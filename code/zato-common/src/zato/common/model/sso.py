@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
@@ -17,6 +17,7 @@ from zato.server.service import Model
 class ExpiryHookInput(Model):
     current_app: 'str'
     username: 'str'
+    default_expiry: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -36,7 +36,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-_shmem_pattern = '/zato-shmem-{}'
+_shmem_pattern = '/zm{}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +60,7 @@ class SharedMemoryIPC:
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
         """
-        self.shmem_name = _shmem_pattern.format(shmem_suffix)
+        self.shmem_name = _shmem_pattern.format(shmem_suffix)[:30]
         self.size = size
 
         # Create or read share memory
@@ -212,7 +212,7 @@ class ServerStartupIPC(SharedMemoryIPC):
     key_name = '/pubsub/pid'
 
     def create(self, deployment_key:'str', size:int, needs_create:'bool'=True) -> 'None':
-        super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size, needs_create)
+        super(ServerStartupIPC, self).create('s{}'.format(deployment_key), size, needs_create)
 
     def set_pubsub_pid(self, pid:'int') -> 'None':
         self.set_key(self.key_name, 'current', pid)
@@ -231,7 +231,7 @@ class ConnectorConfigIPC(SharedMemoryIPC):
     key_name = '/connector/config'
 
     def create(self, deployment_key, size, needs_create=True):
-        super(ConnectorConfigIPC, self).create('connector-config-{}'.format(deployment_key), size, needs_create)
+        super(ConnectorConfigIPC, self).create('c{}'.format(deployment_key), size, needs_create)
 
     def set_config(self, connector_key, config):
         self.set_key(self.key_name, connector_key, config)
@@ -252,7 +252,7 @@ class CommandStoreIPC(SharedMemoryIPC):
     key_name = '/cli/command/store'
 
     def create(self, size=100_000, needs_create=True):
-        super(CommandStoreIPC, self).create('cli-command-store', size, needs_create)
+        super(CommandStoreIPC, self).create('i', size, needs_create)
 
     def add_parser(self, parser_data):
         self.set_key(self.key_name, 'parser', parser_data)

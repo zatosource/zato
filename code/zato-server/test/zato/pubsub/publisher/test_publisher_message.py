@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -173,7 +173,7 @@ class PublisherMessageTestCase(TestCase):
 
 if __name__ == '__main__':
     from unittest import main
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

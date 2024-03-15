@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
@@ -20,15 +20,15 @@ from zato.common.typing_ import cast_
 
 if 0:
     from sqlalchemy import Column
-    from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, intlist, strlist
+    from zato.common.typing_ import anylist, intlist, strlist
     Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 MsgTable = PubSubMessage.__table__
+SubTable = PubSubSubscription.__table__
 TopicTable = PubSubTopic.__table__
 
 # ################################################################################################################################
@@ -90,47 +90,20 @@ def get_gd_depth_topic_list(session:'SASession', cluster_id:'int', topic_id_list
 
 # ################################################################################################################################
 
-def _get_topic_list_by_condition(condition:'any_') -> 'Select':
-    """ Returns topics matching the input condition.
+def get_topic_sub_count_list(session:'SASession', cluster_id:'int', topic_id_list:'intlist') -> 'anylist':
+    """ Returns the number of subscriptions for each topic from the input list.
     """
+
     q = select([
-        TopicTable.c.id,
-        TopicTable.c.name,
+        SubTable.c.topic_id,
+        func.count(SubTable.c.topic_id).label('sub_count')
         ]).\
-        where(
-            condition
-        )
+        where(and_(
+            SubTable.c.cluster_id == cluster_id,
+            SubTable.c.topic_id.in_(topic_id_list),
+        )).\
+        group_by('topic_id')
 
-    return q
-
-# ################################################################################################################################
-
-def get_topic_list_by_id_list(session:'SASession', topic_id_list:'intlist') -> 'anylist':
-    """ Returns topics matching the input list of IDs.
-    """
-    condition = TopicTable.c.id.in_(topic_id_list)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
-
-# ################################################################################################################################
-
-def get_topic_list_by_name_list(session:'SASession', topic_name_list:'strlist') -> 'anylist':
-    """ Returns topics matching the input list of names.
-    """
-    condition = TopicTable.c.name.in_(topic_name_list)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
-
-# ################################################################################################################################
-
-def get_topic_list_by_name_pattern(session:'SASession', pattern:'str') -> 'anylist':
-    """ Returns topics matching the input list of names.
-    """
-    condition = TopicTable.c.name.contains(pattern)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
+    return session.execute(q).fetchall()
 
 # ################################################################################################################################

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -35,6 +35,11 @@ class ZatoException(Exception):
             self.__class__.__name__, hex(id(self)), self.cid, self.msg)
 
     __str__ = __repr__
+
+# ################################################################################################################################
+
+class ServiceMissingException(ZatoException):
+    pass
 
 # ################################################################################################################################
 
@@ -120,7 +125,7 @@ ClientHTTPError = Reportable
 # ################################################################################################################################
 
 class BadRequest(Reportable):
-    def __init__(self, cid, msg='Received a bad request', needs_msg=False):
+    def __init__(self, cid, msg='Bad request', needs_msg=False):
         super(BadRequest, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
 
 # ################################################################################################################################

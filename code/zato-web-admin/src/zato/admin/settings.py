@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -49,6 +49,11 @@ if log_config:
 else:
     logging.basicConfig(level=logging.DEBUG)
 
+# Session timeout
+_session_timeout_env_key = 'Zato_Dashboard_Session_Timeout'
+_session_timeout_default = 60 * 60 * 24 * 30 # In seconds, default = one month
+SESSION_COOKIE_AGE = os.environ.get(_session_timeout_env_key) or _session_timeout_default
+
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 INTERNAL_IPS = ('127.0.0.1',)
@@ -58,6 +63,10 @@ INTERNAL_IPS = ('127.0.0.1',)
 USE_I18N = True
 
 DEBUG = os.environ.get('Zato_Dashboard_Debug_Enabled') or False
+
+if csrf_trusted_origins := os.environ.get('Zato_Django_CSRF_TRUSTED_ORIGINS'):
+    CSRF_TRUSTED_ORIGINS = [f'{csrf_trusted_origins}']
+
 APPEND_SLASH = True
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
@@ -67,12 +76,12 @@ MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
-# Examples: 'http://media.lawrence.com', 'http://example.com/media/'
+# Examples: 'https://media.lawrence.com', 'https://example.com/media/'
 MEDIA_URL = '/static/'
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
-# Examples: 'http://foo.com/media/', '/media/'.
+# Examples: 'https://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]
@@ -147,8 +156,8 @@ if 'DATABASES' in globals():
     db_data = DATABASES['default']
     db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
 
-    for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT'):
-        globals()['DATABASE_{}'.format(name)] = DATABASES['default'][name]
+    for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT', 'OPTIONS'):
+        globals()['DATABASE_{}'.format(name)] = DATABASES['default'].get(name)
 
     db_data['db_type'] = db_type
 

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -172,7 +172,11 @@ class PubRequest(Model):
     ext_pub_time:  strnone = None
 
     security_id:   intnone = None
+    security_name: strnone = None
+
     endpoint_id:   intnone = None
+    endpoint_name: strnone = None
+
     ws_channel_id: intnone = None
 
     group_id:          strnone = ''
@@ -252,7 +256,7 @@ class Publisher:
         # .. otherwise, use request GD value or the default per topic.
         else:
             has_gd = request.has_gd
-            if has_gd not in (None, ZATO_NONE):
+            if has_gd not in (None, '', ZATO_NONE):
                 if not isinstance(has_gd, bool):
                     raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
             else:
@@ -265,8 +269,8 @@ class Publisher:
 
         ext_pub_time = request.ext_pub_time or None
         if ext_pub_time:
-            ext_pub_time = parse_datetime_as_naive(ext_pub_time)
-            ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
+            ext_pub_time = parse_datetime_as_naive(ext_pub_time) # type: ignore
+            ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0 # type: ignore
 
         pub_correl_id = pub_correl_id if pub_correl_id else None
         in_reply_to = in_reply_to if in_reply_to else None
@@ -303,7 +307,7 @@ class Publisher:
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = data
         ps_msg.mime_type = mime_type
-        ps_msg.priority = priority
+        ps_msg.priority = priority # type: ignore
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
@@ -315,8 +319,8 @@ class Publisher:
         ps_msg.group_id = request.group_id or None
         ps_msg.position_in_group = request.position_in_group or PUBSUB.DEFAULT.PositionInGroup
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
-        ps_msg.reply_to_sk = reply_to_sk
-        ps_msg.deliver_to_sk = deliver_to_sk
+        ps_msg.reply_to_sk = reply_to_sk # type: ignore
+        ps_msg.deliver_to_sk = deliver_to_sk # type: ignore
         ps_msg.user_ctx = user_ctx
         ps_msg.zato_ctx = zato_ctx
 
@@ -406,18 +410,44 @@ class Publisher:
 
 # ################################################################################################################################
 
+    def _get_endpoint_id_by_security_name(self, security_name:'str') -> 'intnone':
+        security = self.server.worker_store.basic_auth_get(security_name)
+        security_config = security['config']
+        security_id = security_config['id']
+        endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+        return endpoint_id
+
+# ################################################################################################################################
+
     def get_pub_pattern_matched(self, endpoint_id:'intnone', request:'PubRequest') -> 'tuple_[int, str]':
         """ Returns a publication pattern matched that allows the endpoint to publish messages
         or raises an exception if no pattern was matched. Takes into account various IDs possibly given on request,
         depending on what our caller wanted to provide.
         """
         security_id = request.security_id
+        security_name = request.security_name
+
         ws_channel_id = request.ws_channel_id
+        endpoint_name = request.endpoint_name
+
+        #
+        # Note that if we have security name on input, it will take precedence over input security ID.
+        #
+        if security_name:
+            endpoint_id = self._get_endpoint_id_by_security_name(security_name)
+
+        #
+        # Again, the name of the endpoint takes precedence over its ID
+        #
+        if endpoint_name:
+            endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+            endpoint_id = endpoint.id
 
         if not endpoint_id:
 
             if security_id:
                 endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+
             elif ws_channel_id:
                 endpoint_id_by_wsx_id = self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
                 if endpoint_id_by_wsx_id:
@@ -676,7 +706,7 @@ class Publisher:
             log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' + \
                   ', GD data:`%s`, non-GD data:`%s`'
 
-            logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
+            logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name, # type: ignore
                 ctx.ext_client_id, ctx.pub_pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages

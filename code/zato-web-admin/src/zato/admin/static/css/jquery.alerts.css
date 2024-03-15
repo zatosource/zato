@@ -3,12 +3,15 @@
 	font-size: 12px;
 	min-width: 300px; /* Dialog will be no smaller than this */
 	max-width: 600px; /* Dialog will wrap after this width */
-	background: #FFF;
-	border: solid 5px #999;
+	background: #fff;
+	border: solid 5px red;
 	color: #000;
 	-moz-border-radius: 5px;
 	-webkit-border-radius: 5px;
-	border-radius: 5px;
+	border-radius: 0px;
+	box-shadow: 3px 3px 9px 1px rgba(0,0,0,0.27);
+	-webkit-box-shadow: 3px 3px 9px 1px rgba(0,0,0,0.27);
+	-moz-box-shadow: 3px 3px 9px 1px rgba(0,0,0,0.27);
 }
 
 #popup_title {

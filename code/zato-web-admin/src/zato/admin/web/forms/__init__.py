@@ -3,7 +3,7 @@
 """
 Copyright (C) Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -21,6 +21,7 @@ from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, 
 # ################################################################################################################################
 
 INITIAL_CHOICES_DICT = {'': '----------'}
+Initial_Choices_Dict_Attrs = {'id':'', 'name':'----------'}
 INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 # ################################################################################################################################
@@ -100,9 +101,8 @@ def add_sec_tls_ca_cert_id_select(req, form):
     tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
 
     form.fields['sec_tls_ca_cert_id'].choices = []
-    form.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
-    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
     form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
+    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
 
     for value, label in tls_ca_cert_list.items():
         form.fields['sec_tls_ca_cert_id'].choices.append([value, label])

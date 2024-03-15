@@ -11,13 +11,14 @@
     {% if connection == 'channel' %}
         channels
     {% else %}
-        outconns
+        outgoing connections
     {% endif %}
 
 {% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -59,8 +60,9 @@
                 '_cache',
             {% endif %}
 
-            // 9
+            // 9, 9b
             '_security',
+            '_security_groups',
 
             // 10, 11
             {% if transport == 'soap' %}
@@ -198,11 +200,12 @@
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
                             <th><a href="#">Service</a></th>
-                            <th><a href="#">Cache</a></th>
+                            <th class='ignore'><a href="#">Cache</a></th>
                         {% endif %}
 
-                        <!-- 9 -->
+                        <!-- 9, 9b -->
                         <th><a href="#">Security</a></th>
+                        <th><a href="#">Security groups</a></th>
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -212,7 +215,7 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <th><a href="#">Message log</a></th>
+                            <th class='ignore'><a href="#">Message log</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endif %}
@@ -313,7 +316,13 @@
 
                         <!-- 5 -->
                         {% if connection == 'outgoing' %}
-                            <td>{{ item.host }}</td>
+                            <td>
+                            {% if item.host %}
+                                {{ item.host }}
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                            </td>
                         {% endif %}
 
                         <!-- 6 -->
@@ -321,8 +330,8 @@
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                            <td>
+                            <td><a href="{% url "service-invoker" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td class='ignore'>
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
                             {% else %}
@@ -331,8 +340,20 @@
                             </td>
                         {% endif %}
 
-                        <!-- 9 -->
-                        <td>{{ item.security_name|safe }}</td>
+                        <!-- 9, 9b -->
+                        <td>
+                            {% if item.security_name == "Delegated to RBAC" %}
+                                <span class="form_hint">Delegated to RBAC</span>
+                            {% else %}
+                                {{ item.security_name|safe }}
+                            {% endif %}
+                        <td>
+                            {% if item.security_group_count %}
+                                {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
+                            {% else %}
+                            <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -342,7 +363,7 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <td>
+                            <td class='ignore'>
                                 <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% if transport == 'soap' %}SOAP{% else %}REST{% endif %} {% if connection == 'channel' %}channel{% else %}outgoing connection{% endif %}">View</a>
                             </td>
                             <td class='ignore'>{{ item.service_name }}</td>
@@ -444,7 +465,7 @@
                 <form novalidate action="{% url "http-soap-create" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">Name</td>
+                            <td style="vertical-align:middle;width:19%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -487,9 +508,24 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle">Security<br/>definition</td>
+                            <td style="vertical-align:middle">Security</td>
                             <td>
                                 {{ create_form.security }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Security groups
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="api-client-groups-options-block hidden">
+                            <td class="to-ignore"></td>
+                            <td>
+                                <div class="multi-select-div" id="multi-select-div-create">
+                                </div>
                             </td>
                         </tr>
 
@@ -555,7 +591,7 @@
                             </td>
                         </tr>
                         <tr class="cache-options-block hidden">
-                            <td></td>
+                            <td class="to-ignore"></td>
                             <td>{{ create_form.cache_id }}
                             |
                             Expiry
@@ -567,7 +603,7 @@
                         {% include "zato/include/rate-limiting/create.html" %}
                         {% endif %}
 
-                        {% if connection == 'channel' %}
+                        {% if False and connection == 'channel' %}
                             {% include "zato/include/audit-log/create.html" %}
                         {% endif %}
 
@@ -694,16 +730,34 @@
                             </td>
                         </tr>
 
-                        {% if connection == 'outgoing' %}
-                            {% if transport == 'plain_http' %}
-                                <tr>
-                                    <td style="vertical-align:middle"><label for="id_edit-data_format">Data format</label></td>
-                                    <td>
-                                        {{ edit_form.data_format }}
-                                    </td>
-                                </tr>
-                            {% endif %}
+                        {% if connection == 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service }}</td>
+                        </tr>
                         {% endif %}
+
+                        <tr>
+                            <td style="vertical-align:middle">Security<br/>definition</td>
+                            <td>
+                                {{ edit_form.security }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Security groups
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="api-client-groups-options-block hidden">
+                            <td class="to-ignore"></td>
+                            <td>
+                                <div class="multi-select-div" id="multi-select-div-edit">
+                                </div>
+                            </td>
+                        </tr>
 
                         {% if transport == 'soap' %}
                         <tr>
@@ -714,13 +768,6 @@
                         <tr>
                             <td style="vertical-align:middle">SOAP version</td>
                             <td>{{ edit_form.soap_version }}</td>
-                        </tr>
-                        {% endif %}
-
-                        {% if connection == 'channel' %}
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ edit_form.service }}</td>
                         </tr>
                         {% endif %}
 
@@ -764,13 +811,6 @@
 
 
                         {% endif %}
-
-                        <tr>
-                            <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>
-                                {{ edit_form.security }}
-                            </td>
-                        </tr>
 
                         {% if connection == 'channel' %}
 

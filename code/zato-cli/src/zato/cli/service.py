@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.cli import ZatoCommand
 from zato.client import CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
 from zato.common.api import BROKER, ZATO_INFO_FILE
+from zato.common.const import ServiceConst
 
 # ################################################################################################################################
 
@@ -29,7 +28,8 @@ class Invoke(ZatoCommand):
         {'name':'--channel', 'help':'Channel the service will be invoked through', 'default':'invoke'},
         {'name':'--data-format', 'help':"Payload's data format", 'default': 'json'},
         {'name':'--transport', 'help':'Transport to invoke the service over'},
-        {'name':'--url-path', 'help':'URL path zato.service.invoke is exposed on', 'default':'/zato/admin/invoke'},
+        {'name':'--url-path', 'help':'URL path zato.service.invoke is exposed on',
+            'default':ServiceConst.API_Admin_Invoke_Url_Path},
         {'name':'--max-cid-repr',
          'help':'How many characters of each end of a CID to print out in verbose mode, defaults to {}, use {} to print the whole of it'.format(
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},

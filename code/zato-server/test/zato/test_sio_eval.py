@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -16,13 +16,6 @@ from zato.common.test.apispec_ import CyMyService
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.simpleio import SIOServerConfig
-    SIOServerConfig = SIOServerConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,6 +87,6 @@ class SIOEvalTestCase(BaseSIOTestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################

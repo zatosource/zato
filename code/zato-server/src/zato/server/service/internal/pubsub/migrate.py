@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -72,7 +72,8 @@ class MigrateDeliveryServer(AdminService):
 
         # .. create a new task if the subscription exists ..
         if sub:
-            self.server.rpc[new_delivery_server_name].invoke(service_name, {
+            invoker = self.server.rpc.get_invoker_by_server_name(new_delivery_server_name)
+            invoker.invoke(service_name, {
                 'sub_key': sub_key,
                 'endpoint_type': endpoint_type,
                 'task_delivery_interval': sub.task_delivery_interval

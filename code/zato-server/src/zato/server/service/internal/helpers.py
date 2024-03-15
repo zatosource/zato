@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -26,6 +26,7 @@ from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.open_ import open_rw, open_w
 from zato.server.commands import CommandResult, Config
+from zato.server.connection.facade import RESTInvoker
 from zato.server.service import AsIs, Model, PubSubHook, Service
 from zato.server.service.internal.service import Invoke
 
@@ -33,6 +34,7 @@ from zato.server.service.internal.service import Invoke
 # ################################################################################################################################
 
 if 0:
+    from requests import Response
     from zato.common.pubsub import PubSubMessage
     from zato.common.typing_ import any_, anydict, anytuple
 
@@ -363,7 +365,6 @@ class WebSocketsPubSubGateway(Service):
 
         service = self.request.input.service
         request = self.request.input.request
-
         self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
@@ -485,30 +486,37 @@ class HelperPubSubTarget(Service):
         msg = self.request.raw_request # type: list_[PubSubMessage]
 
         # Whatever happens next, log what we received
-        self.logger.info('I was invoked with %r', msg)
+        self.logger.info('************************** 1) I was invoked with %r', msg)
 
         # .. load the inner dict ..
-        data = msg[0].data # type: anydict
+        data = msg[0].data # type: anydict | str
 
         # .. confirm what it was ..
-        self.logger.info('Data is %r', data)
+        self.logger.info('************************** 2) Data is %r', data)
 
-        # .. optionally, save our input data for the external caller to check it ..
-        if data['target_needs_file']:
+        # .. this may be a dict or an empty string, the latter is the case
+        # .. when a message is published via self.pubsub.publish with no input  ..
+        if data:
 
-            # .. this is where we will save our input data ..
-            file_name = data['file_name']
+            # .. rule out string objects ..
+            if isinstance(data, dict):
 
-            # .. we will save the message as a JSON one ..
-            json_msg = msg[0].to_json(needs_utf8_decode=True)
+                # .. optionally, save our input data for the external caller to check it ..
+                if data['target_needs_file']:
 
-            # .. confirm what we will be saving and where ..
-            self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+                    # .. this is where we will save our input data ..
+                    file_name = data['file_name']
 
-            # .. and actually save it now.
-            f = open_rw(file_name)
-            _ = f.write(json_msg)
-            f.close()
+                    # .. we will save the message as a JSON one ..
+                    json_msg = msg[0].to_json(needs_utf8_decode=True)
+
+                    # .. confirm what we will be saving and where ..
+                    self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+
+                    # .. and actually save it now.
+                    f = open_rw(file_name)
+                    _ = f.write(json_msg)
+                    f.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1065,6 +1073,89 @@ class CommandsService(Service):
         test_suite.test_invoke_async_core()
 
         self.response.payload = 'OK'
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RESTInternalTester(Service):
+
+    name = 'helpers.rest.internal.tester'
+
+    def _run_assertions(self, result:'str | Response', *, is_ping:'bool'=False) -> 'None':
+
+        # stdlib
+        from http.client import OK
+
+        if is_ping:
+            if isinstance(result, str):
+                if not 'HEAD' in result:
+                    raise Exception(f'Invalid ping result (1) -> {result}')
+            else:
+                if not result.status_code == OK:
+                    raise Exception(f'Invalid ping result (2) -> {result}')
+
+        else:
+            result = cast_('Response', result)
+            headers = result.headers
+            server = headers['Server']
+            if not server == 'Zato':
+                raise Exception(f'Unrecognized Server header in {headers}')
+
+# ################################################################################################################################
+
+    def test_rest_by_getitem_no_cid(self, conn_name:'str') -> 'None':
+
+        conn = self.rest[conn_name]
+
+        result = conn.ping()
+        self._run_assertions(result, is_ping=True)
+
+        result = conn.get()
+        self._run_assertions(result)
+
+        result = conn.post('abc')
+        self._run_assertions(result)
+
+# ################################################################################################################################
+
+    def test_rest_by_getitem_with_cid(self, conn_name:'str') -> 'None':
+
+        conn = self.rest[conn_name]
+
+        result = conn.ping(self.cid)
+        self._run_assertions(result, is_ping=True)
+
+        result = conn.get(self.cid)
+        self._run_assertions(result)
+
+        result = conn.post(self.cid, 'abc')
+        self._run_assertions(result)
+
+# ################################################################################################################################
+
+    def test_rest_by_getattr(self, conn:'RESTInvoker') -> 'None':
+
+        result = conn.ping()
+        self._run_assertions(result, is_ping=True)
+
+        result = conn.get()
+        self._run_assertions(result)
+
+        result = conn.post('abc')
+        self._run_assertions(result)
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        conn_name = 'pubsub.demo.sample.outconn'
+
+        self.test_rest_by_getitem_no_cid(conn_name)
+        self.test_rest_by_getitem_with_cid(conn_name)
+
+        conn = self.rest.pubsub_demo_sample_outconn
+        self.test_rest_by_getattr(conn) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

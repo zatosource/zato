@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -18,6 +18,7 @@ from bunch import bunchify
 
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives.constant_time import bytes_eq
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -29,8 +30,28 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strbytes
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_string_equal(data1:'strbytes', data2:'strbytes') -> 'bool':
+
+    if isinstance(data1, str):
+        data1 = data1.encode('utf8')
+
+    if isinstance(data2, str):
+        data2 = data2.encode('utf8')
+
+    return bytes_eq(data1, data2)
 
 # ################################################################################################################################
 
@@ -155,10 +176,13 @@ class CryptoManager:
 # ################################################################################################################################
 
     @staticmethod
-    def generate_secret(bits=256):
+    def generate_secret(bits=256, as_str=False) -> 'bytes | str':
         """ Generates a secret string of bits size.
         """
-        return base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+        value = base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+        if as_str:
+            value = value.decode('utf8')
+        return value
 
 # ################################################################################################################################
 
@@ -188,12 +212,22 @@ class CryptoManager:
 
 # ################################################################################################################################
 
-    def encrypt(self, data):
+    def encrypt(self, data:'any_', *, needs_str:'bool'=False) -> 'bytes | str':
         """ Encrypts incoming data, which must be a string.
         """
+        # Make sure we encrypt bytes ..
         if not isinstance(data, bytes):
             data = data.encode('utf8')
-        return self.secret_key.encrypt(data)
+
+        # .. get the encrypted bytes ..
+        data = self.secret_key.encrypt(data)
+
+        # .. optionally, make sure that we return a string ..
+        if needs_str:
+            data = data.decode('utf8')
+
+        # .. now, we are ready to return our result.
+        return data
 
 # ################################################################################################################################
 
@@ -206,18 +240,19 @@ class CryptoManager:
         if encrypted.startswith(_prefix):
             encrypted = encrypted.replace(_prefix, b'')
 
-        return self.secret_key.decrypt(encrypted).decode('utf8')
+        result = self.secret_key.decrypt(encrypted).decode('utf8')
+        return result
 
 # ################################################################################################################################
 
-    def hash_secret(self, data, name='zato.default'):
+    def hash_secret(self, data:'any_', name:'str'='zato.default') -> 'str':
         """ Hashes input secret using a named configured (e.g. PBKDF2-SHA512, 100k rounds, salt 32 bytes).
         """
         return self.hash_scheme[name].hash(data)
 
 # ################################################################################################################################
 
-    def verify_hash(self, given, expected, name='zato.default'):
+    def verify_hash(self, given:'any_', expected:'any_', name='zato.default') -> 'bool':
         return self.hash_scheme[name].verify(given, expected)
 
 # ################################################################################################################################

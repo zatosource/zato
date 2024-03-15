@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django import forms
@@ -18,11 +16,14 @@ from zato.common.api import PUBSUB
 # ################################################################################################################################
 
 class MsgForm(forms.Form):
-    correl_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    in_reply_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    expiration = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    correl_id = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    in_reply_to = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    expiration = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}),
+        initial=PUBSUB.DEFAULT.EXPIRATION)
     exp_from_now = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    priority = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}), initial=5)
+    priority = forms.CharField(required=True,
+        widget=forms.TextInput(attrs={'class':'required', 'style':'width:60%'}), initial=5)
     mime_type = forms.CharField(widget=forms.HiddenInput())
 
 # ################################################################################################################################

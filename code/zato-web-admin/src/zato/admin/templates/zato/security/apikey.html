@@ -22,7 +22,7 @@
             '_numbering',
             '_selection',
             'name',
-            'username',
+            'header',
             '_change_password',
             '_edit',
             '_delete',
@@ -86,7 +86,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.username }}</td>
+                        <td id="item_header_{{ item.id }}">{{ item.header }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API key')">Change API key</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.delete_('{{ item.id }}')">Delete</a></td>
@@ -174,7 +174,7 @@
                 <form novalidate action="{% url "security-apikey-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:12%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
@@ -182,7 +182,7 @@
                             <td>{{ change_password_form.password1 }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Confirm API key</td>
+                            <td style="vertical-align:middle">Confirm<br/>API key</td>
                             <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
@@ -190,6 +190,7 @@
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                <!-- <input type="submit" value="Generate a new key" /> -->
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

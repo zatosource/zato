@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# stdlib
+import os
 
 # Zato
 from zato.cli import common_totp_opts, ManageCommand
+from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
@@ -47,7 +49,7 @@ class _WebAdminAuthCommand(ManageCommand):
 # ################################################################################################################################
 
 class CreateUser(_WebAdminAuthCommand):
-    """ Creates a new web admin user
+    """ Creates a new Dashboard user
     """
     opts = [
         {'name': '--username', 'help': 'Username to use'},
@@ -117,23 +119,27 @@ class CreateUser(_WebAdminAuthCommand):
         Command.stdout = CreateUser._FakeStdout(self.logger)
         Command.stdin = CreateUser._FakeStdin()
 
-        if self.is_interactive:
-            options = {
-                'verbosity':0,
-                'database': None,
-            }
-        else:
-            options = {
-                'verbosity':0,
-                'database': None,
-                'username':self.args.username,
-                'email':self.args.email,
-            }
+        options = {
+            'verbosity':0,
+            'database': None,
+            'username':self.args.username,
+            'email':self.args.email,
+        }
+
+        os.environ['DJANGO_SUPERUSER_PASSWORD'] = self.args.password
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-        except Exception:
-            self.logger.error('Could not create the user, details: `%s`', format_exc())
+        except Exception as e:
+            if self.args.verbose:
+                suffix = ''
+                exc_info = format_exc()
+            else:
+                suffix = '(use --verbose for more information)'
+                exc_info = e
+
+            self.logger.error(f'User could not be created, details: `{exc_info}` {suffix}')
+
             if needs_sys_exit:
                 sys.exit(self.SYS_ERROR.INVALID_INPUT)
             else:
@@ -145,7 +151,7 @@ class CreateUser(_WebAdminAuthCommand):
 # ################################################################################################################################
 
 class UpdatePassword(_WebAdminAuthCommand):
-    """ Updates a web admin user's password
+    """ Updates a Dashboard user's password
     """
     opts = [
         {'name': 'username', 'help': 'Username to change the password of'},
@@ -235,7 +241,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
     """ Resets a web-admin user's password that it uses to connect to servers.
     """
     opts = [
-        {'name': '--username', 'help': 'Username to reset the password of', 'default':'admin.invoke'},
+        {'name': '--username', 'help': 'Username to reset the password of', 'default':ServiceConst.API_Admin_Invoke_Username},
         {'name': '--password', 'help': 'Password to set'},
     ]
 

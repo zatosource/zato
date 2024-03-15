@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
+from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.pubsub import HandleNewMessageCtx
-from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.common.json_internal import dumps
+from zato.common.pubsub import HandleNewMessageCtx
+from zato.common.util.pubsub import is_service_subscription
+from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -20,7 +21,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 if 0:
     from zato.common.pubsub import PubSubMessage
-    from zato.common.typing_ import any_, anydict, callable_
+    from zato.common.typing_ import any_, anydict, callable_, strcalldict, strdict
+    from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.pubsub.model import Subscription
 
     PubSubMessage = PubSubMessage
@@ -54,8 +56,10 @@ class CreateDeliveryTask(AdminService):
         # Creates a pubsub_tool that will handle this subscription and registers it with pubsub
         pubsub_tool = PubSubTool(self.pubsub, self.server, config['endpoint_type'])
 
-        # Makes this sub_key known to pubsub
-        pubsub_tool.add_sub_key(config['sub_key'])
+        # Makes this sub_key known to pubsub but only if this is not a service subscription
+        # because subscriptions of this sort are handled by the worker store directly in init_pubsub.
+        if not is_service_subscription(config):
+            pubsub_tool.add_sub_key(config['sub_key'])
 
         # Common message for both local server and broker
         msg = {
@@ -65,6 +69,9 @@ class CreateDeliveryTask(AdminService):
             'sub_key': config['sub_key'],
             'endpoint_type': config['endpoint_type'],
             'task_delivery_interval': config['task_delivery_interval'],
+            'source': 'delivery.CreateDeliveryTask',
+            'source_server_name': self.server.name,
+            'source_server_pid': self.server.pid,
         }
 
         # Update in-RAM state of workers
@@ -78,7 +85,7 @@ class DeliverMessage(AdminService):
     to a given endpoint.
     """
     class SimpleIO(AdminSIO):
-        input_required = (Opaque('msg'), Opaque('subscription'))
+        input_required:'any_' = (Opaque('msg'), Opaque('subscription'))
 
 # ################################################################################################################################
 
@@ -97,41 +104,45 @@ class DeliverMessage(AdminService):
 
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
-            out = []
-            for elem in msg:
+            out:'any_' = []
+            for elem in msg: # type: ignore
                 out.append(elem.serialized if elem.serialized else elem.to_external_dict())
             return out
+
         # A single message was given on input
         else:
             return msg.serialized if msg.serialized else msg.to_external_dict()
 
 # ################################################################################################################################
 
-    def _deliver_rest_soap(self,
+    def _deliver_rest(self,
         msg:'list[PubSubMessage]',
         sub:'Subscription',
         impl_getter:'callable_',
-        _suds:'str'=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
-        _rest:'str'=URL_TYPE.PLAIN_HTTP
         ) -> 'None':
 
-        if not sub.config['out_http_soap_id']:
+        # Local variables
+        out_http_method  = sub.config['out_http_method']
+        out_http_soap_id = sub.config.get('out_http_soap_id')
+
+        if not out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(sub))
         else:
+            # Extract the actual data from the pub/sub message ..
             data = self._get_data_from_message(msg)
-            http_soap = impl_getter(sub.config['out_http_soap_id']) # type: any_
 
-            _is_rest = http_soap['config']['transport'] == _rest # type: bool
-            _has_suds = http_soap['config']['serialization_type'] == _suds # type: bool
+            # .. the outgoing connection's configuration ..
+            rest_config:'strdict' = impl_getter(out_http_soap_id)
 
-            # If it is REST or a suds-based connection, we can just invoke it directly
-            if _is_rest or (not _has_suds):
-                http_soap.conn.http_request(sub.config['out_http_method'], self.cid, data=data)
+            # .. from which we can extract the actual wrapper ..
+            conn:'RESTWrapper' = rest_config['conn']
 
-            # .. while suds-based outgoing connections need to invoke the hook service which will
-            # in turn issue a SOAP request to the remote server.
-            else:
-                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, sub, http_soap)
+            # .. make sure that we send JSON ..
+            if not isinstance(data, str):
+                data = dumps(data)
+
+            # .. which now can be invoked.
+            _ = conn.http_request(out_http_method, self.cid, data=data)
 
 # ################################################################################################################################
 
@@ -143,11 +154,11 @@ class DeliverMessage(AdminService):
     ) -> 'None':
 
         # Ultimately we should use impl_getter to get the outconn
-        for value in self.server.worker_store.worker_config.out_amqp.values():
+        for value in self.server.worker_store.worker_config.out_amqp.values(): # type: ignore
             if value['config']['id'] == sub.config['out_amqp_id']:
 
                 data = self._get_data_from_message(msg)
-                name = value['config']['name']
+                name:'str' = value['config']['name']
                 kwargs = {}
 
                 if sub.config['amqp_exchange']:
@@ -176,8 +187,8 @@ class DeliverMessage(AdminService):
         #
         # We can have two cases.
         #
-        # 1) The messages were published via self.pubsub.publish('service.name)
-        # 2) The messages were published to a topic and of its subscribers is a service
+        # 1) The messages were published via self.pubsub.publish('service.name')
+        # 2) The messages were published to a topic and one of its subscribers is a service
         #
         # Depending on which case it is, we will extract the actual service's name differently.
         #
@@ -185,7 +196,7 @@ class DeliverMessage(AdminService):
         # We do not know upfront which case it will be so this needs to be extracted upfront.
         # Each message will be destinated for the same service so we can extract the target service's name
         # from the first message in list, assuming it is in a list at all.
-        zato_ctx = msg[0].zato_ctx if is_list else msg.zato_ctx
+        zato_ctx:'any_' = msg[0].zato_ctx if is_list else msg.zato_ctx
 
         #
         # Case 1) is where we can find the service name immediately.
@@ -197,18 +208,17 @@ class DeliverMessage(AdminService):
         #
         if not target_service_name:
             endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
-            service_id = endpoint.config['service_id']
-            target_service_name = self.server.service_store.get_service_name_by_id(service_id)
+            target_service_name = self.server.service_store.get_service_name_by_id(endpoint.service_id)
 
         # Invoke the target service, giving it on input everything that we have,
-        # regardless of whether it is a list or not. a list
+        # regardless of whether it is a list or not.
         self.invoke(target_service_name, msg)
 
 # ################################################################################################################################
 
 # We need to register it here because it refers to DeliverMessage's methods
-deliver_func = {
-    PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
+deliver_func:'strcalldict' = {
+    PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id: DeliverMessage._deliver_srv,
 }
@@ -220,7 +230,7 @@ class GetServerPIDForSubKey(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('sub_key',)
-        output_optional = (Int('server_pid'),)
+        output_optional:'any_' = (Int('server_pid'),)
 
 # ################################################################################################################################
 

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
@@ -50,7 +50,7 @@ class CreateForm(DataFormatForm, WithAuditLog):
     ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
-    security = forms.ChoiceField(widget=forms.Select())
+    security = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())

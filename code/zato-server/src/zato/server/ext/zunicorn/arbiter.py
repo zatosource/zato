@@ -5,7 +5,7 @@ from __future__ import print_function
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 """
@@ -522,7 +522,7 @@ class Arbiter:
             self.pidfile.create(self.pid)
 
         # set new proc_name
-        util._setproctitle("master [%s]" % self.proc_name)
+        util._setproctitle("main [%s]" % self.proc_name)
 
         # spawn new workers
         for idx, _ in enumerate(range(self.cfg.workers)):
@@ -670,6 +670,10 @@ class Arbiter:
         This is where a worker process leaves the main loop
         of the master process.
         """
+
+        noun = 'process' if self.num_workers == 1 else 'processes'
+        msg = f'Booting {self.num_workers} {noun}'
+        self.log.info(msg)
 
         for idx, _ in enumerate(range(self.num_workers - len(self.WORKERS.keys()))):
             os.environ['ZATO_SERVER_WORKER_IDX'] = str(idx)

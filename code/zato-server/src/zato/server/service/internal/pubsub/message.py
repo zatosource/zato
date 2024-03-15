@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -122,8 +122,8 @@ class GetFromTopicNonGD(AdminService):
         input_required = _GetSIO.input_required + ('server_name', 'server_pid')
 
     def handle(self) -> 'None':
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(GetFromServerTopicNonGD.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetFromServerTopicNonGD.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
@@ -191,8 +191,8 @@ class TopicDeleteNonGD(AdminService):
         input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        server = self.server.rpc[self.request.input.server_name]
-        server.invoke(DeleteTopicNonGDMessage.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        invoker.invoke(DeleteTopicNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
@@ -208,8 +208,8 @@ class QueueDeleteServerNonGD(AdminService):
         input_required = ('sub_key', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
 # ################################################################################################################################
 
@@ -223,7 +223,8 @@ class QueueDeleteNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(
                 QueueDeleteServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id
@@ -256,16 +257,16 @@ class QueueDeleteGD(AdminService):
             session.commit()
 
             # Find the server that has the delivery task for this sub_key
-            sub_key_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
+            sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
             # It's possible that there is no such server in case of WSX clients that connected,
             # had their subscription created but then they disconnected and there is no delivery server for them.
-            if sub_key_server:
-                server = self.server.rpc[sub_key_server.server_name]
-                server.invoke(DeleteDeliveryTaskMessage.get_name(), {
+            if sk_server:
+                invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+                invoker.invoke(DeleteDeliveryTaskMessage.get_name(), {
                     'msg_id': self.request.input.msg_id,
                     'sub_key': self.request.input.sub_key,
-                }, pid=sub_key_server.server_pid)
+                }, pid=sk_server.server_pid)
 
         self.logger.info('Deleting GD queue message `%s` (%s)', self.request.input.msg_id, self.request.input.sub_key)
 
@@ -278,8 +279,8 @@ class DeleteDeliveryTaskMessage(AdminService):
         input_required = (AsIs('msg_id'), 'sub_key')
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
 # ################################################################################################################################
 
@@ -381,8 +382,8 @@ class UpdateNonGD(_Update):
         return Bunch()
 
     def _save_item(self, item:'any_', input:'any_', _ignored:'any_') -> 'bool':
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
         self.response.payload = response['response']
         return True
 
@@ -424,34 +425,36 @@ class GetFromQueueServerNonGD(AdminService):
         input_required = _GetSIO.input_required + ('sub_key',)
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
-        if msg:
-            msg = msg.to_dict()
 
-            msg['msg_id'] = msg.pop('pub_msg_id')
-            msg['correl_id'] = msg.pop('pub_correl_id', None)
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
 
-            for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
-                value = msg.pop(name, None)
-                if value:
-                    value = cast_('float', value)
-                    msg[name] = datetime_from_ms(value * 1000.0)
+            if msg:
+                msg = msg.to_dict()
 
-            published_by_id = msg['published_by_id']
-            published_by_id = cast_('int', published_by_id)
+                msg['msg_id'] = msg.pop('pub_msg_id')
+                msg['correl_id'] = msg.pop('pub_correl_id', None)
 
-            msg['published_by_name'] = self.pubsub.get_endpoint_by_id(published_by_id).name
+                for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
+                    value = msg.pop(name, None)
+                    if value:
+                        value = cast_('float', value)
+                        msg[name] = datetime_from_ms(value * 1000.0)
 
-            sub = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
-            if sub:
-                subscriber_id = sub.endpoint_id
-                subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+                published_by_id = msg['published_by_id']
+                published_by_id = cast_('int', published_by_id)
 
-                msg['subscriber_id'] = subscriber_id
-                msg['subscriber_name'] = subscriber_name
+                msg['published_by_name'] = self.pubsub.get_endpoint_by_id(published_by_id).name
 
-            self.response.payload = msg
+                sub = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
+                if sub:
+                    subscriber_id = sub.endpoint_id
+                    subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+
+                    msg['subscriber_id'] = subscriber_id
+                    msg['subscriber_name'] = subscriber_name
+
+                self.response.payload = msg
 
 # ################################################################################################################################
 
@@ -465,7 +468,8 @@ class GetFromQueueNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(
                 GetFromQueueServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id

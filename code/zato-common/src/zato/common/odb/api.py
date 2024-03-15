@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -18,7 +18,7 @@ from time import time
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -36,7 +36,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
+     JWT, NTLM, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
@@ -52,7 +52,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import callable_, commondict
+    from zato.common.typing_ import anyset, callable_, commondict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -408,7 +408,7 @@ class PoolStore:
         with self._lock:
             if enforce_is_active:
                 wrapper = self.wrappers[name]
-                if wrapper.config['is_active']:
+                if wrapper.config.get('is_active', True):
                     return wrapper
                 raise Inactive(name)
             else:
@@ -598,7 +598,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_missing_services(self, server, locally_deployed):
+    def get_missing_services(self, server, locally_deployed) -> 'anyset':
         """ Returns services deployed on the server given on input that are not among locally_deployed.
         """
         missing = set()
@@ -671,6 +671,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
                 SEC_DEF_TYPE.JWT: JWT,
+                SEC_DEF_TYPE.NTLM: NTLM,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
@@ -741,7 +742,7 @@ class ODBManager(SessionWrapper):
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
-                        result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
+                        result[target].sec_def.header = 'HTTP_{}'.format(sec_def.header.upper().replace('-', '_'))
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
@@ -755,10 +756,8 @@ class ODBManager(SessionWrapper):
                     elif item.sec_type == SEC_DEF_TYPE.TLS_CHANNEL_SEC:
                         result[target].sec_def.value = dict(parse_tls_channel_security_definition(sec_def.value))
 
-                    elif item.sec_type == SEC_DEF_TYPE.XPATH_SEC:
+                    elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.username_expr = sec_def.username_expr
-                        result[target].sec_def.password_expr = sec_def.password_expr
 
                 else:
                     result[target].sec_def = ZATO_NONE
@@ -830,8 +829,14 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
-        # type: (list[dict]) -> None
-        session.execute(DeployedServiceInsert().values(data))
+
+        try:
+            session.execute(DeployedServiceInsert().values(data))
+        except OperationalError as e:
+            if 'duplicate key value violates unique constraint' in str(e):
+                pass
+            else:
+                raise
 
 # ################################################################################################################################
 

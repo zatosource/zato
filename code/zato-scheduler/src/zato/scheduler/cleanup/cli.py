@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -45,8 +45,10 @@ def start_cleanup(path:'str') -> 'None':
     ]
 
     try:
+
         # We are ready to invoke it now
         out = invoker.invoke_cli(cli_params)
+
     except ErrorReturnCode as e:
 
         stdout = cast_('bytes', e.stdout)
@@ -55,9 +57,11 @@ def start_cleanup(path:'str') -> 'None':
         stderr = cast_('bytes', e.stderr)
         stderr = stderr.decode('utf8', errors='replace')
 
-        logger.warn('Cleanup exception -> %s', e.args[0])
-        logger.warn('Cleanup exception stdout -> `%s`', stdout)
-        logger.warn('Cleanup exception stderr -> `%s`', stderr)
+        if stdout:
+            logger.info('Cleanup return stdout -> `\n%s`', stdout)
+
+        if stderr:
+            logger.warn('Cleanup return stderr -> `\n%s`', stderr)
 
     else:
         logger.info('Cleanup out.exit_code -> %s', out.exit_code)

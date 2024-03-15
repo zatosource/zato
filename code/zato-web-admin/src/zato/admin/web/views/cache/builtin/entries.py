@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -15,17 +13,22 @@ from base64 import b64decode, b64encode
 # Bunch
 from bunch import Bunch
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import unicode
-
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Delete as _Delete, Index as _Index
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strdict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CacheEntry:
@@ -70,7 +73,7 @@ class Index(_Index):
             'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted', 'server')
         output_repeated = True
 
-    def handle(self):
+    def handle(self) -> 'strdict':
         return {
             'cluster_id': self.cluster_id,
             'cache_id': self.input.cache_id,
@@ -83,7 +86,12 @@ class Index(_Index):
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')):
 
-        item.key_escaped = item.key.encode('utf8') if isinstance(item.key, unicode) else item.key
+        if item.key is not None:
+            item_key:'any_' = item.key
+        else:
+            item_key = ''
+
+        item.key_escaped = item_key.encode('utf8') if isinstance(item_key, str) else item_key
         item.key_escaped = b64encode(item.key_escaped)
         item.key_escaped = item.key_escaped.decode('utf8')
 

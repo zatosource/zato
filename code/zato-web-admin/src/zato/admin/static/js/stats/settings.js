@@ -6,10 +6,9 @@ $(document).ready(function() {
 
     $.each(fields, function(ignored, suffix) {
         var id = '#id_' + suffix;
-        $(id).attr('data-bvalidator', 'digit,required');
-        $(id).attr('data-bvalidator-msg', 'Enter an integer');
+        $(id).attr('data-QQQ-zvalidator', 'digit,required');
+        $(id).attr('data-QQQ-zvalidator-msg', 'Enter an integer');
     })
 
-    $('#settings_form').bValidator();
+    $('#settings_form').QQQ-zvalidator();
 });
-

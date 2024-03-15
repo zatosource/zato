@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -19,8 +19,7 @@ from zato.common.pubsub import all_dict_keys, pubsub_main_data
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
-    'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', \
+len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', \
     'pubsub_tool_by_sub_key', 'pubsub_tools'
 
 # ################################################################################################################################
@@ -49,6 +48,11 @@ class GetServerList(AdminService):
             'endpoint_meta_max_history': self.pubsub.endpoint_meta_max_history,
             'data_prefix_len': self.pubsub.data_prefix_len,
             'data_prefix_short_len': self.pubsub.data_prefix_short_len,
+            'endpoints': self.pubsub.endpoint_api.endpoints,
+            'sec_id_to_endpoint_id': self.pubsub.endpoint_api.sec_id_to_endpoint_id,
+            'ws_channel_id_to_endpoint_id': self.pubsub.endpoint_api.ws_channel_id_to_endpoint_id,
+            'service_id_to_endpoint_id': self.pubsub.endpoint_api.service_id_to_endpoint_id,
+            'topics': self.pubsub.topic_api.topics,
         }
 
         for key in len_keys:
@@ -202,8 +206,8 @@ class GetEventList(_GetEventList):
     """ Returns a list of events for a particular topic. Must be invoked on the same server the data is to be returned from.
     """
     def handle(self):
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(GetServerEventList.get_name(), self.request.input, pid=self.request.input.server_pid)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetServerEventList.get_name(), self.request.input, pid=self.request.input.server_pid)
         self.response.payload[:] = response
 
 # ################################################################################################################################

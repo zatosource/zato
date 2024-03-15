@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -22,6 +22,12 @@ class TestConfig:
 
     # This topic has only one subscriber
     pubsub_topic_name_unique = '/zato/demo/unique'
+
+    # Tests will create topics with this pattern - note the trailing dot.
+    pubsub_topic_name_unique_auto_create = '/zato/demo/unique.'
+
+    # Tests will also create topics with alsothis pattern - note the trailing dot.
+    pubsub_topic_name_perf_auto_create = '/test-perf.'
 
     default_stdout = b'(None)\n'
 

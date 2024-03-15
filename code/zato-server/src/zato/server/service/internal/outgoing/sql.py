@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -60,6 +60,7 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
             for item in data:
+                item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
                 item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
             self.response.payload[:] = data
 
@@ -106,6 +107,9 @@ class Create(AdminService, _SQLService):
 
                 session.add(item)
                 session.commit()
+
+                # Make sure not to use bytes when notifying other threads
+                input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
                 self.notify_worker_threads(input)
 
@@ -165,6 +169,10 @@ class Edit(AdminService, _SQLService):
 
                 input.password = item.password
                 input.old_name = old_name
+
+                # Make sure not to use bytes when notifying other threads
+                input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
+
                 self.notify_worker_threads(input)
 
                 self.response.payload.id = item.id
@@ -268,6 +276,8 @@ class AutoPing(AdminService):
         response = response['zato_outgoing_sql_get_list_response']
 
         for item in response:
+            if not item.get('is_active'):
+                continue
             try:
                 self.invoke(Ping.get_name(), {
                     'id': item['id'],

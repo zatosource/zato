@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from inspect import isclass
@@ -70,6 +68,8 @@ KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 class SCHEDULER(Constants):
     code_start = 100000
 
+    PAUSE = ValueConstant('')
+    RESUME = ValueConstant('')
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -77,6 +77,8 @@ class SCHEDULER(Constants):
     JOB_EXECUTED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
     DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
+    SET_SERVER_ADDRESS = ValueConstant('')
+    SET_SCHEDULER_ADDRESS = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):
     code_start = 100200
@@ -205,6 +207,8 @@ class OUTGOING(Constants):
     SFTP_CHANGE_PASSWORD = ValueConstant('')
     SFTP_EXECUTE = ValueConstant('')
     SFTP_PING = ValueConstant('')
+
+    REST_WRAPPER_CHANGE_PASSWORD = ValueConstant('')
 
 class CHANNEL(Constants):
     code_start = 101000
@@ -488,16 +492,29 @@ class GENERIC(Constants):
 class SSO(Constants):
     code_start = 107200
 
-    USER_CREATE      = ValueConstant('')
-    USER_EDIT        = ValueConstant('')
+    USER_CREATE = ValueConstant('')
+    USER_EDIT   = ValueConstant('')
 
     LINK_AUTH_CREATE = ValueConstant('')
     LINK_AUTH_DELETE = ValueConstant('')
 
 class EVENT(Constants):
     code_start = 107400
-
     PUSH = ValueConstant('')
+
+class SERVER_IPC(Constants):
+    code_start = 107600
+    INVOKE = ValueConstant('')
+
+class Common(Constants):
+    code_start = 107800
+    Sync_Objects = ValueConstant('')
+
+class Groups(Constants):
+    code_start = 108000
+    Edit = ValueConstant('')
+    Edit_Member_List = ValueConstant('')
+    Delete = ValueConstant('')
 
 code_to_name = {}
 

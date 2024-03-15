@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=unused-import, unused-variable
@@ -15,7 +15,7 @@ from traceback import format_exc, format_exception
 from typing import Iterable as iterable_
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
 from gevent.thread import getcurrent
 
@@ -24,7 +24,6 @@ from zato.common.api import PUBSUB
 from zato.common.exception import RuntimeInvocationError
 from zato.common.odb.api import SQLRow
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import spawn_greenlet
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
 
@@ -127,10 +126,6 @@ class DeliveryTask:
         # A list of messages that were requested to be deleted while a delivery was in progress, checked before each delivery.
         self.delete_requested:list_['Message'] = []
 
-        # This will be set to True if the task should clear all of the messages
-        # that are currently held by its delivery list. The flag is checked before each delivery.
-        self.should_clear = False
-
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
 
@@ -148,7 +143,7 @@ class DeliveryTask:
         else:
             self.wrap_in_list = True
 
-        _ = spawn_greenlet(self.run) # noqa: F841
+        _ = spawn(self.run) # type: ignore
 
 # ################################################################################################################################
 
@@ -492,7 +487,7 @@ class DeliveryTask:
         """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
         assumming there are any waiting for it.
         """
-        # Return quickly if we already know that there are some messages to deliver ..
+        # Return quickly if we already know that there are some messages to deliver or clear ..
         if self.delivery_list:
             return True
 
@@ -509,56 +504,6 @@ class DeliveryTask:
 
         # The above conditions are not met so we explicitly return False
         return False
-
-# ################################################################################################################################
-
-    def _log_delivery_method_changed(self, current_delivery_method:'str') -> 'None':
-        logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
-            self.previous_delivery_method, current_delivery_method, self.sub_key,
-            self.topic_name, self.sub_config['endpoint_name'])
-
-# ################################################################################################################################
-
-    def _log_warnings_from_delivery_task(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
-
-        # .. log all exceptions reported by the delivery task ..
-        for idx, e in enumerate(result.exception_list, 1):
-
-            msg_logger = deliv_exc_msg.format(
-                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
-                ''.join(format_exception(type(e), e, e.__traceback__)))
-
-            msg_logger_zato = deliv_exc_msg.format(
-                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
-                e.args[0])
-
-            logger.warning(msg_logger)
-            logger_zato.warning(msg_logger_zato)
-
-# ################################################################################################################################
-
-    def _sleep_on_delivery_error(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
-
-        if result.reason_code == ReasonCode.Error_IO:
-            sleep_time = self.wait_sock_err
-        else:
-            sleep_time = self.wait_non_sock_err
-
-        exc_len_one = 'an exception'
-        exc_len_multi = '{} exceptions'
-
-        if len_exception_list == 1:
-            exc_len_msg = exc_len_one
-        else:
-            exc_len_msg = exc_len_multi.format(len_exception_list)
-
-        sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
-            sleep_time, exc_len_msg, result.delivery_iter)
-
-        logger.warning(sleep_msg)
-        logger_zato.warning(sleep_msg)
-
-        sleep(sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
 # ################################################################################################################################
 
@@ -629,18 +574,6 @@ class DeliveryTask:
 
                     with self.delivery_lock:
 
-                        # Check if we should not clear all the messages before we run the delivery ..
-                        if self.should_clear:
-
-                            # .. delete the messages first ..
-                            self._delete_messages(self.delivery_list[:])
-
-                            # .. reset the flag ..
-                            self.should_clear = False
-
-                            # .. and continue the loop ..
-                            continue
-
                         # Update last run time to be able to wake up in time for the next delivery
                         self.last_iter_run = utcnow_as_ms()
 
@@ -706,6 +639,56 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _log_delivery_method_changed(self, current_delivery_method:'str') -> 'None':
+        logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
+            self.previous_delivery_method, current_delivery_method, self.sub_key,
+            self.topic_name, self.sub_config['endpoint_name'])
+
+# ################################################################################################################################
+
+    def _log_warnings_from_delivery_task(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
+
+        # .. log all exceptions reported by the delivery task ..
+        for idx, e in enumerate(result.exception_list, 1):
+
+            msg_logger = deliv_exc_msg.format(
+                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                ''.join(format_exception(type(e), e, e.__traceback__)))
+
+            msg_logger_zato = deliv_exc_msg.format(
+                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                e.args[0])
+
+            logger.warning(msg_logger)
+            logger_zato.warning(msg_logger_zato)
+
+# ################################################################################################################################
+
+    def _sleep_on_delivery_error(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
+
+        if result.reason_code == ReasonCode.Error_IO:
+            sleep_time = self.wait_sock_err
+        else:
+            sleep_time = self.wait_non_sock_err
+
+        exc_len_one = 'an exception'
+        exc_len_multi = '{} exceptions'
+
+        if len_exception_list == 1:
+            exc_len_msg = exc_len_one
+        else:
+            exc_len_msg = exc_len_multi.format(len_exception_list)
+
+        sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
+            sleep_time, exc_len_msg, result.delivery_iter)
+
+        logger.warning(sleep_msg)
+        logger_zato.warning(sleep_msg)
+
+        sleep(sleep_time) # pyright: ignore[reportGeneralTypeIssues]
+
+# ################################################################################################################################
+
     def stop(self) -> 'None':
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
@@ -715,9 +698,6 @@ class DeliveryTask:
 
     def clear(self) -> 'None':
 
-        # Indicate to other parts of the task that a clear operation was requested
-        self.should_clear = True
-
         # For logging purposes ..
         gd, non_gd = self.get_queue_depth()
 
@@ -726,13 +706,13 @@ class DeliveryTask:
             self.sub_key, gd, non_gd, [elem.pub_msg_id for elem in self.delivery_list])
 
         # .. indicate what should be deleted in the next iteration of the self.run_delivery loop ..
-        self.delete_requested[:] = self.delivery_list[:]
+        # self.delete_requested[:] = self.delivery_list[:]
 
         # .. clear the delivery list now ..
         self.delivery_list.clear()
 
         # .. and log a higher-level message now.
-        msg = 'Clearing task messages for sub_key `%s` -> `%s`'
+        msg = 'Cleared task messages for sub_key `%s` -> `%s`'
         logger.info(msg, self.sub_key, self.py_object)
         logger_zato.info(msg, self.sub_key, self.py_object)
 

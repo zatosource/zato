@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -14,8 +14,8 @@ from traceback import format_exc
 # Zato
 from zato.common.util.api import spawn_greenlet
 from zato.common.odb.model import SSOUser as UserModel
-from zato.server.service import Service
-from zato.server.service.internal.sso import BaseRESTService, BaseSIO
+from zato.server.service import List, Service
+from zato.server.service.internal.sso import BaseRESTService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +43,7 @@ class PasswordReset(BaseRESTService):
         input_optional = 'current_app', 'credential', 'token', 'reset_key', 'password'
 
         output_required = 'status', 'cid'
-        output_optional = BaseSIO.output_optional + ('reset_key',)
+        output_optional = ('reset_key', List('sub_status'))
 
         # Do not wrap elements in a top-level root element
         response_elem = None

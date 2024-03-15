@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
@@ -39,6 +39,7 @@ from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
+from zato.admin.web.views import groups
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -62,7 +63,6 @@ from zato.admin.web.views.outgoing.redis.data_dict import translation as out_red
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
-from zato.admin.web.views.pubsub.task import sync as pubsub_task_sync
 from zato.admin.web.views.pubsub.task import delivery as pubsub_task
 from zato.admin.web.views.pubsub.task.delivery import message as pubsub_task_message
 from zato.admin.web.views.pubsub.task.delivery import server as pubsub_task_delivery_server
@@ -78,6 +78,7 @@ from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as
 from zato.admin.web.views.security.vault import connection as vault_conn
 from zato.admin.web.views.stats import service_usage as stats_service_usage
 from zato.admin.web.views.stats import user as stats_user
+from zato.admin.web.views.vendors import keysight_vision
 
 urlpatterns = [
 
@@ -992,6 +993,9 @@ urlpatterns += [
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
+    url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
+        login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
+
     ]
 
 # ################################################################################################################################
@@ -1560,32 +1564,32 @@ urlpatterns += [
         login_required(pubsub_task_message.get), name='pubsub-task-message'),
 
     # PubSub objects / tools
-    url(r'^zato/pubsub/task/sync/$',
-        login_required(pubsub_task_sync.Index()), name=pubsub_task_sync.Index.url_name),
-
+    # url(r'^zato/pubsub/task/sync/$',
+    #     login_required(pubsub_task_sync.Index()), name=pubsub_task_sync.Index.url_name),
+    #
     # PubSub tools - dict keys
-    url(r'^zato/pubsub/task/sync/dict-keys/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.SubscriptionDictKeys()), name=pubsub_task_sync.SubscriptionDictKeys.url_name),
-
+    # url(r'^zato/pubsub/task/sync/dict-keys/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.SubscriptionDictKeys()), name=pubsub_task_sync.SubscriptionDictKeys.url_name),
+    #
     # PubSub tools - dict values - subscriptions
-    url(r'^zato/pubsub/task/sync/dict-values/sub/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.DictValuesSubscriptions()), name=pubsub_task_sync.DictValuesSubscriptions.url_name),
-
+    # url(r'^zato/pubsub/task/sync/dict-values/sub/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.DictValuesSubscriptions()), name=pubsub_task_sync.DictValuesSubscriptions.url_name),
+    #
     # PubSub tools - dict values - sub key servers
-    url(r'^zato/pubsub/task/sync/dict-values/sks/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.DictValuesSubKeyServer()), name=pubsub_task_sync.DictValuesSubKeyServer.url_name),
-
+    # url(r'^zato/pubsub/task/sync/dict-values/sks/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.DictValuesSubKeyServer()), name=pubsub_task_sync.DictValuesSubKeyServer.url_name),
+    #
     # PubSub tools - dict values - endpoints
-    url(r'^zato/pubsub/task/sync/dict-values/endpoint/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.DictValuesEndpoints()), name=pubsub_task_sync.DictValuesEndpoints.url_name),
-
+    # url(r'^zato/pubsub/task/sync/dict-values/endpoint/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.DictValuesEndpoints()), name=pubsub_task_sync.DictValuesEndpoints.url_name),
+    #
     # PubSub tools - dict values - topics
-    url(r'^zato/pubsub/task/sync/dict-values/topic/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.DictValuesTopics()), name=pubsub_task_sync.DictValuesTopics.url_name),
-
+    # url(r'^zato/pubsub/task/sync/dict-values/topic/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.DictValuesTopics()), name=pubsub_task_sync.DictValuesTopics.url_name),
+    #
     # PubSub tools - event list
-    url(r'^zato/pubsub/task/sync/event-list/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_sync.EventList()), name=pubsub_task_sync.EventList.url_name),
+    # url(r'^zato/pubsub/task/sync/event-list/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+    #     login_required(pubsub_task_sync.EventList()), name=pubsub_task_sync.EventList.url_name),
 
     # Per-server delivery tasks
 
@@ -1633,7 +1637,69 @@ urlpatterns += [
     ]
 
 # ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Vendors
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Vendors - Keysight Vision Series
+    url(r'^zato/vendors/keysight/vision/$',
+        login_required(keysight_vision.Index()), name=keysight_vision.Index.url_name),
+    url(r'^zato/vendors/keysight/vision/create/$',
+        login_required(keysight_vision.Create()), name=keysight_vision.Create.url_name),
+    url(r'^zato/vendors/keysight/vision/edit/$',
+        login_required(keysight_vision.Edit()), name=keysight_vision.Edit.url_name),
+    url(r'^zato/vendors/keysight/vision/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(keysight_vision.Delete()), name=keysight_vision.Delete.url_name),
+    url(r'^zato/vendors/keysight/vision/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(keysight_vision.ping), name='vendors-keysight-vision-ping'),
+    url(r'^zato/vendors/keysight/vision/change-password/$',
+        login_required(keysight_vision.change_password), name='vendors-keysight-vision-change-password'),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Groups
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Groups
+
+    url(r'^zato/groups/members/action/(?P<action>.*)/group/(?P<group_id>.*)/id-list/(?P<member_id_list>.*)/$',
+        login_required(groups.members_action), name='groups-members-action'),
+    url(r'^zato/groups/members/(?P<group_type>.*)/(?P<group_id>.*)/$', # type: ignore
+        login_required(groups.manage_group_members), name='groups-members-manage'),
+    url(r'^zato/groups/group/(?P<group_type>.*)/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(groups.Delete()), name=groups.Delete.url_name),
+
+    url(r'^zato/groups/get-security-list/$', # type: ignore
+        login_required(groups.get_security_list), name='groups-get-security-list'),
+
+    url(r'^zato/groups/get-member-list/$', # type: ignore
+        login_required(groups.get_member_list), name='groups-get-member-list'),
+
+    url(r'^zato/groups/group/(?P<group_type>.*)/$',
+        login_required(groups.Index()), name=groups.Index.url_name),
+    url(r'^zato/groups/create/$',
+        login_required(groups.Create()), name=groups.Create.url_name),
+    url(r'^zato/groups/edit/$',
+        login_required(groups.Edit()), name=groups.Edit.url_name),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
+# ################################################################################################################################
+# ################################################################################################################################

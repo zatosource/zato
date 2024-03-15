@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -36,6 +36,8 @@ def update_globals(config, base_dir='.', needs_crypto=True):
     for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
         config[name] = config[name].encode('utf8')
 
+    is_sqlite = config['db_type'] == 'sqlite'
+
     # If secret key is not given directly in the config file, we will expect to find it
     # on command line.
     zato_secret_key = config['zato_secret_key']
@@ -49,9 +51,17 @@ def update_globals(config, base_dir='.', needs_crypto=True):
         if k.startswith('DATABASE_'):
             default = globals()['DATABASES']['default']
             k = k.replace('DATABASE_', '', 1)
-            if k == 'PASSWORD' and config['db_type'] != 'sqlite':
-                v = cm.decrypt(v)
-            default[k] = str(v)
+
+            if not is_sqlite:
+                if k == 'PASSWORD':
+                    v = cm.decrypt(v)
+
+                if k == 'OPTIONS':
+                    continue
+
+            v = str(v) if k != 'OPTIONS' else v
+            default[k] = v
+
         else:
             if k == 'ADMIN_INVOKE_PASSWORD' and needs_crypto:
                 v = cm.decrypt(v)

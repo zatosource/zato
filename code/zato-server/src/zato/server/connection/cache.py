@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64encode
@@ -27,6 +25,7 @@ from paste.util.converters import asbool
 from zato.cache import Cache as _CyCache
 from zato.common.api import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
+from zato.common.typing_ import cast_
 from zato.common.util.api import parse_extra_into_dict
 
 # Python 2/3 compatibility
@@ -35,9 +34,17 @@ from zato.common.py23_.past.builtins import basestring
 from zato.common.py23_ import pickle_dumps
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 builtin_ops = [
@@ -118,10 +125,18 @@ class Cache:
 
 # ################################################################################################################################
 
-    def get(self, key, default=default_get, details=False):
+    def get(self, key, default=default_get, details=False) -> 'any_':
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
         """
         return self.impl.get(key, default if default != default_get else self.impl.default_get, details)
+
+# ################################################################################################################################
+
+    def has_key(self, key, default=default_get, details=False) -> 'bool':
+        """ Returns True or False, depending on whether such a key exists in the cache or not.
+        """
+        value = self.get(key, default=default, details=details)
+        return value != ZATO_NOT_GIVEN
 
 # ################################################################################################################################
 
@@ -809,7 +824,7 @@ class Cache:
 
 class _NotConfiguredAPI:
     def set(self, *args, **kwargs):
-        raise Exception('Default cache is not configured')
+        logger.warn('Default cache is not configured')
     get = set
 
 # ################################################################################################################################
@@ -820,7 +835,7 @@ class CacheAPI:
     def __init__(self, server):
         self.server = server
         self.lock = RLock()
-        self.default = _NotConfiguredAPI()
+        self.default = cast_('Cache', _NotConfiguredAPI())
         self.caches = {
             CACHE.TYPE.BUILTIN:{},
             CACHE.TYPE.MEMCACHED:{},
@@ -859,7 +874,9 @@ class CacheAPI:
                 else:
                     data['is_value_pickled'] = True
                     value = _pickle_dumps(value)
-                    data['value'] = b64encode(value)
+                    value = b64encode(value)
+                    value = value.decode('utf8')
+                    data['value'] = value
             else:
                 data['is_value_pickled'] = False
 
@@ -981,14 +998,37 @@ class CacheAPI:
         """
         with self.lock:
             self._clear(cache_type, name)
+#
+# ################################################################################################################################
+
+    def _get_cache(self, cache_type:'str', name:'str') -> 'Cache':
+        """ Actually returns a cache. Must be called with self.lock held.
+        """
+        return self.caches[cache_type][name]
 
 # ################################################################################################################################
 
-    def get_cache(self, cache_type, name):
+    def get_cache(self, cache_type:'str', name:'str') -> 'Cache':
         """ Returns the lower-level cache implementation object by its type and name.
         """
         with self.lock:
             return self.caches[cache_type][name]
+
+# ################################################################################################################################
+
+    def get_builtin_cache(self, name):
+        """ Returns a built-in cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.BUILTIN, name)
+
+# ################################################################################################################################
+
+    def get_memcached_cache(self, name):
+        """ Returns a Memcached cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.MEMCACHED, name)
 
 # ################################################################################################################################
 

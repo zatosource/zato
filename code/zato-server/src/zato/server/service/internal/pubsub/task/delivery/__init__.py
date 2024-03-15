@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -54,27 +54,28 @@ class GetServerDeliveryTaskList(AdminService):
                     if last_sync:
                         last_sync = datetime_from_ms(last_sync * 1000)
 
-                    endpoint_id = self.pubsub.get_subscription_by_sub_key(task.sub_key).endpoint_id
-                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    if sub := self.pubsub.get_subscription_by_sub_key(task.sub_key):
+                        endpoint_id = sub.endpoint_id
+                        endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
 
-                    out.append({
-                        'server_name': ps_tool.server_name,
-                        'server_pid': ps_tool.server_pid,
-                        'endpoint_id': endpoint.id,
-                        'endpoint_name': endpoint.name,
-                        'py_object': task.py_object,
-                        'python_id': task.python_id,
-                        'sub_key': task.sub_key,
-                        'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
-                        'topic_name': task.topic_name,
-                        'is_active': task.keep_running,
-                        'len_messages': len(task.delivery_list),
-                        'len_history': len(task.delivery_list),
-                        'last_sync': last_sync,
-                        'last_iter_run': datetime_from_ms(task.last_iter_run * 1000),
-                        'len_batches': task.len_batches,
-                        'len_delivered': task.len_delivered,
-                    })
+                        out.append({
+                            'server_name': ps_tool.server_name,
+                            'server_pid': ps_tool.server_pid,
+                            'endpoint_id': endpoint.id,
+                            'endpoint_name': endpoint.name,
+                            'py_object': task.py_object,
+                            'python_id': task.python_id,
+                            'sub_key': task.sub_key,
+                            'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
+                            'topic_name': task.topic_name,
+                            'is_active': task.keep_running,
+                            'len_messages': len(task.delivery_list),
+                            'len_history': len(task.delivery_list),
+                            'last_sync': last_sync,
+                            'last_iter_run': datetime_from_ms(task.last_iter_run * 1000),
+                            'len_batches': task.len_batches,
+                            'len_delivered': task.len_delivered,
+                        })
 
         # Return the list of tasks sorted by sub_keys and their Python names
         return sorted(out, key=itemgetter('sub_key', 'py_object'))
@@ -93,7 +94,8 @@ class GetDeliveryTaskList(AdminService):
 
     def handle(self):
 
-        self.response.payload[:] = self.server.rpc[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        self.response.payload[:] = invoker.invoke(GetServerDeliveryTaskList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
         }, pid=self.request.input.server_pid)
 
@@ -114,7 +116,8 @@ class GetDeliveryTask(AdminService):
             'server_pid': self.request.input.server_pid,
         }
 
-        response = self.server.rpc[self.request.input.server_name].invoke(GetDeliveryTaskList.get_name(), request)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetDeliveryTaskList.get_name(), request)
 
         for item in response:
             if item['python_id'] == self.request.input.python_id:

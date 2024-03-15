@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # This comes first
@@ -104,7 +104,7 @@ class OAuthStoreTestCase(_BaseTestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

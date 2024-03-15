@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=attribute-defined-outside-init
@@ -16,7 +16,7 @@ from logging import getLogger
 from zato.bunch import Bunch
 from zato.common.api import AuditLog, RATE_LIMIT
 from zato.common.audit_log import LogContainerConfig
-from zato.common.const import SECRETS
+from zato.common.const import SECRETS, ServiceConst
 from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -54,6 +54,88 @@ class ModuleCtx:
 class ConfigLoader:
     """ Loads server's configuration.
     """
+
+# ################################################################################################################################
+
+    def set_up_security(self:'ParallelServer', cluster_id:'int') -> 'None':
+
+        # API keys
+        query = self.odb.get_apikey_security_list(cluster_id, True)
+        self.config.apikey = ConfigDict.from_query('apikey', query, decrypt_func=self.decrypt)
+
+        # AWS
+        query = self.odb.get_aws_security_list(cluster_id, True)
+        self.config.aws = ConfigDict.from_query('aws', query, decrypt_func=self.decrypt)
+
+        # HTTP Basic Auth
+        query = self.odb.get_basic_auth_list(cluster_id, None, True)
+        self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
+
+        # JWT
+        query = self.odb.get_jwt_list(cluster_id, None, True)
+        self.config.jwt = ConfigDict.from_query('jwt', query, decrypt_func=self.decrypt)
+
+        # NTLM
+        query = self.odb.get_ntlm_list(cluster_id, True)
+        self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
+
+        # OAuth
+        query = self.odb.get_oauth_list(cluster_id, True)
+        self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
+
+        # RBAC - permissions
+        query = self.odb.get_rbac_permission_list(cluster_id, True)
+        self.config.rbac_permission = ConfigDict.from_query('rbac_permission', query, decrypt_func=self.decrypt)
+
+        # RBAC - roles
+        query = self.odb.get_rbac_role_list(cluster_id, True)
+        self.config.rbac_role = ConfigDict.from_query('rbac_role', query, decrypt_func=self.decrypt)
+
+        # RBAC - client roles
+        query = self.odb.get_rbac_client_role_list(cluster_id, True)
+        self.config.rbac_client_role = ConfigDict.from_query('rbac_client_role', query, decrypt_func=self.decrypt)
+
+        # RBAC - role permission
+        query = self.odb.get_rbac_role_permission_list(cluster_id, True)
+        self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query, decrypt_func=self.decrypt)
+
+        # TLS CA certs
+        query = self.odb.get_tls_ca_cert_list(cluster_id, True)
+        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query, decrypt_func=self.decrypt)
+
+        # TLS channel security
+        query = self.odb.get_tls_channel_sec_list(cluster_id, True)
+        self.config.tls_channel_sec = ConfigDict.from_query('tls_channel_sec', query, decrypt_func=self.decrypt)
+
+        # TLS key/cert pairs
+        query = self.odb.get_tls_key_cert_list(cluster_id, True)
+        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query, decrypt_func=self.decrypt)
+
+        # Vault connections
+        query = self.odb.get_vault_connection_list(cluster_id, True)
+        self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query, decrypt_func=self.decrypt)
+
+        # Encrypt all secrets
+        self._encrypt_secrets()
+
+# ################################################################################################################################
+
+    def set_up_pubsub(self:'ParallelServer', cluster_id:'int') -> 'None':
+
+        # Pub/sub
+        self.config.pubsub = Bunch()
+
+        # Pub/sub - endpoints
+        query = self.odb.get_pubsub_endpoint_list(cluster_id, True)
+        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query, decrypt_func=self.decrypt)
+
+        # Pub/sub - topics
+        query = self.odb.get_pubsub_topic_list(cluster_id, True)
+        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query, decrypt_func=self.decrypt)
+
+        # Pub/sub - subscriptions
+        query = self.odb.get_pubsub_subscription_list(cluster_id, True)
+        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query, decrypt_func=self.decrypt)
 
 # ################################################################################################################################
 
@@ -255,64 +337,7 @@ class ConfigLoader:
         # Security - start
         #
 
-        # API keys
-        query = self.odb.get_apikey_security_list(server.cluster.id, True)
-        self.config.apikey = ConfigDict.from_query('apikey', query, decrypt_func=self.decrypt)
-
-        # AWS
-        query = self.odb.get_aws_security_list(server.cluster.id, True)
-        self.config.aws = ConfigDict.from_query('aws', query, decrypt_func=self.decrypt)
-
-        # HTTP Basic Auth
-        query = self.odb.get_basic_auth_list(server.cluster.id, None, True)
-        self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
-
-        # JWT
-        query = self.odb.get_jwt_list(server.cluster.id, None, True)
-        self.config.jwt = ConfigDict.from_query('jwt', query, decrypt_func=self.decrypt)
-
-        # NTLM
-        query = self.odb.get_ntlm_list(server.cluster.id, True)
-        self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
-
-        # OAuth
-        query = self.odb.get_oauth_list(server.cluster.id, True)
-        self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
-
-        # RBAC - permissions
-        query = self.odb.get_rbac_permission_list(server.cluster.id, True)
-        self.config.rbac_permission = ConfigDict.from_query('rbac_permission', query, decrypt_func=self.decrypt)
-
-        # RBAC - roles
-        query = self.odb.get_rbac_role_list(server.cluster.id, True)
-        self.config.rbac_role = ConfigDict.from_query('rbac_role', query, decrypt_func=self.decrypt)
-
-        # RBAC - client roles
-        query = self.odb.get_rbac_client_role_list(server.cluster.id, True)
-        self.config.rbac_client_role = ConfigDict.from_query('rbac_client_role', query, decrypt_func=self.decrypt)
-
-        # RBAC - role permission
-        query = self.odb.get_rbac_role_permission_list(server.cluster.id, True)
-        self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query, decrypt_func=self.decrypt)
-
-        # TLS CA certs
-        query = self.odb.get_tls_ca_cert_list(server.cluster.id, True)
-        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query, decrypt_func=self.decrypt)
-
-        # TLS channel security
-        query = self.odb.get_tls_channel_sec_list(server.cluster.id, True)
-        self.config.tls_channel_sec = ConfigDict.from_query('tls_channel_sec', query, decrypt_func=self.decrypt)
-
-        # TLS key/cert pairs
-        query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
-        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query, decrypt_func=self.decrypt)
-
-        # Vault connections
-        query = self.odb.get_vault_connection_list(server.cluster.id, True)
-        self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query, decrypt_func=self.decrypt)
-
-        # Encrypt all secrets
-        self._encrypt_secrets()
+        self.set_up_security(server.cluster_id)
 
         #
         # Security - end
@@ -356,20 +381,19 @@ class ConfigLoader:
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
         self.config.simple_io['bytes_to_str'] = {'encoding': self.sio_config.bytes_to_str_encoding or None}
 
-        # Pub/sub
-        self.config.pubsub = Bunch()
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        # Pub/sub - endpoints
-        query = self.odb.get_pubsub_endpoint_list(server.cluster.id, True)
-        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query, decrypt_func=self.decrypt)
+        #
+        # Pub/sub - start
+        #
 
-        # Pub/sub - topics
-        query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
-        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query, decrypt_func=self.decrypt)
+        self.set_up_pubsub(self.cluster_id)
 
-        # Pub/sub - subscriptions
-        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
-        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query, decrypt_func=self.decrypt)
+        #
+        # Pub/sub - end
+        #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
@@ -379,12 +403,29 @@ class ConfigLoader:
         query = self.odb.get_email_imap_list(server.cluster.id, True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
 
-        # HTTP access log should optionally ignore certain requests
-        access_log_ignore = self.fs_server_config.get('logging', {}).get('http_access_log_ignore')
+        # .. reusable ..
+        _logging_stanza = self.fs_server_config.get('logging', {})
+
+        # HTTP access log should optionally ignore certain requests ..
+        access_log_ignore = _logging_stanza.get('http_access_log_ignore')
         if access_log_ignore:
             access_log_ignore = access_log_ignore if isinstance(access_log_ignore, list) else [access_log_ignore]
             self.needs_all_access_log = False
             self.access_log_ignore.update(access_log_ignore)
+
+        # .. same goes for REST log entries that go to the server log ..
+
+        # .. if it does not exist, we need to populate it ourselves ..
+        _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
+
+        if not _has_rest_log_ignore:
+            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path]
+        else:
+            rest_log_ignore = _logging_stanza['rest_log_ignore']
+            rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]
+
+        # .. now, update the set of channels to ignore the REST log for ..
+        self.rest_log_ignore.update(rest_log_ignore)
 
         # Assign config to worker
         self.worker_store.worker_config = self.config

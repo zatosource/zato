@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -87,7 +87,7 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(OutgoingOdoo, _auth, OUTGOING.ODOO_CHANGE_PASSWORD.value,
-            publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size'])
+            publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size', 'is_active'])
 
 # ################################################################################################################################
 

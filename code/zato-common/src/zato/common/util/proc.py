@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -104,7 +104,7 @@ class _StdErr:
 # ################################################################################################################################
 
 def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
-        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
+        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
@@ -165,7 +165,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
 # ################################################################################################################################
 
 def start_python_process(component_name, run_in_fg, py_path, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-        extra_options=None, stderr_path=None, stdin_data=None):
+        extra_options=None, stderr_path=None, stdin_data=None) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     options = {

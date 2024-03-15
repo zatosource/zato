@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -28,10 +28,12 @@ from builtins import str as text
 from six import PY3
 
 # Zato
-from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.api import BROKER, URLInfo, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
+from zato.common.util.config import get_url_protocol_from_config_item
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
@@ -41,6 +43,12 @@ DEFAULT_MAX_RESPONSE_REPR = 2500
 DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strtuple
 
 # ################################################################################################################################
 # Version
@@ -319,12 +327,23 @@ class RawDataResponse(_Response):
 class _Client:
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
+
+    service_address: 'str'
+    session: 'any_'
+
     def __init__(self, address, path, auth=None, session=None, to_bunch=False,
                  max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None,
                  tls_verify=True):
+
         self.address = address
-        self.service_address = '{}{}'.format(address, path)
-        self.session = session or requests.session()
+        self.path = path
+
+        self.auth     = auth    # type: strtuple
+        self.username = auth[0] # type: str
+        self.password = auth[1] # type: str
+
+        self.set_service_address()
+        self.set_session(session)
 
         for adapter in self.session.adapters.values():
             retry = Retry(connect=4, backoff_factor=0.1)
@@ -339,6 +358,8 @@ class _Client:
 
         if not self.session.auth:
             self.session.auth = auth
+
+# ################################################################################################################################
 
     def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
@@ -357,12 +378,42 @@ class _Client:
 
         return response
 
+# ################################################################################################################################
+
     def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
         return self.inner_invoke(request, response_class, is_async, headers)
 
+# ################################################################################################################################
+
+    def set_service_address(self):
+        self.service_address = '{}{}'.format(self.address, self.path)
+
+# ################################################################################################################################
+
+    def set_address(self, url:'URLInfo') -> 'None':
+
+        # Extract details from the URL ..
+        protocol = get_url_protocol_from_config_item(url.use_tls)
+
+        # .. build a new address ..
+        address = f'{protocol}://{url.host}:{url.port}'
+
+        # .. set it for later use ..
+        self.address = address
+
+        # .. and rebuild the underlying configuration.
+        self.set_service_address()
+        self.set_session(None)
+
+# ################################################################################################################################
+
+    def set_session(self, session:'any_') -> 'None':
+        self.session = session or requests.session()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _JSONClient(_Client):
@@ -425,10 +476,10 @@ class AnyServiceInvoker(_Client):
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
             ServiceInvokeResponse, is_async, headers, output_repeated)
 
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(is_async=False, *args, **kwargs)
 
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(is_async=True, *args, **kwargs)
 
 # ################################################################################################################################
@@ -450,12 +501,22 @@ class ZatoClient(AnyServiceInvoker):
 
 # ################################################################################################################################
 
-def get_client_from_credentials(server_url:'str', client_auth:'tuple') -> 'ZatoClient':
-    return ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+def get_client_from_credentials(use_tls:'bool', server_url:'str', client_auth:'tuple') -> 'ZatoClient':
+    api_protocol = get_url_protocol_from_config_item(use_tls)
+    address = f'{api_protocol}://{server_url}'
+    return ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path, client_auth, max_response_repr=15000)
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
+def get_client_from_server_conf(
+    server_dir,
+    client_auth_func,
+    get_config_func,
+    server_url=None,
+    stdin_data=None,
+    *,
+    url_path=None,
+):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
     # stdlib
@@ -473,18 +534,32 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     secrets_conf = get_config_func(
-        repo_location, 'secrets.conf', needs_user_config=False,
-        crypto_manager=crypto_manager, secrets_conf=secrets_config)
+        repo_location,
+        'secrets.conf',
+        needs_user_config=False,
+        crypto_manager=crypto_manager,
+        secrets_conf=secrets_config
+    )
 
-    config = get_config_func(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
+    config = get_config_func(
+        repo_location,
+        'server.conf',
+        crypto_manager=crypto_manager,
+        secrets_conf=secrets_conf,
+    )
 
     # Note that we cannot use 0.0.0.0 under Windows but, since it implies localhost, we can just replace it as below.
     server_url = server_url if server_url else config.main.gunicorn_bind # type: str
     server_url = server_url.replace('0.0.0.0', '127.0.0.1')
 
-    client_auth = client_auth_func(config, repo_location, crypto_manager, False)
+    client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)
 
-    client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+    use_tls = config.crypto.use_tls
+    api_protocol = get_url_protocol_from_config_item(use_tls)
+    address = f'{api_protocol}://{server_url}'
+
+    client = ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path,
+        client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 
     client.cluster_id = session.query(Server).\
