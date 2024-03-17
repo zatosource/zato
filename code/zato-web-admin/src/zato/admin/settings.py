@@ -84,8 +84,8 @@ MEDIA_URL = '/static/'
 # Examples: 'https://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
-CSP_DEFAULT_SRC = ["'none'"]
-CSP_IMG_SRC     = ["'self'"]
+CSP_DEFAULT_SRC = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
+CSP_IMG_SRC     = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
 CSP_STYLE_SRC   = ["'self'"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
 CSP_CONNECT_SRC = ["'self'"]

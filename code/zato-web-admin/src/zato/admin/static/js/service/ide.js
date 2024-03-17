@@ -22,7 +22,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         enableLiveAutocompletion: true,
         newLineMode: "unix",
         fontSize: 13, // 16
-        fontFamily: "Source Code Pro", // Ubuntu Mono
+        fontFamily: "monospace", // Ubuntu Mono
         cursorStyle: "ace"
     });
 

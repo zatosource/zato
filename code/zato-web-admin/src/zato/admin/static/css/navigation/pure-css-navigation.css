@@ -145,7 +145,7 @@ ul {
     visibility:hidden;
      opacity:0;
      position:absolute;
-     z-index:1;
+     z-index:1999999;
      display:block;
 }
  .pure-css-nav > nav ul li:hover > ul {
