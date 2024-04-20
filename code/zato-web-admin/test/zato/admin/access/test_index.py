@@ -131,7 +131,7 @@ class IndexTestCase(BaseTestCase):
             # .. if we are here, it means that we can visit the URL
             # .. and confirm that all of its responses were fine.
             if should_continue:
-                address = self.config.web_admin_address + item.path# + '?cluster=1'
+                address = self.config.web_admin_address + item.path
                 logger.info('Accessing %s', address)
                 self.client.get(address)
                 self.check_response_statuses()
