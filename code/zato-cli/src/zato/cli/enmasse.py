@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import chain
 from time import sleep
+from uuid import uuid4
 
 # Zato
 from zato.cli import ManageCommand
@@ -1571,7 +1572,7 @@ class ObjectImporter:
                             if key.startswith(('is_', 'should_', 'needs_')):
                                 value = None
                             else:
-                                value = 'Env-Value-Not-Found-' + orig_value
+                                value = 'Env-Value-Not-Found-' + orig_value + '.' + uuid4().hex
 
                     attrs[key] = value
 
@@ -3301,7 +3302,7 @@ class Enmasse(ManageCommand):
         out:'strlist' = []
 
         # Turn the string into a list of items that we will process ..
-        include_type:'strlist' = include_type.split(',')
+        include_type:'strlist' = include_type.split(',') # type: ignore
         include_type = [item.strip().lower() for item in include_type]
 
         # .. ignore explicit types if all types are to be returned ..
