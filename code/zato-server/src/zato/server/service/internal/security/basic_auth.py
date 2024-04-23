@@ -219,7 +219,7 @@ class Delete(AdminService):
                     one()
 
                 session.delete(auth)
-                # session.commit()
+                session.commit()
             except Exception:
                 self.logger.error('Could not delete HTTP Basic Auth definition, e:`%s`', format_exc())
                 session.rollback()
