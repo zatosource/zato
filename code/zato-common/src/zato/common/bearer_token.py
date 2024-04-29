@@ -145,7 +145,7 @@ class BearerTokenManager:
     ) -> 'BearerTokenInfo':
 
         # Local variables
-        _needs_json = data_format == Data_Format
+        _needs_json = data_format == Data_Format.JSON
 
         # The content type will depend on whether it is JSON or not
         if _needs_json:
