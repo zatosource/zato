@@ -286,6 +286,11 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $("<a class=\"header-sublink-first\" href=\"#\">Copy</a>").insertAfter("#header-status");
     */
 
+    // Reset the result header to its default state but not the text itself
+    // because we still want to show the previous response
+    let result_header = $("#result-header");
+    result_header.removeClass("invoker-draw-attention");
+
     // One-line status bar
     $("#header-status").text(initial_header_status);
 
