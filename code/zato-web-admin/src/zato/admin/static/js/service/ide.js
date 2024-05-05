@@ -239,7 +239,7 @@ $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
 
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
-    $.fn.zato.ide.add_header_left_link("deploy-all", "Deploy all");
+    $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     $.fn.zato.ide.add_header_left_link("new", "New");
     $.fn.zato.ide.add_header_left_link("rename-file", "Rename");
     $.fn.zato.ide.add_header_left_link("delete-file", "Delete", true);
@@ -266,7 +266,7 @@ $.fn.zato.ide.populate_invoker_area = function() {
 
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
-    $.fn.zato.ide.add_header_left_link("deploy-all", "Deploy all");
+    $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     $.fn.zato.ide.add_header_left_link("previous", "Previous");
     $.fn.zato.ide.add_header_left_link("next", "Next");
     $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
