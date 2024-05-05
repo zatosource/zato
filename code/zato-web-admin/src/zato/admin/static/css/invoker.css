@@ -1,0 +1,37 @@
+
+/* ***************************** */
+
+.invoker-blinking {
+    display: inline;
+    color: inherit;
+    animation: blink 0.8s steps(1) infinite;
+    -webkit-animation: blink 0.8s steps(1) infinite;
+}
+
+@keyframes blink {
+    70% {color: #ccc;}
+}
+@-webkit-keyframes blink {
+    70% {color: #ccc;}
+}
+
+/* ***************************** */
+
+#result-header {
+    padding: 0.4rem;
+    padding-left: 0rem;
+}
+
+.invoker-draw-attention {
+    animation: invoker-draw-attention 0.6s 2 linear;
+}
+
+@keyframes invoker-draw-attention {
+    0%   { background: #fff; }
+    25%  { background: #ebf4fa; }
+    50%  { background: #deedf8; }
+    75%  { background: #ebf4fa; }
+    100% { background: #fff; }
+  }
+
+/* ***************************** */
