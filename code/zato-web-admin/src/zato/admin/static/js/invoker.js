@@ -40,6 +40,31 @@ $.fn.zato.invoker.invoke = function(
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_status, error_message) {
+
+    // Local variables
+    let on_started_activate_blinking = options["on_started_activate_blinking"];
+    let on_ended_draw_attention = options["on_ended_draw_attention"];
+
+    // Disable blinking for all the elements that should blink
+    on_started_activate_blinking.each(function(elem) {
+        $.fn.zato.toggle_css_class($(elem), "invoker-blinking", "hidden");
+    });
+
+    // End by draw attention to specific elements
+    on_ended_draw_attention.each(function(elem) {
+        let _elem = $(elem);
+        _elem.removeClass("hidden");
+        _elem.removeClass("invoker-draw-attention");
+        _elem.addClass("invoker-draw-attention", 1);
+    });
+}
+
+$.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.run_sync_invoker = function(options) {
 
     console.log("Options 1: " +  Object.entries(options));
@@ -52,12 +77,18 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
 
     // Show elements that by default were hidden
     on_started_remove_hidden.each(function(elem) {
-        $(elem).removeClass("hidden");
+        //$(elem).removeClass("hidden");
     });
 
     // Enable blinking for all the elements that should blink
     on_started_activate_blinking.each(function(elem) {
         $.fn.zato.toggle_css_class($(elem), "hidden", "invoker-blinking");
+    });
+
+    // Disable all the elements that previously might have needed attention
+    on_ended_draw_attention.each(function(elem) {
+        let _elem = $(elem);
+        _elem.addClass("hidden");
     });
 
     // Submit the form, if we have one on input
@@ -71,70 +102,21 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
             data: form_data,
             processData: false,
             contentType: false,
-            error: function(jqXHR, text_status, error_message) {
-                console.log(error_message);
+            error: function(jq_xhr, text_status, error_message) {
+                let _on_error = function() {
+                    $.fn.zato.invoker.on_sync_invoke_ended_error(options, jq_xhr, text_status, error_message);
+                }
+                setTimeout(_on_error, 350)
             },
-            success: function(data) {console.log(data)}
+            success: function(data) {
+                let _on_success = function() {
+                    $.fn.zato.invoker.on_sync_invoke_ended_on_success(options, data);
+                }
+                setTimeout(_on_success, 350)
+            }
         });
 
     }
-
-    // End by draw attention to specific elements
-    on_ended_draw_attention2.each(function(elem) {
-        let _elem = $(elem);
-        _elem.removeClass("hidden");
-        _elem.removeClass("invoker-draw-attention");
-        _elem.addClass("invoker-draw-attention", 1);
-    });
-
-    /*
-
-    var _callback = function(data, status, xhr){
-        var success = status == 'success';
-        if(success) {
-            let action_verb = $('#action_verb').val() || 'action-verb-html-js';
-            $.fn.zato.user_message(true, 'OK, '+ action_verb +' successfully');
-            $('#response_data').text(JSON.stringify(data) || '(No response)');
-        }
-        else {
-            $.fn.zato.user_message(false, 'Invocation error -> `' + status + '`');
-            $('#response_data').text(data.responseText);
-        }
-    }
-
-    var options = {
-        success: _callback,
-        error:  _callback,
-        resetForm: false,
-        'dataType': 'json',
-    };
-
-    form.ajaxSubmit(options);
-    return false;
-    */
-
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-/*
-$(document).ready(function() {
-
-    var _callback = function(data, status, xhr){
-        var success = status == 'success';
-        var msg = success ? data : data.responseText;
-        $.fn.zato.user_message(success, msg);
-    }
-
-    var options = {
-        success: _callback,
-        error:  _callback,
-        resetForm: false,
-    };
-
-    $('#invoke_service_form').submit(function() {
-        $(this).ajaxSubmit(options);
-        return false;
-    });
-});
-*/
