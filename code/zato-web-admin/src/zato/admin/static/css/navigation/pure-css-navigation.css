@@ -2,17 +2,21 @@
 /* Customizable styles */
 
 .pure-css-nav {
+   position: relative;
    background-color:#363636;
    border-bottom: 3px solid #aaa;
+   z-index: 9999;
 }
 
 div.nav-container {
    background-color: #363636;
-   height:2.1rem
+   height:2.5rem;
+   z-index: 9999;
 }
 
 nav.menu {
    background-color:#363636;
+   z-index: 9999;
 }
 
 nav.menu ul.left {
@@ -57,17 +61,14 @@ ul {
 }
 
 .pure-css-nav > nav ul li.first-level a {
-   font-size: 0.7rem;
+   font-size: 0.9rem;
    background-color: transparent;
 }
 
 .pure-css-nav > nav ul li.first-level a:hover {
-   font-size: 0.7rem;
    background-color: transparent;
 }
- .pure-css-nav > nav ul li a {
-     font-size:0.7rem;
-}
+
 /* Level 2 and beyond */
  .pure-css-nav > nav ul ul {
     padding-top: 0.16rem;
@@ -134,7 +135,7 @@ ul {
 }
 
 .pure-css-nav > nav ul > li.child {
-   width: 7rem;
+   width: 9rem;
 }
  .pure-css-nav > nav ul li a {
     display:block;
