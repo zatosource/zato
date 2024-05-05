@@ -48,13 +48,20 @@ img.button {
     opacity: 30%;
 }
 
-img.button.more-visible {
-    opacity: 45%;
+img.button.less-visible {
+    opacity: 25%;
+}
+
+img.button:hover {
+    background-color: #ccc;
 }
 
 img.button:hover {
     opacity: 100%;
-    background-color: #ccc;
+}
+
+img.button.less-visible:hover {
+    opacity: 60%;
 }
 
 a.img-button {
