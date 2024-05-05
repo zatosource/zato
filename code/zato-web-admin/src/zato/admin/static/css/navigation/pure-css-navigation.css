@@ -4,15 +4,18 @@
 .pure-css-nav {
    background-color:#363636;
    border-bottom: 3px solid #aaa;
+   z-index: 999;
 }
 
 div.nav-container {
    background-color: #363636;
-   height:2.1rem
+   height:2.1rem;
+   z-index: 999;
 }
 
 nav.menu {
    background-color:#363636;
+   z-index: 999;
 }
 
 nav.menu ul.left {

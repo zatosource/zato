@@ -45,11 +45,13 @@
                         </div>
                     </td>
                 </tr>
+                {% if True %}
                 <tr class="header">
                     <td colspan="2" class="header">
                         <span id="header-status" class="dimmed"></span>
                     </td>
                 </tr>
+                {% endif %}
             </table>
             <div id="file-system-listing-div">
             <table class="file-system-listing">
@@ -61,71 +63,19 @@
                     </tr>
                 {% endfor %}
 
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> **</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">api.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">model.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">crm.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">adapter_odoo.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">channel_salesforce.py</a></td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is required">
-                        customer_id *
-                        <br/>
-                        <input type="text" class="data-request" placeholder="customer_id"/>
-                    </td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is optional">
-                        account_id
-                        <br/>
-                        <input type="text" class="data-request" placeholder="account_id"/>
-                    </td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is optional">
-                        account_number
-                        <br/>
-                        <input type="text" class="data-request" placeholder="account_number"/>
-                    </td>
-                </tr>
                 <tr colspan="2" class="invoker-tr">
                     <td>
+                        <textarea id="data-request">
+                        </textarea>
+                    </td>
+                </tr>
+
+                <tr colspan="2" class="invoker-tr">
+                    <td class="align-right"">
                         <input type="button" value="Invoke" />
                     </td>
                 </tr>
+
                 <tr colspan="2" class="invoker-tr">
                     <td>
                         <br/>
@@ -170,20 +120,22 @@
 
         <ul class="side-buttons">
             <li>
-                <a href="javascript:$.fn.zato.ide.switch_to_action_area('browser')" class="img-button">
-                    <img src="/static/gfx/editor/files.png" class="button" title="Browse files on server" />
-                </a>
-            </li>
-            <li>
                 <a href="javascript:$.fn.zato.ide.switch_to_action_area('invoker')" class="img-button">
                     <img src="/static/gfx/editor/play.png" class="button" title="Invoke the current service" />
                 </a>
             </li>
             <li>
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('browser')" class="img-button">
+                    <img src="/static/gfx/editor/files.png" class="button" title="Browse files on server" />
+                </a>
+            </li>
+            {% if False %}
+            <li>
                 <a href="javascript:$.fn.zato.ide.switch_to_action_area('info')" class="img-button">
                     <img src="/static/gfx/editor/icons/data-models.png" class="button" title="Data models" />
                 </a>
             </li>
+            {% endif %}
         </ul>
 
     </div>
