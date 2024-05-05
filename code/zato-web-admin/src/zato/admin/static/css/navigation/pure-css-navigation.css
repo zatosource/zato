@@ -2,20 +2,21 @@
 /* Customizable styles */
 
 .pure-css-nav {
+   position: relative;
    background-color:#363636;
    border-bottom: 3px solid #aaa;
-   z-index: 999;
+   z-index: 9999;
 }
 
 div.nav-container {
    background-color: #363636;
    height:2.1rem;
-   z-index: 999;
+   z-index: 9999;
 }
 
 nav.menu {
    background-color:#363636;
-   z-index: 999;
+   z-index: 9999;
 }
 
 nav.menu ul.left {
