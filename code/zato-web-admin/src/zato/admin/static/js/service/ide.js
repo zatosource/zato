@@ -122,6 +122,8 @@ $.fn.zato.ide.toggle_action_area = function() {
     // let default_size = "3.9fr 1fr 0.06fr";
     // let expanded_size = "1.0fr 1fr 0.06fr";
 
+    let service_select = $("#service-select");
+
     let default_size = "1.0fr 1fr 0.06fr";
     let expanded_size = "3.9fr 1fr 0.06fr";
 
@@ -131,10 +133,12 @@ $.fn.zato.ide.toggle_action_area = function() {
     if(is_expanded == "false") {
         new_size = expanded_size;
         elem_to_expand.attr("data-is-expanded", "true");
+        $.fn.zato.toggle_css_class(service_select, "expanded", "default");
     }
     else {
         new_size = default_size
         elem_to_expand.attr("data-is-expanded", "false");
+        $.fn.zato.toggle_css_class(service_select, "default", "expanded");
     }
 
     // Set the current layout ..
