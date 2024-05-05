@@ -71,7 +71,6 @@ span.header-text {
 
 #editor {
     z-index: 0;
-    isolation: isolate;
     height: 87vh;
     border-right: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
@@ -85,6 +84,15 @@ span.header-text {
 #action-area {
     height: 82vh;
     background-color: #fff;
+    position: relative;
+}
+
+#service-select.default {
+    max-width: 50rem;
+}
+
+#service-select.expanded {
+    max-width: 50rem;
 }
 
 #side-menu {
@@ -157,7 +165,6 @@ span.header-text {
     text-decoration: none !important;
     font-family: Zato_IDE_Font;
     font-size: 0.92rem;
-    zletter-spacing: 0.03rem;
     color: #333;
 }
 
