@@ -9,9 +9,11 @@
 <script type="text/javascript" src="/static/store2/store2.js"></script>
 
 <script type="text/javascript" src="/static/js/common.js"></script>
+<script type="text/javascript" src="/static/js/invoker.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
 <link rel="stylesheet" media="screen" href="/static/css/service/ide.css" />
+<link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
 
 <div id="main-area-container">
     <div class="item">
@@ -71,15 +73,16 @@
                 </tr>
 
                 <tr colspan="2" class="invoker-tr">
-                    <td class="align-right"">
-                        <input type="button" value="Invoke" />
+                    <td class="align-right" style="display:flex">
+                        <div style="flex: 1; padding-top: 6px; padding-right: 3px;"><span id="invoking-please-wait" class="hidden">Please wait ..</span></div>
+                        <div><input id="invoke-service" type="button" value="Invoke" /></div>
                     </td>
                 </tr>
 
                 <tr colspan="2" class="invoker-tr">
                     <td>
                         <br/>
-                        <span class="dimmed">Response 200 OK</span> <a href="#">Copy</a>
+                        <span id="result-header" class="dimmed invoker-draw-attention">Response 200 OK | 42 ms</span> | <a href="#">Copy</a>
                         <textarea id="data-response">
 {
     "RecordType": "MO",

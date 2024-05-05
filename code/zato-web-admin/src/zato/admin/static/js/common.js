@@ -94,6 +94,7 @@ $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
 $.namespace('zato.ide');
+$.namespace('zato.invoker');
 $.namespace('zato.load_balancer');
 $.namespace('zato.message');
 $.namespace('zato.message.json_pointer');
