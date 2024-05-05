@@ -133,6 +133,10 @@ span.header-text {
     padding: 9px;
 }
 
+.file-system-listing td.header.status {
+    padding-bottom: 0px;
+}
+
 #header-status {
     font-size: 1.1em;
 }
