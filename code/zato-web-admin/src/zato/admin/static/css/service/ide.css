@@ -48,8 +48,13 @@ img.button {
     opacity: 30%;
 }
 
+img.button.more-visible {
+    opacity: 45%;
+}
+
 img.button:hover {
     opacity: 100%;
+    background-color: #ccc;
 }
 
 a.img-button {
@@ -127,10 +132,6 @@ span.header-text {
 
 #header-links-wrapper {
     display: flex;
-}
-
-#header-links-left {
-    zflex: 0 0 55%;
 }
 
 #header-links-right {
