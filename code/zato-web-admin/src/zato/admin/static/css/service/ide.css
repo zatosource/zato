@@ -88,7 +88,7 @@ span.header-text {
 }
 
 #service-select.default {
-    max-width: 20rem;
+    max-width: 90%;
 }
 
 #service-select.expanded {
@@ -130,7 +130,7 @@ span.header-text {
 }
 
 #header-links-left {
-    flex: 0 0 55%;
+    zflex: 0 0 55%;
 }
 
 #header-links-right {
