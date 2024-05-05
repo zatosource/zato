@@ -5,6 +5,7 @@
 {% block "content" %}
 
 <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+<script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
 <script type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
 <script type="text/javascript" src="/static/store2/store2.js"></script>
 
@@ -56,67 +57,71 @@
                     </td>
                 </tr>
             </table>
+
             <div id="file-system-listing-div">
-            <table class="file-system-listing">
+                <table class="file-system-listing">
 
-                {% for file_item in data.file_list %}
-                    <tr class="file-listing-tr">
-                        <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}', '{{ file_item.fs_location_url_safe }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_file_list %}current{% endif %}">{{ file_item.name }}</a></td>
+                    {% for file_item in data.file_list %}
+                        <tr class="file-listing-tr">
+                            <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                            <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}', '{{ file_item.fs_location_url_safe }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_file_list %}current{% endif %}">{{ file_item.name }}</a></td>
+                        </tr>
+                    {% endfor %}
+
+                    <tr colspan="2" class="invoker-tr">
+                        <td>
+                            <textarea id="data-request"></textarea>
+                        </td>
                     </tr>
-                {% endfor %}
 
-                <tr colspan="2" class="invoker-tr">
-                    <td>
-                        <textarea id="data-request"></textarea>
-                    </td>
-                </tr>
+                    <tr colspan="2" class="invoker-tr">
+                        <td class="align-right">
+                            <div><input id="invoke-service" type="button" value="Invoke" /></div>
+                        </td>
+                    </tr>
 
-                <tr colspan="2" class="invoker-tr">
-                    <td class="align-right" style="display:flex">
-                        <div style="flex: 1; padding-top: 6px; padding-right: 3px;"><span id="invoking-please-wait" class="hidden">Please wait ..</span></div>
-                        <div><input id="invoke-service" type="button" value="Invoke" /></div>
-                    </td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td>
-                        <br/>
-                        <span id="result-header" class="dimmed zato-not-used">Response 200 OK | 42 ms</span><span class="dimmed">|</span><a href="#">Copy</a>
-                        <textarea id="data-response">
-{
-    "RecordType": "MO",
-    "SystemIdentity": "ga",
-    "FileNum": "54",
-    "SwitchNum": "US",
-    "CallingNum": "12345567",
-    "CallingIMSI": "1234556700911",
-    "CalledNum": "77191972",
-    "CalledIMSI": "091716266251113",
-    "DateS": "20220311",
-    "TimeS": null,
-    "TimeType": 2,
-    "CallPeriod": 313,
-    "CallingCellID": null,
-    "CalledCellID": null,
-    "ServiceType": "S",
-    "Transfer": 1,
-    "IncomingTrunk": null,
-    "OutgoingTrunk": "3456",
-    "MSRN": "817296834",
-    "CalledNum2": null,
-    "FCIFlag": null,
-    "callrecTime": "2022-03-11T11:22:33.0000000Z",
-    "EventProcessedUtcTime": "2022-03-11T11:22:33.0000000Z",
-    "PartitionId": 5,
-    "EventEnqueuedUtcTime": "2022-03-11T11:22:33.0000000Z"
-}
-                        </textarea>
-                    </td>
-                </tr>
-            </table>
+                    <tr colspan="2" class="invoker-tr">
+                        <td>
+                            <br/>
+                            <a href="#">Copy</a>
+                            <span id="result-header-separator" class="hidden">|</span>
+                            <span id="result-header" class="dimmed zato-not-used hidden">Response 200 OK | 42 ms</span></span>
+                            <span id="invoking-please-wait" class="hidden">Please wait ..</span>
+                            <form id="invoke-service-form" action="/zato/service/invoke/pub.zato.ping/cluster/1/" novalidate="" method="post"></form>
+                            <textarea id="data-response">
+                                {
+                                    "RecordType": "MO",
+                                    "SystemIdentity": "ga",
+                                    "FileNum": "54",
+                                    "SwitchNum": "US",
+                                    "CallingNum": "12345567",
+                                    "CallingIMSI": "1234556700911",
+                                    "CalledNum": "77191972",
+                                    "CalledIMSI": "091716266251113",
+                                    "DateS": "20220311",
+                                    "TimeS": null,
+                                    "TimeType": 2,
+                                    "CallPeriod": 313,
+                                    "CallingCellID": null,
+                                    "CalledCellID": null,
+                                    "ServiceType": "S",
+                                    "Transfer": 1,
+                                    "IncomingTrunk": null,
+                                    "OutgoingTrunk": "3456",
+                                    "MSRN": "817296834",
+                                    "CalledNum2": null,
+                                    "FCIFlag": null,
+                                    "callrecTime": "2022-03-11T11:22:33.0000000Z",
+                                    "EventProcessedUtcTime": "2022-03-11T11:22:33.0000000Z",
+                                    "PartitionId": 5,
+                                    "EventEnqueuedUtcTime": "2022-03-11T11:22:33.0000000Z"
+                                }
+                            </textarea>
+                            </form>
+                        </td>
+                    </tr>
+                </table>
             </div>
-
         </div>
     </div>
     <div id="side-menu" class="item">
