@@ -38,20 +38,21 @@
         <div id="action-area" class="item item-2">
             <table class="file-system-listing">
                 <tr class="header">
+                    <td colspan="2" class="header status">
+                        <span id="header-status" class="dimmed"></span>
+                    </td>
+                </tr>
+                <tr class="header">
                     <td colspan="2" class="header">
                         <div id="header-links-wrapper">
                             <div id="header-links-left"></div>
                             <div id="header-links-right"></div>
                         </div>
+                        <div>
+
+                        </div>
                     </td>
                 </tr>
-                {% if True %}
-                <tr class="header">
-                    <td colspan="2" class="header">
-                        <span id="header-status" class="dimmed"></span>
-                    </td>
-                </tr>
-                {% endif %}
             </table>
             <div id="file-system-listing-div">
             <table class="file-system-listing">
@@ -149,7 +150,8 @@
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-    $.fn.zato.ide.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
+    // $.fn.zato.ide.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
+    $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
 </script>
 
 {% endblock %}
