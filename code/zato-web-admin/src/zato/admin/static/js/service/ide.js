@@ -31,7 +31,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // Set initial data
     $.fn.zato.ide.populate_browser_area(initial_header_status);
-    // $.fn.zato.ide.populate_invoker_area();
+    $.fn.zato.ide.populate_invoker_area();
 
     // Handle browser history back/forward actions
     window.onpopstate = function(event) {
@@ -243,14 +243,14 @@ $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
 
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
-    $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
+    // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     $.fn.zato.ide.add_header_left_link("new", "New");
     $.fn.zato.ide.add_header_left_link("rename-file", "Rename");
     $.fn.zato.ide.add_header_left_link("delete-file", "Delete", true);
 
     // Right-hand side links
-    $.fn.zato.ide.add_header_right_link("push", "Push", false);
-    $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
+    // $.fn.zato.ide.add_header_right_link("push", "Push", false);
+    // $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
     $("#header-status").text(initial_header_status);
@@ -258,7 +258,7 @@ $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.populate_invoker_area = function() {
+$.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     // Clear anything that we may already have
     $.fn.zato.ide.clear_header_links("left")
@@ -269,11 +269,11 @@ $.fn.zato.ide.populate_invoker_area = function() {
     $('.invoker-tr').show();
 
     // Left-hand side links
-    $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
-    $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
-    $.fn.zato.ide.add_header_left_link("previous", "Previous");
-    $.fn.zato.ide.add_header_left_link("next", "Next");
-    $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
+    $.fn.zato.ide.add_header_left_link("deploy", "Deploy", true);
+    // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
+    //$.fn.zato.ide.add_header_left_link("previous", "Previous");
+    //$.fn.zato.ide.add_header_left_link("next", "Next");
+    //$.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
 
     // Right-hand side links
     // $.fn.zato.ide.add_header_right_link("open-api", "OpenAPI", true);
@@ -285,6 +285,10 @@ $.fn.zato.ide.populate_invoker_area = function() {
     $("<a href=\"#\">Edit</a>").insertAfter("#header-status");
     $("<a class=\"header-sublink-first\" href=\"#\">Copy</a>").insertAfter("#header-status");
     */
+
+    // One-line status bar
+    $("#header-status").text(initial_header_status);
+
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
