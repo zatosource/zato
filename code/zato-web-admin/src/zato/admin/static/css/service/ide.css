@@ -4,7 +4,7 @@
 
 @font-face {
     font-family: Zato_IDE_Font;
-    src: url("/static/fonts//SourceCodePro-Regular.ttf");
+    src: url("/static/fonts/UbuntuMono-R.ttf");
     font-weight: normal;
     font-style: normal;
 }
@@ -73,6 +73,7 @@ span.header-text {
 }
 
 #editor {
+    z-index:0;
     height: 87vh;
     border-right: 1px solid #ddd;
     border-bottom: 1px solid #ddd;

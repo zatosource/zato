@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import mimetypes
+import posixpath
 from logging import getLogger
+from pathlib import Path
 
 # Django
+from django.http import FileResponse, Http404, HttpResponseNotModified
 from django.template.response import TemplateResponse
+from django.utils._os import safe_join
+from django.utils.http import http_date, parse_http_date
 
 # Zato
 from zato.common.crypto.api import CryptoManager
@@ -93,6 +99,78 @@ def set_user_profile_totp_key(user_profile, zato_secret_key, totp_key, totp_key_
         opaque_attrs['totp_key_label'] = totp_key_label
 
     return opaque_attrs
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#
+# Taken from Django to change the content type from application/json to application/javascript.
+#
+def static_serve(request, path, document_root=None, show_indexes=False):
+    """
+    Serve static files below a given point in the directory structure.
+
+    To use, put a URL pattern such as::
+
+        from django.views.static import serve
+
+        path('<path:path>', serve, {'document_root': '/path/to/my/files/'})
+
+    in your URLconf. You must provide the ``document_root`` param. You may
+    also set ``show_indexes`` to ``True`` if you'd like to serve a basic index
+    of the directory.  This index view will use the template hardcoded below,
+    but if you'd like to override it, you can create a template called
+    ``static/directory_index.html``.
+    """
+
+    path = posixpath.normpath(path).lstrip("/")
+    fullpath = Path(safe_join(document_root, path))
+    if fullpath.is_dir():
+        if show_indexes:
+            return directory_index(path, fullpath)
+        raise Http404(_("Directory indexes are not allowed here."))
+    if not fullpath.exists():
+        raise Http404(_("“%(path)s” does not exist") % {"path": fullpath})
+    # Respect the If-Modified-Since header.
+    statobj = fullpath.stat()
+    if not was_modified_since(
+        request.META.get("HTTP_IF_MODIFIED_SINCE"), statobj.st_mtime
+    ):
+        return HttpResponseNotModified()
+    content_type, encoding = mimetypes.guess_type(str(fullpath))
+    content_type = content_type or "application/octet-stream"
+
+    # Explicitly set the content type for JSON resources.
+    # Note that this needs to be combined with SECURE_CONTENT_TYPE_NOSNIFF=False in settings.py
+    if fullpath.name.endswith('.js'):
+        content_type = 'application/javascript'
+
+    response = FileResponse(fullpath.open("rb"), content_type=content_type)
+    response.headers["Last-Modified"] = http_date(statobj.st_mtime)
+    if encoding:
+        response.headers["Content-Encoding"] = encoding
+    return response
+
+def was_modified_since(header=None, mtime=0):
+    """
+    Was something modified since the user last downloaded it?
+
+    header
+      This is the value of the If-Modified-Since header.  If this is None,
+      I'll just return True.
+
+    mtime
+      This is the modification time of the item we're talking about.
+    """
+    try:
+        if header is None:
+            raise ValueError
+        header_mtime = parse_http_date(header)
+        if int(mtime) > header_mtime:
+            raise ValueError
+    except (ValueError, OverflowError):
+        return True
+    return False
 
 # ################################################################################################################################
 # ################################################################################################################################

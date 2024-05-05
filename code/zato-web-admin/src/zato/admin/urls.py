@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Django
 from django.urls import re_path as url
 from django.contrib.auth.decorators import login_required
-from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
+from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, audit_log, cluster, http_soap, load_balancer, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
@@ -1698,7 +1698,7 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
-    url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
+    url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
 # ################################################################################################################################
