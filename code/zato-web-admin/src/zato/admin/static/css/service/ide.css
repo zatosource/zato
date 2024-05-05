@@ -61,7 +61,7 @@ img.button:hover {
 }
 
 img.button.less-visible:hover {
-    opacity: 60%;
+    opacity: 70%;
 }
 
 a.img-button {
