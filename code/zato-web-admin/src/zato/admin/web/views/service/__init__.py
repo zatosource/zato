@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,11 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from collections import namedtuple
 from datetime import datetime
+from traceback import format_exc
 
 # dateutil
 from dateutil.relativedelta import relativedelta
 
 # Django
+from django.http import HttpRequest, HttpResponse, HttpResponseServerError
 from django.urls import reverse
 from django.template.response import TemplateResponse
 
@@ -22,22 +24,30 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
-from zato.common.api import ZATO_NONE
+from zato.common.api import DATA_FORMAT, ZATO_NONE
 from zato.common.ext.validate_ import is_boolean
 from zato.common.odb.model import Service
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anylist
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url'])
-DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
+ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url']) # type: ignore
+DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type: ignore
 
 # ################################################################################################################################
 
-def get_public_wsdl_url(cluster, service_name):
+def get_public_wsdl_url(cluster:'any_', service_name:'str') -> 'str':
     """ Returns an address under which a service's WSDL is publically available.
     """
     return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
@@ -45,7 +55,7 @@ def get_public_wsdl_url(cluster, service_name):
 
 # ################################################################################################################################
 
-def _get_channels(client, cluster, id, channel_type):
+def _get_channels(client:'any_', cluster:'any_', id:'str', channel_type:'str') -> 'anylist':
     """ Returns a list of channels of a given type for the given service.
     """
     input_dict = {
@@ -100,7 +110,7 @@ class Index(_Index):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def create(req):
+def create(req:'any_') -> 'None':
     pass
 
 # ################################################################################################################################
@@ -116,13 +126,14 @@ class Edit(CreateEdit):
             'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} service `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 
 @method_allowed('GET')
-def overview(req, service_name):
+def overview(req:'HttpRequest', service_name:'str') -> 'TemplateResponse':
+
     cluster_id = req.GET.get('cluster')
     service = None
 
@@ -133,10 +144,10 @@ def overview(req, service_name):
 
         input_dict = {
             'name': service_name,
-            'cluster_id': req.zato.cluster_id
+            'cluster_id': req.zato.cluster_id # type: ignore
         }
 
-        response = req.zato.client.invoke('zato.service.get-by-name', input_dict)
+        response = req.zato.client.invoke('zato.service.get-by-name', input_dict) # type: ignore
         if response.has_data:
             service = Service()
 
@@ -152,8 +163,8 @@ def overview(req, service_name):
                 if name == 'last_timestamp':
 
                     if value:
-                        service.last_timestamp_utc = value
-                        service.last_timestamp = from_utc_to_user(value+'+00:00', req.zato.user_profile)
+                        service.last_timestamp_utc = value # type: ignore
+                        service.last_timestamp = from_utc_to_user(value+'+00:00', req.zato.user_profile) # type: ignore
 
                     continue
 
@@ -162,7 +173,11 @@ def overview(req, service_name):
             now = datetime.utcnow()
             start = now+relativedelta(minutes=-60)
 
-            response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
+            response = req.zato.client.invoke( # type: ignore
+                'zato.stats.get-by-service',
+                {'service_id':service.id, 'start':start, 'stop':now}
+            )
+
             if response.has_data:
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
                     value = getattr(response.data, name, ZATO_NONE)
@@ -172,13 +187,16 @@ def overview(req, service_name):
                     setattr(service, 'time_{}_1h'.format(name), value)
 
             for channel_type in('plain_http', 'amqp', 'jms-wmq', 'zmq'):
-                channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type)
+                channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type) # type: ignore
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
-            for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id, 'needs_details':True}):
+            deployment_service = 'zato.service.get-deployment-info-list'
+            deployment_request = {'id': service.id, 'needs_details':True}
+
+            for item in req.zato.client.invoke(deployment_service, deployment_request): # type: ignore
                 service.deployment_info.append(DeploymentInfo(item.server_name, item.details))
 
-            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id})
+            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id}) # type: ignore
             if response.has_data:
                 for item in response.data:
                     if item.service_name == service_name:
@@ -187,10 +205,11 @@ def overview(req, service_name):
                         url += '&highlight={}'.format(item.id)
                         service.scheduler_jobs.append(ExposedThrough(item.id, item.name, url))
 
-    return_data = {'zato_clusters':req.zato.clusters,
+    return_data = {
+        'zato_clusters':req.zato.clusters, # type: ignore
         'service': service,
         'cluster_id':cluster_id,
-        'search_form':req.zato.search_form,
+        'search_form':req.zato.search_form, # type: ignore
         'create_form':create_form,
         'edit_form':edit_form,
         }
@@ -207,16 +226,15 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def package_upload(req, cluster_id):
+def package_upload(req:'HttpRequest', cluster_id:'str') -> 'any_':
     """ Handles a service package file upload.
     """
     return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
 
-
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke(req, name, cluster_id):
+def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
     try:
@@ -229,7 +247,7 @@ def invoke(req, name, cluster_id):
             input_dict[attr] = value
         input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
 
-        response = req.zato.client.invoke(name, **input_dict)
+        response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
     except Exception as e:
         msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
