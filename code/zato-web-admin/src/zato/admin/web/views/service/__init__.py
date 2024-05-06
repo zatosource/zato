@@ -24,7 +24,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
-from zato.common.api import DATA_FORMAT, ZATO_NONE
+from zato.common.api import ZATO_NONE
 from zato.common.ext.validate_ import is_boolean
 from zato.common.odb.model import Service
 
@@ -237,16 +237,11 @@ def package_upload(req:'HttpRequest', cluster_id:'str') -> 'any_':
 def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
+
     try:
         input_dict = {}
-        for attr in('payload', 'data_format', 'transport'):
-            value = req.POST.get(attr, '')
-            if attr == 'data_format':
-                if not value:
-                    value = DATA_FORMAT.JSON
-            input_dict[attr] = value
-        input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
-
+        input_dict['payload'] = req.POST.get('data-request', '')
+        input_dict['to_json'] = True
         response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
     except Exception as e:
