@@ -39,8 +39,9 @@ $.fn.zato.invoker.invoke = function(
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_status, error_message) {
-
+$.fn.zato.invoker.on_sync_invoke_ended_common = function(
+    options, status, data
+) {
     // Local variables
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
@@ -58,11 +59,24 @@ $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_st
         _elem.addClass("invoker-draw-attention", 1);
     });
 
-    $("#result-header").text("Response 200 OK | 42 ms");
-
+    $("#result-header").text(status + " | 42 ms");
+    $("#data-response").val(data);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_status, error_message) {
+
+    let status = jq_xhr.status + " " + error_message;
+    $.fn.zato.invoker.on_sync_invoke_ended_common(options, status, jq_xhr.responseText);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
+
+    let status = "200 OK";
+    $.fn.zato.invoker.on_sync_invoke_ended_common(options, status, data);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -94,21 +108,22 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
 
         $.ajax({
             type: "POST",
-            url: "address",// where you wanna post
+            url: "/zato/service/invoke/pub.zato.ping/cluster/1/",
             data: form_data,
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
             processData: false,
             contentType: false,
             error: function(jq_xhr, text_status, error_message) {
                 let _on_error = function() {
                     $.fn.zato.invoker.on_sync_invoke_ended_error(options, jq_xhr, text_status, error_message);
                 }
-                setTimeout(_on_error, 290)
+                setTimeout(_on_error, 120)
             },
             success: function(data) {
                 let _on_success = function() {
-                    $.fn.zato.invoker.on_sync_invoke_ended_on_success(options, data);
+                    $.fn.zato.invoker.on_sync_invoke_ended_success(options, data);
                 }
-                setTimeout(_on_success, 290)
+                setTimeout(_on_success, 120)
             }
         });
 
