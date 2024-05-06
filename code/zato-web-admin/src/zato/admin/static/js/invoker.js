@@ -10,7 +10,7 @@ $(document).ready(function() {
 $.fn.zato.invoker.on_invoke_submitted = function() {
 
     const options = {
-        "form_id": "#invoke-service-form",
+        "request_form_id": "#invoke-service-request-form",
         "on_started_activate_blinking": ["#invoking-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
         "get_request_url_func": $.fn.zato.invoker.get_request_url,
@@ -97,7 +97,7 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
     console.log("Options 1: " +  Object.entries(options));
 
     // Local variables
-    let form_id = options["form_id"];
+    let request_form_id = options["request_form_id"];
     let get_request_url_func = options["get_request_url_func"];
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
@@ -117,17 +117,20 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
     });
 
     // Submit the form, if we have one on input
-    if(form_id) {
-        let form = $(form_id);
-        let form_data = new FormData(form[0]);
+    if(request_form_id) {
+        let request_form = $(request_form_id);
+        let request_form_data = request_form.serialize();
+
+        console.log("Request 1: " + request_form);
+        console.log("Request 2: " + request_form_id);
+        console.log("Request 3: " + request_form_data);
 
         $.ajax({
             type: "POST",
             url: url,
-            data: form_data,
+            data: request_form_data,
+            dataType: null,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
-            processData: false,
-            contentType: false,
             error: function(jq_xhr, text_status, error_message) {
                 let _on_error = function() {
                     $.fn.zato.invoker.on_sync_invoke_ended_error(options, jq_xhr, text_status, error_message);
