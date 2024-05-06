@@ -10,13 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from collections import namedtuple
 from datetime import datetime
+from http import HTTPStatus
+from json import dumps
 from traceback import format_exc
 
 # dateutil
 from dateutil.relativedelta import relativedelta
 
 # Django
-from django.http import HttpRequest, HttpResponse, HttpResponseServerError
+from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 from django.template.response import TemplateResponse
 
@@ -238,23 +240,47 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
 
+    # Local variables
+    status_code = HTTPStatus.BAD_REQUEST
+    content = {
+        'content': '',
+        'response_time_ms': '1234',
+        'response_time_human': '1.12 s',
+    }
+
     try:
         input_dict = {}
         input_dict['payload'] = req.POST.get('data-request', '')
         input_dict['to_json'] = True
+
         response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
     except Exception as e:
         msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
         logger.error(msg)
-        return HttpResponseServerError(e.args)
+        data = e.args
+        status_code = HTTPStatus.BAD_REQUEST
     else:
         try:
             if response.ok:
-                return HttpResponse(response.inner_service_response or '(None)')
+                data = response.inner_service_response or '(None)'
+                status_code = HTTPStatus.OK
             else:
-                return HttpResponseServerError(response.details)
+                data = response.details
         except Exception:
-            return HttpResponseServerError(format_exc())
+            data = response.details
+
+    content['data'] = data
+    content = dumps(content)
+
+    out = HttpResponse()
+    out.status_code = status_code
+    out.content = content
+
+    print()
+    print(111, content)
+    print()
+
+    return out
 
 # ################################################################################################################################

@@ -269,11 +269,11 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $('.invoker-tr').show();
 
     // Left-hand side links
-    $.fn.zato.ide.add_header_left_link("deploy", "Deploy", true);
+    $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
-    //$.fn.zato.ide.add_header_left_link("previous", "Previous");
-    //$.fn.zato.ide.add_header_left_link("next", "Next");
-    //$.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
+    $.fn.zato.ide.add_header_left_link("previous", "Previous");
+    $.fn.zato.ide.add_header_left_link("next", "Next", true);
+    // $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
 
     // Right-hand side links
     // $.fn.zato.ide.add_header_right_link("open-api", "OpenAPI", true);
