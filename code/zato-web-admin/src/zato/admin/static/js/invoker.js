@@ -13,6 +13,8 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
         "form_id": "#invoke-service-form",
         "on_started_activate_blinking": ["#invoking-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
+        "get_request_url_func": $.fn.zato.invoker.get_request_url,
+
     }
     $.fn.zato.invoker.run_sync_invoker(options);
 }
@@ -36,6 +38,15 @@ $.fn.zato.invoker.invoke = function(
         context: context
     });
 };
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.get_request_url = function() {
+    let select = $("#service-select");
+    let service = select.val();
+    let out = "/zato/service/invoke/"+ service + "/cluster/1/";
+    return out
+}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -87,8 +98,12 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
 
     // Local variables
     let form_id = options["form_id"];
+    let get_request_url_func = options["get_request_url_func"];
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
+
+    // Obtain the URL we are to invoke
+    let url = get_request_url_func();
 
     // Enable blinking for all the elements that should blink
     on_started_activate_blinking.each(function(elem) {
@@ -108,7 +123,7 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
 
         $.ajax({
             type: "POST",
-            url: "/zato/service/invoke/pub.zato.ping/cluster/1/",
+            url: url,
             data: form_data,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             processData: false,
