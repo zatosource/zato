@@ -121,10 +121,6 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
         let request_form = $(request_form_id);
         let request_form_data = request_form.serialize();
 
-        console.log("Request 1: " + request_form);
-        console.log("Request 2: " + request_form_id);
-        console.log("Request 3: " + request_form_data);
-
         $.ajax({
             type: "POST",
             url: url,
@@ -137,7 +133,7 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
                 }
                 setTimeout(_on_error, 120)
             },
-            success: function(data) {
+            success: function(data, text_status, request) {
                 let _on_success = function() {
                     $.fn.zato.invoker.on_sync_invoke_ended_success(options, data);
                 }
