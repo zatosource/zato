@@ -23,7 +23,7 @@
 }
 
 .invoker-draw-attention {
-    animation: invoker-draw-attention 0.6s 2 linear;
+    animation: invoker-draw-attention 0.6s 1 linear;
 }
 
 @keyframes invoker-draw-attention {
