@@ -175,6 +175,8 @@ urlpatterns += [
         login_required(service.Delete()), name=service.Delete.url_name),
     url(r'^zato/service/overview/(?P<service_name>.*)/$',
         login_required(service.overview), name='service-overview'),
+    url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
     url(r'^zato/service/ide/get-file/(?P<fs_location>.*)/$',
@@ -205,7 +207,6 @@ urlpatterns += [
     url(r'^zato/audit-log/event/delete/(?P<object_name>.*)/(?P<object_id>.*)/(?P<event_id>.*)/$',
         login_required(audit_log.delete_event), name='audit-event-delete'),
 ]
-
 
 # ################################################################################################################################
 # ################################################################################################################################

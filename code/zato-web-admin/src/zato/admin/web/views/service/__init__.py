@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -211,5 +211,37 @@ def package_upload(req, cluster_id):
     """ Handles a service package file upload.
     """
     return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
+
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke(req, name, cluster_id):
+    """ Executes a service directly, even if it isn't exposed through any channel.
+    """
+    try:
+        input_dict = {}
+        for attr in('payload', 'data_format', 'transport'):
+            value = req.POST.get(attr, '')
+            if attr == 'data_format':
+                if not value:
+                    value = DATA_FORMAT.JSON
+            input_dict[attr] = value
+        input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
+
+        response = req.zato.client.invoke(name, **input_dict)
+
+    except Exception as e:
+        msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(e.args)
+    else:
+        try:
+            if response.ok:
+                return HttpResponse(response.inner_service_response or '(None)')
+            else:
+                return HttpResponseServerError(response.details)
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
 # ################################################################################################################################
