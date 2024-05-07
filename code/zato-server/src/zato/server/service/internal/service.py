@@ -44,6 +44,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
@@ -503,6 +504,121 @@ class Invoke(AdminService):
 
 # ################################################################################################################################
 
+    def _build_response(self, response:'any_') -> 'any_':
+
+        if not isinstance(response, str):
+            if not isinstance(response, bytes):
+                if hasattr(response, 'to_dict'):
+                    response = response.to_dict() # type: ignore
+                response = json_dumps(response)
+
+        # Make sure what we return is a string ..
+        response = response if isinstance(response, bytes) else response.encode('utf8')
+
+        # .. which we base64-encode ..
+        response = b64encode(response).decode('utf8') if response else ''
+
+        # .. and return to our caller.
+        return response
+
+# ################################################################################################################################
+
+    def _run_async_invoke(
+        self,
+        pid:'int',
+        id:'any_',
+        name:'str',
+        payload:'any_',
+        channel:'str',
+        data_format:'str',
+        transport:'str',
+        expiration:'int',
+    ) -> 'any_':
+
+
+        if id:
+            impl_name = self.server.service_store.id_to_impl_name[id]
+            name = self.server.service_store.service_data(impl_name)['name']
+
+        # If PID is given on input it means we must invoke this particular server process by it ID
+        if pid and pid != self.server.pid:
+            response = self.server.invoke_by_pid(name, payload, pid)
+        else:
+            response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
+
+        return response
+
+# ################################################################################################################################
+
+    def _run_sync_invoke(
+        self,
+        pid:'int',
+        timeout:'int',
+        id:'any_',
+        name:'str',
+        all_pids:'bool',
+        payload:'any_',
+        channel:'str',
+        data_format:'str',
+        transport:'str',
+        skip_response_elem:'bool',
+    ) -> 'any_':
+
+        # This method is the same as the one for async, except that in async there was no all_pids
+
+        # It is possible that we were given the all_pids flag on input but we know
+        # ourselves that there is only one process, the current one, so we can just
+        # invoke it directly instead of going through IPC.
+        if all_pids and self.server.fs_server_config.main.gunicorn_workers > 1:
+            use_all_pids = True
+        else:
+            use_all_pids = False
+
+        if use_all_pids:
+            args = (name, payload, timeout) if timeout else (name, payload)
+            response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
+
+        else:
+
+            # We are invoking another server by its PID ..
+            if pid and pid != self.server.pid:
+                response = self._invoke_other_server_pid(name, payload, pid, data_format, skip_response_elem)
+
+            # .. we are invoking our own process ..
+            else:
+                response = self._invoke_current_server_pid(
+                    id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
+
+        return response
+
+# ################################################################################################################################
+
+    def _build_response_time(self, start_time:'datetime') -> 'any_':
+
+        response_time = self.time.utcnow(needs_format=False) - start_time # type: ignore
+        response_time = response_time.total_seconds()
+        response_time = response_time * 1000 # Turn seconds into milliseconds
+
+        # If we have less than a millisecond, don't show exactly how much it was ..
+        if response_time < 1:
+            response_time_human = 'Below 1 ms'
+        else:
+            # .. if it's below 10 seconds, keep using milliseconds ..
+            if response_time < 10_000:
+                response_time = int(response_time) # Round it up
+                response_time_human = f'{response_time} ms'
+
+            # .. otherwise, turn it into seconds ..
+            else:
+                _response_time = float(response_time)
+                _response_time = _response_time / 1000.0 # Convert it back to seconds
+                _response_time = round(_response_time, 2) # Keep it limited to two digits
+                response_time_human = f'{_response_time} sec.'
+
+        return response_time, response_time_human
+
+# ################################################################################################################################
+
     def handle(self):
 
         # Local aliases
@@ -556,89 +672,34 @@ class Invoke(AdminService):
         if name and id:
             raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
 
-        if self.request.input.get('is_async'):
+        try:
 
-            if id:
-                impl_name = self.server.service_store.id_to_impl_name[id]
-                name = self.server.service_store.service_data(impl_name)['name']
+            # Is this an async invocation ..
+            if self.request.input.get('is_async'):
+                response = self._run_async_invoke(
+                    pid, id, name, payload, channel, data_format, transport, expiration)
 
-            # If PID is given on input it means we must invoke this particular server process by it ID
-            if pid and pid != self.server.pid:
-                response = self.server.invoke_by_pid(name, payload, pid) # type: ignore
+            # .. or a sync one ..
             else:
-                response = self.invoke_async(name, payload, channel, data_format, transport, expiration) # type: ignore
+                response = self._run_sync_invoke(
+                    pid, timeout, id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
 
-        else:
+            # .. we still may not have any response here ..
+            if response:
+                response = self._build_response(response)
+                self.response.payload.response = response
 
-            # This branch is the same as above in is_async branch, except in is_async there was no all_pids
+        finally:
 
-            # It is possible that we were given the all_pids flag on input but we know
-            # ourselves that there is only one process, the current one, so we can just
-            # invoke it directly instead of going through IPC.
-            if all_pids and self.server.fs_server_config.main.gunicorn_workers > 1:
-                use_all_pids = True
-            else:
-                use_all_pids = False
+            # If we are here, it means that we can optionally compute the total execution time ..
+            if needs_response_time:
 
-            if use_all_pids:
+                # .. build the values we are to return ..
+                response_time, response_time_human = self._build_response_time(start_time) # type: ignore
 
-                args = (name, payload, timeout) if timeout else (name, payload) # type: ignore
-                response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
-
-            else:
-
-                # We are invoking another server by its PID ..
-                if pid and pid != self.server.pid:
-
-                    response = self._invoke_other_server_pid(name, payload, pid, data_format, skip_response_elem)
-
-                # .. we are invoking our own process ..
-                else:
-                    response = self._invoke_current_server_pid(
-                        id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
-
-        if response:
-
-            if not isinstance(response, str):
-                if not isinstance(response, bytes):
-                    if hasattr(response, 'to_dict'):
-                        response = response.to_dict() # type: ignore
-                    response = json_dumps(response)
-
-            # Make sure what we return is a string ..
-            response = response if isinstance(response, bytes) else response.encode('utf8')
-
-            # .. which we base64-encode ..
-            response = b64encode(response).decode('utf8') if response else ''
-
-            # .. and return to our caller.
-            self.response.payload.response = response
-
-        # If we are here, it means that we can optionally compute the total execution time ..
-        if needs_response_time:
-            response_time = self.time.utcnow(needs_format=False) - start_time # type: ignore
-            response_time = response_time.total_seconds()
-            response_time = response_time * 1000 # Turn seconds into milliseconds
-
-            # If we have less than a millisecond, don't show exactly how much it was ..
-            if response_time < 1:
-                response_time_human = 'Below 1 ms'
-            else:
-                # .. if it's below 10 seconds, keep using milliseconds ..
-                if response_time < 10_000:
-                    response_time = int(response_time) # Round it up
-                    response_time_human = f'{response_time} ms'
-
-                # .. otherwise, turn it into seconds ..
-                else:
-                    _response_time = float(response_time)
-                    _response_time = _response_time / 1000.0 # Convert it back to seconds
-                    _response_time = round(_response_time, 2) # Keep it limited to two digits
-                    response_time_human = f'{_response_time} sec.'
-
-            # .. which we attach to our response.
-            self.response.headers['X-Zato-Response-Time'] = response_time
-            self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
+                # .. which we attach to our response.
+                self.response.headers['X-Zato-Response-Time'] = response_time
+                self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
 
 # ################################################################################################################################
 # ################################################################################################################################
