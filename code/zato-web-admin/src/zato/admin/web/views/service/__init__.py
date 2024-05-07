@@ -243,7 +243,6 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     # Local variables
     status_code = HTTPStatus.BAD_REQUEST
     content = {
-        'content': '',
         'response_time_human': '',
     }
 
