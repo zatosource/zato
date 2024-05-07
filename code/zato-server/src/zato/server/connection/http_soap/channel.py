@@ -276,6 +276,12 @@ class RequestDispatcher:
         # Assume that by default we are not authenticated / authorized
         auth_result = None
 
+        # This dictionary may be populated by a service with HTTP headers,
+        # which the headers will be still in the dictionary even if the service
+        # raises an exception. In this way we can return both the headers
+        # and a non-200 response to the caller.
+        zato_response_headers_container = {}
+
         # .. before proceeding, log what we have learned so far about the request ..
         # .. but do not do it for paths that are explicitly configured to be ignored ..
         if _has_log_info:
@@ -404,8 +410,10 @@ class RequestDispatcher:
 
                 # This is the call that obtains a response.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data, path_info, channel_params)
+                    payload, worker_store, self.simple_io_config, post_data, path_info, channel_params,
+                    zato_response_headers_container)
 
+                # Add the default headers.
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
                 wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
@@ -546,6 +554,11 @@ class RequestDispatcher:
                 wsgi_environ['zato.http.response.status'] = status
 
                 return response
+
+            finally:
+                # No matter if we had an exception or not, we can add the headers that the service potentially produced.
+                if zato_response_headers_container:
+                    wsgi_environ['zato.http.response.headers'].update(zato_response_headers_container)
 
         # This is 404, no such URL path.
         else:
@@ -792,6 +805,7 @@ class RequestHandler:
         post_data:'dictnone',
         path_info:'str',
         channel_params:'stranydict',
+        zato_response_headers_container:'stranydict',
     ) -> 'any_':
         """ Create a new instance of a service and invoke it.
         """
@@ -824,7 +838,8 @@ class RequestHandler:
             worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
-            params_priority=channel_item.params_pri)
+            params_priority=channel_item.params_pri,
+            zato_response_headers_container=zato_response_headers_container)
 
         # Cache the response if needed (cache_key was already created on return from get_response_from_cache)
         if channel_item['cache_type']:
