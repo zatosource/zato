@@ -433,8 +433,9 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'),
-            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'))
+        input_optional = 'id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'), \
+            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'), \
+            'needs_response_time'
         output_optional = ('response',)
 
 # ################################################################################################################################
@@ -466,6 +467,11 @@ class Invoke(AdminService):
 
         # Local aliases
         payload:'any_'
+        needs_response_time = self.request.input.get('needs_response_time') or False
+
+        # Optionally, we are return the total execution time of this service
+        if needs_response_time:
+            start_time = self.time.utcnow(needs_format=False)
 
         # This is our input ..
         orig_payload:'any_' = self.request.input.get('payload')
@@ -589,8 +595,35 @@ class Invoke(AdminService):
                         response = response.to_dict()
                     response = json_dumps(response)
 
+            # Make sure what we return is a string ..
             response = response if isinstance(response, bytes) else response.encode('utf8')
-            self.response.payload.response = b64encode(response).decode('utf8') if response else ''
+
+            # .. which we base64-encode ..
+            response = b64encode(response).decode('utf8') if response else ''
+
+            # .. and return to our caller.
+            self.response.payload.response = response
+
+        # If we are here, it means that we can optionally compute the total execution time ..
+        if needs_response_time:
+            import time
+            time.sleep(1)
+            response_time = self.time.utcnow(needs_format=False) - start_time # type: ignore
+            response_time = response_time.total_seconds()
+            response_time = response_time * 1000 # Turn seconds into milliseconds
+
+            # If we have less than a millisecond, don't show exactly how much it was ..
+            if response_time < 1:
+                response_time_human = 'Below 1 ms'
+            else:
+                import datetime
+                from humanize import naturaldelta
+                delta = datetime.timedelta(milliseconds=response_time)
+                response_time_human = naturaldelta(delta, minimum_unit='milliseconds')
+
+            # .. which we attach to our response.
+            self.response.headers['X-Zato-Response-Time'] = response_time
+            self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
 
 # ################################################################################################################################
 # ################################################################################################################################
