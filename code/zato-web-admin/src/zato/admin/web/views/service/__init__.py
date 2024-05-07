@@ -26,6 +26,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
+from zato.admin.middleware import HeadersEnrichedException
 from zato.common.api import ZATO_NONE
 from zato.common.ext.validate_ import is_boolean
 from zato.common.odb.model import Service
@@ -252,7 +253,11 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         input_dict['to_json'] = True
         input_dict['needs_response_time'] = True
 
-        response = req.zato.client.invoke(name, **input_dict) # type: ignore
+        response = req.zato.client.invoke(name, needs_headers=True, **input_dict) # type: ignore
+
+    except HeadersEnrichedException as enriched_exc:
+        content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human')
+        raise
 
     except Exception as e:
         msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
