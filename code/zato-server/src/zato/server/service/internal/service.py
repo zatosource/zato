@@ -438,10 +438,75 @@ class Invoke(AdminService):
 
 # ################################################################################################################################
 
+    def _invoke_other_server_pid(
+        self,
+        name:'str',
+        payload:'any_',
+        pid:'int',
+        data_format:'str',
+        skip_response_elem:'bool',
+    ) -> 'any_':
+
+        response = self.server.invoke(
+            name,
+            payload, # type: ignore
+            pid=pid,
+            data_format=data_format,
+            skip_response_elem=skip_response_elem)
+
+        response = {
+            pid: {
+                'is_ok': True,
+                'pid': pid,
+                'pid_data': response or None,
+                'error_info': '',
+        }}
+
+        return response
+
+# ################################################################################################################################
+
+    def _invoke_current_server_pid(
+        self,
+        id:'any_',
+        name:'str',
+        all_pids:'bool',
+        payload:'any_',
+        channel:'str',
+        data_format:'str',
+        transport:'str',
+        skip_response_elem:'bool',
+    ) -> 'any_':
+
+        func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
+
+        response = func(
+            id_,
+            payload, # type: ignore
+            channel,
+            data_format,
+            transport,
+            skip_response_elem=skip_response_elem,
+            serialize=True)
+
+        if all_pids:
+
+            response = {
+                self.server.pid: {
+                    'is_ok': True,
+                    'pid': self.server.pid,
+                    'pid_data': response,
+                    'error_info': '',
+            }}
+
+        return response
+
+# ################################################################################################################################
+
     def handle(self):
 
         # Local aliases
-        payload:'any_'
+        payload:'any_' = None
         needs_response_time = self.request.input.get('needs_response_time') or False
 
         # Optionally, we are return the total execution time of this service
@@ -522,45 +587,15 @@ class Invoke(AdminService):
 
             else:
 
+                # We are invoking another server by its PID ..
                 if pid and pid != self.server.pid:
 
-                    response = self.server.invoke(
-                        name,
-                        payload, # type: ignore
-                        pid=pid,
-                        data_format=data_format,
-                        skip_response_elem=skip_response_elem)
+                    response = self._invoke_other_server_pid(name, payload, pid, data_format, skip_response_elem)
 
-                    response = {
-                        pid: {
-                          'is_ok': True,
-                          'pid': pid,
-                          'pid_data': response or None,
-                          'error_info': '',
-                    }}
-
+                # .. we are invoking our own process ..
                 else:
-
-                    func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-
-                    response = func(
-                        id_,
-                        payload, # type: ignore
-                        channel,
-                        data_format,
-                        transport,
-                        skip_response_elem=skip_response_elem,
-                        serialize=True)
-
-                    if all_pids:
-
-                        response = {
-                            self.server.pid: {
-                              'is_ok': True,
-                              'pid': self.server.pid,
-                              'pid_data': response,
-                              'error_info': '',
-                        }}
+                    response = self._invoke_current_server_pid(
+                        id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
 
         if response:
 
