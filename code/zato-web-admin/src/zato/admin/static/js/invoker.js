@@ -57,6 +57,8 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
 
+    console.log("Data "+ data);
+
     // Extract the response's underlying JSON
     let response = $.parseJSON(data);
 
@@ -73,8 +75,14 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
         _elem.addClass("invoker-draw-attention", 1);
     });
 
-    $("#result-header").text(status + " | 42 ms");
-    $("#data-response").val(response["data"]);
+    // This is optional
+    if(response.response_time_human) {
+        status += " | ";
+        status += response.response_time_human;
+    }
+
+    $("#result-header").text(status);
+    $("#data-response").val(response.data);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
