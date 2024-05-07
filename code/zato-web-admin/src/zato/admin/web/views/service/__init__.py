@@ -242,11 +242,9 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     # Local variables
     status_code = HTTPStatus.BAD_REQUEST
-    response_time_human = ''
     content = {
         'content': '',
-        'response_time_ms': '1234',
-        'response_time_human': '1.12 s',
+        'response_time_human': '',
     }
 
     try:
@@ -264,6 +262,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         status_code = HTTPStatus.BAD_REQUEST
     else:
         try:
+            content['response_time_human'] = response.inner.headers.get('X-Zato-Response-Time-Human')
             if response.ok:
                 data = response.inner_service_response or '(None)'
                 status_code = HTTPStatus.OK
@@ -278,11 +277,6 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     out = HttpResponse()
     out.status_code = status_code
     out.content = content
-
-    print()
-    print(111, content)
-    print(222, response.inner.headers)
-    print()
 
     return out
 
