@@ -242,6 +242,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     # Local variables
     status_code = HTTPStatus.BAD_REQUEST
+    response_time_human = ''
     content = {
         'content': '',
         'response_time_ms': '1234',
@@ -252,6 +253,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         input_dict = {}
         input_dict['payload'] = req.POST.get('data-request', '')
         input_dict['to_json'] = True
+        input_dict['needs_response_time'] = True
 
         response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
@@ -279,6 +281,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     print()
     print(111, content)
+    print(222, response.inner.headers)
     print()
 
     return out

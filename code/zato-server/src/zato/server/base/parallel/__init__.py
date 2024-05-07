@@ -252,6 +252,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_parser = BasicParser()
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.needs_x_zato_cid = False
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -765,6 +766,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         if self.fs_server_config.kvdb.host:
             self.kvdb.init()
+
+        # Whether to add X-Zato-CID to outgoing responses
+        needs_x_zato_cid = self.fs_server_config.misc.get('needs_x_zato_cid') or False
+        self.needs_x_zato_cid = needs_x_zato_cid
 
         # New in 3.1, it may be missing in the config file
         if not self.fs_server_config.misc.get('sftp_genkey_command'):
