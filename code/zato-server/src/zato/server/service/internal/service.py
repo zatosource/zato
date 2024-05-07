@@ -606,8 +606,6 @@ class Invoke(AdminService):
 
         # If we are here, it means that we can optionally compute the total execution time ..
         if needs_response_time:
-            import time
-            time.sleep(1)
             response_time = self.time.utcnow(needs_format=False) - start_time # type: ignore
             response_time = response_time.total_seconds()
             response_time = response_time * 1000 # Turn seconds into milliseconds
@@ -616,10 +614,17 @@ class Invoke(AdminService):
             if response_time < 1:
                 response_time_human = 'Below 1 ms'
             else:
-                import datetime
-                from humanize import naturaldelta
-                delta = datetime.timedelta(milliseconds=response_time)
-                response_time_human = naturaldelta(delta, minimum_unit='milliseconds')
+                # .. if it's below 10 seconds, keep using milliseconds ..
+                if response_time < 10_000:
+                    response_time = int(response_time) # Round it up
+                    response_time_human = f'{response_time} ms'
+
+                # .. otherwise, turn it into seconds ..
+                else:
+                    _response_time = float(response_time)
+                    _response_time = _response_time / 1000.0 # Convert it back to seconds
+                    _response_time = round(_response_time, 2) # Keep it limited to two digits
+                    response_time_human = f'{_response_time} sec.'
 
             # .. which we attach to our response.
             self.response.headers['X-Zato-Response-Time'] = response_time
