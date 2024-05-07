@@ -10,19 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from base64 import b64decode, b64encode
 from contextlib import closing
-from enum import Enum
-from json import dumps as stdlib_dumps
 from operator import attrgetter
 from traceback import format_exc
 from uuid import uuid4
 
-# bson
-from bson.json_util import dumps as bson_dumps
-
 # Python 2/3 compatibility
 from builtins import bytes
 from zato.common.ext.future.utils import iterkeys
-from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import BROKER, SCHEDULER, StatsKey
@@ -49,33 +43,14 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 # ################################################################################################################################
 
-from zato.common.typing_ import any_, strnone
+if 0:
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # For pyflakes
 Service = Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_no_such_service_name = uuid4().hex
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _default_dumps(elem:'any_') -> 'any_':
-    if isinstance(elem, Enum):
-        return elem.value
-    else:
-        return elem
-
-def _dumps(response:'any_') -> 'any_':
-    try:
-        return bson_dumps(response)
-    except TypeError:
-        return stdlib_dumps(response, default=_default_dumps)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,7 +74,7 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def _get_data(self, session, return_internal, include_list, internal_del):
+    def _get_data(self, session, return_internal, include_list, internal_del): # type: ignore
 
         out = []
         search_result = self._search(
@@ -121,7 +96,7 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def get_data(self, session):
+    def get_data(self, session): # type: ignore
 
         # Reusable
         return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
@@ -224,13 +199,13 @@ class _Get(AdminService):
             'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), 'last_timestamp', \
             'usage_min', 'usage_max', 'usage_mean'
 
-    def get_data(self, session):
+    def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
             ODBService.impl_name, ODBService.is_internal, ODBService.slow_threshold).\
             filter(Cluster.id==ODBService.cluster_id).\
             filter(Cluster.id==self.request.input.cluster_id)
 
-        query = self.add_filter(query)
+        query = self.add_filter(query) # type: ignore
         return query.one()
 
     def handle(self):
@@ -247,8 +222,8 @@ class _Get(AdminService):
             self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
-        usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name})
-        usage_response = collect_current_usage(usage_response.data) # type: dict
+        usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name}) # type: ignore
+        usage_response = collect_current_usage(usage_response.data) # type: any_
 
         if usage_response:
 
@@ -271,9 +246,9 @@ class GetByName(_Get):
         response_elem = 'zato_service_get_by_name_response'
         input_required = _Get.SimpleIO.input_required + ('name',)
 
-    def add_filter(self, query):
+    def add_filter(self, query): # type: ignore
         return query.\
-               filter(ODBService.name==self.request.input.name)
+            filter(ODBService.name==self.request.input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -286,9 +261,9 @@ class GetByID(_Get):
         response_elem = 'zato_service_get_by_name_response'
         input_required = _Get.SimpleIO.input_required + ('id',)
 
-    def add_filter(self, query):
+    def add_filter(self, query): # type: ignore
         return query.\
-               filter(ODBService.id==self.request.input.id)
+            filter(ODBService.id==self.request.input.id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,10 +294,10 @@ class Edit(AdminService):
                 set_instance_opaque_attrs(service, input)
 
                 # Configure JSON Schema validation if service has a schema assigned by user.
-                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
+                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: anydict
                 class_ = class_info['service_class'] # type: ODBService
                 if class_.schema:
-                    self.server.service_store.set_up_class_json_schema(class_, input)
+                    self.server.service_store.set_up_class_json_schema(class_, input) # type: ignore
 
                 # Set up rate-limiting each time an object was edited
                 self.server.service_store.set_up_rate_limiting(service.name)
@@ -524,9 +499,9 @@ class Invoke(AdminService):
 
             # If PID is given on input it means we must invoke this particular server process by it ID
             if pid and pid != self.server.pid:
-                response = self.server.invoke_by_pid(name, payload, pid)
+                response = self.server.invoke_by_pid(name, payload, pid) # type: ignore
             else:
-                response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
+                response = self.invoke_async(name, payload, channel, data_format, transport, expiration) # type: ignore
 
         else:
 
@@ -542,7 +517,7 @@ class Invoke(AdminService):
 
             if use_all_pids:
 
-                args = (name, payload, timeout) if timeout else (name, payload)
+                args = (name, payload, timeout) if timeout else (name, payload) # type: ignore
                 response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
 
             else:
@@ -551,7 +526,7 @@ class Invoke(AdminService):
 
                     response = self.server.invoke(
                         name,
-                        payload,
+                        payload, # type: ignore
                         pid=pid,
                         data_format=data_format,
                         skip_response_elem=skip_response_elem)
@@ -570,7 +545,7 @@ class Invoke(AdminService):
 
                     response = func(
                         id_,
-                        payload,
+                        payload, # type: ignore
                         channel,
                         data_format,
                         transport,
@@ -589,10 +564,10 @@ class Invoke(AdminService):
 
         if response:
 
-            if not isinstance(response, basestring):
+            if not isinstance(response, str):
                 if not isinstance(response, bytes):
                     if hasattr(response, 'to_dict'):
-                        response = response.to_dict()
+                        response = response.to_dict() # type: ignore
                     response = json_dumps(response)
 
             # Make sure what we return is a string ..
@@ -643,7 +618,7 @@ class GetDeploymentInfoList(AdminService):
         output = 'server_id', 'server_name', 'service_id', 'service_name', 'fs_location', 'file_name', \
             Integer('line_number'), '-details'
 
-    def get_data(self, session):
+    def get_data(self, session): # type: ignore
 
         # Response to produce
         out = []
@@ -703,8 +678,8 @@ class GetSourceInfo(AdminService):
         input_required = ('cluster_id', 'name')
         output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
 
-    def get_data(self, session):
-        return session.query(ODBService.id.label('service_id'), Server.name.label('server_name'),
+    def get_data(self, session): # type: ignore
+        return session.query(ODBService.id.label('service_id'), Server.name.label('server_name'), # type: ignore
             DeployedService.source, DeployedService.source_path,
             DeployedService.source_hash, DeployedService.source_hash_method).\
             filter(Cluster.id==ODBService.cluster_id).\
@@ -781,7 +756,7 @@ class ServiceInvoker(AdminService):
 
 # ################################################################################################################################
 
-    def handle(self, _internal=('zato', 'pub.zato')):
+    def handle(self, _internal=('zato', 'pub.zato')): # type: ignore
 
         # ODBService name is given in URL path
         service_name = self.request.http.params.service_name
@@ -793,8 +768,9 @@ class ServiceInvoker(AdminService):
         # that our channel can be used for such invocations.
         if is_internal:
             if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
-                self.logger.warning('ODBService `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
-                    service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
+                msg = 'ODBService `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)'
+                self.logger.warning(
+                    msg, service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
                 self.response.data_format = 'text/plain'
                 raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
