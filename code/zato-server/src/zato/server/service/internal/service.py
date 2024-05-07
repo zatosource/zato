@@ -476,6 +476,7 @@ class Invoke(AdminService):
         channel:'str',
         data_format:'str',
         transport:'str',
+        zato_response_headers_container:'anydict',
         skip_response_elem:'bool',
     ) -> 'any_':
 
@@ -487,6 +488,7 @@ class Invoke(AdminService):
             channel,
             data_format,
             transport,
+            zato_response_headers_container=zato_response_headers_container,
             skip_response_elem=skip_response_elem,
             serialize=True)
 
@@ -561,6 +563,7 @@ class Invoke(AdminService):
         channel:'str',
         data_format:'str',
         transport:'str',
+        zato_response_headers_container:'anydict',
         skip_response_elem:'bool',
     ) -> 'any_':
 
@@ -587,7 +590,8 @@ class Invoke(AdminService):
             # .. we are invoking our own process ..
             else:
                 response = self._invoke_current_server_pid(
-                    id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
+                    id, name, all_pids, payload, channel, data_format, transport,
+                    zato_response_headers_container, skip_response_elem)
 
         return response
 
@@ -624,6 +628,9 @@ class Invoke(AdminService):
         # Local aliases
         payload:'any_' = None
         needs_response_time = self.request.input.get('needs_response_time') or False
+
+        # A dictionary of headers that the target service may want to produce
+        zato_response_headers_container = {}
 
         # Optionally, we are return the total execution time of this service
         if needs_response_time:
@@ -682,7 +689,9 @@ class Invoke(AdminService):
             # .. or a sync one ..
             else:
                 response = self._run_sync_invoke(
-                    pid, timeout, id, name, all_pids, payload, channel, data_format, transport, skip_response_elem)
+                    pid, timeout, id, name, all_pids, payload, channel,
+                    data_format, transport, zato_response_headers_container, skip_response_elem
+                )
 
             # .. we still may not have any response here ..
             if response:
@@ -696,6 +705,11 @@ class Invoke(AdminService):
 
                 # .. build the values we are to return ..
                 response_time, response_time_human = self._build_response_time(start_time) # type: ignore
+
+                headers = {
+                    'X-Zato-Response-Time': response_time,
+                    'X-Zato-Response-Time-Human': response_time_human,
+                }
 
                 # .. which we attach to our response.
                 self.response.headers['X-Zato-Response-Time'] = response_time
