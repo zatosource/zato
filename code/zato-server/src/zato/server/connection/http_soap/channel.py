@@ -304,7 +304,7 @@ class RequestDispatcher:
                 match_target = channel_item['match_target']
 
                 # This is the channel's security definition, if any
-                sec = self.url_data.url_sec[match_target]
+                sec = self.url_data.url_sec[match_target] # type: ignore
 
                 # This may point to security groups attached to this channel
                 security_groups_ctx = channel_item.get('security_groups_ctx')
@@ -757,8 +757,10 @@ class RequestHandler:
         Note that query string is sorted which means that ?foo=123&bar=456 is equal to ?bar=456&foo=123,
         that is, the order of parameters in query string does not matter.
         """
-        if service.get_request_hash:
-            hash_value = service.get_request_hash(_HashCtx(raw_request, channel_item, channel_params, wsgi_environ))
+        if service.get_request_hash:# type: ignore
+            hash_value = service.get_request_hash(
+                _HashCtx(raw_request, channel_item, channel_params, wsgi_environ) # type: ignore
+                )
         else:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
