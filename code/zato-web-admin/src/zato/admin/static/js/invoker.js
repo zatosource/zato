@@ -57,6 +57,9 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
 
+    // Extract the response's underlying JSON
+    let response = $.parseJSON(data);
+
     // Disable blinking for all the elements that should blink
     on_started_activate_blinking.each(function(elem) {
         $.fn.zato.toggle_css_class($(elem), "invoker-blinking", "hidden");
@@ -71,7 +74,7 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
     });
 
     $("#result-header").text(status + " | 42 ms");
-    $("#data-response").val(data);
+    $("#data-response").val(response["data"]);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
