@@ -9,10 +9,14 @@
 <script type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
 <script type="text/javascript" src="/static/store2/store2.js"></script>
 
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
+
 <script type="text/javascript" src="/static/js/common.js"></script>
 <script type="text/javascript" src="/static/js/invoker.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <link rel="stylesheet" media="screen" href="/static/css/service/ide.css" />
 <link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
 
@@ -128,7 +132,6 @@
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-    // $.fn.zato.ide.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
 </script>
 

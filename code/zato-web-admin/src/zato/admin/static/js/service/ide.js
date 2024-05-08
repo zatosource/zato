@@ -192,7 +192,7 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
     let header_links = $(header_links_id);
 
     // .. this is what each link will be based on ..
-    let link_pattern = '<a href="javascript:$.fn.zato.ide.invoke_header_link(\'{0}\', \'{1}\')" id="header-{0}-link-{1}">{2}</a>';
+    let link_pattern = '<input type="button" id="header-{0}-link-{1}" value="{2}"></button>';
 
     // .. build a string containing the link ..
     let link_string = String.format(link_pattern, prefix, item_label, text);
@@ -205,7 +205,7 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
 
     // .. and add a separator unless this is the last link.
     if(!is_last) {
-        $("<span> ⬝ </span>").insertAfter(link);
+        $("<span> </span>").insertAfter(link);
     }
 }
 
@@ -270,6 +270,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
+    $.fn.zato.ide.add_header_left_link("file", "File");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     $.fn.zato.ide.add_header_left_link("previous", "Previous");
     $.fn.zato.ide.add_header_left_link("next", "Next", true);
@@ -295,6 +296,16 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     // One-line status bar
     $("#header-status").text(initial_header_status);
+
+    tippy('#header-left-link-file', {
+        content: '<input type="button" value="New"/> <input type="button" value="Rename"/> <input type="button" value="Delete"/>',
+        allowHTML: true,
+        theme: 'light',
+        trigger: 'click',
+        placement: 'bottom',
+        arrow: true,
+        interactive: true,
+      });
 
 }
 
