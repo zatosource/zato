@@ -51,16 +51,18 @@ $.fn.zato.invoker.get_request_url = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.on_sync_invoke_ended_common = function(
-    options, status, data
+    options,
+    status,
+    data,
 ) {
+
     // Local variables
+    let response = $.parseJSON(data);
+    let has_response = !!response.response_time_human;
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
 
     console.log("Data "+ data);
-
-    // Extract the response's underlying JSON
-    let response = $.parseJSON(data);
 
     // Disable blinking for all the elements that should blink
     on_started_activate_blinking.each(function(elem) {
@@ -81,8 +83,15 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
         status += response.response_time_human;
     }
 
+    if(has_response) {
+        response_data = response.data;
+    }
+    else {
+        response_data = $.fn.zato.to_json(response.data[0].zato_env);
+    }
+
     $("#result-header").text(status);
-    $("#data-response").val(response.data);
+    $("#data-response").val(response_data);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -104,8 +113,6 @@ $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.run_sync_invoker = function(options) {
-
-    console.log("Options 1: " +  Object.entries(options));
 
     // Local variables
     let request_form_id = options["request_form_id"];
