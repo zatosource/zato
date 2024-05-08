@@ -205,7 +205,7 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
 
     // .. and add a separator unless this is the last link.
     if(!is_last) {
-        $("<span> | </span>").insertAfter(link);
+        $("<span> ⬝ </span>").insertAfter(link);
     }
 }
 
@@ -249,8 +249,8 @@ $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
     $.fn.zato.ide.add_header_left_link("delete-file", "Delete", true);
 
     // Right-hand side links
-    // $.fn.zato.ide.add_header_right_link("push", "Push", false);
-    // $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
+    $.fn.zato.ide.add_header_right_link("push", "Push", false);
+    $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
     $("#header-status").text(initial_header_status);
@@ -276,7 +276,9 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     // $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
 
     // Right-hand side links
-    // $.fn.zato.ide.add_header_right_link("open-api", "OpenAPI", true);
+    //$.fn.zato.ide.add_header_right_link("open-api", "OpenAPI", true);
+    $.fn.zato.ide.add_header_right_link("push", "Push");
+    $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
     // $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
