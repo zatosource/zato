@@ -706,11 +706,6 @@ class Invoke(AdminService):
                 # .. build the values we are to return ..
                 response_time, response_time_human = self._build_response_time(start_time) # type: ignore
 
-                headers = {
-                    'X-Zato-Response-Time': response_time,
-                    'X-Zato-Response-Time-Human': response_time_human,
-                }
-
                 # .. which we attach to our response.
                 self.response.headers['X-Zato-Response-Time'] = response_time
                 self.response.headers['X-Zato-Response-Time-Human'] = response_time_human
