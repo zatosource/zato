@@ -80,7 +80,7 @@
 
                     <tr colspan="2" class="invoker-tr">
                         <td class="align-right">
-                            <div><input id="invoke-service" type="button" value="Invoke" /></div>
+                            <div><input id="invoke-service" type="button" value="Invoke"/></div>
                         </td>
                     </tr>
 
@@ -88,7 +88,8 @@
                         <td>
                             <br/>
                             <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
-                            <span id="invoking-please-wait" class="hidden">Please wait ..</span>
+                            <span id="deploying-please-wait" class="hidden">Deploying ..</span>
+                            <span id="invoking-please-wait" class="hidden">Invoking ..</span>
                             <form id="invoke-service-form" action="/zato/service/invoke/pub.zato.ping/cluster/1/" novalidate="" method="post"></form>
                                 <textarea id="data-response"></textarea>
                             </form>
