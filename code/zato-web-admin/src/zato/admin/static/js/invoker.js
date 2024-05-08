@@ -89,7 +89,7 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
     }
 
     $("#result-header").text(status);
-    $("#data-response").val(response_data);
+    $("#data-response").text(response_data);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
