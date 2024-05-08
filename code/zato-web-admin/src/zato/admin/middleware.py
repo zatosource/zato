@@ -106,10 +106,6 @@ class Client(AnyServiceInvoker):
             err_details = json_data.get('details')
             full_details = 'CID: {}; nDetails: {}'.format(cid, err_details)
 
-            print()
-            print(111, response.inner.headers)
-            print()
-
             if not err_details:
                 err_details = json_data
 
