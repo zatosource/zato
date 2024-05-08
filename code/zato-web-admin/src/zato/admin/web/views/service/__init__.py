@@ -257,7 +257,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     except HeadersEnrichedException as enriched_exc:
         content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human')
-        raise
+        data = enriched_exc.args
 
     except Exception as e:
         msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
