@@ -1,4 +1,13 @@
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$(document).ready(function() {
+    $('#invoke-service').click($.fn.zato.invoker.on_invoke_submitted);
+    $('#header-left-link-deploy').click($.fn.zato.invoker.on_invoke_submitted);
+});
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // All the keys that we use with LocalStorage
@@ -518,6 +527,20 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
     else {
         $.fn.zato.ide.on_service_select_changed_non_current_file(select_elem, option_selected);
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.on_deploy_submitted = function() {
+
+    const options = {
+        "request_form_id": "#invoke-service-request-form",
+        "on_started_activate_blinking": ["#invoking-please-wait"],
+        "on_ended_draw_attention": ["#result-header"],
+        "get_request_url_func": $.fn.zato.invoker.get_request_url,
+
+    }
+    $.fn.zato.invoker.run_deployer(options);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
