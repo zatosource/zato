@@ -6,7 +6,7 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
         "request_form_id": "#invoke-service-request-form",
         "on_started_activate_blinking": ["#invoking-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
-        "get_request_url_func": $.fn.zato.invoker.get_request_url,
+        "get_request_url_func": $.fn.zato.invoker.get_sync_invoke_request_url,
 
     }
     $.fn.zato.invoker.run_sync_invoker(options);
@@ -69,7 +69,7 @@ $.fn.zato.invoker.submit_form = function(
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.get_request_url = function() {
+$.fn.zato.invoker.get_sync_invoke_request_url = function() {
     let select = $("#service-select");
     let service = select.val();
     let out = "/zato/service/invoke/"+ service + "/cluster/1/";
@@ -78,7 +78,7 @@ $.fn.zato.invoker.get_request_url = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.on_sync_invoke_ended_common = function(
+$.fn.zato.invoker.on_submit_form_ended_common = function(
     options,
     status,
     data,
@@ -125,7 +125,7 @@ $.fn.zato.invoker.on_sync_invoke_ended_common = function(
 $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_status, error_message) {
 
     let status = jq_xhr.status + " " + error_message;
-    $.fn.zato.invoker.on_sync_invoke_ended_common(options, status, jq_xhr.responseText);
+    $.fn.zato.invoker.on_submit_form_ended_common(options, status, jq_xhr.responseText);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -133,13 +133,12 @@ $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_st
 $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
 
     let status = "200 OK";
-    $.fn.zato.invoker.on_sync_invoke_ended_common(options, status, data);
+    $.fn.zato.invoker.on_submit_form_ended_common(options, status, data);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.run_sync_invoker = function(options) {
-
+$.fn.zato.invoker.run_sync_form_submitter = function(options) {
     // Local variables
     let request_form_id = options["request_form_id"];
     let get_request_url_func = options["get_request_url_func"];
@@ -170,6 +169,12 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
             $.fn.zato.invoker.on_sync_invoke_ended_error
         )
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.run_sync_invoker = function(options) {
+    $.fn.zato.invoker.run_sync_form_submitter(options);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
