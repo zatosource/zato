@@ -549,4 +549,9 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
     //$.fn.zato.invoker.run_sync_form_submitter(options);
     options = $.fn.zato.to_dict(options);
     console.log("Opt: "+ options);
+
+    // Populate the form based on what is inside the editor
+    let editor_text = window.zato_editor.getSession().getValue()
+
+    console.log("Text: "+ editor_text);
 }
