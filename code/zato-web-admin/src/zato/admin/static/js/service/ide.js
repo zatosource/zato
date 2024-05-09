@@ -30,7 +30,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     window.zato_editor_session_map[current_fs_location] = window.zato_editor;
 
     // Set initial data
-    $.fn.zato.ide.populate_browser_area(initial_header_status);
     $.fn.zato.ide.populate_invoker_area();
 
     // Handle browser history back/forward actions
@@ -160,14 +159,14 @@ $.fn.zato.ide.set_main_area_container_size = function(size) {
 
 $.fn.zato.ide.switch_to_action_area = function(name) {
 
-    if(name == "browser") {
-        $.fn.zato.ide.populate_browser_area();
-    }
-    else if(name == "invoker") {
+    if(name == "invoker") {
         $.fn.zato.ide.populate_invoker_area();
     }
     else if(name == "info") {
         $.fn.zato.ide.populate_data_model_area();
+    }
+    else if(name == "settings") {
+        $.fn.zato.ide.populate_settings_area();
     }
 }
 
@@ -231,33 +230,6 @@ $.fn.zato.ide.populate_header_status = function(text) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.populate_browser_area = function(initial_header_status) {
-
-    // Clear anything that we may already have
-    $.fn.zato.ide.clear_header_links("left")
-    $.fn.zato.ide.clear_header_links("right")
-
-    // Make sure that we are only showing our own area now
-    $('.file-listing-tr').show();
-    $('.invoker-tr').hide();
-
-    // Left-hand side links
-    $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
-    // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
-    $.fn.zato.ide.add_header_left_link("new", "New");
-    $.fn.zato.ide.add_header_left_link("rename-file", "Rename");
-    $.fn.zato.ide.add_header_left_link("delete-file", "Delete", true);
-
-    // Right-hand side links
-    $.fn.zato.ide.add_header_right_link("push", "Push", false);
-    $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
-
-    // One-line status bar
-    $("#header-status").text(initial_header_status);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
 $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     // Clear anything that we may already have
@@ -297,8 +269,14 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     // One-line status bar
     $("#header-status").text(initial_header_status);
 
+    let header_left_link_file_content = `
+        <input type="button" value="New"/>
+        <input type="button" value="Rename"/>
+        <input type="button" value="Delete"/>
+    `
+
     tippy('#header-left-link-file', {
-        content: '<input type="button" value="New"/> <input type="button" value="Rename"/> <input type="button" value="Delete"/>',
+        content: header_left_link_file_content,
         allowHTML: true,
         theme: 'light',
         trigger: 'click',
