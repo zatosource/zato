@@ -531,11 +531,20 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.invoker.get_sync_deploy_request_url = function() {
+    let input = $("#current_fs_location");
+    let current_fs_location = input.val();
+    let out = "/zato/service/deploy/?current_fs_location="+ current_fs_location;
+    return out
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.on_deploy_submitted = function() {
 
     const options = {
         "request_form_id": "#editor-form",
-        "on_started_activate_blinking": ["#invoking-please-wait"],
+        "on_started_activate_blinking": ["#deploying-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
         "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
 
@@ -547,11 +556,14 @@ $.fn.zato.invoker.on_deploy_submitted = function() {
 
 $.fn.zato.invoker.run_sync_deployer = function(options) {
     //$.fn.zato.invoker.run_sync_form_submitter(options);
-    options = $.fn.zato.to_dict(options);
-    console.log("Opt: "+ options);
+    //options = $.fn.zato.to_dict(options);
+    //console.log("Opt: "+ options);
 
     // Populate the form based on what is inside the editor
-    let editor_text = window.zato_editor.getSession().getValue()
+    let editor_value = window.zato_editor.getSession().getValue()
+    $("#data-editor").val(editor_value);
 
-    console.log("Text: "+ editor_text);
+    $.fn.zato.invoker.run_sync_form_submitter(options);
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
