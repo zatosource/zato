@@ -1,10 +1,3 @@
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$(document).ready(function() {
-    $('#invoke-service').click($.fn.zato.invoker.on_invoke_submitted);
-});
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.on_invoke_submitted = function() {
@@ -36,6 +29,41 @@ $.fn.zato.invoker.invoke = function(
         complete: callback,
         dataType: data_type,
         context: context
+    });
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.submit_form = function(
+    url,
+    form_id,
+    options,
+    on_success_func,
+    on_error_func,
+    display_timeout,
+) {
+    let _display_timeout = display_timeout || 120;
+    let form = $(form_id);
+    let form_data = form.serialize();
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: form_data,
+        dataType: null,
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data, text_status, request) {
+            let _on_success = function() {
+                on_success_func(options, data);
+            }
+            setTimeout(_on_success, _display_timeout)
+        },
+        error: function(jq_xhr, text_status, error_message) {
+            let _on_error = function() {
+                on_error_func(options, jq_xhr, text_status, error_message);
+            }
+            setTimeout(_on_error, _display_timeout)
+        },
     });
 };
 
@@ -134,29 +162,13 @@ $.fn.zato.invoker.run_sync_invoker = function(options) {
 
     // Submit the form, if we have one on input
     if(request_form_id) {
-        let request_form = $(request_form_id);
-        let request_form_data = request_form.serialize();
-
-        $.ajax({
-            type: "POST",
-            url: url,
-            data: request_form_data,
-            dataType: null,
-            headers: {'X-CSRFToken': $.cookie('csrftoken')},
-            error: function(jq_xhr, text_status, error_message) {
-                let _on_error = function() {
-                    $.fn.zato.invoker.on_sync_invoke_ended_error(options, jq_xhr, text_status, error_message);
-                }
-                setTimeout(_on_error, 120)
-            },
-            success: function(data, text_status, request) {
-                let _on_success = function() {
-                    $.fn.zato.invoker.on_sync_invoke_ended_success(options, data);
-                }
-                setTimeout(_on_success, 120)
-            }
-        });
-
+        $.fn.zato.invoker.submit_form(
+            url,
+            request_form_id,
+            options,
+            $.fn.zato.invoker.on_sync_invoke_ended_success,
+            $.fn.zato.invoker.on_sync_invoke_ended_error
+        )
     }
 }
 
