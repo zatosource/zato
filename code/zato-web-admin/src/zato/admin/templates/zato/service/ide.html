@@ -25,6 +25,7 @@
         <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
         <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
         <div id="editor">{{ data.current_file_source_code }}</div>
+        <form id="editor-form" class="hidden"><textarea id="data-editor" name="data-editor"></textarea></form>
     </div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
@@ -90,7 +91,7 @@
                             <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
                             <span id="deploying-please-wait" class="hidden">Deploying ..</span>
                             <span id="invoking-please-wait" class="hidden">Invoking ..</span>
-                            <form id="invoke-service-form" action="/zato/service/invoke/pub.zato.ping/cluster/1/" novalidate="" method="post"></form>
+                            <form id="invoke-service-form" novalidate="" method="post"></form>
                                 <textarea id="data-response"></textarea>
                             </form>
                         </td>

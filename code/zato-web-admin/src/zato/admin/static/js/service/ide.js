@@ -3,7 +3,7 @@
 
 $(document).ready(function() {
     $('#invoke-service').click($.fn.zato.invoker.on_invoke_submitted);
-    $('#header-left-link-deploy').click($.fn.zato.invoker.on_invoke_submitted);
+    $('#header-left-link-deploy').click($.fn.zato.invoker.on_deploy_submitted);
 });
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -534,13 +534,19 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 $.fn.zato.invoker.on_deploy_submitted = function() {
 
     const options = {
-        "request_form_id": "#invoke-service-request-form",
+        "request_form_id": "#editor-form",
         "on_started_activate_blinking": ["#invoking-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
-        "get_request_url_func": $.fn.zato.invoker.get_request_url,
+        "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
 
     }
-    $.fn.zato.invoker.run_deployer(options);
+    $.fn.zato.invoker.run_sync_deployer(options);
 }
 
-/* ---------------------------------------------------------------------------------------------------------------------------- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.run_sync_deployer = function(options) {
+    //$.fn.zato.invoker.run_sync_form_submitter(options);
+    options = $.fn.zato.to_dict(options);
+    console.log("Opt: "+ options);
+}
