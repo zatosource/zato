@@ -37,7 +37,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
-from zato.common.typing_ import anydict, cast_, listnone, type_
+from zato.common.typing_ import cast_, listnone, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.commands import CommandsFacade
