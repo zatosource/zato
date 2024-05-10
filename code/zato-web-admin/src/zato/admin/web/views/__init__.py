@@ -864,14 +864,21 @@ def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_te
 
 # ################################################################################################################################
 
-def upload_to_server(req, cluster_id, service, error_msg_template):
+def upload_to_server(
+    client,
+    data,
+    payload_name,
+    cluster_id=1,
+    service='zato.service.upload-package',
+    error_msg_template='Upload error, e:`{}`'
+):
     try:
         input_dict = {
             'cluster_id': cluster_id,
-            'payload': b64encode(req.read()),
-            'payload_name': req.GET['qqfile']
+            'payload': b64encode(data),
+            'payload_name': payload_name,
         }
-        req.zato.client.invoke(service, input_dict)
+        client.invoke(service, input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
