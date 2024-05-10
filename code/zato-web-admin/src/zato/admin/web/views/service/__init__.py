@@ -229,12 +229,28 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def package_upload(req:'HttpRequest', cluster_id:'str') -> 'any_':
-    """ Handles a service package file upload.
+def upload(req:'HttpRequest') -> 'any_':
+    """ Uploads one or more files with services.
     """
     client = req.zato.client # type: ignore
-    data = req.read()
     payload_name = req.GET['qqfile']
+    has_post = req.GET.get('has_post')
+
+    # This is used by the IDE ..
+    if has_post:
+        data = req.POST.get('data-editor')
+
+    # .. and this is used by file uploads in the listing of services.
+    else:
+        data = req.read()
+
+    print()
+    print(111, data)
+    print()
+
+    print()
+    print(222, data)
+    print()
 
     return upload_to_server(client, data, payload_name)
 

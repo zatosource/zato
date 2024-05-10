@@ -1643,7 +1643,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'ModuleType', class_:'any_') -> 'SourceCodeInfo':
+    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'SourceCodeInfo':
         """ Returns the source code of and the FS path to the given module.
         """
         source_info = SourceCodeInfo()

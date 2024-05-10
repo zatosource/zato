@@ -537,7 +537,6 @@ class Invoke(AdminService):
         expiration:'int',
     ) -> 'any_':
 
-
         if id:
             impl_name = self.server.service_store.id_to_impl_name[id]
             name = self.server.service_store.service_data(impl_name)['name']
@@ -819,27 +818,35 @@ class UploadPackage(AdminService):
     def handle(self):
 
         # Local variables
-        prefix='zato-hd-'
-        suffix=self.request.input.payload_name
+        payload = self.request.input.payload
+        payload_name = self.request.input.payload_name
+        input_payload = b64decode(payload)
+
+        prefix = 'zato-hd-'
+        suffix = payload_name
         body = uuid4().hex
 
-        if service_deploy_location := os.environ.get('Zato_Service_Deploy_Location'):
+        service_deploy_location = os.environ.get('Zato_Service_Deploy_Location')
+        has_abs_path = os.path.isabs(payload_name)
+
+        if service_deploy_location:
             file_name_full = os.path.join(service_deploy_location, suffix)
             needs_default_hot_deploy = False
+        elif has_abs_path:
+            file_name_full = payload_name
+            needs_default_hot_deploy = False
         else:
-            prefix='zato-hd-'
-            suffix=self.request.input.payload_name
+            prefix = 'zato-hd-'
             body = uuid4().hex
             file_name_full = get_tmp_path(prefix, suffix, body)
             needs_default_hot_deploy = True
 
         with open(file_name_full, 'wb') as tf:
-            input_payload = b64decode(self.request.input.payload)
             _ = tf.write(input_payload)
             tf.flush()
 
         if needs_default_hot_deploy:
-            package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+            package_id = hot_deploy(self.server, payload_name, tf.name, False)
             self.response.payload = {
                 'package_id': package_id
             }
