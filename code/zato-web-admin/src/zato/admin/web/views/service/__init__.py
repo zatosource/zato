@@ -232,7 +232,11 @@ class Delete(_Delete):
 def package_upload(req:'HttpRequest', cluster_id:'str') -> 'any_':
     """ Handles a service package file upload.
     """
-    return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
+    client = req.zato.client # type: ignore
+    data = req.read()
+    payload_name = req.GET['qqfile']
+
+    return upload_to_server(client, data, payload_name)
 
 # ################################################################################################################################
 
