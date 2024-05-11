@@ -605,13 +605,29 @@ $.fn.zato.ide.on_editor_changed = function() {
     else {
         var class_name = "not-different";
     }
-    console.log("Diff: "+ is_different);
-    console.log("CSS: "+ class_name);
 
     // .. and set it for the button accordingly.
+    $.fn.zato.ide.set_deployment_button_status_class(class_name);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.set_deployment_button_status_class = function(class_name) {
     let button = $("#header-left-link-deploy")
     button.removeClass("different not-different");
     button.addClass(class_name);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.set_deployment_button_status_different = function() {
+    $.fn.zato.ide.set_deployment_button_status_class("different");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.set_deployment_button_status_not_different = function() {
+    $.fn.zato.ide.set_deployment_button_status_class("not-different");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -651,6 +667,9 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
     // Save the current contents of the file for later use
     let key = $.fn.zato.ide.get_last_deployed_key();
     store.set(key, editor_value);
+
+    // Indicate that the file has no changes to deploy
+    $.fn.zato.ide.set_deployment_button_status_not_different();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

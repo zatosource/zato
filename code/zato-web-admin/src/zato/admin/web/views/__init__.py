@@ -13,7 +13,6 @@ import logging
 from base64 import b64encode
 from datetime import datetime, timedelta
 from itertools import chain
-from time import sleep
 from traceback import format_exc
 
 # bunch
@@ -37,7 +36,7 @@ from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.util.api import get_lb_client as _get_lb_client
+from zato.common.util.api import get_lb_client as _get_lb_client, validate_python_syntax
 
 # ################################################################################################################################
 
@@ -871,9 +870,14 @@ def upload_to_server(
     payload_name,
     cluster_id=1,
     service='zato.service.upload-package',
-    error_msg_template='Upload error, e:`{}`',
+    error_msg_template='Deployment error, e:`{}`',
 ):
+
     try:
+
+        # First, check if the source code is valid
+        validate_python_syntax(data)
+
         input_dict = {
             'cluster_id': cluster_id,
             'payload': b64encode(data),
@@ -893,7 +897,13 @@ def upload_to_server(
     except Exception:
         msg = error_msg_template.format(format_exc())
         logger.error(msg)
-        return HttpResponseServerError(msg)
+
+        out = {
+            'success': False,
+            'data':msg
+        }
+
+        return HttpResponseServerError(dumps(out))
 
 # ################################################################################################################################
 
