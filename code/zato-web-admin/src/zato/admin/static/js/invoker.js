@@ -84,6 +84,8 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
     data,
 ) {
 
+    console.log("Data "+ data);
+
     // Local variables
     let response = $.parseJSON(data);
     let has_response = !!response.response_time_human;
@@ -104,7 +106,7 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
     });
 
     // This is optional
-    if(response.response_time_human) {
+    if(response.response_time_human && response.response_time_human != "default") {
         status += " | ";
         status += response.response_time_human;
     }
@@ -133,7 +135,13 @@ $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_st
 $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
 
     let status = "200 OK";
+    let on_post_success_func = options["on_post_success_func"];
+
     $.fn.zato.invoker.on_submit_form_ended_common(options, status, data);
+
+    if(on_post_success_func) {
+        on_post_success_func();
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
