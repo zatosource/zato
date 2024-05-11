@@ -84,8 +84,10 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         }
       });
 
-    window.zato_inactivity_interval = null;
-    document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+      window.zato_editor.on('change', function(delta) {
+        $.fn.zato.ide.on_editor_changed();
+    });
+
 
     // Make sure the menu can be visible
     $(".pure-css-nav").hover(function() {
@@ -100,6 +102,10 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
+
+    window.zato_inactivity_interval = null;
+    document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -465,6 +471,11 @@ $.fn.zato.ide.get_current_source_code_key = function() {
     return $.fn.zato.ide.get_cluster_name() + "." + $.fn.zato.ide.get_current_fs_location();
 }
 
+$.fn.zato.ide.get_last_deployed_key = function() {
+    let key = "zato.last-deployed." + $.fn.zato.ide.get_current_source_code_key()
+    return key;
+}
+
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_document_changed = function(e) {
@@ -575,6 +586,12 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.on_editor_changed = function() {
+
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.get_sync_deploy_request_url = function() {
     let input = $("#current_fs_location");
     let current_fs_location = input.val();
@@ -599,15 +616,17 @@ $.fn.zato.invoker.on_deploy_submitted = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.run_sync_deployer = function(options) {
-    //$.fn.zato.invoker.run_sync_form_submitter(options);
-    //options = $.fn.zato.to_dict(options);
-    //console.log("Opt: "+ options);
 
     // Populate the form based on what is inside the editor
-    let editor_value = window.zato_editor.getSession().getValue()
+    let editor_value = window.zato_editor.getValue()
     $("#data-editor").val(editor_value);
 
+    // Actually deploy the source code
     $.fn.zato.invoker.run_sync_form_submitter(options);
+
+    // Save the current contents of the file for later use
+    let key = $.fn.zato.ide.get_last_deployed_key();
+    store.set(key, editor_value);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
