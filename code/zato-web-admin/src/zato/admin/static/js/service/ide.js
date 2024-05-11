@@ -48,16 +48,36 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     }
 
     // Resizes the action area
-    hotkeys('F2', $.fn.zato.ide.on_key_f2);
+    hotkeys('F2', $.fn.zato.ide.on_key_toggle_action_area);
 
     // Same as above (F2)
     window.zato_editor.commands.addCommand({
         name: 'on_F2',
         bindKey: {win: 'F2',  mac: 'F2'},
         exec: function(_ignored_editor) {
-            $.fn.zato.ide.on_key_f2(null, null);
+            $.fn.zato.ide.on_key_toggle_action_area(null, null);
         }
     })
+
+    // Ignore F1
+    window.zato_editor.commands.addCommand({
+        name: 'on_F1',
+        bindKey: {win: 'F1',  mac: 'F1'},
+        exec: function(_ignored_editor) {
+            // Explicitly do nothing
+        }
+    })
+
+    // Ctrl-S to deploy a file
+    window.zato_editor.commands.addCommand({
+        name: 'on_Ctrl_S',
+        bindKey: {win: 'Ctrl-S',  mac: 'Command-S'},
+        exec: function(_ignored_editor) {
+            $.fn.zato.ide.on_key_deploy_file(null, null);
+        }
+    })
+
+    $.fn.zato.invoker.on_deploy_submitted
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
@@ -119,8 +139,13 @@ $.fn.zato.ide.restore_layout = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 // Resizes the action area
-$.fn.zato.ide.on_key_f2 = function(_ignored_event, _ignored_handler) {
+$.fn.zato.ide.on_key_toggle_action_area = function(_ignored_event, _ignored_handler) {
     $.fn.zato.ide.toggle_action_area();
+}
+
+// Deploys the current file
+$.fn.zato.ide.on_key_deploy_file = function(_ignored_event, _ignored_handler) {
+    $.fn.zato.invoker.on_deploy_submitted();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
