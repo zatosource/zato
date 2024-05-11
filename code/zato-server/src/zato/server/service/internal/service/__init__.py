@@ -626,7 +626,7 @@ class Invoke(AdminService):
 
         # Local aliases
         payload:'any_' = None
-        needs_response_time = self.request.input.get('needs_response_time') or False
+        needs_response_time = self.request.input.get('needs_response_time', True)
 
         # A dictionary of headers that the target service may want to produce
         zato_response_headers_container = {}

@@ -116,6 +116,10 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
         response_data = $.fn.zato.to_json(response.data[0].zato_env);
     }
 
+    console.log("Data "+ data);
+    console.log("Has "+ has_response);
+    console.log("RSP "+ response_data);
+
     $("#result-header").text(status);
     $("#data-response").text(response_data);
 }
