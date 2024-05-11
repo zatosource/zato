@@ -35,3 +35,8 @@
   }
 
 /* ***************************** */
+
+input {
+    xtext-decoration:underline;
+    xcolor: #999 !important;
+}
