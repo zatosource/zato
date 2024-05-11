@@ -116,12 +116,20 @@ span.header-text {
     width: 16px;
 }
 
-#header-left-link-deploy.different {
+#invoke-service-temporarily-disabled {
+    margin-right: 3px;
+}
+
+#header-left-link-deploy.different,
+#invoke-service.different
+{
     outline: 3px double #333;
     color: #333;
 }
 
-#header-left-link-deploy.not-different {
+#header-left-link-deploy.not-different,
+#invoke-service.not-different
+{
     outline: none;
     color: inherit;
 }
