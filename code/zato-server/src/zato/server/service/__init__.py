@@ -37,7 +37,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
-from zato.common.typing_ import cast_, listnone, type_
+from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.commands import CommandsFacade
@@ -97,7 +97,7 @@ if 0:
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
-        modelnone, strdict, strdictnone, strstrdict, strnone, strlist
+        listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.connector import Connector
@@ -212,9 +212,9 @@ class AsyncCtx:
     cid: str
     data: str
     data_format: str
-    zato_ctx: object
-    environ: anydict
-    callback: listnone = None
+    zato_ctx: 'any_'
+    environ: 'anydict'
+    callback: 'listnone' = None
 
 # ################################################################################################################################
 
