@@ -2246,6 +2246,7 @@ default_internal_modules = {
     'zato.server.service.internal.security.xpath': True,
     'zato.server.service.internal.server': True,
     'zato.server.service.internal.service': True,
+    'zato.server.service.internal.service.ide': True,
     'zato.server.service.internal.sms': True,
     'zato.server.service.internal.sms.twilio': True,
     'zato.server.service.internal.sso': True,
