@@ -266,7 +266,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         input_dict['to_json'] = True
         input_dict['needs_response_time'] = True
 
-        response = req.zato.client.invoke(name, needs_headers=True, **input_dict) # type: ignore
+        response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
         content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human')

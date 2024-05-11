@@ -878,9 +878,16 @@ def upload_to_server(
             'payload': b64encode(data),
             'payload_name': payload_name,
         }
-        client.invoke(service, input_dict)
 
-        return HttpResponse(dumps({'success': True}))
+        response = client.invoke(service, input_dict)
+
+        out = {
+            'success': True,
+            'data':'OK, deployed',
+            'response_time_human': response.inner.headers.get('X-Zato-Response-Time-Human')
+        }
+
+        return HttpResponse(dumps(out))
 
     except Exception:
         msg = error_msg_template.format(format_exc())
