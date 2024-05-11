@@ -238,19 +238,12 @@ def upload(req:'HttpRequest') -> 'any_':
 
     # This is used by the IDE ..
     if has_post:
-        data = req.POST.get('data-editor')
+        data = req.POST.get('data-editor') or ''
+        data = data.encode('utf8')
 
     # .. and this is used by file uploads in the listing of services.
     else:
         data = req.read()
-
-    print()
-    print(111, data)
-    print()
-
-    print()
-    print(222, data)
-    print()
 
     return upload_to_server(client, data, payload_name)
 
