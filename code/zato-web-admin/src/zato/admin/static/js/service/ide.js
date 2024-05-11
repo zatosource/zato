@@ -69,13 +69,20 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     })
 
     // Ctrl-S to deploy a file
-    window.zato_editor.commands.addCommand({
-        name: 'on_Ctrl_S',
-        bindKey: {win: 'Ctrl-S',  mac: 'Command-S'},
-        exec: function(_ignored_editor) {
-            $.fn.zato.ide.on_key_deploy_file(null, null);
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          $.fn.zato.ide.on_key_deploy_file(null, null);
         }
-    })
+      });
+
+    // Ctrl-Enter to invoke a service
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          $.fn.zato.ide.on_key_invoke(null, null);
+        }
+      });
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
@@ -144,6 +151,11 @@ $.fn.zato.ide.on_key_toggle_action_area = function(_ignored_event, _ignored_hand
 // Deploys the current file
 $.fn.zato.ide.on_key_deploy_file = function(_ignored_event, _ignored_handler) {
     $.fn.zato.invoker.on_deploy_submitted();
+}
+
+// Invokes the current service
+$.fn.zato.ide.on_key_invoke = function(_ignored_event, _ignored_handler) {
+    $.fn.zato.invoker.on_invoke_submitted();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -276,14 +288,14 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
-    $.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
-    $.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
+    //$.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
+    //$.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
     // $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
 
     // Right-hand side links
     //$.fn.zato.ide.add_header_right_link("open-api", "OpenAPI", true);
-    $.fn.zato.ide.add_header_right_link("push", "Push");
-    $.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
+    //$.fn.zato.ide.add_header_right_link("push", "Push");
+    //$.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
     // $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
