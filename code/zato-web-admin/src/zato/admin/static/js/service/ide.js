@@ -535,7 +535,7 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 $.fn.zato.invoker.get_sync_deploy_request_url = function() {
     let input = $("#current_fs_location");
     let current_fs_location = input.val();
-    let out = "/zato/service/upload/?qqfile="+ current_fs_location;
+    let out = String.format("/zato/service/upload/?qqfile={0}&has_post=true", current_fs_location);
     return out
 }
 
