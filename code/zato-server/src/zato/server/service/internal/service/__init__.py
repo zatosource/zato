@@ -693,7 +693,7 @@ class Invoke(AdminService):
                 )
 
             # .. we still may not have any response here ..
-            if response:
+            if response is not None:
                 response = self._build_response(response)
                 self.response.payload.response = response
 
