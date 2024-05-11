@@ -13,6 +13,7 @@ import logging
 from base64 import b64encode
 from datetime import datetime, timedelta
 from itertools import chain
+from time import sleep
 from traceback import format_exc
 
 # bunch
@@ -870,7 +871,7 @@ def upload_to_server(
     payload_name,
     cluster_id=1,
     service='zato.service.upload-package',
-    error_msg_template='Upload error, e:`{}`'
+    error_msg_template='Upload error, e:`{}`',
 ):
     try:
         input_dict = {
@@ -883,7 +884,7 @@ def upload_to_server(
 
         out = {
             'success': True,
-            'data':'OK, deployed',
+            'data':'OK, deployment started',
             'response_time_human': response.inner.headers.get('X-Zato-Response-Time-Human')
         }
 
