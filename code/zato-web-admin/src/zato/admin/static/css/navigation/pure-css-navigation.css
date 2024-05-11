@@ -2,10 +2,14 @@
 /* Customizable styles */
 
 .pure-css-nav {
-   position: relative;
+   position: inherit;
    background-color:#363636;
    border-bottom: 3px solid #aaa;
    z-index: 9999;
+}
+
+.pure-css-nav.position-relative {
+   position: relative;
 }
 
 div.nav-container {

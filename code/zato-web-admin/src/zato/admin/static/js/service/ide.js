@@ -61,8 +61,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // Ignore F1
     window.zato_editor.commands.addCommand({
-        name: 'on_F1',
-        bindKey: {win: 'F1',  mac: 'F1'},
+        name: 'on_F21',
+        bindKey: {win: 'F21',  mac: 'F21'},
         exec: function(_ignored_editor) {
             // Explicitly do nothing
         }
@@ -86,6 +86,14 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+
+    // Make sure the menu can be visible
+    $(".pure-css-nav").hover(function() {
+        $(".pure-css-nav").addClass("position-relative");
+    });
+    $(".pure-css-nav").mouseleave(function() {
+        $(".pure-css-nav").removeClass("position-relative");
+    });
 
     // This will try to load all the remember layout options from LocalStorage
     $.fn.zato.ide.restore_layout();
