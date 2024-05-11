@@ -886,6 +886,8 @@ def upload_to_server(
 
         response = client.invoke(service, input_dict)
 
+        import ruff
+
         out = {
             'success': True,
             'data':'OK, deployed',
@@ -898,6 +900,7 @@ def upload_to_server(
         out = {
             'success': False,
             'data':format_exc(),
+            'response_time_human': 'default' # This is required by the frontend
         }
         return HttpResponseBadRequest(dumps(out))
 

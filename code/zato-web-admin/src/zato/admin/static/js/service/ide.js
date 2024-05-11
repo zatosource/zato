@@ -648,6 +648,7 @@ $.fn.zato.invoker.on_deploy_submitted = function() {
         "on_started_activate_blinking": ["#deploying-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
         "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
+        "on_post_success_func": $.fn.zato.ide.set_deployment_button_status_not_different,
 
     }
     $.fn.zato.invoker.run_sync_deployer(options);
@@ -668,8 +669,6 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
     let key = $.fn.zato.ide.get_last_deployed_key();
     store.set(key, editor_value);
 
-    // Indicate that the file has no changes to deploy
-    $.fn.zato.ide.set_deployment_button_status_not_different();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
