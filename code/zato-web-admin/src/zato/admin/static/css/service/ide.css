@@ -116,8 +116,14 @@ span.header-text {
     width: 16px;
 }
 
-.modified {
-    color: #c33 !important;
+#header-left-link-deploy.different {
+    outline: 3px double #333;
+    color: #333;
+}
+
+#header-left-link-deploy.not-different {
+    outline: none;
+    color: inherit;
 }
 
 .file-system-listing {

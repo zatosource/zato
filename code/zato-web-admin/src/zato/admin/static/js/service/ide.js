@@ -588,6 +588,30 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 
 $.fn.zato.ide.on_editor_changed = function() {
 
+    // Get the current value of the editor ..
+    let editor_value = window.zato_editor.getValue()
+
+    // .. get the value of what was last deployed ..
+    let key = $.fn.zato.ide.get_last_deployed_key();
+    let last_deployed = store.get(key);
+
+    // .. check if they are different ..
+    let is_different = editor_value != last_deployed;
+
+    // .. pick the correct CSS class to set for the "Deploy" button
+    if(is_different) {
+        var class_name = "different";
+    }
+    else {
+        var class_name = "not-different";
+    }
+    console.log("Diff: "+ is_different);
+    console.log("CSS: "+ class_name);
+
+    // .. and set it for the button accordingly.
+    let button = $("#header-left-link-deploy")
+    button.removeClass("different not-different");
+    button.addClass(class_name);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
