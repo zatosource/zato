@@ -19,7 +19,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
 
 # pytz
 from pytz import UTC
@@ -894,16 +894,17 @@ def upload_to_server(
 
         return HttpResponse(dumps(out))
 
+    except SyntaxError:
+        out = {
+            'success': False,
+            'data':format_exc(),
+        }
+        return HttpResponseBadRequest(dumps(out))
+
     except Exception:
         msg = error_msg_template.format(format_exc())
         logger.error(msg)
-
-        out = {
-            'success': False,
-            'data':msg
-        }
-
-        return HttpResponseServerError(dumps(out))
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################
 
