@@ -253,8 +253,8 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
-    $.fn.zato.ide.add_header_left_link("previous", "Previous");
-    $.fn.zato.ide.add_header_left_link("next", "Next", true);
+    $.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
+    $.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
     // $.fn.zato.ide.add_header_left_link("clear-request", "Clear request", true);
 
     // Right-hand side links
