@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import ast
 import copy
 import errno
 import gc
@@ -2149,5 +2150,10 @@ def make_list_from_string_list(value:'str', separator:'str') -> 'strlist':
     value = [elem.strip() for elem in value if elem] # type: ignore
 
     return value
+
+# ################################################################################################################################
+
+def validate_python_syntax(data:'str') -> 'None':
+    ast.parse(data)
 
 # ################################################################################################################################
