@@ -77,8 +77,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         }
     })
 
-    $.fn.zato.invoker.on_deploy_submitted
-
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
 
