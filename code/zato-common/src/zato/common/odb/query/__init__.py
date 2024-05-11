@@ -16,7 +16,7 @@ from bunch import bunchify
 # SQLAlchemy
 from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql.expression import case, false as sa_false
+from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
@@ -904,7 +904,7 @@ def service_deployment_list(session, service_id=None, include_internal=None):
 
     if not include_internal:
         query = query.\
-            filter(Service.is_internal==sa_false) # type: ignore
+            filter(Service.is_internal==False) # type: ignore
 
         query = query.filter(
             not_(
