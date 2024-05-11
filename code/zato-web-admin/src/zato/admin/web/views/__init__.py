@@ -884,7 +884,7 @@ def upload_to_server(
 
         out = {
             'success': True,
-            'data':'OK, deployment started',
+            'data':'OK, deployed',
             'response_time_human': response.inner.headers.get('X-Zato-Response-Time-Human')
         }
 
