@@ -120,6 +120,7 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
 
     $("#result-header").text(status);
     $("#data-response").text(response_data);
+
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
