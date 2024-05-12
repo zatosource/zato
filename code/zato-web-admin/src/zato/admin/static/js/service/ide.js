@@ -719,7 +719,26 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     object_select.append(optgroup_all_services);
 
     // .. extract the newly created optgroups ..
+    let optgroup_current_file_object = $("#optgroup-current-file");
     let optgroup_all_services_object = $("#optgroup-all-services");
+
+    // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
+    for(service_item of data.current_file_service_list) {
+        let is_current_file = "1";
+        var option = `<option
+            class="option-all-objects"
+            data-is-current-file="{0}"
+            data-line-number="{1}"
+            data-fs-location="{2}">{3}</option>`;
+        var option = String.format(
+            option,
+            is_current_file,
+            service_item.line_number_human,
+            service_item.fs_location,
+            service_item.name,
+        );
+        optgroup_current_file_object.append(option);
+    }
 
     // .. build an option element for each service and append it to the "All services" optgroup ..
     for(service_item of data.service_list) {
