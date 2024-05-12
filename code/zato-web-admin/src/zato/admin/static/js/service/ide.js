@@ -576,12 +576,23 @@ $.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, 
 $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     let option_selected = $('option:selected', select_elem);
     let is_current_file = option_selected.attr('data-is-current-file') == "1";
+    let current_object_select = $("#current-object-select").val()
 
-    if(is_current_file) {
-        $.fn.zato.ide.on_object_select_changed_current_file(option_selected);
+    // Handle the selection of a service ..
+    if(current_object_select == "service") {
+        if(is_current_file) {
+            $.fn.zato.ide.on_object_select_changed_current_file(option_selected);
+        }
+        else {
+            $.fn.zato.ide.on_object_select_changed_non_current_file(select_elem, option_selected);
+        }
     }
+
+    // .. handle the selection of a file ..
     else {
-        $.fn.zato.ide.on_object_select_changed_non_current_file(select_elem, option_selected);
+        let selected_fs_location = option_selected.attr("data-fs-location");
+        console.log("Current: "+ current_object_select);
+        console.log("FS: "+ selected_fs_location);
     }
 }
 
@@ -687,19 +698,6 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_service_list_response = function(response) {
-
-    /*
-    <optgroup label="Current file" id="optgroup-current-file">
-        {% for service_item in data.current_file_service_list %}
-            <option class="option-current-file" data-is-current-file="1" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}" {% if current_object_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
-        {% endfor %}
-    </optgroup>
-    <optgroup label="All services" id="optgroup-all-services">
-    {% for service_item in data.service_list %}
-        <option class="option-all-objects" data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
-    {% endfor %}
-    </optgroup>
-    */
 
     // Local variables
     let object_select = $("#object-select");
@@ -844,8 +842,6 @@ $.fn.zato.ide.on_toggle_object_select = function() {
     let url_path;
     let callback;
     let current_object_select = $("#current-object-select").val()
-
-    console.log("Current: "+ current_object_select);
 
     // We are switching from services to files ..
     if(current_object_select == "service") {
