@@ -886,8 +886,6 @@ def upload_to_server(
 
         response = client.invoke(service, input_dict)
 
-        import ruff
-
         out = {
             'success': True,
             'data':'OK, deployed',
