@@ -179,7 +179,7 @@ $.fn.zato.ide.toggle_action_area = function() {
     // let default_size = "3.9fr 1fr 0.06fr";
     // let expanded_size = "1.0fr 1fr 0.06fr";
 
-    let service_select = $("#service-select");
+    let object_select = $("#object-select");
 
     let default_size = "1.0fr 1fr 0.06fr";
     let expanded_size = "3.9fr 1fr 0.06fr";
@@ -190,12 +190,12 @@ $.fn.zato.ide.toggle_action_area = function() {
     if(is_expanded == "false") {
         new_size = expanded_size;
         elem_to_expand.attr("data-is-expanded", "true");
-        $.fn.zato.toggle_css_class(service_select, "expanded", "default");
+        $.fn.zato.toggle_css_class(object_select, "expanded", "default");
     }
     else {
         new_size = default_size
         elem_to_expand.attr("data-is-expanded", "false");
-        $.fn.zato.toggle_css_class(service_select, "default", "expanded");
+        $.fn.zato.toggle_css_class(object_select, "default", "expanded");
     }
 
     // Set the current layout ..
@@ -547,7 +547,7 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_service_select_changed_current_file = function(option_selected) {
+$.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) {
 
     let fs_location = option_selected.attr('data-fs-location');
     var line_number = option_selected.attr('data-line-number');
@@ -561,7 +561,7 @@ $.fn.zato.ide.on_service_select_changed_current_file = function(option_selected)
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_service_select_changed_non_current_file = function(select_elem, option_selected) {
+$.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, option_selected) {
     let new_service_name = select_elem.value;
     let fs_location = option_selected.attr('data-fs-location');
     $.fn.zato.ide.save_current_editor_session();
@@ -572,15 +572,15 @@ $.fn.zato.ide.on_service_select_changed_non_current_file = function(select_elem,
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_service_select_changed = function(select_elem) {
+$.fn.zato.ide.on_object_select_changed = function(select_elem) {
     let option_selected = $('option:selected', select_elem);
     let is_current_file = option_selected.attr('data-is-current-file') == "1";
 
     if(is_current_file) {
-        $.fn.zato.ide.on_service_select_changed_current_file(option_selected);
+        $.fn.zato.ide.on_object_select_changed_current_file(option_selected);
     }
     else {
-        $.fn.zato.ide.on_service_select_changed_non_current_file(select_elem, option_selected);
+        $.fn.zato.ide.on_object_select_changed_non_current_file(select_elem, option_selected);
     }
 }
 
