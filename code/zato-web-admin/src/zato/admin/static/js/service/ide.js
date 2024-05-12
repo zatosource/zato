@@ -855,7 +855,8 @@ $.fn.zato.ide.on_toggle_object_select = function() {
 
     // .. or from files to services.
     else {
-        url_path = "/zato/service/ide/get-service-list/";
+        let current_fs_location = $("#current_fs_location").val();
+        url_path = "/zato/service/ide/get-service-list/?fs_location="+ current_fs_location;
         callback = $.fn.zato.ide.on_service_list_response;
     }
 
