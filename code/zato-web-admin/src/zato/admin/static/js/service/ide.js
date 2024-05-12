@@ -686,10 +686,97 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.on_service_list_response = function(data) {
+    console.log("Service list data: "+ data);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_file_list_response = function(data) {
+
+    // Local variables
+    let name_prefix = "&nbsp".repeat(10);
+    let object_select = $("#object-select");
+
+    // Extract the underlying JSON ..
+    let json = JSON.parse(data.responseText);
+
+    // .. clear out the form ..
+    object_select.empty();
+
+    // .. go through everything we were given ..
+    Object.entries(json).forEach(([dir_name, file_list]) => {
+
+        // .. build an options group for each directory ..
+        let optgroup_id = $.fn.zato.slugify("optgroup-" + dir_name);
+        let optgroup = '<optgroup label="{0}" id="{1}">'
+
+        // .. append it to the form ..
+        object_select.append(String.format(optgroup, dir_name, optgroup_id));
+
+        // .. get a reference to it so that we can use it below ..
+        let optgroup_object = $("#" + optgroup_id);
+
+        // .. go through each file in that directory, if there are any ..
+        if(file_list.length) {
+            for(file_name of file_list) {
+
+                // .. get the file name alone ..
+                let file_name_short = file_name.replace(dir_name, "");
+
+                // .. the file may begind with a slash ..
+                let first_character = file_name_short.charAt(0);
+
+                // .. which we need to remove ..
+                if(first_character == "/" || first_character == "\\") {
+                    file_name_short = file_name_short.substring(1);
+                }
+
+                // .. the file may only belong to a project's directory ..
+
+                // .. whose name we also need to remove ..
+
+                // .. now, we can build a new option for this file ..
+                let option = `<option class="option-all-services" data-is-current-file="1" data-fs-location="{0}">{1}</option>`
+
+                // .. and append it to the form ..
+                optgroup_object.append(String.format(option, file_name, file_name_short));
+            }
+        }
+        // .. if there are no files, be explicit about it.
+        else {
+            let option = `<option class="option-all-services" data-is-current-file="1" data-fs-location="">No files</option>`
+            optgroup_object.append(String.format(option));
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.on_toggle_object_select = function() {
+
+    let url_path;
+    let callback;
     let current_object_select = $("#current-object-select").val()
+
     console.log("Current: "+ current_object_select);
-    $.fn.zato.ide.toggle_current_object_select(current_object_select);
+
+    // We are switching from services to files ..
+    if(current_object_select == "service") {
+        url_path = "/zato/service/ide/get-file-list/";
+        callback = $.fn.zato.ide.on_file_list_response;
+    }
+
+    // .. or from files to services.
+    else {
+        url_path = "/QQQ/";
+        callback = $.fn.zato.ide.on_service_list_response;
+    }
+
+    // Get all the objects and pass control to the callback.
+    $.fn.zato.invoker.invoke(url_path, "", callback)
+
+    //$.fn.zato.ide.toggle_current_object_select(current_object_select);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
