@@ -70,7 +70,7 @@ $.fn.zato.invoker.submit_form = function(
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.get_sync_invoke_request_url = function() {
-    let select = $("#service-select");
+    let select = $("#object-select");
     let service = select.val();
     let out = "/zato/service/invoke/"+ service + "/cluster/1/";
     return out
