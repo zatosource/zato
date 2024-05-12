@@ -686,29 +686,85 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.on_service_list_response = function(data) {
-    console.log("Service list data: "+ data.responseText);
-}
+$.fn.zato.ide.on_service_list_response = function(response) {
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.ide.on_file_list_response = function(data) {
+    /*
+    <optgroup label="Current file" id="optgroup-current-file">
+        {% for service_item in data.current_file_service_list %}
+            <option class="option-current-file" data-is-current-file="1" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}" {% if current_object_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
+        {% endfor %}
+    </optgroup>
+    <optgroup label="All services" id="optgroup-all-services">
+    {% for service_item in data.service_list %}
+        <option class="option-all-objects" data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
+    {% endfor %}
+    </optgroup>
+    */
 
     // Local variables
     let object_select = $("#object-select");
 
     // Extract the underlying JSON ..
-    let json = JSON.parse(data.responseText);
+    let data = JSON.parse(response.responseText);
+
+    // .. clear out the form ..
+    object_select.empty();
+
+    // .. build the expected optgroups ..
+    let optgroup_current_file = '<optgroup label="Current file" id="optgroup-current-file"/>';
+    let optgroup_all_services = '<optgroup label="All services" id="optgroup-all-services"/>';
+
+    // .. add our optgroups to the select ..
+    object_select.append(optgroup_current_file);
+    object_select.append(optgroup_all_services);
+
+    // .. extract the newly created optgroups ..
+    let optgroup_all_services_object = $("#optgroup-all-services");
+
+    // .. build an option element for each service and append it to the "All services" optgroup ..
+    for(service_item of data.service_list) {
+        let is_current_file = service_item.fs_location == data.current_fs_location ? "1" : "0";
+        var option = `<option
+            class="option-all-objects"
+            data-is-current-file="{0}"
+            data-line-number="{1}"
+            data-fs-location="{2}">{3}</option>`;
+        var option = String.format(
+            option,
+            is_current_file,
+            service_item.line_number_human,
+            service_item.fs_location,
+            service_item.name,
+        );
+        optgroup_all_services_object.append(option);
+    }
+
+    // .. switch to services ..
+    $.fn.zato.ide.toggle_current_object_select("file");
+
+    // .. services can be invoked now.
+    $("#invoke-service").prop("disabled", false).removeClass("no-click");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_file_list_response = function(response) {
+
+    // Local variables
+    let object_select = $("#object-select");
+
+    // Extract the underlying JSON ..
+    let data = JSON.parse(response.responseText);
 
     // .. clear out the form ..
     object_select.empty();
 
     // .. go through everything we were given ..
-    Object.entries(json).forEach(([dir_name, file_list]) => {
+    Object.entries(data).forEach(([dir_name, file_list]) => {
 
         // .. build an options group for each directory ..
         let optgroup_id = $.fn.zato.slugify("optgroup-" + dir_name);
-        let optgroup = '<optgroup label="{0}" id="{1}">'
+        let optgroup = '<optgroup label="{0}" id="{1}"/>'
 
         // .. append it to the form ..
         object_select.append(String.format(optgroup, dir_name, optgroup_id));
@@ -759,7 +815,7 @@ $.fn.zato.ide.on_file_list_response = function(data) {
     $.fn.zato.ide.toggle_current_object_select("service");
 
     // .. services cannot be invoked in the files view.
-    $("#invoke-service").prop("disabled", true);
+    $("#invoke-service").prop("disabled", true).addClass("no-click");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

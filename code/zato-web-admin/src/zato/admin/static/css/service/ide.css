@@ -227,3 +227,7 @@ td.data-input-field-name {
 .align-right {
     text-align: right;
 }
+
+.no-click {
+    pointer-events: none;
+}
