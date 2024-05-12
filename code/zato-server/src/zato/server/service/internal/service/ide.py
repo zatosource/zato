@@ -26,6 +26,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def make_fs_location_url_safe(data:'str') -> 'str':
+    return data.replace('/', '~')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class IDERequest(Model):
     service_name: 'strnone' = None
@@ -161,7 +167,7 @@ class ServiceIDE(_IDEBase):
             file_list.append({
                 'name': file_name,
                 'fs_location': fs_location,
-                'fs_location_url_safe': fs_location.replace('/', '~'),
+                'fs_location_url_safe': make_fs_location_url_safe(fs_location),
             })
 
         file_count = len(file_list)
@@ -297,11 +303,12 @@ class GetFileList(_GetBase):
                 _dir_name = dir_name
 
             # .. extract all the Python files recursively ..
-            for py_file in Path(_dir_name).glob('**/*.py'):
-                files.append(str(py_file))
-
-            # .. make sure we return them sorted ..
-            files.sort()
+            for py_file in sorted(Path(_dir_name).glob('**/*.py')):
+                py_file_name = str(py_file)
+                files.append({
+                    'file_name': py_file_name,
+                    'file_name_url_safe': make_fs_location_url_safe(py_file_name),
+                })
 
         # .. finally, we can return the response to our caller.
         self.response.payload = out

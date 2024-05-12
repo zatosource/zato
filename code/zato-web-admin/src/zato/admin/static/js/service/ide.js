@@ -591,8 +591,11 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     // .. handle the selection of a file ..
     else {
         let selected_fs_location = option_selected.attr("data-fs-location");
+        let selected_fs_location_url_safe = option_selected.attr("data-fs-location-url-safe");
         console.log("Current: "+ current_object_select);
         console.log("FS: "+ selected_fs_location);
+        console.log("FS-Safe: "+ selected_fs_location_url_safe);
+        $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
     }
 }
 
@@ -722,17 +725,22 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
     for(service_item of data.current_file_service_list) {
+
+        console.log("Service item: "+ $.fn.zato.to_dict(service_item));
+
         let is_current_file = "1";
         var option = `<option
             class="option-all-objects"
             data-is-current-file="{0}"
             data-line-number="{1}"
-            data-fs-location="{2}">{3}</option>`;
+            data-fs-location="{2}"
+            data-fs-location-url-safe="{3}">{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
             service_item.line_number_human,
             service_item.fs_location,
+            service_item.fs_location_url_safe,
             service_item.name,
         );
         optgroup_current_file_object.append(option);
@@ -773,6 +781,8 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
 
+    // console.log("File list data: "+ $.fn.zato.to_dict(data));
+
     // .. clear out the form ..
     object_select.empty();
 
@@ -791,7 +801,10 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
         // .. go through each file in that directory, if there are any ..
         if(file_list.length) {
-            for(file_name of file_list) {
+            for(file_item of file_list) {
+
+                let file_name = file_item.file_name;
+                let file_name_url_safe = file_item.file_name_url_safe;
 
                 // .. get the file name alone ..
                 let file_name_short = file_name.replace(dir_name, "");
@@ -815,10 +828,14 @@ $.fn.zato.ide.on_file_list_response = function(response) {
                 // .. whose name we also need to remove ..
 
                 // .. now, we can build a new option for this file ..
-                let option = `<option class="option-all-objects" data-is-current-file="1" data-fs-location="{0}">{1}</option>`
+                let option = `<option
+                    class="option-all-objects"
+                    data-is-current-file="1"
+                    data-fs-location="{0}"
+                    data-fs-location-url-safe="{1}">{2}</option>`
 
                 // .. and append it to the form ..
-                optgroup_object.append(String.format(option, file_name, file_name_short));
+                optgroup_object.append(String.format(option, file_name, file_name_url_safe, file_name_short));
             }
         }
         // .. if there are no files, be explicit about it.
