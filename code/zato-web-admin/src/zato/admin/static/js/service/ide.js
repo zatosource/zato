@@ -733,6 +733,12 @@ $.fn.zato.ide.on_file_list_response = function(data) {
                 }
 
                 // .. the file may only belong to a project's directory ..
+                if(file_name_short.startsWith("impl/src/")) {
+                    file_name_short = file_name_short.replace("impl/src/", "");
+                }
+                else if(file_name_short.startsWith("impl\\src\\")) {
+                    file_name_short = file_name_short.replace("impl\\src\\", "");
+                }
 
                 // .. whose name we also need to remove ..
 
