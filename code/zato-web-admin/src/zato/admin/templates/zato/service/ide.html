@@ -38,7 +38,7 @@
                 </optgroup>
                 <optgroup label="All services" id="optgroup-all-services">
                 {% for service_item in data.service_list %}
-                    <option class="option-all-services" data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
+                    <option class="option-all-objects" data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
                 {% endfor %}
                 </optgroup>
             </select>
