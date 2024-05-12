@@ -672,3 +672,23 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.toggle_current_object_select = function(current) {
+    if(current == "service") {
+        var new_current = "file";
+    }
+    else {
+        var new_current = "service";
+    }
+    $("#current-object-select").val(new_current)
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_toggle_object_select = function() {
+    let current_object_select = $("#current-object-select").val()
+    console.log("Current: "+ current_object_select);
+    $.fn.zato.ide.toggle_current_object_select(current_object_select);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
