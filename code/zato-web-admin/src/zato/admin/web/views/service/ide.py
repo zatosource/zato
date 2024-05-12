@@ -88,7 +88,8 @@ def get_file_list(req):
 
 @method_allowed('POST')
 def get_service_list(req):
-    return invoke_action_handler(req, 'zato.service.ide.service-ide')
+    fs_location = req.GET['fs_location']
+    return invoke_action_handler(req, 'zato.service.ide.service-ide', extra={'fs_location': fs_location})
 
 # ################################################################################################################################
 # ################################################################################################################################
