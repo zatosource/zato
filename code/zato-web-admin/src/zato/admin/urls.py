@@ -183,6 +183,8 @@ urlpatterns += [
         login_required(service_ide.get_file), name='service-ide-get-file'),
     url(r'^zato/service/ide/get-file-list/$',
         login_required(service_ide.get_file_list), name='service-ide-get-file-list'),
+    url(r'^zato/service/ide/get-service-list/$',
+        login_required(service_ide.get_service_list), name='service-ide-get-service-list'),
     url(r'^zato/service/ide/(?P<object_type>.*)/(?P<name>.*)/$',
         login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
     ]
