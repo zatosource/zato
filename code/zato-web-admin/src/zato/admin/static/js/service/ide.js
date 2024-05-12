@@ -331,6 +331,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" value="New"/>
         <input type="button" value="Rename"/>
         <input type="button" value="Delete"/>
+        <input type="button" value="Reload"/>
         <input type="button" value="Info"/>
     `
 
