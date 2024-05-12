@@ -687,7 +687,7 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_service_list_response = function(data) {
-    console.log("Service list data: "+ data);
+    console.log("Service list data: "+ data.responseText);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -695,7 +695,6 @@ $.fn.zato.ide.on_service_list_response = function(data) {
 $.fn.zato.ide.on_file_list_response = function(data) {
 
     // Local variables
-    let name_prefix = "&nbsp".repeat(10);
     let object_select = $("#object-select");
 
     // Extract the underlying JSON ..
@@ -743,7 +742,7 @@ $.fn.zato.ide.on_file_list_response = function(data) {
                 // .. whose name we also need to remove ..
 
                 // .. now, we can build a new option for this file ..
-                let option = `<option class="option-all-services" data-is-current-file="1" data-fs-location="{0}">{1}</option>`
+                let option = `<option class="option-all-objects" data-is-current-file="1" data-fs-location="{0}">{1}</option>`
 
                 // .. and append it to the form ..
                 optgroup_object.append(String.format(option, file_name, file_name_short));
@@ -751,10 +750,16 @@ $.fn.zato.ide.on_file_list_response = function(data) {
         }
         // .. if there are no files, be explicit about it.
         else {
-            let option = `<option class="option-all-services" data-is-current-file="1" data-fs-location="">No files</option>`
+            let option = `<option class="option-all-objects" data-is-current-file="1" data-fs-location="">No files</option>`
             optgroup_object.append(String.format(option));
         }
     });
+
+    // Switch to files ..
+    $.fn.zato.ide.toggle_current_object_select("service");
+
+    // .. services cannot be invoked in the files view.
+    $("#invoke-service").prop("disabled", true);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -775,14 +780,12 @@ $.fn.zato.ide.on_toggle_object_select = function() {
 
     // .. or from files to services.
     else {
-        url_path = "/QQQ/";
+        url_path = "/zato/service/ide/get-service-list/";
         callback = $.fn.zato.ide.on_service_list_response;
     }
 
     // Get all the objects and pass control to the callback.
     $.fn.zato.invoker.invoke(url_path, "", callback)
-
-    //$.fn.zato.ide.toggle_current_object_select(current_object_select);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
