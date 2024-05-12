@@ -21,6 +21,7 @@ $.fn.zato.invoker.invoke = function(
     data_type,
     context
 ) {
+    data_type = data_type || "JSON";
     $.ajax({
         type: 'POST',
         url: url,
