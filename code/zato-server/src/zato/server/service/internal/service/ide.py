@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 from operator import itemgetter
+from pathlib import Path
 
 # Zato
 from zato.common.typing_ import anylist, intnone, list_field, strnone
@@ -71,7 +72,6 @@ class _IDEBase(Service):
 # ################################################################################################################################
 
 class ServiceIDE(_IDEBase):
-    # name = 'dev.service.ide'
 
     def handle(self):
 
@@ -192,7 +192,6 @@ class ServiceIDE(_IDEBase):
 # ################################################################################################################################
 
 class _GetBase(_IDEBase):
-    # name = 'dev.service.ide.get-service'
 
     def _get_service_list_by_fs_location(self, deployment_info_list:'any_', fs_location:'str') -> 'dictlist':
         out = []
@@ -226,7 +225,6 @@ class _GetBase(_IDEBase):
 # ################################################################################################################################
 
 class GetService(_GetBase):
-    # name = 'dev.service.ide.get-service'
 
     def handle(self):
 
@@ -252,7 +250,6 @@ class GetService(_GetBase):
 # ################################################################################################################################
 
 class GetFile(_GetBase):
-    # name = 'dev.service.ide.get-file'
 
     def handle(self):
 
@@ -269,30 +266,45 @@ class GetFile(_GetBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-'''
-# -*- coding: utf-8 -*-
-
-# Zato
-from zato.server.service import Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MyService(Service):
+class GetFileList(_GetBase):
 
     def handle(self):
 
-        out = []
+        # Our response to produce
+        out = {}
 
-        for key, value in self.server.pickup_config.items():
+        # .. this the default directory that will always exist
+        out[self.server.hot_deploy_config.pickup_dir] = []
+
+        # .. now, we can append all the user-defined directories ..
+        for key, value in sorted(self.server.pickup_config.items()):
             if not value:
                 continue
             if key.startswith(('hot-deploy.user', 'user_conf')):
                 if not 'patterns' in value:
-                    out.append(value)
+                    pickup_from = value['pickup_from']
+                    if pickup_from.endswith('/'):
+                        pickup_from = pickup_from[:-1]
+                    out[pickup_from] = []
 
+        # .. go through all the top-level roots ..
+        for dir_name, files in out.items():
+
+            # .. make sure we take into services and models into account here ..
+            if dir_name.endswith('src-zato'):
+                _dir_name = os.path.join(dir_name, 'impl', 'src')
+            else:
+                _dir_name = dir_name
+
+            # .. extract all the Python files recursively ..
+            for py_file in Path(_dir_name).glob('**/*.py'):
+                files.append(str(py_file))
+
+            # .. make sure we return them sorted ..
+            files.sort()
+
+        # .. finally, we can return the response to our caller.
         self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''
