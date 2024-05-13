@@ -72,10 +72,16 @@ class BaseObserver:
         self.is_notify = self.observer_type_impl == FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
         self.name = channel_config.name
         self.is_active = channel_config.is_active
-        self.sleep_time = default_interval
         self.path_list = ['<initial-observer>']
         self.is_recursive = False
         self.keep_running = True
+
+        if pickup_interval := (os.environ.get('Zato_Hot_Deploy_Interval') or os.environ.get('Zato_Hot_Deployment_Interval')):
+            pickup_interval = int(pickup_interval)
+        else:
+            pickup_interval = default_interval
+
+        self.sleep_time = pickup_interval
 
 # ################################################################################################################################
 
