@@ -441,7 +441,10 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
     console.log("Setting current file: "+ current_fs_location);
 
     // Zero out the current file flag for all the select opions ..
-    $("option[data-object-holder='1']").attr("data-is-current-file", "0");
+    $(`option[data-object-holder="1"]`).attr("data-is-current-file", "0");
+
+    // and enable it back for the ones that point to the current file
+    $(`option[data-fs-location="${current_fs_location}"`).attr("data-is-current-file", "1");
 }
 
 
