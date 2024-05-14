@@ -84,11 +84,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         }
       });
 
-      window.zato_editor.on('change', function(delta) {
-        $.fn.zato.ide.on_editor_changed();
-    });
-
-
     // Make sure the menu can be visible
     $(".pure-css-nav").hover(function() {
         $(".pure-css-nav").addClass("position-relative");
@@ -143,6 +138,9 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
     if(value) {
         window.zato_editor.setValue(value);
         window.zato_editor.clearSelection();
+
+        // Optionally, populate the initial deployment state.
+        $.fn.zato.ide.maybe_populate_initial_last_deployed();
     }
 }
 
@@ -428,7 +426,9 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     // This will be entered only by the "on-file-selected" handlers
     // because they do not have any specific service to select.
     if(!has_new_service_name_match) {
-        first_option_elem.attr("selected", "selected");
+        if(first_option_elem) {
+            first_option_elem.attr("selected", "selected");
+        }
     }
 }
 
@@ -482,7 +482,8 @@ $.fn.zato.ide.get_last_deployed_key = function() {
 $.fn.zato.ide.on_document_changed = function(e) {
     let undo_manager = window.zato_editor.getSession().getUndoManager();
     let has_undo = undo_manager.hasUndo();
-    $.fn.zato.ide.mark_file_modified(has_undo);
+    // $.fn.zato.ide.mark_file_modified(has_undo);
+    $.fn.zato.ide.on_editor_changed();
 
     // Make sure there is no selection if there is no undo
     // because there may be some in case the edit we have just undone
@@ -530,6 +531,7 @@ $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_co
     $.fn.zato.ide.set_up_editor_session(editor_session);
     window.zato_editor.setSession(editor_session);
     window.zato_editor.focus();
+
 }
 
 $.fn.zato.ide.save_current_editor_session = function() {
@@ -539,7 +541,25 @@ $.fn.zato.ide.save_current_editor_session = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
+    // Check if this file has been ever deployed, if not, we need to populate
+    // the store with the current contents of the file because, by definition,
+    // it must be the same as the source code from the server given that we've just loaded it.
+    let key = $.fn.zato.ide.get_last_deployed_key();
+    let last_deployed = store.get(key);
+
+    console.log("Key: "+ key);
+
+    if(!last_deployed) {
+        let editor_value = window.zato_editor.getValue()
+        store.set(key, editor_value);
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
+    console.log("File ..")
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
@@ -592,11 +612,14 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     else {
         let selected_fs_location = option_selected.attr("data-fs-location");
         let selected_fs_location_url_safe = option_selected.attr("data-fs-location-url-safe");
-        console.log("Current: "+ current_object_select);
-        console.log("FS: "+ selected_fs_location);
-        console.log("FS-Safe: "+ selected_fs_location_url_safe);
+        // console.log("Current: "+ current_object_select);
+        // console.log("FS: "+ selected_fs_location);
+        // console.log("FS-Safe: "+ selected_fs_location_url_safe);
         $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
     }
+
+    // .. optionally, populate the initial deployment state.
+    $.fn.zato.ide.maybe_populate_initial_last_deployed();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -612,6 +635,11 @@ $.fn.zato.ide.on_editor_changed = function() {
 
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
+
+    console.log("Is diff: "+ is_different);
+    console.log("Store: "+ last_deployed);
+    //console.log("Editor: "+ editor_value);
+    //console.log("Key: "+ key);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
