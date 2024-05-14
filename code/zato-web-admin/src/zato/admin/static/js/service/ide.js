@@ -445,6 +445,7 @@ $.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
         $.fn.zato.ide.highlight_current_file(fs_location);
         $.fn.zato.ide.populate_current_file_service_list(json.current_file_service_list, name);
         $.fn.zato.ide.maybe_populate_initial_last_deployed();
+        // $.fn.zato.ide.set_is_current_file();
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
@@ -551,7 +552,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
     let key = $.fn.zato.ide.get_last_deployed_key();
     let last_deployed = store.get(key);
 
-    console.log("Key: "+ key);
+    console.log("Maybe populate initial last deployed: "+ !!last_deployed +"; key: "+ key);
 
     if(!last_deployed) {
         let editor_value = window.zato_editor.getValue()
@@ -562,7 +563,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
-    console.log("File ..")
+    console.log("On file selected ..")
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
@@ -572,6 +573,8 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) {
+
+    console.log("On object selected current file ..")
 
     let fs_location = option_selected.attr('data-fs-location');
     var line_number = option_selected.attr('data-line-number');
@@ -586,6 +589,9 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, option_selected) {
+
+    console.log("On object selected non-current file ..")
+
     let new_service_name = select_elem.value;
     let fs_location = option_selected.attr('data-fs-location');
     $.fn.zato.ide.save_current_editor_session();
@@ -642,8 +648,8 @@ $.fn.zato.ide.on_editor_changed = function() {
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
 
-    console.log("Key: "+ key);
-    console.log("Is diff: "+ is_different);
+    // console.log("Key: "+ key);
+    // console.log("Is diff: "+ is_different);
     // console.log("Editor: ["+ editor_value + "]");
     // console.log("Store: ["+ last_deployed + "]");
 
@@ -765,6 +771,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
         let is_current_file = "1";
         var option = `<option
             class="option-all-objects"
+            data-object-holder="1"
             data-is-current-file="{0}"
             data-line-number="{1}"
             data-fs-location="{2}"
@@ -785,6 +792,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
         let is_current_file = service_item.fs_location == data.current_fs_location ? "1" : "0";
         var option = `<option
             class="option-all-objects"
+            data-object-holder="1"
             data-is-current-file="{0}"
             data-line-number="{1}"
             data-fs-location="{2}">{3}</option>`;
