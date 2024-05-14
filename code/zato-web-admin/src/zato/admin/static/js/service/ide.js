@@ -98,6 +98,9 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
 
+    // Optionally, populate the initial deployment state.
+    $.fn.zato.ide.maybe_populate_initial_last_deployed()
+
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
 
@@ -138,9 +141,6 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
     if(value) {
         window.zato_editor.setValue(value);
         window.zato_editor.clearSelection();
-
-        // Optionally, populate the initial deployment state.
-        $.fn.zato.ide.maybe_populate_initial_last_deployed();
     }
 }
 
@@ -487,7 +487,7 @@ $.fn.zato.ide.on_document_changed = function(e) {
 
     // Make sure there is no selection if there is no undo
     // because there may be some in case the edit we have just undone
-    // had come from LocalStorate, in which case it overwrote the whole document,
+    // had come from LocalStorage, in which case it overwrote the whole document,
     // thus making everything use a yellow background which is not necessary.
     if(!has_undo) {
         window.zato_editor.clearSelection()
@@ -619,7 +619,7 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     }
 
     // .. optionally, populate the initial deployment state.
-    $.fn.zato.ide.maybe_populate_initial_last_deployed();
+    //$.fn.zato.ide.maybe_populate_initial_last_deployed();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -636,10 +636,10 @@ $.fn.zato.ide.on_editor_changed = function() {
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
 
+    console.log("Key: "+ key);
     console.log("Is diff: "+ is_different);
-    console.log("Store: "+ last_deployed);
+    //console.log("Store: "+ last_deployed);
     //console.log("Editor: "+ editor_value);
-    //console.log("Key: "+ key);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
