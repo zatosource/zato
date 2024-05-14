@@ -98,8 +98,11 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
 
-    // Optionally, populate the initial deployment state.
+    // Optionally, populate the initial deployment state
     $.fn.zato.ide.maybe_populate_initial_last_deployed()
+
+    // Optionally, indicate that there are some unsaved changes that can be deployed
+    $.fn.zato.ide.maybe_set_deploy_needed();
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
@@ -447,7 +450,6 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
     $(`option[data-fs-location="${current_fs_location}"`).attr("data-is-current-file", "1");
 }
 
-
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.post_load_source_object = function(object_name, current_file_source_code, current_file_service_list, fs_location) {
@@ -455,6 +457,7 @@ $.fn.zato.ide.post_load_source_object = function(object_name, current_file_sourc
     $.fn.zato.ide.highlight_current_file(fs_location);
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
     $.fn.zato.ide.maybe_populate_initial_last_deployed();
+    $.fn.zato.ide.maybe_set_deploy_needed();
     $.fn.zato.ide.set_is_current_file(fs_location);
 }
 
@@ -550,15 +553,25 @@ $.fn.zato.ide.set_up_editor_session = function(editor_session) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code) {
+
+    // We may already have a previous session for that file so we can load it here ..
     var editor_session = window.zato_editor_session_map[fs_location];
     if(!editor_session) {
         var editor_session = ace.createEditSession(current_file_source_code);
     }
+
+    // .. configure ACE ..
     $.fn.zato.ide.set_up_editor_session(editor_session);
+
+    // .. let it be our current editor ..
     window.zato_editor.setSession(editor_session);
+
+    // .. that we can now switch.
     window.zato_editor.focus();
 
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.save_current_editor_session = function() {
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
@@ -567,19 +580,34 @@ $.fn.zato.ide.save_current_editor_session = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.get_last_deployed_from_store = function(key) {
+    let last_deployed = store.get(key);
+    console.log("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
+    return last_deployed;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
+
     // Check if this file has been ever deployed, if not, we need to populate
     // the store with the current contents of the file because, by definition,
     // it must be the same as the source code from the server given that we've just loaded it.
+    console.log("In maybe populate initial last deployed");
     let key = $.fn.zato.ide.get_last_deployed_key();
-    let last_deployed = store.get(key);
-
-    console.log("Maybe populate initial last deployed: "+ !!last_deployed +"; key: "+ key);
+    last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
 
     if(!last_deployed) {
         let editor_value = window.zato_editor.getValue()
         store.set(key, editor_value);
     }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.maybe_set_deploy_needed = function() {
+    console.log("In maybe set deploy needed");
+    $.fn.zato.ide.set_deployment_status();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -658,14 +686,14 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.on_editor_changed = function() {
+$.fn.zato.ide.set_deployment_status = function() {
 
     // Get the current value of the editor ..
     let editor_value = window.zato_editor.getValue()
 
     // .. get the value of what was last deployed ..
     let key = $.fn.zato.ide.get_last_deployed_key();
-    let last_deployed = store.get(key);
+    let last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
 
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
@@ -685,6 +713,12 @@ $.fn.zato.ide.on_editor_changed = function() {
 
     // .. and set it for the button accordingly.
     $.fn.zato.ide.set_deployment_button_status_class(class_name);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_editor_changed = function() {
+    $.fn.zato.ide.set_deployment_status();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
