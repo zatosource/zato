@@ -447,19 +447,22 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
     $(`option[data-fs-location="${current_fs_location}"`).attr("data-is-current-file", "1");
 }
 
-
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
+
+    var _post_source_loaded_func = function(current_file_source_code, current_file_service_list) {
+        $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
+        $.fn.zato.ide.highlight_current_file(fs_location);
+        $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, name);
+        $.fn.zato.ide.maybe_populate_initial_last_deployed();
+        $.fn.zato.ide.set_is_current_file(fs_location);
+    }
+
     var callback = function(data, status) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
-        let current_file_source_code = json.current_file_source_code;
-        $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
-        $.fn.zato.ide.highlight_current_file(fs_location);
-        $.fn.zato.ide.populate_current_file_service_list(json.current_file_service_list, name);
-        $.fn.zato.ide.maybe_populate_initial_last_deployed();
-        $.fn.zato.ide.set_is_current_file(fs_location);
+        _post_source_loaded_func(json.current_file_source_code, json.current_file_service_list)
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
