@@ -122,12 +122,14 @@ $.fn.zato.ide.set_inactivity_handler = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.handle_inactivity = function() {
+    console.log("Handing inactivity")
     $.fn.zato.ide.save_current_source_code_to_local_storage();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
+    console.log("Saving to local storage")
     let key = $.fn.zato.ide.get_current_source_code_key()
     let value = window.zato_editor.getValue();
     store.set(key, value);
@@ -442,6 +444,7 @@ $.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
         $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
         $.fn.zato.ide.highlight_current_file(fs_location);
         $.fn.zato.ide.populate_current_file_service_list(json.current_file_service_list, name);
+        $.fn.zato.ide.maybe_populate_initial_last_deployed();
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
@@ -594,15 +597,20 @@ $.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_object_select_changed = function(select_elem) {
+
     let option_selected = $('option:selected', select_elem);
     let is_current_file = option_selected.attr('data-is-current-file') == "1";
     let current_object_select = $("#current-object-select").val()
 
     // Handle the selection of a service ..
     if(current_object_select == "service") {
+
+        // .. a service within the current file was selected ..
         if(is_current_file) {
             $.fn.zato.ide.on_object_select_changed_current_file(option_selected);
         }
+
+        // .. a service in another file was selected ..
         else {
             $.fn.zato.ide.on_object_select_changed_non_current_file(select_elem, option_selected);
         }
@@ -618,8 +626,6 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
         $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
     }
 
-    // .. optionally, populate the initial deployment state.
-    //$.fn.zato.ide.maybe_populate_initial_last_deployed();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -638,8 +644,8 @@ $.fn.zato.ide.on_editor_changed = function() {
 
     console.log("Key: "+ key);
     console.log("Is diff: "+ is_different);
-    //console.log("Store: "+ last_deployed);
-    //console.log("Editor: "+ editor_value);
+    // console.log("Editor: ["+ editor_value + "]");
+    // console.log("Store: ["+ last_deployed + "]");
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
