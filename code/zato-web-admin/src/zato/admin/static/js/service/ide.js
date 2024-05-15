@@ -729,7 +729,7 @@ $.fn.zato.ide.set_deployment_status = function() {
 
 $.fn.zato.ide.set_deployment_option_text = function(is_different) {
 
-    let different_prefix = "ℹ️ ";
+    let different_prefix = "🔷 ";
     let current_fs_location = $.fn.zato.ide.get_current_fs_location()
     console.log(`Setting option text: ${is_different} and ${current_fs_location}`);
 
