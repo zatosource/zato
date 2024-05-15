@@ -729,6 +729,7 @@ $.fn.zato.ide.set_deployment_status = function() {
 
 $.fn.zato.ide.set_deployment_option_text = function(is_different) {
 
+    let different_prefix = "ℹ️ ";
     let current_fs_location = $.fn.zato.ide.get_current_fs_location()
     console.log(`Setting option text: ${is_different} and ${current_fs_location}`);
 
@@ -736,12 +737,17 @@ $.fn.zato.ide.set_deployment_option_text = function(is_different) {
         let option = $(this);
         let text = option.text()
         if(is_different) {
-            new_text = "↪ " + text;
+            if(text.startsWith(different_prefix)) {
+                new_text = text;
+            }
+            else {
+                new_text = different_prefix + text;
+            }
         }
         else {
-            new_text = text;
+            new_text = text.replace(different_prefix, "");;
         }
-        option.text(new_text);
+        option.text(new_text)
         console.log("Opt: "+ option.text());
     });
 
