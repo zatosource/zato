@@ -798,6 +798,10 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 
 $.fn.zato.ide.on_service_list_response = function(response) {
 
+    //
+    // We're switching from files to services here.
+    //
+
     // Local variables
     let object_select = $("#object-select");
 
@@ -873,8 +877,13 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
 $.fn.zato.ide.on_file_list_response = function(response) {
 
+    //
+    // We're switching from services to files here.
+    //
+
     // Local variables
     let object_select = $("#object-select");
+    let current_fs_location = $("#current_fs_location").val();
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -901,6 +910,9 @@ $.fn.zato.ide.on_file_list_response = function(response) {
         if(file_list.length) {
             for(file_item of file_list) {
 
+                // Loop-local variables
+                let selected_option;
+
                 let file_name = file_item.file_name;
                 let file_name_url_safe = file_item.file_name_url_safe;
 
@@ -923,17 +935,24 @@ $.fn.zato.ide.on_file_list_response = function(response) {
                     file_name_short = file_name_short.replace("impl\\src\\", "");
                 }
 
-                // .. whose name we also need to remove ..
+                // .. we need to select this option if it points to the file that we currently have opened ..
+                if(file_name == current_fs_location) {
+                    selected_option = `selected="selected"`;
+                }
+                else {
+                    selected_option = "";
+                }
 
                 // .. now, we can build a new option for this file ..
                 let option = `<option
                     class="option-all-objects"
+                    {0}
                     data-is-current-file="1"
-                    data-fs-location="{0}"
-                    data-fs-location-url-safe="{1}">{2}</option>`
+                    data-fs-location="{1}"
+                    data-fs-location-url-safe="{2}">{3}</option>`
 
                 // .. and append it to the form ..
-                optgroup_object.append(String.format(option, file_name, file_name_url_safe, file_name_short));
+                optgroup_object.append(String.format(option, selected_option, file_name, file_name_url_safe, file_name_short));
             }
         }
         // .. if there are no files, be explicit about it.
