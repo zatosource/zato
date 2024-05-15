@@ -686,6 +686,12 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.on_editor_changed = function() {
+    $.fn.zato.ide.set_deployment_status();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.set_deployment_status = function() {
 
     // Get the current value of the editor ..
@@ -705,20 +711,24 @@ $.fn.zato.ide.set_deployment_status = function() {
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
-        var class_name = "different";
+        var button_class_name = "different";
     }
     else {
-        var class_name = "not-different";
+        var button_class_name = "not-different";
     }
 
-    // .. and set it for the button accordingly.
-    $.fn.zato.ide.set_deployment_button_status_class(class_name);
+    // .. set it for the button accordingly ..
+    $.fn.zato.ide.set_deployment_button_status_class(button_class_name);
+
+    // .. and for all the select options that point to the current file ..
+    $.fn.zato.ide.set_deployment_option_text(is_different);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.on_editor_changed = function() {
-    $.fn.zato.ide.set_deployment_status();
+$.fn.zato.ide.set_deployment_option_text = function(is_different) {
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location()
+    console.log(`Setting option text: ${is_different} and ${current_fs_location}`);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -744,8 +754,7 @@ $.fn.zato.ide.set_deployment_button_status_not_different = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.get_sync_deploy_request_url = function() {
-    let input = $("#current_fs_location");
-    let current_fs_location = input.val();
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let out = String.format("/zato/service/upload/?qqfile={0}&has_post=true", current_fs_location);
     return out
 }
