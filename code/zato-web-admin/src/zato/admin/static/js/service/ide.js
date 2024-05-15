@@ -728,8 +728,23 @@ $.fn.zato.ide.set_deployment_status = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.set_deployment_option_text = function(is_different) {
+
     let current_fs_location = $.fn.zato.ide.get_current_fs_location()
     console.log(`Setting option text: ${is_different} and ${current_fs_location}`);
+
+    $(`#object-select option[data-fs-location="${current_fs_location}"]`).each(function() {
+        let option = $(this);
+        let text = option.text()
+        if(is_different) {
+            new_text = "↪ " + text;
+        }
+        else {
+            new_text = text;
+        }
+        option.text(new_text);
+        console.log("Opt: "+ option.text());
+    });
+
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
