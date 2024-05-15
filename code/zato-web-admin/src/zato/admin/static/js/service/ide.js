@@ -2,8 +2,8 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $(document).ready(function() {
-    $('#invoke-service').click($.fn.zato.invoker.on_invoke_submitted);
-    $('#header-left-link-deploy').click($.fn.zato.invoker.on_deploy_submitted);
+    $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
+    $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
 });
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -12,7 +12,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // All the keys that we use with LocalStorage
     window.zato_local_storage_key = {
-        'zato_action_area_size': 'zato.action-area-size',
+        "zato_action_area_size": "zato.action-area-size",
     }
 
     // Our initial file that we process
@@ -48,12 +48,12 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     }
 
     // Resizes the action area
-    hotkeys('F2', $.fn.zato.ide.on_key_toggle_action_area);
+    hotkeys("F2", $.fn.zato.ide.on_key_toggle_action_area);
 
     // Same as above (F2)
     window.zato_editor.commands.addCommand({
-        name: 'on_F2',
-        bindKey: {win: 'F2',  mac: 'F2'},
+        name: "on_F2",
+        bindKey: {win: "F2",  mac: "F2"},
         exec: function(_ignored_editor) {
             $.fn.zato.ide.on_key_toggle_action_area(null, null);
         }
@@ -61,24 +61,24 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // Ignore F1
     window.zato_editor.commands.addCommand({
-        name: 'on_F21',
-        bindKey: {win: 'F21',  mac: 'F21'},
+        name: "on_F21",
+        bindKey: {win: "F21",  mac: "F21"},
         exec: function(_ignored_editor) {
             // Explicitly do nothing
         }
     })
 
     // Ctrl-S to deploy a file
-    document.addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    document.addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "s") {
           e.preventDefault();
           $.fn.zato.ide.on_key_deploy_file(null, null);
         }
       });
 
     // Ctrl-Enter to invoke a service
-    document.addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    document.addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
           e.preventDefault();
           $.fn.zato.ide.on_key_invoke(null, null);
         }
@@ -252,7 +252,7 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
     let header_links = $(header_links_id);
 
     // .. this is what each link will be based on ..
-    let link_pattern = '<input type="button" id="header-{0}-link-{1}" value="{2}"></button>';
+    let link_pattern = `<input type="button" id="header-{0}-link-{1}" value="{2}"></button>`;
 
     // .. build a string containing the link ..
     let link_string = String.format(link_pattern, prefix, item_label, text);
@@ -298,8 +298,8 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $.fn.zato.ide.clear_header_links("right")
 
     // Make sure that we are only showing our own area now
-    $('.file-listing-tr').hide();
-    $('.invoker-tr').show();
+    $(".file-listing-tr").hide();
+    $(".invoker-tr").show();
 
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
@@ -315,9 +315,9 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     //$.fn.zato.ide.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
-    // $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
+    // $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d "{\"customer_id\":\"123\"}'");
     /*
-    $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
+    $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d "{\"customer_id\":\"123\"}'");
     $("<a href=\"#\">Edit</a>").insertAfter("#header-status");
     $("<a class=\"header-sublink-first\" href=\"#\">Copy</a>").insertAfter("#header-status");
     */
@@ -338,12 +338,12 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" value="Info"/>
     `
 
-    tippy('#header-left-link-file', {
+    tippy("#header-left-link-file", {
         content: header_left_link_file_content,
         allowHTML: true,
-        theme: 'light',
-        trigger: 'click',
-        placement: 'bottom',
+        theme: "light",
+        trigger: "click",
+        placement: "bottom",
         arrow: true,
         interactive: true,
       });
@@ -473,7 +473,7 @@ $.fn.zato.ide.load_source_object = function(object_type, object_name, fs_locatio
         $.fn.zato.ide.post_load_source_object(object_name, current_file_source_code, current_file_service_list, fs_location);
     }
 
-    var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, object_name);
+    var url = String.format("/zato/service/ide/get-{0}/{1}/", object_type, object_name);
     $.fn.zato.post(url, callback);
 }
 
@@ -626,8 +626,8 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
 
     console.log("On object selected current file ..")
 
-    let fs_location = option_selected.attr('data-fs-location');
-    var line_number = option_selected.attr('data-line-number');
+    let fs_location = option_selected.attr("data-fs-location");
+    var line_number = option_selected.attr("data-line-number");
 
     let should_center = false;
     let should_animate = true;
@@ -638,12 +638,12 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, option_selected) {
+$.fn.zato.ide.on_object_select_changed_non_current_file = function(option_selected) {
 
     console.log("On object selected non-current file ..")
 
-    let new_service_name = select_elem.value;
-    let fs_location = option_selected.attr('data-fs-location');
+    let new_service_name = option_selected.attr("data-service-name");
+    let fs_location = option_selected.attr("data-fs-location");
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_service_url_path(new_service_name);
@@ -654,8 +654,9 @@ $.fn.zato.ide.on_object_select_changed_non_current_file = function(select_elem, 
 
 $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
-    let option_selected = $('option:selected', select_elem);
-    let is_current_file = option_selected.attr('data-is-current-file') == "1";
+    select_elem = $(select_elem);
+    let option_selected = $("option:selected", select_elem);
+    let is_current_file = option_selected.attr("data-is-current-file") == "1";
     let current_object_select = $("#current-object-select").val()
 
     // Handle the selection of a service ..
@@ -668,7 +669,7 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
         // .. a service in another file was selected ..
         else {
-            $.fn.zato.ide.on_object_select_changed_non_current_file(select_elem, option_selected);
+            $.fn.zato.ide.on_object_select_changed_non_current_file(option_selected);
         }
     }
 
@@ -821,8 +822,8 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     object_select.empty();
 
     // .. build the expected optgroups ..
-    let optgroup_current_file = '<optgroup label="Current file" id="optgroup-current-file"/>';
-    let optgroup_all_services = '<optgroup label="All services" id="optgroup-all-services"/>';
+    let optgroup_current_file = `<optgroup label="Current file" id="optgroup-current-file"/>`;
+    let optgroup_all_services = `<optgroup label="All services" id="optgroup-all-services"/>`;
 
     // .. add our optgroups to the select ..
     object_select.append(optgroup_current_file);
@@ -907,7 +908,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
         // .. build an options group for each directory ..
         let optgroup_id = $.fn.zato.slugify("optgroup-" + dir_name);
-        let optgroup = '<optgroup label="{0}" id="{1}"/>'
+        let optgroup = `<optgroup label="{0}" id="{1}"/>`;
 
         // .. append it to the form ..
         object_select.append(String.format(optgroup, dir_name, optgroup_id));
