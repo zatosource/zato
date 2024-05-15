@@ -883,7 +883,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
     // Local variables
     let object_select = $("#object-select");
-    let current_fs_location = $("#current_fs_location").val();
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -985,7 +985,7 @@ $.fn.zato.ide.on_toggle_object_select = function() {
 
     // .. or from files to services.
     else {
-        let current_fs_location = $("#current_fs_location").val();
+        let current_fs_location = $.fn.zato.ide.get_current_fs_location();
         url_path = "/zato/service/ide/get-service-list/?fs_location="+ current_fs_location;
         callback = $.fn.zato.ide.on_service_list_response;
     }
