@@ -79,16 +79,12 @@ $.fn.zato.invoker.get_sync_invoke_request_url = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.on_submit_form_ended_common = function(
+$.fn.zato.invoker.on_form_ended_common_impl = function(
     options,
     status,
-    data,
+    response,
 ) {
 
-    console.log("Data "+ data);
-
-    // Local variables
-    let response = $.parseJSON(data);
     let has_response = !!response.data;
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
@@ -121,6 +117,19 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
 
     $("#result-header").text(status);
     $("#data-response").text(response_data);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.on_form_ended_common = function(
+    options,
+    status,
+    data,
+) {
+
+    console.log("Data "+ data);
+    let response = $.parseJSON(data);
+    $.fn.zato.invoker.on_form_ended_common_impl(options, status, response)
 
 }
 
@@ -129,7 +138,7 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
 $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_status, error_message) {
 
     let status = jq_xhr.status + " " + error_message;
-    $.fn.zato.invoker.on_submit_form_ended_common(options, status, jq_xhr.responseText);
+    $.fn.zato.invoker.on_form_ended_common(options, status, jq_xhr.responseText);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -139,7 +148,7 @@ $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
     let status = "200 OK";
     let on_post_success_func = options["on_post_success_func"];
 
-    $.fn.zato.invoker.on_submit_form_ended_common(options, status, data);
+    $.fn.zato.invoker.on_form_ended_common(options, status, data);
 
     if(on_post_success_func) {
         on_post_success_func();
