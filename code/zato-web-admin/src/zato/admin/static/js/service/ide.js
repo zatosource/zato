@@ -725,15 +725,12 @@ $.fn.zato.ide.set_deployment_status = function() {
     $.fn.zato.ide.set_deployment_button_status_class(button_class_name);
 
     // .. and for all the select options that point to the current file ..
-    $.fn.zato.ide.set_deployment_option_text(is_different);
+    $.fn.zato.ide.update_deployment_option_state(is_different);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-//
-// QQQ
-//
-$.fn.zato.ide.set_deployment_option_text = function(is_different, fs_location) {
+$.fn.zato.ide.update_deployment_option_state = function(is_different, fs_location) {
 
     fs_location = fs_location || $.fn.zato.ide.get_current_fs_location();
     console.log(`Setting option text: ${is_different} and ${fs_location}`);
@@ -786,7 +783,7 @@ $.fn.zato.ide.set_deployment_button_status_not_different = function() {
 
 $.fn.zato.ide.on_post_success_func = function() {
     $.fn.zato.ide.set_deployment_button_status_not_different();
-    $.fn.zato.ide.set_deployment_option_text(false);
+    $.fn.zato.ide.update_deployment_option_state(false);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -846,6 +843,22 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 $.fn.zato.ide.get_undeployed_files_list = function() {
 
     console.log("Getting undeployed files list");
+
+    let undeployed = [];
+    $(`#object-select option[data-is-modified="1"`).each(function() {
+        let fs_location = $(this).attr("data-fs-location");
+        undeployed.push(fs_location);
+    })
+    return undeployed;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.mark_as_undeployed = function(undeployed) {
+
+    for(item of undeployed) {
+        $.fn.zato.ide.update_deployment_option_state(true, item)
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -860,7 +873,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
 
-    zzz
+    console.log("On service list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -926,6 +939,9 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. switch to services ..
     $.fn.zato.ide.toggle_current_object_select("file");
 
+    // .. mark the relevant select options as undeployed ..
+    $.fn.zato.ide.mark_as_undeployed(undeployed);
+
     // .. services can be invoked now.
     $("#invoke-service").prop("disabled", false).removeClass("no-click");
 }
@@ -942,6 +958,8 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+
+    console.log("On file list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -1022,6 +1040,9 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
     // Switch to files ..
     $.fn.zato.ide.toggle_current_object_select("service");
+
+    // .. mark the relevant select options as undeployed ..
+    $.fn.zato.ide.mark_as_undeployed(undeployed);
 
     // .. services cannot be invoked in the files view.
     $("#invoke-service").prop("disabled", true).addClass("no-click");
