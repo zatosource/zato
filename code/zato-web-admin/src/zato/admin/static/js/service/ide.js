@@ -109,7 +109,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
-
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -719,7 +718,6 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
         // console.log("FS-Safe: "+ selected_fs_location_url_safe);
         $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
     }
-
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -790,7 +788,6 @@ $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_locatio
         option.attr("data-is-modified", is_modified);
         //  console.log(`Opt: ${is_modified} -> ${option.text()}`);
     });
-
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
