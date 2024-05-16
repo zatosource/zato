@@ -672,6 +672,7 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
         // .. a service in another file was selected ..
         else {
+            console.log("Switching to an object in another file: "+ option_selected.text());
             $.fn.zato.ide.on_object_select_changed_non_current_file(option_selected);
         }
     }
@@ -905,7 +906,8 @@ $.fn.zato.ide.on_service_list_response = function(response) {
             data-is-current-file="{0}"
             data-line-number="{1}"
             data-fs-location="{2}"
-            data-fs-location-url-safe="{3}">{4}</option>`;
+            data-fs-location-url-safe="{3}"
+            data-service-name="{4}">{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
@@ -925,12 +927,15 @@ $.fn.zato.ide.on_service_list_response = function(response) {
             data-object-holder="1"
             data-is-current-file="{0}"
             data-line-number="{1}"
-            data-fs-location="{2}">{3}</option>`;
+            data-fs-location="{2}"
+            data-fs-location-url-safe="{3}"
+            data-service-name="{4}">{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
             service_item.line_number_human,
             service_item.fs_location,
+            service_item.fs_location_url_safe,
             service_item.name,
         );
         optgroup_all_services_object.append(option);
