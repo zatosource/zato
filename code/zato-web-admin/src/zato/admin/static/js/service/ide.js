@@ -128,14 +128,14 @@ $.fn.zato.ide.set_inactivity_handler = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.handle_inactivity = function() {
-    console.log("Handing inactivity")
+    //  console.log("Handing inactivity")
     $.fn.zato.ide.save_current_source_code_to_local_storage();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
-    console.log("Saving to local storage")
+    //  console.log("Saving to local storage")
     let key = $.fn.zato.ide.get_current_source_code_key()
     let value = window.zato_editor.getValue();
     store.set(key, value);
@@ -361,7 +361,16 @@ $.fn.zato.ide.populate_data_model_area = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_document_title = function(name) {
-    let new_title = `${name} - IDE - Zato`;
+    var prefix = "";
+    let has_modified =  $.fn.zato.ide.has_current_object_modified();
+
+    // console.log("Received has modified: "+ has_modified);
+
+    if(has_modified) {
+        prefix = "* ";
+    }
+
+    let new_title = `${prefix}${name} - IDE - Zato`;
     document.title = new_title;
 }
 
@@ -444,7 +453,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
 
 $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 
-    console.log("Setting current file: "+ current_fs_location);
+    //  console.log("Setting current file: "+ current_fs_location);
 
     // Zero out the current file flag for all the select opions ..
     $(`option[data-object-holder="1"]`).attr("data-is-current-file", "0");
@@ -504,9 +513,29 @@ $.fn.zato.ide.get_current_source_code_key = function() {
     return $.fn.zato.ide.get_cluster_name() + "." + $.fn.zato.ide.get_current_fs_location();
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.get_last_deployed_key = function() {
     let key = "zato.last-deployed." + $.fn.zato.ide.get_current_source_code_key()
     return key;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_object_select = function() {
+    let current = $("#object-select :selected");
+    //  console.log("Returning current select: "+ current.text())
+    return current;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.has_current_object_modified = function() {
+    let current = $.fn.zato.ide.get_current_object_select();
+
+    let has_modified = current.attr("data-is-modified") == "1";
+    // console.log("Has current modified: "+ has_modified);
+    return has_modified;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -585,7 +614,7 @@ $.fn.zato.ide.save_current_editor_session = function() {
 
 $.fn.zato.ide.get_last_deployed_from_store = function(key) {
     let last_deployed = store.get(key);
-    console.log("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
+    // console.log("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
     return last_deployed;
 }
 
@@ -596,7 +625,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
     // Check if this file has been ever deployed, if not, we need to populate
     // the store with the current contents of the file because, by definition,
     // it must be the same as the source code from the server given that we've just loaded it.
-    console.log("In maybe populate initial last deployed");
+    // console.log("In maybe populate initial last deployed");
     let key = $.fn.zato.ide.get_last_deployed_key();
     last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
 
@@ -609,14 +638,14 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.maybe_set_deploy_needed = function() {
-    console.log("In maybe set deploy needed");
+    // console.log("In maybe set deploy needed");
     $.fn.zato.ide.set_deployment_status();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
-    console.log("On file selected ..")
+    //  console.log("On file selected ..")
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
@@ -627,7 +656,7 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
 
 $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) {
 
-    console.log("On object selected current file ..")
+    //  console.log("On object selected current file ..")
 
     let fs_location = option_selected.attr("data-fs-location");
     var line_number = option_selected.attr("data-line-number");
@@ -643,7 +672,7 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
 
 $.fn.zato.ide.on_object_select_changed_non_current_file = function(option_selected) {
 
-    console.log("On object selected non-current file ..")
+    //  console.log("On object selected non-current file ..")
 
     let new_service_name = option_selected.attr("data-service-name");
     let fs_location = option_selected.attr("data-fs-location");
@@ -672,7 +701,7 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
         // .. a service in another file was selected ..
         else {
-            console.log("Switching to an object in another file: "+ option_selected.text());
+            //  console.log("Switching to an object in another file: "+ option_selected.text());
             $.fn.zato.ide.on_object_select_changed_non_current_file(option_selected);
         }
     }
@@ -734,7 +763,7 @@ $.fn.zato.ide.set_deployment_status = function() {
 $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_location) {
 
     fs_location = fs_location || $.fn.zato.ide.get_current_fs_location();
-    console.log(`Setting option text: ${is_different} and ${fs_location}`);
+    //  console.log(`Setting option text: ${is_different} and ${fs_location}`);
 
     $(`#object-select option[data-fs-location="${fs_location}"]`).each(function() {
         let option = $(this);
@@ -755,7 +784,7 @@ $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_locatio
         }
         option.text(new_text)
         option.attr("data-is-modified", is_modified);
-        console.log(`Opt: ${is_modified} -> ${option.text()}`);
+        //  console.log(`Opt: ${is_modified} -> ${option.text()}`);
     });
 
 }
@@ -843,7 +872,7 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 
 $.fn.zato.ide.get_undeployed_files_list = function() {
 
-    console.log("Getting undeployed files list");
+    //  console.log("Getting undeployed files list");
 
     let undeployed = [];
     $(`#object-select option[data-is-modified="1"`).each(function() {
@@ -874,7 +903,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
 
-    console.log("On service list undeployed: "+ undeployed);
+    //  console.log("On service list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -897,7 +926,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
     for(service_item of data.current_file_service_list) {
 
-        console.log("Service item: "+ $.fn.zato.to_dict(service_item));
+        //  console.log("Service item: "+ $.fn.zato.to_dict(service_item));
 
         let is_current_file = "1";
         var option = `<option
@@ -964,7 +993,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
-    console.log("On file list undeployed: "+ undeployed);
+    //  console.log("On file list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
