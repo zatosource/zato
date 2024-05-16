@@ -151,6 +151,7 @@ class ServiceIDE(_IDEBase):
                 current_file_service_list.append({
                     'name': service_name,
                     'fs_location': fs_location,
+                    'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                     'line_number': line_number,
                     'line_number_human': line_number_human,
                 })

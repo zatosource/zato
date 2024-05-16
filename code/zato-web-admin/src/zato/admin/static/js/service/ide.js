@@ -336,7 +336,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" value="New"/>
         <input type="button" value="Rename"/>
         <input type="button" value="Delete"/>
-        <input type="button" value="Reload"/>
+        <input type="button" value="Reload" onclick="$.fn.zato.ide.on_file_reload();" />
         <input type="button" value="Info"/>
     `
 
@@ -354,6 +354,16 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_data_model_area = function() {
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_reload = function() {
+    let current_object_select = $.fn.zato.ide.get_current_object_select();
+    let fs_location = current_object_select.attr("data-fs-location");
+    let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
+    console.log(`Reloading: ${current_object_select} ${fs_location} ${fs_location_url_safe} `)
+    $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -466,25 +476,50 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.post_load_source_object = function(object_name, current_file_source_code, current_file_service_list, fs_location) {
-    $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
+$.fn.zato.ide.post_load_source_object = function(
+    object_name,
+    current_file_source_code,
+    current_file_service_list,
+    fs_location,
+    reuse_source_code,
+) {
+    $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
     $.fn.zato.ide.highlight_current_file(fs_location);
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
-    $.fn.zato.ide.maybe_populate_initial_last_deployed();
-    $.fn.zato.ide.maybe_set_deploy_needed();
+
+    // We are going to reuse the source that we may already have cached
+    // and it means that we may potentially need to set the correct deployment status ..
+    if(reuse_source_code) {
+        $.fn.zato.ide.maybe_populate_initial_last_deployed();
+        $.fn.zato.ide.maybe_set_deploy_needed();
+    }
+
+    // .. if we are here, we know that we have just loaded the latest source code
+    // .. from the server so we also know that we don't need to deploy this file.
+    else {
+        $.fn.zato.ide.set_deployment_button_status_class("not-different");
+        $.fn.zato.ide.update_deployment_option_state(false);
+    }
+
     $.fn.zato.ide.set_is_current_file(fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_source_object = function(object_type, object_name, fs_location) {
+$.fn.zato.ide.load_source_object = function(object_type, object_name, fs_location, reuse_source_code) {
 
-    var callback = function(data, status) {
+    var callback = function(data, _unused_status) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
         let current_file_source_code = json.current_file_source_code;
         let current_file_service_list = json.current_file_service_list;
-        $.fn.zato.ide.post_load_source_object(object_name, current_file_source_code, current_file_service_list, fs_location);
+        $.fn.zato.ide.post_load_source_object(
+            object_name,
+            current_file_source_code,
+            current_file_service_list,
+            fs_location,
+            reuse_source_code
+        );
     }
 
     var url = String.format("/zato/service/ide/get-{0}/{1}/", object_type, object_name);
@@ -580,18 +615,26 @@ $.fn.zato.ide.mark_file_modified = function(has_undo) {
 
 $.fn.zato.ide.set_up_editor_session = function(editor_session) {
     editor_session.setMode("ace/mode/python");
-    editor_session.setUndoSelect(true);
+    editor_session.setUndoSelect(false);
     editor_session.on("change", $.fn.zato.ide.on_document_changed);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code) {
+$.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code, reuse_source_code) {
+
+    console.log("Current: "+ current_file_source_code);
 
     // We may already have a previous session for that file so we can load it here ..
     var editor_session = window.zato_editor_session_map[fs_location];
     if(!editor_session) {
         var editor_session = ace.createEditSession(current_file_source_code);
+    }
+
+    // .. we may have an old session whose source we need to overwrite with what we have on input ..
+    if(!reuse_source_code) {
+        window.zato_editor.setValue(current_file_source_code);
+        window.zato_editor.clearSelection();
     }
 
     // .. configure ACE ..
@@ -602,7 +645,6 @@ $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_co
 
     // .. that we can now switch.
     window.zato_editor.focus();
-
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -646,12 +688,20 @@ $.fn.zato.ide.maybe_set_deploy_needed = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
+$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe, reuse_source_code) {
     //  console.log("On file selected ..")
+
+    if(reuse_source_code == null) {
+        reuse_source_code = true;
+    }
+    else {
+        reuse_source_code = false;
+    }
+
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
-    $.fn.zato.ide.load_source_object("file", fs_location, fs_location);
+    $.fn.zato.ide.load_source_object("file", fs_location, fs_location, reuse_source_code);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -681,7 +731,7 @@ $.fn.zato.ide.on_object_select_changed_non_current_file = function(option_select
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_service_url_path(new_service_name);
-    $.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
+    $.fn.zato.ide.load_source_object("service", new_service_name, fs_location, true);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
