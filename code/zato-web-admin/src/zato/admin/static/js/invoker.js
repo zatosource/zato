@@ -89,7 +89,7 @@ $.fn.zato.invoker.on_submit_form_ended_common = function(
 
     // Local variables
     let response = $.parseJSON(data);
-    let has_response = !!response.response_time_human;
+    let has_response = !!response.data;
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
 

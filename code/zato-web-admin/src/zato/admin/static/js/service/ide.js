@@ -349,7 +349,6 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         arrow: true,
         interactive: true,
       });
-
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
