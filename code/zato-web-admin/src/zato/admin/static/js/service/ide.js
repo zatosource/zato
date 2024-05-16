@@ -10,6 +10,9 @@ $(document).ready(function() {
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
 
+    // Global variables
+    window.zato_undeployed_prefix = "🔷 ";
+
     // All the keys that we use with LocalStorage
     window.zato_local_storage_key = {
         "zato_action_area_size": "zato.action-area-size",
@@ -727,28 +730,34 @@ $.fn.zato.ide.set_deployment_status = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.set_deployment_option_text = function(is_different) {
+//
+// QQQ
+//
+$.fn.zato.ide.set_deployment_option_text = function(is_different, fs_location) {
 
-    let different_prefix = "🔷 ";
-    let current_fs_location = $.fn.zato.ide.get_current_fs_location()
-    console.log(`Setting option text: ${is_different} and ${current_fs_location}`);
+    fs_location = fs_location || $.fn.zato.ide.get_current_fs_location();
+    console.log(`Setting option text: ${is_different} and ${fs_location}`);
 
-    $(`#object-select option[data-fs-location="${current_fs_location}"]`).each(function() {
+    $(`#object-select option[data-fs-location="${fs_location}"]`).each(function() {
         let option = $(this);
-        let text = option.text()
+        let text = option.text();
         if(is_different) {
-            if(text.startsWith(different_prefix)) {
+            if(text.startsWith(window.zato_undeployed_prefix)) {
                 new_text = text;
+                is_modified = 0;
             }
             else {
-                new_text = different_prefix + text;
+                new_text = window.zato_undeployed_prefix + text;
+                is_modified = 1;
             }
         }
         else {
-            new_text = text.replace(different_prefix, "");;
+            new_text = text.replace(window.zato_undeployed_prefix, "");;
+            is_modified = 0;
         }
         option.text(new_text)
-        console.log("Opt: "+ option.text());
+        option.attr("data-is-modified", is_modified);
+        console.log(`Opt: ${is_modified} -> ${option.text()}`);
     });
 
 }
@@ -834,6 +843,13 @@ $.fn.zato.ide.toggle_current_object_select = function(current) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.get_undeployed_files_list = function() {
+
+    console.log("Getting undeployed files list");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.on_service_list_response = function(response) {
 
     //
@@ -842,6 +858,9 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
     // Local variables
     let object_select = $("#object-select");
+    let undeployed = $.fn.zato.ide.get_undeployed_files_list();
+
+    zzz
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -921,6 +940,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
     // Local variables
     let object_select = $("#object-select");
+    let undeployed = $.fn.zato.ide.get_undeployed_files_list();
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
     // Extract the underlying JSON ..
