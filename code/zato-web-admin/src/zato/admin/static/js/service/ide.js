@@ -775,6 +775,13 @@ $.fn.zato.ide.set_deployment_button_status_not_different = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.on_post_success_func = function() {
+    $.fn.zato.ide.set_deployment_button_status_not_different();
+    $.fn.zato.ide.set_deployment_option_text(false);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.get_sync_deploy_request_url = function() {
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let out = String.format("/zato/service/upload/?qqfile={0}&has_post=true", current_fs_location);
@@ -790,7 +797,7 @@ $.fn.zato.invoker.on_deploy_submitted = function() {
         "on_started_activate_blinking": ["#deploying-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
         "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
-        "on_post_success_func": $.fn.zato.ide.set_deployment_button_status_not_different,
+        "on_post_success_func": $.fn.zato.ide.on_post_success_func,
 
     }
     $.fn.zato.invoker.run_sync_deployer(options);
