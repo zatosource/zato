@@ -353,7 +353,11 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.populate_data_model_area = function() {
+$.fn.zato.ide.after_post_load_source_func = function(data) {
+    let options = {
+
+    };
+    $.fn.zato.invoker.on_form_ended_common_impl QQQ QQQ
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -477,11 +481,13 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.post_load_source_object = function(
+    data,
     object_name,
     current_file_source_code,
     current_file_service_list,
     fs_location,
     reuse_source_code,
+    after_post_load_source_func,
 ) {
     $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
     $.fn.zato.ide.highlight_current_file(fs_location);
@@ -502,11 +508,22 @@ $.fn.zato.ide.post_load_source_object = function(
     }
 
     $.fn.zato.ide.set_is_current_file(fs_location);
+    if(after_post_load_source_func) {
+        after_post_load_source_func(data);
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_source_object = function(object_type, object_name, fs_location, reuse_source_code) {
+$.fn.zato.ide.load_source_object = function(
+    object_type,
+    object_name,
+    fs_location,
+    reuse_source_code,
+    after_post_load_source_func
+) {
+
+    // ZZZ
 
     var callback = function(data, _unused_status) {
         let msg = data.responseText;
@@ -514,11 +531,13 @@ $.fn.zato.ide.load_source_object = function(object_type, object_name, fs_locatio
         let current_file_source_code = json.current_file_source_code;
         let current_file_service_list = json.current_file_service_list;
         $.fn.zato.ide.post_load_source_object(
+            data,
             object_name,
             current_file_source_code,
             current_file_service_list,
             fs_location,
-            reuse_source_code
+            reuse_source_code,
+            after_post_load_source_func
         );
     }
 
@@ -621,9 +640,11 @@ $.fn.zato.ide.set_up_editor_session = function(editor_session) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code, reuse_source_code) {
-
-    console.log("Current: "+ current_file_source_code);
+$.fn.zato.ide.load_editor_session = function(
+    fs_location,
+    current_file_source_code,
+    reuse_source_code
+) {
 
     // We may already have a previous session for that file so we can load it here ..
     var editor_session = window.zato_editor_session_map[fs_location];
@@ -688,7 +709,7 @@ $.fn.zato.ide.maybe_set_deploy_needed = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe, reuse_source_code) {
+$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe, reuse_source_code, after_post_load_source_func) {
     //  console.log("On file selected ..")
 
     if(reuse_source_code == null) {
@@ -701,7 +722,7 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe, reu
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
-    $.fn.zato.ide.load_source_object("file", fs_location, fs_location, reuse_source_code);
+    $.fn.zato.ide.load_source_object("file", fs_location, fs_location, reuse_source_code, after_post_load_source_func);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
