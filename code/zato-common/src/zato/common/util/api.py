@@ -1059,7 +1059,9 @@ def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
             original_line = line
             if line:
 
+                line = line.replace(r'\r', '')
                 line = line.strip()
+
                 if line.startswith('#'):
                     continue
 
