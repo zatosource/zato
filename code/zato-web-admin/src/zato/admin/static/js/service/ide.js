@@ -410,6 +410,8 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     var first_option_elem = null;
     var has_new_service_name_match = false;
 
+    console.log("Populate current file service list: "+ current_file_service_list);
+
     // First, remove anything we already have in the list ..
     $(".option-current-file").remove();
 
@@ -418,6 +420,8 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
 
     // .. and populate it anew
     for (const item of current_file_service_list) {
+
+        console.log("Populate item: "+ $.fn.zato.to_dict(item));
 
         var option = $("<option>");
         option.text(item.name);
@@ -926,7 +930,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
     for(service_item of data.current_file_service_list) {
 
-        //  console.log("Service item: "+ $.fn.zato.to_dict(service_item));
+        // console.log("Service item: "+ $.fn.zato.to_dict(service_item));
 
         let is_current_file = "1";
         var option = `<option
@@ -936,7 +940,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
             data-line-number="{1}"
             data-fs-location="{2}"
             data-fs-location-url-safe="{3}"
-            data-service-name="{4}">{4}</option>`;
+            data-service-name="{4}" class="option-current-file>{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
