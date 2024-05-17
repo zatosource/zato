@@ -235,11 +235,18 @@ $.fn.zato.ide.switch_to_action_area = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.get_header_links_elem = function(prefix) {
+    let header_links_id = `#header-links-${prefix}`;
+    let header_links = $(header_links_id);
+    return header_links;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.clear_header_links = function(prefix) {
 
     // The element where all the links reside ..
-    let header_links_id = `#header-links-${prefix}`;
-    let header_links = $(header_links_id);
+    let header_links = $.fn.zato.ide.get_header_links_elem(prefix);
 
     // .. clean it up.
     header_links.empty();
@@ -250,8 +257,7 @@ $.fn.zato.ide.clear_header_links = function(prefix) {
 $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
 
     // The element where all the links reside ..
-    let header_links_id = `#header-links-${prefix}`;
-    let header_links = $(header_links_id);
+    let header_links = $.fn.zato.ide.get_header_links_elem(prefix);
 
     // .. this is what each link will be based on ..
     let link_pattern = `<input type="button" id="header-{0}-link-{1}" value="{2}"></button>`;
@@ -269,6 +275,23 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
     if(!is_last) {
         $("<span> </span>").insertAfter(link);
     }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.add_header_span = function(prefix, id, is_visible) {
+
+    if(is_visible) {
+        var class_ = "visible";
+    }
+    else {
+        var class_ = "hidden";
+    }
+
+    let span = `<span id=${id} class="${class_}"></span>`;
+    let header_links = $.fn.zato.ide.get_header_links_elem(prefix);
+
+    header_links.append($(span));
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -306,6 +329,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
+    $.fn.zato.ide.add_header_span("left", "header-feedback", false);
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     //$.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
     //$.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
@@ -333,11 +357,11 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $("#header-status").text(initial_header_status);
 
     let header_left_link_file_content = `
-        <input type="button" value="New"/>
-        <input type="button" value="Rename"/>
-        <input type="button" value="Delete"/>
-        <input type="button" value="Reload" onclick="$.fn.zato.ide.on_file_reload();" />
-        <input type="button" value="Info"/>
+        <input type="button" id="file-new" value="New"/>
+        <input type="button" id="file-rename" value="Rename"/>
+        <input type="button" id="file-delete" value="Delete"/>
+        <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();" />
+        <input type="button" id="file-info" value="Info"/>
     `
 
     tippy("#header-left-link-file", {
@@ -355,9 +379,23 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
 $.fn.zato.ide.after_post_load_source_func = function(data) {
     let options = {
-
     };
-    $.fn.zato.invoker.on_form_ended_common_impl QQQ QQQ
+    // $.fn.zato.invoker.on_form_ended_common_impl
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.after_file_reloaded = function() {
+    let zato_tippy_file_reload = tippy("#header-feedback", {
+        content: "OK, reloaded",
+        allowHTML: false,
+        theme: "dark",
+        trigger: "click",
+        placement: "top",
+        arrow: true,
+        interactive: false,
+    });
+    console.log("Tippy: "+ zato_tippy_file_reload);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -367,7 +405,7 @@ $.fn.zato.ide.on_file_reload = function() {
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
     console.log(`Reloading: ${current_object_select} ${fs_location} ${fs_location_url_safe} `)
-    $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false);
+    $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false, $.fn.zato.ide.after_file_reloaded);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -709,7 +747,12 @@ $.fn.zato.ide.maybe_set_deploy_needed = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe, reuse_source_code, after_post_load_source_func) {
+$.fn.zato.ide.on_file_selected = function(
+    fs_location,
+    fs_location_url_safe,
+    reuse_source_code,
+    after_post_load_source_func
+) {
     //  console.log("On file selected ..")
 
     if(reuse_source_code == null) {
