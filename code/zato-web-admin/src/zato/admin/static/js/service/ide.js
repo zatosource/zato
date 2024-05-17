@@ -562,8 +562,6 @@ $.fn.zato.ide.load_source_object = function(
     after_post_load_source_func
 ) {
 
-    // ZZZ
-
     var callback = function(data, _unused_status) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
@@ -1041,7 +1039,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
     for(service_item of data.current_file_service_list) {
 
-        // console.log("Service item: "+ $.fn.zato.to_dict(service_item));
+        console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
 
         let is_current_file = "1";
         var option = `<option
@@ -1051,7 +1049,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
             data-line-number="{1}"
             data-fs-location="{2}"
             data-fs-location-url-safe="{3}"
-            data-service-name="{4}" class="option-current-file>{4}</option>`;
+            data-service-name="{4}" class="option-current-file">{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
