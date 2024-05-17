@@ -404,7 +404,7 @@ $.fn.zato.ide.on_file_reload = function() {
     let current_object_select = $.fn.zato.ide.get_current_object_select();
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
-    // console.log(`Reloading: ${current_object_select} ${fs_location} ${fs_location_url_safe} `)
+    console.log(`Reloading: "${current_object_select}" "${fs_location}" "${fs_location_url_safe}"`)
     $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false, $.fn.zato.ide.after_file_reloaded);
 }
 
