@@ -390,7 +390,7 @@ $.fn.zato.ide.after_file_reloaded = function() {
         content: "OK, reloaded",
         allowHTML: false,
         theme: "dark",
-        trigger: "click",
+        trigger: "manual",
         placement: "bottom",
         arrow: true,
         interactive: false,
