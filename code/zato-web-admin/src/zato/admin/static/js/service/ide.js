@@ -359,8 +359,8 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" id="file-new" value="New"/>
         <input type="button" id="file-rename" value="Rename"/>
         <input type="button" id="file-delete" value="Delete"/>
-        <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();" />
-        <input type="button" id="file-info" value="Info"/>
+        <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();"/>
+        <input type="button" id="file-info" value="Info" onclick="$.fn.zato.ide.on_file_info();"/>
     `
 
     tippy("#header-left-link-file", {
@@ -404,8 +404,15 @@ $.fn.zato.ide.on_file_reload = function() {
     let current_object_select = $.fn.zato.ide.get_current_object_select();
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
-    console.log(`Reloading: "${current_object_select}" "${fs_location}" "${fs_location_url_safe}"`)
+    console.log(`Reloading file: "${fs_location}" "${fs_location_url_safe}"`)
     $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false, $.fn.zato.ide.after_file_reloaded);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_info = function() {
+    let fs_location = $.fn.zato.ide.get_current_fs_location()
+    console.log(`Getting file info for: "${fs_location}"`);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
