@@ -329,7 +329,6 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     // Left-hand side links
     $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
-    $.fn.zato.ide.add_header_span("left", "header-feedback", false);
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     //$.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
     //$.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
@@ -386,16 +385,17 @@ $.fn.zato.ide.after_post_load_source_func = function(data) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.after_file_reloaded = function() {
-    let zato_tippy_file_reload = tippy("#header-feedback", {
+
+    let zato_tippy_file_reload = tippy("#file-reload", {
         content: "OK, reloaded",
         allowHTML: false,
         theme: "dark",
         trigger: "click",
-        placement: "top",
+        placement: "bottom",
         arrow: true,
         interactive: false,
     });
-    console.log("Tippy: "+ zato_tippy_file_reload);
+    zato_tippy_file_reload[0].show();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
