@@ -18,6 +18,13 @@ from zato.admin.web.views import BaseCallView, invoke_action_handler, method_all
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from django.http import HttpRequest, HttpResponse
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -49,7 +56,7 @@ class IDE(BaseCallView):
 
 # ################################################################################################################################
 
-    def build_http_response(self, response):
+    def build_http_response(self, response:'any_') -> 'TemplateResponse':
 
         return_data = {
             'cluster_id': self.req.zato.cluster_id,
@@ -65,28 +72,28 @@ class IDE(BaseCallView):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_service(req, service_name):
+def get_service(req:'HttpRequest', service_name:'str') -> 'HttpResponse':
     return invoke_action_handler(req, 'zato.service.ide.get-service', extra={'service_name': service_name})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_file(req, fs_location):
+def get_file(req:'HttpRequest', fs_location:'str') -> 'HttpResponse':
     return invoke_action_handler(req, 'zato.service.ide.get-file', extra={'fs_location': fs_location})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_file_list(req):
+def get_file_list(req:'HttpRequest') -> 'HttpResponse':
     return invoke_action_handler(req, 'zato.service.ide.get-file-list')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_service_list(req):
+def get_service_list(req:'HttpRequest') -> 'HttpResponse':
     fs_location = req.GET['fs_location']
     return invoke_action_handler(req, 'zato.service.ide.service-ide', extra={'fs_location': fs_location})
 
