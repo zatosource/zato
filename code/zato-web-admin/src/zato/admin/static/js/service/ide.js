@@ -1043,13 +1043,13 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
         let is_current_file = "1";
         var option = `<option
-            class="option-all-objects"
+            class="option-current-file"
             data-object-holder="1"
             data-is-current-file="{0}"
             data-line-number="{1}"
             data-fs-location="{2}"
             data-fs-location-url-safe="{3}"
-            data-service-name="{4}" class="option-current-file">{4}</option>`;
+            data-service-name="{4}">{4}</option>`;
         var option = String.format(
             option,
             is_current_file,
