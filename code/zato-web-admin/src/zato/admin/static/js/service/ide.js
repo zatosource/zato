@@ -377,9 +377,6 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.after_post_load_source_func = function(data) {
-    let options = {
-    };
-    // $.fn.zato.invoker.on_form_ended_common_impl
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -411,8 +408,60 @@ $.fn.zato.ide.on_file_reload = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_info = function() {
+
+    // Local variables
+    let form_id = "file-info-form";
     let fs_location = $.fn.zato.ide.get_current_fs_location()
+
     console.log(`Getting file info for: "${fs_location}"`);
+
+    // First, build a dynamic form ..
+    $.fn.zato.ide.build_singleton_form(form_id, {
+        "fs_location": fs_location,
+    });
+
+    // .. collect all the required parameters ..
+    const options = {
+        "request_form_id": `#${form_id}`,
+        "on_started_activate_blinking": ["#getting-info-please-wait"],
+        "on_ended_draw_attention": ["#result-header"],
+        "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
+        "on_post_success_func": $.fn.zato.ide.on_post_success_func,
+    }
+
+    // .. and invoke the newly created form now.
+    $.fn.zato.invoker.run_sync_form_submitter(options);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.build_singleton_form = function(form_id, items) {
+
+    // Local variables
+    let form_selector = `#${form_id}`;
+    let parent = $("#singleton-form-parent");
+
+    // First, make sure that such an element doesn't exist ..
+    $(form_selector).remove();
+
+    // .. now, create it again ..
+    let form = `<form id="${form_id}"></form>`;
+
+    // .. append it to our parent ..
+    parent.append(form);
+
+    // .. get a handle to the newly created form ..
+    let form_elem = $(form_selector);
+
+    // .. go through all the fields that we need to create ..
+    for(const [key, value] of Object.entries(items)) {
+
+        // .. create a hidden field for each one ..
+        let field = `<input type="hidden" name="${key}" value="${value}"/>`;
+
+        // .. and attach it to the form.
+        form_elem.append(field);
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
