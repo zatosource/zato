@@ -404,7 +404,7 @@ $.fn.zato.ide.on_file_reload = function() {
     let current_object_select = $.fn.zato.ide.get_current_object_select();
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
-    console.log(`Reloading: ${current_object_select} ${fs_location} ${fs_location_url_safe} `)
+    // console.log(`Reloading: ${current_object_select} ${fs_location} ${fs_location_url_safe} `)
     $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false, $.fn.zato.ide.after_file_reloaded);
 }
 
@@ -460,7 +460,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     var first_option_elem = null;
     var has_new_service_name_match = false;
 
-    console.log("Populate current file service list: "+ current_file_service_list);
+    // console.log("Populate current file service list: "+ current_file_service_list);
 
     // First, remove anything we already have in the list ..
     $(".option-current-file").remove();
@@ -471,7 +471,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     // .. and populate it anew
     for (const item of current_file_service_list) {
 
-        console.log("Populate item: "+ $.fn.zato.to_dict(item));
+        // console.log("Populate item: "+ $.fn.zato.to_dict(item));
 
         var option = $("<option>");
         option.text(item.name);
