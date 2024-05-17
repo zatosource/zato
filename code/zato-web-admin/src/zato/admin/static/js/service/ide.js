@@ -360,7 +360,6 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" id="file-rename" value="Rename"/>
         <input type="button" id="file-delete" value="Delete"/>
         <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();"/>
-        <input type="button" id="file-info" value="Info" onclick="$.fn.zato.ide.on_file_info();"/>
     `
 
     tippy("#header-left-link-file", {
