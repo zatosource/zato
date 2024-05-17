@@ -50,6 +50,7 @@ class IDEResponse(Model):
     service_list: 'anylist' = list_field()
     current_file_name: 'strnone' = None
     current_fs_location: 'strnone' = None
+    current_fs_location_url_safe: 'strnone' = None
 
     # A list of services that are contained in a particular file.
     current_file_service_list: 'anylist' = list_field()
@@ -129,6 +130,7 @@ class ServiceIDE(_IDEBase):
             service_list.append({
                 'name': service_name,
                 'fs_location': fs_location,
+                'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                 'line_number': line_number,
                 'line_number_human': line_number_human,
             })
@@ -206,7 +208,8 @@ class _GetBase(_IDEBase):
             if fs_location == item['fs_location']:
                 out.append({
                     'name': item['service_name'],
-                    'fs_location': item['fs_location'],
+                    'fs_location': fs_location,
+                    'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                     'line_number': item['line_number'],
 
                     # We subtract a little bit to make sure the class name is not in the first line
@@ -223,6 +226,7 @@ class _GetBase(_IDEBase):
         response.current_file_service_list = self._get_service_list_by_fs_location(deployment_info_list, fs_location)
         response.current_service_file_list = []
         response.current_fs_location = fs_location
+        response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
         response.current_file_name = os.path.basename(fs_location)
         response.current_file_source_code = open(fs_location).read()
 
