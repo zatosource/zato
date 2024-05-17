@@ -477,6 +477,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         option.text(item.name);
         option.attr("class", "option-current-file");
         option.attr("data-fs-location", item.fs_location);
+        option.attr("data-fs-location-url-safe", item.fs_location_url_safe);
         option.attr("data-line-number", item.line_number_human);
         option.attr("data-is-current-file", "1");
         option.appendTo(optgroup);
