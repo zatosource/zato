@@ -157,15 +157,11 @@ $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.run_sync_form_submitter = function(options) {
+$.fn.zato.invoker.form_submitter_common = function(options) {
+
     // Local variables
-    let request_form_id = options["request_form_id"];
-    let get_request_url_func = options["get_request_url_func"];
     let on_started_activate_blinking = options["on_started_activate_blinking"];
     let on_ended_draw_attention = options["on_ended_draw_attention"];
-
-    // Obtain the URL we are to invoke
-    let url = get_request_url_func();
 
     // Enable blinking for all the elements that should blink
     on_started_activate_blinking.each(function(elem) {
@@ -177,6 +173,21 @@ $.fn.zato.invoker.run_sync_form_submitter = function(options) {
         let _elem = $(elem);
         _elem.addClass("hidden");
     });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker.run_sync_form_submitter = function(options) {
+
+    // Local variables
+    let request_form_id = options["request_form_id"];
+    let get_request_url_func = options["get_request_url_func"];
+
+    // Run the common part
+    $.fn.zato.invoker.form_submitter_common(options);
+
+    // Obtain the URL we are to invoke
+    let url = get_request_url_func();
 
     // Submit the form, if we have one on input
     if(request_form_id) {
