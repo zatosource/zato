@@ -397,7 +397,25 @@ $.fn.zato.ide.after_file_reloaded = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_new = function() {
-    let file_name = prompt("Creating a new file.\n\nRoot directory: /QQQ QQQ", "api.py");
+
+    // Local variables
+    let prompt_text = "Create a new file."
+    let root_directory_count = $.fn.zato.ide.get_root_directory_count();
+    let current_root_directory = $.fn.zato.ide.get_current_root_directory();
+
+    // We need an integer here ..
+    root_directory_count = Number(root_directory_count);
+
+    // .. show additional information if we have more than one root directory ..
+    if(root_directory_count > 1) {
+        prompt_text += "\n\n";
+        prompt_text += `Root directory: ${current_root_directory}\n\n`;
+    }
+
+    // .. do prompt the user ..
+    let file_name = prompt(prompt_text, "");
+
+    // .. proceed if we've received anything ..
     if(file_name) {
         console.log("File name received: "+ file_name);
     }
