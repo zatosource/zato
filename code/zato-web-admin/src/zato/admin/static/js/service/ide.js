@@ -356,7 +356,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $("#header-status").text(initial_header_status);
 
     let header_left_link_file_content = `
-        <input type="button" id="file-new" value="New"/>
+        <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
         <input type="button" id="file-rename" value="Rename"/>
         <input type="button" id="file-delete" value="Delete"/>
         <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();"/>
@@ -392,6 +392,15 @@ $.fn.zato.ide.after_file_reloaded = function() {
         interactive: false,
     });
     zato_tippy_file_reload[0].show();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_new = function() {
+    let file_name = prompt("Creating a new file.\n\nRoot directory: /QQQ QQQ", "api.py");
+    if(file_name) {
+        console.log("File name received: "+ file_name);
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -653,6 +662,18 @@ $.fn.zato.ide.get_current_fs_location = function() {
 
 $.fn.zato.ide.set_current_fs_location = function(fs_location) {
     $("#current_fs_location").val(fs_location);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_root_directory = function() {
+    return $("#current_root_directory").val();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_root_directory_count = function() {
+    return $("#root_directory_count").val();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */

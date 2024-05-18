@@ -730,6 +730,8 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
     $.fn.zato.turn_selects_into_chosen(div_id);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
     $.fn.zato.data_table._create_edit(action, title, id, remove_multirow);
 }
