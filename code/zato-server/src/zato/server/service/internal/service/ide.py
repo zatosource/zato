@@ -21,7 +21,7 @@ from zato.server.service import Model, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictlist
+    from zato.common.typing_ import any_, dictlist, strlistdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,12 +51,23 @@ class IDEResponse(Model):
     current_file_name: 'strnone' = None
     current_fs_location: 'strnone' = None
     current_fs_location_url_safe: 'strnone' = None
+    current_root_directory: 'strnone' = None
+    root_directory_count: 'intnone' = None
 
     # A list of services that are contained in a particular file.
     current_file_service_list: 'anylist' = list_field()
 
     # A list of files that may potentially have a service of the given name.
     current_service_file_list: 'anylist' = list_field()
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class RootDirInfo(Model):
+    current_root_directory: 'strnone' = None
+    root_directory_count: 'intnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,6 +230,54 @@ class _GetBase(_IDEBase):
 
 # ################################################################################################################################
 
+    def _get_all_root_directories(self) -> 'strlistdict':
+
+        # Our response to produce
+        out = {}
+
+        # .. this the default directory that will always exist
+        out[self.server.hot_deploy_config.pickup_dir] = []
+
+        # .. now, we can append all the user-defined directories ..
+        for key, value in sorted(self.server.pickup_config.items()):
+            if not value:
+                continue
+            if key.startswith(('hot-deploy.user', 'user_conf')):
+                if not 'patterns' in value:
+                    pickup_from = value['pickup_from']
+                    if pickup_from.endswith('/'):
+                        pickup_from = pickup_from[:-1]
+                    out[pickup_from] = []
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_current_root_dir_info(self, fs_location:'str') -> 'RootDirInfo':
+
+        # Our response to produce
+        out = RootDirInfo()
+
+        # Collect all the root, top-level directories we can deploy services to ..
+        all_root_directories = self._get_all_root_directories()
+
+        # .. check which one the current file belongs to ..
+        for item in all_root_directories:
+            if fs_location.startswith(item):
+                current_root_directory = item
+                break
+        else:
+            current_root_directory = None
+
+        # .. populate the response accordingly ..
+        out.current_root_directory = current_root_directory
+        out.root_directory_count = len(all_root_directories)
+
+        # .. and return it to our caller.
+        return out
+
+# ################################################################################################################################
+
     def _build_get_response(self, deployment_info_list:'any_', fs_location:'str') -> 'IDEResponse':
 
         response = IDEResponse()
@@ -230,6 +289,14 @@ class _GetBase(_IDEBase):
         response.current_file_name = os.path.basename(fs_location)
         response.current_file_source_code = open(fs_location).read()
 
+        # .. get information about the current root directory ..
+        info = self._get_current_root_dir_info(fs_location)
+
+        # .. populate the response accordingly ..
+        response.current_root_directory = info.current_root_directory
+        response.root_directory_count = info.root_directory_count
+
+        # .. and return it to our caller.
         return response
 
 # ################################################################################################################################
@@ -282,21 +349,7 @@ class GetFileList(_GetBase):
     def handle(self):
 
         # Our response to produce
-        out = {}
-
-        # .. this the default directory that will always exist
-        out[self.server.hot_deploy_config.pickup_dir] = []
-
-        # .. now, we can append all the user-defined directories ..
-        for key, value in sorted(self.server.pickup_config.items()):
-            if not value:
-                continue
-            if key.startswith(('hot-deploy.user', 'user_conf')):
-                if not 'patterns' in value:
-                    pickup_from = value['pickup_from']
-                    if pickup_from.endswith('/'):
-                        pickup_from = pickup_from[:-1]
-                    out[pickup_from] = []
+        out = self._get_all_root_directories()
 
         # .. go through all the top-level roots ..
         for dir_name, files in out.items():

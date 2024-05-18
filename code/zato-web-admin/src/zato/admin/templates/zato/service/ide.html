@@ -24,6 +24,8 @@
     <div class="item">
         <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
         <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
+        <input type="hidden" id="current_root_directory" value="{{ data.current_root_directory }}"/>
+        <input type="hidden" id="root_directory_count" value="{{ data.root_directory_count }}"/>
         <div id="editor">{{ data.current_file_source_code }}</div>
         <form id="editor-form" class="hidden"><textarea id="data-editor" name="data-editor"></textarea></form>
     </div>
