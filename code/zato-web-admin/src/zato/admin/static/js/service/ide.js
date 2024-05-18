@@ -917,12 +917,14 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
     // .. handle the selection of a file ..
     else {
+
         let selected_fs_location = option_selected.attr("data-fs-location");
         let selected_fs_location_url_safe = option_selected.attr("data-fs-location-url-safe");
-        // console.log("Current: "+ current_object_select);
-        // console.log("FS: "+ selected_fs_location);
-        // console.log("FS-Safe: "+ selected_fs_location_url_safe);
-        $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
+
+        // .. we enter here only if we have an actual file to switch to.
+        if(selected_fs_location) {
+            $.fn.zato.ide.on_file_selected(selected_fs_location, selected_fs_location_url_safe);
+        }
     }
 }
 
@@ -1131,28 +1133,52 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let optgroup_all_services_object = $("#optgroup-all-services");
 
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
-    for(service_item of data.current_file_service_list) {
 
-        console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
-
+    // .. we go here if there are no services in the current file ..
+    if(!data.current_file_service_list) {
+        alert(111);
         let is_current_file = "1";
         var option = `<option
             class="option-current-file"
             data-object-holder="1"
             data-is-current-file="{0}"
-            data-line-number="{1}"
-            data-fs-location="{2}"
-            data-fs-location-url-safe="{3}"
-            data-service-name="{4}">{4}</option>`;
+            data-line-number="-1"
+            data-fs-location=""
+            data-fs-location-url-safe=""
+            data-service-name="">(No services in current file)</option>`;
         var option = String.format(
             option,
             is_current_file,
-            service_item.line_number_human,
-            service_item.fs_location,
-            service_item.fs_location_url_safe,
-            service_item.name,
         );
         optgroup_current_file_object.append(option);
+    }
+
+    // .. we go here if there are some services in the current file ..
+    else {
+        alert(222);
+        for(service_item of data.current_file_service_list) {
+
+            console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
+
+            let is_current_file = "1";
+            var option = `<option
+                class="option-current-file"
+                data-object-holder="1"
+                data-is-current-file="{0}"
+                data-line-number="{1}"
+                data-fs-location="{2}"
+                data-fs-location-url-safe="{3}"
+                data-service-name="{4}">{4}</option>`;
+            var option = String.format(
+                option,
+                is_current_file,
+                service_item.line_number_human,
+                service_item.fs_location,
+                service_item.fs_location_url_safe,
+                service_item.name,
+            );
+            optgroup_current_file_object.append(option);
+        }
     }
 
     // .. build an option element for each service and append it to the "All services" optgroup ..
