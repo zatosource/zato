@@ -690,10 +690,18 @@ $.fn.zato.ide.get_current_root_directory = function() {
     return $("#current_root_directory").val();
 }
 
+$.fn.zato.ide.set_current_root_directory = function(value) {
+    $("#current_root_directory").val(value);
+}
+
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.get_root_directory_count = function() {
     return $("#root_directory_count").val();
+}
+
+$.fn.zato.ide.set_root_directory_count = function(value) {
+    $("#root_directory_count").val(value);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -849,6 +857,9 @@ $.fn.zato.ide.populate_root_directory_info_from_option = function(option) {
     let root_directory_count = option.attr("data-root-directory-count");
 
     console.log(`Setting root dir info: "${current_root_directory}" and "${root_directory_count}"`)
+
+    $.fn.zato.ide.set_current_root_directory(current_root_directory);
+    $.fn.zato.ide.set_root_directory_count(root_directory_count);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
