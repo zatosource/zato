@@ -43,6 +43,8 @@
                             data-line-number="{{ service_item.line_number_human }}"
                             data-fs-location="{{ service_item.fs_location }}"
                             data-fs-location-url-safe="{{ service_item.fs_location_url_safe }}"
+                            data-current-root-directory="{{ service_item.current_root_directory }}"
+                            data-root-directory-count="{{ service_item.root_directory_count }}"
                             {% if current_object_name == service_item.name %}selected="selected"{% endif %}
                             data-service-name="{{ service_item.name }}">{{ service_item.name }}</option>
                     {% empty %}
@@ -54,6 +56,8 @@
                             data-line-number="-1"
                             data-fs-location=""
                             data-fs-location-url-safe=""
+                            data-current-root-directory="{{ data.current_root_directory }}"
+                            data-root-directory-count="{{ data.root_directory_count }}"
                             {% if current_object_name == service_item.name %}selected="selected"{% endif %}
                             data-service-name="">(No services in current file)</option>
                     {% endfor %}
@@ -68,6 +72,8 @@
                         data-line-number="{{ service_item.line_number_human }}"
                         data-fs-location="{{ service_item.fs_location }}"
                         data-fs-location-url-safe="{{ service_item.fs_location_url_safe }}"
+                        data-current-root-directory="{{ service_item.current_root_directory }}"
+                        data-root-directory-count="{{ service_item.root_directory_count }}"
                         data-service-name="{{ service_item.name }}">{{ service_item.name }}</option>
                 {% endfor %}
                 </optgroup>
