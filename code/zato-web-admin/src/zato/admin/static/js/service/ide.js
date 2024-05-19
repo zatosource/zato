@@ -1136,7 +1136,6 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
     // .. we go here if there are no services in the current file ..
     if(!data.current_file_service_list) {
-        alert(111);
         let is_current_file = "1";
         var option = `<option
             class="option-current-file"
@@ -1155,12 +1154,12 @@ $.fn.zato.ide.on_service_list_response = function(response) {
 
     // .. we go here if there are some services in the current file ..
     else {
-        alert(222);
         for(service_item of data.current_file_service_list) {
 
             console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
 
             let is_current_file = "1";
+
             var option = `<option
                 class="option-current-file"
                 data-object-holder="1"
