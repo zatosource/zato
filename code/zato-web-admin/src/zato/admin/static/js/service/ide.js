@@ -1286,6 +1286,8 @@ $.fn.zato.ide.on_file_list_response = function(response) {
                     data-is-current-file="1"
                     data-fs-location="${file_name}"
                     data-fs-location-url-safe="${file_name_url_safe}"
+                    data-current-root-directory="${dir_name}"
+                    data-root-directory-count="${root_directory_count}"
                     >${file_name_short}</option>`;
 
                 // .. and append it to the form ..
