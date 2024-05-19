@@ -367,9 +367,12 @@ class GetFileList(_GetBase):
             # .. extract all the Python files recursively ..
             for py_file in sorted(Path(_dir_name).glob('**/*.py')):
                 py_file_name = str(py_file)
+                root_dir_info = self._get_current_root_dir_info(py_file_name)
                 files.append({
                     'file_name': py_file_name,
                     'file_name_url_safe': make_fs_location_url_safe(py_file_name),
+                    'current_root_directory': root_dir_info.current_root_directory,
+                    'root_directory_count': root_dir_info.root_directory_count,
                 })
 
         # .. finally, we can return the response to our caller.
