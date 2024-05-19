@@ -117,13 +117,13 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _get_current_root_dir_info(self, fs_location:'str') -> 'RootDirInfo':
+    def _get_current_root_dir_info(self, fs_location:'str', all_root_directories:'strlistdict | None'=None) -> 'RootDirInfo':
 
         # Our response to produce
         out = RootDirInfo()
 
         # Collect all the root, top-level directories we can deploy services to ..
-        all_root_directories = self._get_all_root_directories()
+        all_root_directories = all_root_directories or self._get_all_root_directories()
 
         # .. check which one the current file belongs to ..
         for item in all_root_directories:
@@ -161,6 +161,9 @@ class ServiceIDE(_IDEBase):
         # Add type hints
         input = self.request.input # type: IDERequest
 
+        # Local variables
+        all_root_directories = self._get_all_root_directories()
+
         # Default data structures to fill out with details
         file_item_dict = {}
         service_list = []
@@ -196,6 +199,9 @@ class ServiceIDE(_IDEBase):
             service_name = item['service_name']
             line_number = item['line_number']
 
+            # This is reusable
+            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+
             # We subtract a little bit to make sure the class name is not in the first line
             line_number_human = item['line_number'] - 3
 
@@ -209,6 +215,8 @@ class ServiceIDE(_IDEBase):
                 'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                 'line_number': line_number,
                 'line_number_human': line_number_human,
+                'current_root_directory': root_dir_info.current_root_directory,
+                'root_directory_count': root_dir_info.root_directory_count,
             })
 
             # If the current service is among what this file contains or if the current file is what we have on input,
@@ -222,6 +230,9 @@ class ServiceIDE(_IDEBase):
                 # or if input location is the same as what we are processing right now in this loop's iteration.
                 current_fs_location = fs_location
 
+                # This is reusable
+                root_dir_info = self._get_current_root_dir_info(current_fs_location, all_root_directories)
+
                 # Append this location to the list of locations that the service is available under ..
                 current_service_file_list.append(fs_location)
 
@@ -232,6 +243,8 @@ class ServiceIDE(_IDEBase):
                     'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                     'line_number': line_number,
                     'line_number_human': line_number_human,
+                    'current_root_directory': root_dir_info.current_root_directory,
+                    'root_directory_count': root_dir_info.root_directory_count,
                 })
 
                 # .. and read the service's source code for our caller's benefit.
@@ -243,10 +256,16 @@ class ServiceIDE(_IDEBase):
         file_list = []
 
         for fs_location, file_name in file_item_dict.items():
+
+            # This is reusable
+            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+
             file_list.append({
                 'name': file_name,
                 'fs_location': fs_location,
                 'fs_location_url_safe': make_fs_location_url_safe(fs_location),
+                'current_root_directory': root_dir_info.current_root_directory,
+                'root_directory_count': root_dir_info.root_directory_count,
             })
 
         file_count = len(file_list)

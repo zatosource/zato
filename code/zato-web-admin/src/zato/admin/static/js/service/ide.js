@@ -1102,6 +1102,14 @@ $.fn.zato.ide.mark_as_undeployed = function(undeployed) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.populate_root_directory_info_from_option = function(option) {
+
+    // Local variables
+
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.on_service_list_response = function(response) {
 
     //
@@ -1136,19 +1144,17 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. we go here if there are no services in the current file ..
 
     if(!data.current_file_service_list.length) {
-        let is_current_file = "1";
         var option = `<option
             class="option-current-file"
             data-object-holder="1"
-            data-is-current-file="{0}"
+            data-is-current-file="1"
             data-line-number="-1"
             data-fs-location=""
             data-fs-location-url-safe=""
-            data-service-name="">(No services in current file)</option>`;
-        var option = String.format(
-            option,
-            is_current_file,
-        );
+            data-current-root-directory="${data.current_root_directory}"
+            data-root-directory-count="${data.root_directory_count}"
+            data-service-name=""
+            >(No services in current file)</option>`;
         optgroup_current_file_object.append(option);
     }
 
@@ -1157,25 +1163,17 @@ $.fn.zato.ide.on_service_list_response = function(response) {
         for(service_item of data.current_file_service_list) {
 
             console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
-
-            let is_current_file = "1";
-
             var option = `<option
                 class="option-current-file"
                 data-object-holder="1"
-                data-is-current-file="{0}"
-                data-line-number="{1}"
-                data-fs-location="{2}"
-                data-fs-location-url-safe="{3}"
-                data-service-name="{4}">{4}</option>`;
-            var option = String.format(
-                option,
-                is_current_file,
-                service_item.line_number_human,
-                service_item.fs_location,
-                service_item.fs_location_url_safe,
-                service_item.name,
-            );
+                data-is-current-file="1"
+                data-line-number="${service_item.line_number_human}"
+                data-fs-location="${service_item.fs_location}"
+                data-fs-location-url-safe="${service_item.fs_location_url_safe}"
+                data-current-root-directory="${service_item.current_root_directory}"
+                data-root-directory-count="${service_item.root_directory_count}"
+                data-service-name="${service_item.name}"
+                >${service_item.name}</option>`;
             optgroup_current_file_object.append(option);
         }
     }
@@ -1186,19 +1184,14 @@ $.fn.zato.ide.on_service_list_response = function(response) {
         var option = `<option
             class="option-all-objects"
             data-object-holder="1"
-            data-is-current-file="{0}"
-            data-line-number="{1}"
-            data-fs-location="{2}"
-            data-fs-location-url-safe="{3}"
-            data-service-name="{4}">{4}</option>`;
-        var option = String.format(
-            option,
-            is_current_file,
-            service_item.line_number_human,
-            service_item.fs_location,
-            service_item.fs_location_url_safe,
-            service_item.name,
-        );
+            data-is-current-file="${is_current_file}"
+            data-line-number="${service_item.line_number_human}"
+            data-fs-location="${service_item.fs_location}"
+            data-fs-location-url-safe="${service_item.fs_location_url_safe}"
+            data-current-root-directory="${service_item.current_root_directory}"
+            data-root-directory-count="${service_item.root_directory_count}"
+            data-service-name="${service_item.name}"
+            >${service_item.name}</option>`;
         optgroup_all_services_object.append(option);
     }
 
@@ -1220,17 +1213,18 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     // We're switching from services to files here.
     //
 
+    // Extract the underlying JSON ..
+    let data = JSON.parse(response.responseText);
+
     // Local variables
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+    let root_directory_count = Object.keys(data).length;
 
-    //  console.log("On file list undeployed: "+ undeployed);
-
-    // Extract the underlying JSON ..
-    let data = JSON.parse(response.responseText);
-
+    // console.log("On file list undeployed: "+ undeployed);
     // console.log("File list data: "+ $.fn.zato.to_dict(data));
+    // console.log("Data length: "+ root_directory_count);
 
     // .. clear out the form ..
     object_select.empty();
@@ -1288,18 +1282,26 @@ $.fn.zato.ide.on_file_list_response = function(response) {
                 // .. now, we can build a new option for this file ..
                 let option = `<option
                     class="option-all-objects"
-                    {0}
+                    ${selected_option}
                     data-is-current-file="1"
-                    data-fs-location="{1}"
-                    data-fs-location-url-safe="{2}">{3}</option>`
+                    data-fs-location="${file_name}"
+                    data-fs-location-url-safe="${file_name_url_safe}"
+                    >${file_name_short}</option>`;
 
                 // .. and append it to the form ..
-                optgroup_object.append(String.format(option, selected_option, file_name, file_name_url_safe, file_name_short));
+                optgroup_object.append(option);
             }
         }
         // .. if there are no files, be explicit about it.
         else {
-            let option = `<option class="option-all-objects" data-is-current-file="1" data-fs-location="">No files</option>`
+            let option = `<option
+                class="option-all-objects"
+                data-is-current-file="1"
+                data-fs-location=""
+                data-fs-location-url-safe=""
+                data-current-root-directory="${dir_name}"
+                data-root-directory-count="${root_directory_count}"
+                >No files</option>`;
             optgroup_object.append(String.format(option));
         }
     });
