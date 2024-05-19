@@ -47,6 +47,8 @@ $.fn.zato.invoker.submit_form = function(
     let form = $(form_id);
     let form_data = form.serialize();
 
+    // console.log(`Submitting form ${form_id};  data ${form_data}`);
+
     $.ajax({
         type: "POST",
         url: url,
