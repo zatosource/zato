@@ -173,7 +173,7 @@ class ServiceIDE(_IDEBase):
         input_fs_location = input_fs_location.replace('~', '/')
 
         # Full path to the file with the current service's source code
-        current_fs_location = ''
+        current_fs_location = input_fs_location
 
         # Current's service source code
         current_file_source_code = ''
