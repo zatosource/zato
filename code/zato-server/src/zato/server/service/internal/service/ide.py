@@ -78,14 +78,26 @@ class _IDEBase(Service):
     output = IDEResponse
 
     def _get_service_list_by_fs_location(self, deployment_info_list:'any_', fs_location:'str') -> 'dictlist':
+
+        # Local variables
+        all_root_directories = self._get_all_root_directories()
+
+        # Response to produce
         out = []
+
         for item in deployment_info_list:
             if fs_location == item['fs_location']:
+
+                # This is reusable
+                root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+
                 out.append({
                     'name': item['service_name'],
                     'fs_location': fs_location,
                     'fs_location_url_safe': make_fs_location_url_safe(fs_location),
                     'line_number': item['line_number'],
+                    'current_root_directory': root_dir_info.current_root_directory,
+                    'root_directory_count': root_dir_info.root_directory_count,
 
                     # We subtract a little bit to make sure the class name is not in the first line
                     'line_number_human': item['line_number'] - 3
