@@ -179,6 +179,8 @@ urlpatterns += [
         login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
+    url(r'^zato/service/ide/create-file/$',
+        login_required(service_ide.create_file), name='service-ide-create-file'),
     url(r'^zato/service/ide/get-file/(?P<fs_location>.*)/$',
         login_required(service_ide.get_file), name='service-ide-get-file'),
     url(r'^zato/service/ide/get-file-list/$',
