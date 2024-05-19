@@ -1133,9 +1133,9 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let optgroup_all_services_object = $("#optgroup-all-services");
 
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
-
     // .. we go here if there are no services in the current file ..
-    if(!data.current_file_service_list) {
+
+    if(!!data.current_file_service_list) {
         let is_current_file = "1";
         var option = `<option
             class="option-current-file"
@@ -1304,7 +1304,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
         }
     });
 
-    // Switch to files ..
+    // .. switch to files ..
     $.fn.zato.ide.toggle_current_object_select("service");
 
     // .. mark the relevant select options as undeployed ..
