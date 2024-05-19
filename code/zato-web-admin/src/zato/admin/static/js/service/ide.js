@@ -399,7 +399,7 @@ $.fn.zato.ide.after_file_reloaded = function() {
 $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     // Local variables
-    let url_path = "/zato/service/ide/create-file";
+    let url_path = "/zato/service/ide/create-file/";
     let form_id = "file-new-form";
     let options = null;
     let display_timeout = 1;
@@ -418,9 +418,10 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     $.fn.zato.ide.build_singleton_form(form_id, {
         "file_name": file_name,
+        "current_root_directory": current_root_directory,
     });
 
-    $.fn.zato.invoker.submit_form(url_path, form_id, options, _on_success_func, _on_error_func, display_timeout);
+    $.fn.zato.invoker.submit_form(url_path, "#"+form_id, options, _on_success_func, _on_error_func, display_timeout);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -501,7 +502,7 @@ $.fn.zato.ide.build_singleton_form = function(form_id, items) {
     $(form_selector).remove();
 
     // .. now, create it again ..
-    let form = `<form id="${form_id}"></form>`;
+    let form = `<form id="${form_id}" method="post"></form>`;
 
     // .. append it to our parent ..
     parent.append(form);

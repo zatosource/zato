@@ -86,9 +86,11 @@ def get_file(req:'HttpRequest', fs_location:'str') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def create_file(req:'HttpRequest', fs_location:'str') -> 'HttpResponse':
-    current_root_directory = req.GET['current_root_directory']
-    file_name = req.GET['file_name']
+def create_file(req:'HttpRequest') -> 'HttpResponse':
+
+    file_name = req.POST['file_name']
+    current_root_directory = req.POST['current_root_directory']
+
     return invoke_action_handler(req, 'zato.service.ide.create-file', extra={
         'current_root_directory': current_root_directory,
         'file_name': file_name,
