@@ -553,7 +553,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     // .. and populate it anew
     for (const item of current_file_service_list) {
 
-        // console.log("Populate item: "+ $.fn.zato.to_dict(item));
+        console.log("Populate current file item: "+ $.fn.zato.to_dict(item));
 
         var option = $("<option>");
         option.text(item.name);
@@ -562,6 +562,8 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         option.attr("data-fs-location-url-safe", item.fs_location_url_safe);
         option.attr("data-line-number", item.line_number_human);
         option.attr("data-is-current-file", "1");
+        option.attr("data-current-root-directory", item.current_root_directory);
+        option.attr("data-root-directory-count", item.root_directory_count);
         option.appendTo(optgroup);
 
         if(first_option_elem === null) {
@@ -838,6 +840,17 @@ $.fn.zato.ide.maybe_set_deploy_needed = function() {
     $.fn.zato.ide.set_deployment_status();
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.populate_root_directory_info_from_option = function(option) {
+
+    // Local variables
+    let current_root_directory = option.attr("data-current-root-directory");
+    let root_directory_count = option.attr("data-root-directory-count");
+
+    console.log(`Setting root dir info: "${current_root_directory}" and "${root_directory_count}"`)
+}
+
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_selected = function(
@@ -899,6 +912,9 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     let option_selected = $("option:selected", select_elem);
     let is_current_file = option_selected.attr("data-is-current-file") == "1";
     let current_object_select = $("#current-object-select").val()
+
+    // This will update the global information about what directory we are
+    $.fn.zato.ide.populate_root_directory_info_from_option(option_selected);
 
     // Handle the selection of a service ..
     if(current_object_select == "service") {
@@ -1100,13 +1116,6 @@ $.fn.zato.ide.mark_as_undeployed = function(undeployed) {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.ide.populate_root_directory_info_from_option = function(option) {
-
-    // Local variables
-
-}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
