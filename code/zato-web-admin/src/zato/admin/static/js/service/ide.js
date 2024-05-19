@@ -399,7 +399,7 @@ $.fn.zato.ide.after_file_reloaded = function() {
 $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     // Local variables
-    let url_path = "/QQQ";
+    let url_path = "/zato/service/ide/create-file";
     let form_id = "file-new-form";
     let options = null;
     let display_timeout = 1;
