@@ -1135,7 +1135,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. build an option element for services from the current file and append it to the "Current file" optgroup ..
     // .. we go here if there are no services in the current file ..
 
-    if(!!data.current_file_service_list) {
+    if(!data.current_file_service_list.length) {
         let is_current_file = "1";
         var option = `<option
             class="option-current-file"
