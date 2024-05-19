@@ -79,6 +79,19 @@ $.fn.zato.invoker.get_sync_invoke_request_url = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.invoker.draw_attention = function(elem_list) {
+    // End by draw attention to specific elements
+    elem_list.each(function(elem) {
+        let _elem = $(elem);
+        _elem.removeClass("hidden");
+        _elem.removeClass("invoker-draw-attention");
+        _elem.addClass("invoker-draw-attention", 1);
+    });
+
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.invoker.on_form_ended_common_impl = function(
     options,
     status,
@@ -95,12 +108,7 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
     });
 
     // End by draw attention to specific elements
-    on_ended_draw_attention.each(function(elem) {
-        let _elem = $(elem);
-        _elem.removeClass("hidden");
-        _elem.removeClass("invoker-draw-attention");
-        _elem.addClass("invoker-draw-attention", 1);
-    });
+    $.fn.zato.invoker.draw_attention(on_ended_draw_attention);
 
     // This is optional
     if(response.response_time_human && response.response_time_human != "default") {

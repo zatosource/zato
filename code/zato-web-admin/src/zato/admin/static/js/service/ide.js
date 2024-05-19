@@ -396,6 +396,35 @@ $.fn.zato.ide.after_file_reloaded = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
+
+    // Local variables
+    let url_path = "/QQQ";
+    let form_id = "file-new-form";
+    let options = null;
+    let display_timeout = 1;
+    let result_header_selector = "#result-header";
+
+    _on_success_func = function(options, data) {
+        console.log("File new impl, on success");
+    };
+
+    _on_error_func = function(options, jq_xhr, text_status, error_message) {
+        console.log(`File new impl, on error:  ${jq_xhr.status} -> ${error_message} ->  ${jq_xhr.responseText}`);
+        $(result_header_selector).text(`${jq_xhr.status} ${error_message}`);
+        $("#data-response").val(jq_xhr.responseText);
+        $.fn.zato.invoker.draw_attention([result_header_selector]);
+    };
+
+    $.fn.zato.ide.build_singleton_form(form_id, {
+        "file_name": file_name,
+    });
+
+    $.fn.zato.invoker.submit_form(url_path, form_id, options, _on_success_func, _on_error_func, display_timeout);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_new = function() {
 
     // Local variables
@@ -417,7 +446,8 @@ $.fn.zato.ide.on_file_new = function() {
 
     // .. proceed if we've received anything ..
     if(file_name) {
-        console.log("File name received: "+ file_name);
+        console.log(`Creating file: "${current_root_directory}" -> "${file_name}"`);
+        $.fn.zato.ide.on_file_new_impl(current_root_directory, file_name);
     }
 }
 
