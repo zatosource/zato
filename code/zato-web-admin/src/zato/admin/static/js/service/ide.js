@@ -649,7 +649,7 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
     // Check if we have any specific file now that we loaded an object
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
-    console.log(`Postprocessing file buttons: "${current_fs_location}"`);
+    // console.log(`Postprocessing file buttons: "${current_fs_location}"`);
 
     // Go through all the buttons ..
     for(button_id of button_id_list) {
@@ -657,13 +657,13 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
         // Loop-local variables
         let button = $(button_id);
 
-        let button_attrs = button.attributes;
-        let button_id_attr = button.attr("id");
-        let button_class_attr = button.attr("class");
+        // let button_attrs = button.attributes;
+        // let button_id_attr = button.attr("id");
+        // let button_class_attr = button.attr("class");
 
-        console.log("Button attrs: "+ button_attrs);
-        console.log("Button ID: "+ button_id_attr);
-        console.log("Button class: "+ button_class_attr);
+        // console.log("Button attrs: "+ button_attrs);
+        // console.log("Button ID: "+ button_id_attr);
+        // console.log("Button class: "+ button_class_attr);
 
         // First, clear out everything ..
         button.removeAttr("disabled");
@@ -672,7 +672,7 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
         // .. we enter here if we don't have any current file ..
         if(!current_fs_location) {
 
-            console.log("No current FS: "+ button_id);
+            // console.log("No current FS: "+ button_id);
 
             // .. now, indicate that this button should be disabled.
             button.attr("disabled", "disabled");
@@ -681,7 +681,7 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
         }
 
         else {
-            console.log("Found current FS: "+ button_id);
+            // console.log("Found current FS: "+ button_id);
         }
     }
 }
