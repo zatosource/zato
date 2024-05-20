@@ -403,6 +403,18 @@ $.fn.zato.ide.after_file_reloaded = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.after_file_created = function() {
+
+    // Local variables
+    let elem_id_selector = "#file-new";
+    let text = "OK, created";
+
+    // Do show the tooltip now
+    $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     // Local variables
@@ -413,7 +425,9 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
     let result_header_selector = "#result-header";
 
     _on_success_func = function(options, data) {
-        console.log("File new impl, on success");
+        console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
+        $.fn.zato.ide.set_current_fs_location(data.full_path);
+        $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, $.fn.zato.ide.after_file_created);
     };
 
     _on_error_func = function(options, jq_xhr, text_status, error_message) {

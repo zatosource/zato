@@ -53,7 +53,7 @@ $.fn.zato.invoker.submit_form = function(
         type: "POST",
         url: url,
         data: form_data,
-        dataType: null,
+        dataType: "json",
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
 
         success: function(data, text_status, request) {
