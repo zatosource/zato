@@ -418,7 +418,7 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     $.fn.zato.ide.build_singleton_form(form_id, {
         "file_name": file_name,
-        "current_root_directory": current_root_directory,
+        "root_directory": current_root_directory,
     });
 
     $.fn.zato.invoker.submit_form(url_path, "#"+form_id, options, _on_success_func, _on_error_func, display_timeout);
