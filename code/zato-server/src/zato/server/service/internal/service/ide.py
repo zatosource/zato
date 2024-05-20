@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Zato
 from zato.common.typing_ import anylist, intnone, list_field, strnone
-from zato.common.util.open_ import open_r
+from zato.common.util.open_ import open_r, open_w
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -442,10 +442,12 @@ class CreateFile(_GetBase):
 
     # Our I/O
     input = 'file_name', 'root_directory'
+    output = 'data', 'full_path', 'full_path_url_safe'
 
     def handle(self):
 
         # Local variables
+        data = ''
         file_name = self.request.input.file_name
         root_directory = self.request.input.root_directory
 
@@ -459,9 +461,30 @@ class CreateFile(_GetBase):
         full_path = os.path.expanduser(full_path)
         full_path = os.path.abspath(full_path)
 
+        # .. make sure this is a Python file ..
+        if not full_path.endswith('.py'):
+            full_path += '.py'
+
         # .. ensure it has a prefix that we recognize ..
         for item in all_root_dirs:
+
+            # .. we have a match ..
             if full_path.startswith(item):
+
+                # .. if the file already exists ..
+                if os.path.exists(full_path):
+
+                    # .. open it ..
+                    with open_r(full_path) as f:
+
+                        # .. and read its contents for later use ..
+                        data = f.read()
+
+                # .. otherwise, simply create it ..
+                with open_w(full_path) as f:
+                    _ = f.write('')
+
+                # .. no need to continue further ..
                 break
 
         # .. if it has no such prefix, we need to report an error ..
@@ -469,7 +492,9 @@ class CreateFile(_GetBase):
             msg = f'Invalid path `{full_path}`, must start with one of: `{sorted(all_root_dirs)}`'
             raise ValueError(msg)
 
-        self.response.payload = {}
+        self.response.payload.data = data
+        self.response.payload.full_path = full_path
+        self.response.payload.full_path_url_safe = make_fs_location_url_safe(full_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
