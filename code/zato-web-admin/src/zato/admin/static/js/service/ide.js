@@ -355,11 +355,19 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     // One-line status bar
     $("#header-status").text(initial_header_status);
 
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+    if(current_fs_location) {
+        var button_attrs = "";
+    }
+    else {
+        var button_attrs = `disabled="disabled" class="no-click"`;
+    }
+
     let header_left_link_file_content = `
         <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
-        <input type="button" id="file-rename" value="Rename" />
-        <input type="button" id="file-delete" value="Delete" />
-        <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();"/>
+        <input type="button" id="file-rename" value="Rename" ${button_attrs} />
+        <input type="button" id="file-delete" value="Delete" ${button_attrs} />
+        <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
     `;
 
     tippy("#header-left-link-file", {
