@@ -343,10 +343,12 @@ class _GetBase(_IDEBase):
         response.service_list = []
         response.current_file_service_list = self._get_service_list_by_fs_location(deployment_info_list, fs_location)
         response.current_service_file_list = []
-        response.current_fs_location = fs_location
-        response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
-        response.current_file_name = os.path.basename(fs_location)
-        response.current_file_source_code = open(fs_location).read()
+
+        if fs_location:
+            response.current_fs_location = fs_location
+            response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
+            response.current_file_name = os.path.basename(fs_location)
+            response.current_file_source_code = open(fs_location).read()
 
         # .. get information about the current root directory ..
         info = self._get_current_root_dir_info(fs_location)
@@ -466,6 +468,8 @@ class CreateFile(_GetBase):
         else:
             msg = f'Invalid path `{full_path}`, must start with one of: `{sorted(all_root_dirs)}`'
             raise ValueError(msg)
+
+        self.response.payload = {}
 
 # ################################################################################################################################
 # ################################################################################################################################

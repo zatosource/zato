@@ -55,18 +55,21 @@ $.fn.zato.invoker.submit_form = function(
         data: form_data,
         dataType: null,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
+
         success: function(data, text_status, request) {
             let _on_success = function() {
                 on_success_func(options, data);
             }
             setTimeout(_on_success, _display_timeout)
         },
+
         error: function(jq_xhr, text_status, error_message) {
             let _on_error = function() {
                 on_error_func(options, jq_xhr, text_status, error_message);
             }
             setTimeout(_on_error, _display_timeout)
         },
+
     });
 };
 

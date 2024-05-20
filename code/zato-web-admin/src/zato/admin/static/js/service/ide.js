@@ -408,7 +408,7 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
     // Local variables
     let url_path = "/zato/service/ide/create-file/";
     let form_id = "file-new-form";
-    let options = null;
+    let options = {};
     let display_timeout = 1;
     let result_header_selector = "#result-header";
 
