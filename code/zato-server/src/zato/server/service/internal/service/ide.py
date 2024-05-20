@@ -80,7 +80,7 @@ class _IDEBase(Service):
     def _get_service_list_by_fs_location(self, deployment_info_list:'any_', fs_location:'str') -> 'dictlist':
 
         # Local variables
-        all_root_directories = self._get_all_root_directories()
+        all_root_dirs = self._get_all_root_directories()
 
         # Response to produce
         out = []
@@ -89,7 +89,7 @@ class _IDEBase(Service):
             if fs_location == item['fs_location']:
 
                 # This is reusable
-                root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+                root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
 
                 out.append({
                     'name': item['service_name'],
@@ -129,16 +129,31 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _get_current_root_dir_info(self, fs_location:'str', all_root_directories:'strlistdict | None'=None) -> 'RootDirInfo':
+    def _get_default_root_directory(self, all_root_dirs:'strlistdict') -> 'str':
+
+        for item in all_root_dirs:
+
+            windows_matches = r'incoming\services' in item
+            non_windows_matches = 'incoming/services' in item
+
+            if windows_matches or non_windows_matches:
+                return item
+
+        else:
+            raise ValueError(f'Default root directory not found among {sorted(all_root_dirs)}')
+
+# ################################################################################################################################
+
+    def _get_current_root_dir_info(self, fs_location:'str', all_root_dirs:'strlistdict | None'=None) -> 'RootDirInfo':
 
         # Our response to produce
         out = RootDirInfo()
 
         # Collect all the root, top-level directories we can deploy services to ..
-        all_root_directories = all_root_directories or self._get_all_root_directories()
+        all_root_dirs = all_root_dirs or self._get_all_root_directories()
 
         # .. check which one the current file belongs to ..
-        for item in all_root_directories:
+        for item in all_root_dirs:
             if fs_location.startswith(item):
                 current_root_directory = item
                 break
@@ -147,7 +162,7 @@ class _IDEBase(Service):
 
         # .. populate the response accordingly ..
         out.current_root_directory = current_root_directory
-        out.root_directory_count = len(all_root_directories)
+        out.root_directory_count = len(all_root_dirs)
 
         # .. and return it to our caller.
         return out
@@ -174,7 +189,7 @@ class ServiceIDE(_IDEBase):
         input = self.request.input # type: IDERequest
 
         # Local variables
-        all_root_directories = self._get_all_root_directories()
+        all_root_dirs = self._get_all_root_directories()
 
         # Default data structures to fill out with details
         file_item_dict = {}
@@ -212,7 +227,7 @@ class ServiceIDE(_IDEBase):
             line_number = item['line_number']
 
             # This is reusable
-            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
 
             # We subtract a little bit to make sure the class name is not in the first line
             line_number_human = item['line_number'] - 3
@@ -243,7 +258,7 @@ class ServiceIDE(_IDEBase):
                 current_fs_location = fs_location
 
                 # This is reusable
-                root_dir_info = self._get_current_root_dir_info(current_fs_location, all_root_directories)
+                root_dir_info = self._get_current_root_dir_info(current_fs_location, all_root_dirs)
 
                 # Append this location to the list of locations that the service is available under ..
                 current_service_file_list.append(fs_location)
@@ -270,7 +285,7 @@ class ServiceIDE(_IDEBase):
         for fs_location, file_name in file_item_dict.items():
 
             # This is reusable
-            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_directories)
+            root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
 
             file_list.append({
                 'name': file_name,
@@ -289,7 +304,16 @@ class ServiceIDE(_IDEBase):
         file_count_human = f'{file_count} file{file_list_suffix}'
         service_count_human = f'{service_count} service{service_list_suffix}'
 
+        # Let's try to find the root directory based on the current file ..
         root_dir_info = self._get_current_root_dir_info(current_fs_location)
+
+        # .. we go here if we found one ..
+        if root_dir_info.current_root_directory:
+            current_root_directory = root_dir_info.current_root_directory
+
+        # .. we go here if we didn't find one, which may happen if the current file has no services inside ..
+        else:
+            current_root_directory = self._get_default_root_directory(all_root_dirs)
 
         response = {
             'service_list': sorted(service_list, key=itemgetter('name')),
@@ -302,7 +326,7 @@ class ServiceIDE(_IDEBase):
             'current_service_file_list': current_service_file_list,
             'current_fs_location': current_fs_location,
             'current_file_source_code': current_file_source_code,
-            'current_root_directory': root_dir_info.current_root_directory,
+            'current_root_directory': current_root_directory,
             'root_directory_count': root_dir_info.root_directory_count,
         }
 
@@ -424,7 +448,7 @@ class CreateFile(_GetBase):
         root_directory = self.request.input.root_directory
 
         # We will expect for the full path to begin with one of these
-        all_root_directories = self._get_all_root_directories()
+        all_root_dirs = self._get_all_root_directories()
 
         # Combine the two to get a full path ..
         full_path = os.path.join(root_directory, file_name)
@@ -434,12 +458,14 @@ class CreateFile(_GetBase):
         full_path = os.path.abspath(full_path)
 
         # .. ensure it has a prefix that we recognize ..
-        for item in all_root_directories:
+        for item in all_root_dirs:
             if full_path.startswith(item):
                 break
+
+        # .. if it has no such prefix, we need to report an error ..
         else:
-            msg = f'Invalid path `{full_path}`, must '
-            raise ValueError()
+            msg = f'Invalid path `{full_path}`, must start with one of: `{sorted(all_root_dirs)}`'
+            raise ValueError(msg)
 
 
 # ################################################################################################################################
