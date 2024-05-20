@@ -959,7 +959,7 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra
 
         if response.ok:
 
-            if 'response_data' in response.data:
+            if 'response_data' in (response.data or ''):
                 response_data = response.data['response_data']
             else:
                 response_data = response.data
