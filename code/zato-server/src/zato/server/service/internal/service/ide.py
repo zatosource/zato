@@ -411,3 +411,36 @@ class GetFileList(_GetBase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class CreateFile(_GetBase):
+
+    # Our I/O
+    input = 'file_name', 'root_directory'
+
+    def handle(self):
+
+        # Local variables
+        file_name = self.request.input.file_name
+        root_directory = self.request.input.root_directory
+
+        # We will expect for the full path to begin with one of these
+        all_root_directories = self._get_all_root_directories()
+
+        # Combine the two to get a full path ..
+        full_path = os.path.join(root_directory, file_name)
+
+        # .. make sure it's an absolute one ..
+        full_path = os.path.expanduser(full_path)
+        full_path = os.path.abspath(full_path)
+
+        # .. ensure it has a prefix that we recognize ..
+        for item in all_root_directories:
+            if full_path.startswith(item):
+                break
+        else:
+            msg = f'Invalid path `{full_path}`, must '
+            raise ValueError()
+
+
+# ################################################################################################################################
+# ################################################################################################################################
