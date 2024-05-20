@@ -26,6 +26,23 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+Default_File_Data = """
+# -*- coding: utf-8 -*-
+
+# Zato
+from zato.server.service import Service
+
+class MyService(Service):
+    def handle(self):
+        data = {
+            'Hello': 'World',
+        }
+        self.response.payload = data
+""".lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def make_fs_location_url_safe(data:'str') -> 'str':
     return data.replace('/', '~')
 
@@ -482,7 +499,7 @@ class CreateFile(_GetBase):
 
                 # .. otherwise, simply create it ..
                 with open_w(full_path) as f:
-                    _ = f.write('')
+                    _ = f.write(Default_File_Data)
 
                 # .. no need to continue further ..
                 break
