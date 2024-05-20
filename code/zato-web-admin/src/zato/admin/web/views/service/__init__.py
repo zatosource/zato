@@ -11,7 +11,7 @@ import logging
 from collections import namedtuple
 from datetime import datetime
 from http import HTTPStatus
-from json import dumps
+from json import dumps, loads
 from traceback import format_exc
 
 # dateutil
@@ -281,7 +281,15 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         try:
             content['response_time_human'] = response.inner.headers.get('X-Zato-Response-Time-Human')
             if response.ok:
-                data = response.inner_service_response or '(None)'
+                if data := response.inner_service_response:
+                    try:
+                        data = loads(data)
+                    except ValueError as e:
+                        print()
+                        print(111, e)
+                        print()
+                else:
+                    data = '(None)'
                 status_code = HTTPStatus.OK
             else:
                 data = response.details
@@ -291,9 +299,12 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     content['data'] = data
     content = dumps(content)
 
+    headers = {'Content-Type': 'application/json'}
+
     out = HttpResponse()
     out.status_code = status_code
     out.content = content
+    out.headers = headers # type: ignore
 
     return out
 
