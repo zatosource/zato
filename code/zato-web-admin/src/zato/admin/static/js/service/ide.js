@@ -382,16 +382,12 @@ $.fn.zato.ide.after_post_load_source_func = function(data) {
 
 $.fn.zato.ide.after_file_reloaded = function() {
 
-    let zato_tippy_file_reload = tippy("#file-reload", {
-        content: "OK, reloaded",
-        allowHTML: false,
-        theme: "dark",
-        trigger: "manual",
-        placement: "bottom",
-        arrow: true,
-        interactive: false,
-    });
-    zato_tippy_file_reload[0].show();
+    // Local variables
+    let elem_id_selector = "#file-reload";
+    let text = "OK, reloaded";
+
+    // Do show the tooltip now
+    $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
