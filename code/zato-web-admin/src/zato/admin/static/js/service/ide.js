@@ -357,10 +357,10 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     let header_left_link_file_content = `
         <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
-        <input type="button" id="file-rename" value="Rename"/>
-        <input type="button" id="file-delete" value="Delete"/>
+        <input type="button" id="file-rename" value="Rename" />
+        <input type="button" id="file-delete" value="Delete" />
         <input type="button" id="file-reload" value="Reload" onclick="$.fn.zato.ide.on_file_reload();"/>
-    `
+    `;
 
     tippy("#header-left-link-file", {
         content: header_left_link_file_content,
@@ -371,6 +371,8 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         arrow: true,
         interactive: true,
       });
+
+      $.fn.zato.ide.postprocess_file_buttons();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -630,6 +632,33 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.postprocess_file_buttons = function() {
+
+    // Check if we have any specific file now that we loaded an object
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+
+    // This will be attached to the buttons
+    if(current_fs_location) {
+        var button_attrs = "";
+    }
+    else {
+        var button_attrs = `disabled="disabled" class="no-click"`;
+    }
+
+    console.log("File button attrs: "+ button_attrs);
+
+    /*
+    let header_left_link_file_content = `
+        <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
+        <input type="button" id="file-rename" value="Rename" ${button_attrs}/>
+        <input type="button" id="file-delete" value="Delete" ${button_attrs}/>
+        <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
+    `;
+    */
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.post_load_source_object = function(
     data,
     object_name,
@@ -661,6 +690,9 @@ $.fn.zato.ide.post_load_source_object = function(
     if(after_post_load_source_func) {
         after_post_load_source_func(data);
     }
+
+    // This will enable or disable file buttons
+    $.fn.zato.ide.postprocess_file_buttons();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
