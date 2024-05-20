@@ -53,7 +53,7 @@ $.fn.zato.invoker.submit_form = function(
         type: "POST",
         url: url,
         data: form_data,
-        dataType: "json",
+        dataType: null,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
 
         success: function(data, text_status, request) {
@@ -122,7 +122,13 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
     }
 
     if(has_response) {
-        response_data = response.data;
+        if($.fn.zato.is_object(response.data)) {
+            response_data = $.fn.zato.to_json(response.data);
+        }
+        else {
+            response_data = response.data;
+        }
+
     }
     else {
         response_data = $.fn.zato.to_json(response.data[0].zato_env);
@@ -140,7 +146,7 @@ $.fn.zato.invoker.on_form_ended_common = function(
     data,
 ) {
 
-    console.log("Data "+ data);
+    console.log("Data1 "+ data);
     let response = $.parseJSON(data);
     $.fn.zato.invoker.on_form_ended_common_impl(options, status, response)
 
