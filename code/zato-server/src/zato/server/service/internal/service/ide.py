@@ -65,6 +65,7 @@ def make_fs_location_url_safe(data:'str') -> 'str':
 class IDERequest(Model):
     service_name: 'strnone' = None
     fs_location: 'strnone' = None
+    should_wait_for_services: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -283,9 +284,10 @@ class ServiceIDE(_IDEBase):
         # It's possible that we've been called right after a file was deployed,
         # in which case we need to wait for a moment until any services
         # from that file are deployed.
-        if input_fs_location:
-            if os.path.exists(input_fs_location):
-                self._wait_for_services(input_fs_location)
+        if self.request.input.should_wait_for_services:
+            if input_fs_location:
+                if os.path.exists(input_fs_location):
+                    self._wait_for_services(input_fs_location)
 
         # Current's service source code
         current_file_source_code = ''

@@ -407,7 +407,7 @@ $.fn.zato.ide.after_file_created = function() {
 
     // Local variables
     let elem_id_selector = "#file-new";
-    let text = "OK, created";
+    let text = "OK, ready to invoke";
 
     // Do show the tooltip now
     $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
@@ -435,12 +435,11 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
         console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
 
-        // let new_url_path = `/zato/service/ide/file/${data.full_path_url_safe}/?cluster=1`
-        // window.location.href = new_url_path;
+        $.fn.zato.show_bottom_tooltip("#file-new", "Deploying ..");
 
         $.fn.zato.ide.set_current_fs_location(data.full_path);
         $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, false, false);
-        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created);
+        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
     };
 
     _on_error_func = function(options, jq_xhr, text_status, error_message) {
@@ -1475,9 +1474,16 @@ $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.populate_current_file_service_list_impl = function(after_func) {
+$.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, should_wait_for_services) {
+
+    let url_path_prefix = "/zato/service/ide/get-service-list/";
+    if(should_wait_for_services === undefined) {
+        should_wait_for_services = "";
+    }
+
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
-    let url_path = "/zato/service/ide/get-service-list/?fs_location="+ current_fs_location;
+    let url_path = `${url_path_prefix}?fs_location=${current_fs_location}&should_wait_for_services=${should_wait_for_services}`;
+
     let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
     $.fn.zato.invoker.invoke(url_path, "", callback)
 }
