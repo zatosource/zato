@@ -9,8 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from operator import itemgetter
 from pathlib import Path
+from time import sleep
 
 # Zato
 from zato.common.typing_ import anylist, intnone, list_field, strnone
@@ -237,6 +239,11 @@ class _IDEBase(Service):
         return out
 
 # ################################################################################################################################
+
+    def _wait_for_services(self, fs_location:'str', max_wait_time:'int'=3) -> 'None':
+        sleep(max_wait_time)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceIDE(_IDEBase):
@@ -244,7 +251,7 @@ class ServiceIDE(_IDEBase):
     def handle(self):
 
         # Add type hints
-        input = self.request.input # type: IDERequest
+        input:'IDERequest' = self.request.input
 
         # Local variables
         all_root_dirs = self._get_all_root_directories()
@@ -263,6 +270,12 @@ class ServiceIDE(_IDEBase):
         # Full path to the file with the current service's source code
         current_fs_location = input_fs_location
 
+        # It's possible that we've been called right after a file was deployed,
+        # in which case we need to wait for a moment until any services
+        # from that file are deployed.
+        if input_fs_location:
+            self._wait_for_services(input_fs_location)
+
         # Current's service source code
         current_file_source_code = ''
 
@@ -275,7 +288,6 @@ class ServiceIDE(_IDEBase):
         current_service_file_list = []
 
         service_list_response = self.get_deployment_info_list()
-        service_list_response = list(service_list_response)
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
@@ -340,8 +352,9 @@ class ServiceIDE(_IDEBase):
                 })
 
                 # .. and read the service's source code for our caller's benefit.
-                with open_r(fs_location) as f:
-                    current_file_source_code = f.read()
+                if os.path.exists(fs_location):
+                    with open_r(fs_location) as f:
+                        current_file_source_code = f.read()
 
         # This list may have file names that are not unique
         # but their FS locations will be always unique.
