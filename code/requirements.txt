@@ -115,7 +115,7 @@ redis==4.5.4
 regex==2022.3.2
 repoze.lru==0.6
 repoze.profile==2.3
-requests==2.31.0
+requests==2.32.0
 requests-ntlm==1.2.0
 requests-toolbelt==0.9.1
 sarge==0.1.7.post1
