@@ -439,7 +439,7 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
         // window.location.href = new_url_path;
 
         $.fn.zato.ide.set_current_fs_location(data.full_path);
-        // $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, $.fn.zato.ide.after_file_created);
+        $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, false, false);
         $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created);
     };
 
@@ -983,9 +983,14 @@ $.fn.zato.ide.on_file_selected = function(
     fs_location,
     fs_location_url_safe,
     reuse_source_code,
-    after_post_load_source_func
+    after_post_load_source_func,
+    should_load_source_object,
 ) {
     //  console.log("On file selected ..")
+
+    if(should_load_source_object === undefined) {
+        should_load_source_object = true;
+    };
 
     if(reuse_source_code == null) {
         reuse_source_code = true;
@@ -997,7 +1002,9 @@ $.fn.zato.ide.on_file_selected = function(
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
+    //if(should_load_source_object) {
     $.fn.zato.ide.load_source_object("file", fs_location, fs_location, reuse_source_code, after_post_load_source_func);
+    //}
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */

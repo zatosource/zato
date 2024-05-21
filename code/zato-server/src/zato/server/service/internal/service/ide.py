@@ -241,7 +241,17 @@ class _IDEBase(Service):
 # ################################################################################################################################
 
     def _wait_for_services(self, fs_location:'str', max_wait_time:'int'=3) -> 'None':
-        sleep(max_wait_time)
+        now = datetime.utcnow()
+        until = now + timedelta(seconds=max_wait_time)
+
+        while now < until:
+            self.logger.info('Waiting for %s', fs_location)
+            for item in self.get_deployment_info_list():
+                if item['fs_location'] == fs_location:
+                    return
+
+            now = datetime.utcnow()
+            sleep(0.2)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -274,7 +284,8 @@ class ServiceIDE(_IDEBase):
         # in which case we need to wait for a moment until any services
         # from that file are deployed.
         if input_fs_location:
-            self._wait_for_services(input_fs_location)
+            if os.path.exists(input_fs_location):
+                self._wait_for_services(input_fs_location)
 
         # Current's service source code
         current_file_source_code = ''
