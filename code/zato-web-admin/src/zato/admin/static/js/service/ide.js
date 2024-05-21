@@ -425,7 +425,16 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
     let result_header_selector = "#result-header";
 
     _on_success_func = function(options, data) {
+
+        if($.fn.zato.is_object(data)) {
+            var data = data;
+        }
+        else {
+            var data = $.parseJSON(data);
+        }
+
         console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
+
         $.fn.zato.ide.set_current_fs_location(data.full_path);
         $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, $.fn.zato.ide.after_file_created);
     };
@@ -442,7 +451,7 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
         "root_directory": current_root_directory,
     });
 
-    $.fn.zato.invoker.submit_form(url_path, "#"+form_id, options, _on_success_func, _on_error_func, display_timeout);
+    $.fn.zato.invoker.submit_form(url_path, "#"+form_id, options, _on_success_func, _on_error_func, display_timeout, "json");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
