@@ -42,10 +42,12 @@ $.fn.zato.invoker.submit_form = function(
     on_success_func,
     on_error_func,
     display_timeout,
+    data_format,
 ) {
     let _display_timeout = display_timeout || 120;
     let form = $(form_id);
     let form_data = form.serialize();
+    let _data_format = data_format || null;
 
     // console.log(`Submitting form ${form_id};  data ${form_data}`);
 
@@ -53,7 +55,7 @@ $.fn.zato.invoker.submit_form = function(
         type: "POST",
         url: url,
         data: form_data,
-        dataType: null,
+        dataType: data_format,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
 
         success: function(data, text_status, request) {
@@ -152,7 +154,6 @@ $.fn.zato.invoker.on_form_ended_common = function(
     else {
         var response = $.parseJSON(data);
     }
-    console.log("Data1 "+ data);
     $.fn.zato.invoker.on_form_ended_common_impl(options, status, response)
 
 }

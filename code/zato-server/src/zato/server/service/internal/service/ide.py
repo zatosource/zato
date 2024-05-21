@@ -33,11 +33,21 @@ Default_File_Data = """
 from zato.server.service import Service
 
 class MyService(Service):
+
+    # I/O definition
+    input = 'name'
+    output = 'salutation'
+
     def handle(self):
-        data = {
-            'Hello': 'World',
-        }
-        self.response.payload = data
+
+        # Local variables
+        name = self.request.input.name
+
+        # Our response to produce
+        message = f'Howdy {name}'
+
+        # Reply to our caller
+        self.response.payload.salutation = message
 """.lstrip()
 
 # ################################################################################################################################
