@@ -16,6 +16,7 @@ from time import sleep
 
 # Zato
 from zato.common.typing_ import anylist, intnone, list_field, strnone
+from zato.common.util.api import wait_for_file
 from zato.common.util.open_ import open_r, open_w
 from zato.server.service import Model, Service
 
@@ -31,7 +32,7 @@ if 0:
 Default_File_Data = """
 # -*- coding: utf-8 -*-
 
-# File name: {full_path}
+# File path: {full_path}
 
 # Zato
 from zato.server.service import Service
@@ -68,6 +69,7 @@ class IDERequest(Model):
     service_name: 'strnone' = None
     fs_location: 'strnone' = None
     should_wait_for_services: 'bool' = False
+    should_convert_pickup_to_work_dir: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,7 +123,8 @@ class _IDEBase(Service):
             if fs_location == item['fs_location']:
 
                 # This is reusable
-                root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
+                _target_fs_location = self._maybe_convert_work_to_pickup_dir(fs_location)
+                root_dir_info = self._get_current_root_dir_info(_target_fs_location, all_root_dirs)
 
                 out.append({
                     'name': item['service_name'],
@@ -214,7 +217,7 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _maybe_fix_up_fs_location(self, fs_location:'str') -> 'str':
+    def _maybe_convert_work_to_pickup_dir(self, fs_location:'str') -> 'str':
 
         # Windows ..
         if 'hot-deploy\\current' in fs_location:
@@ -233,6 +236,37 @@ class _IDEBase(Service):
             file_name = os.path.basename(fs_location)
             default_root_dir = self._get_default_root_directory()
             out = os.path.join(default_root_dir, file_name)
+
+        # .. otherwise, we use it as-is ..
+        else:
+            out = fs_location
+
+        # .. now, we can return it to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def _maybe_convert_pickup_to_work_dir(self, fs_location:'str') -> 'str':
+
+        # Windows ..
+        if 'pickup\\incoming\\services' in fs_location:
+            needs_replace = True
+
+        # .. non-Windows ..
+        elif 'pickup/incoming/services' in fs_location:
+            needs_replace = True
+
+        # .. we don't need to fix it up ..
+        else:
+            needs_replace = False
+
+        # .. we enter here if we need to fix up the name ..
+        if needs_replace:
+            file_name = os.path.basename(fs_location)
+            base_work_dir = self.server.work_dir
+            hot_deploy_dir = self.server.fs_server_config.hot_deploy.current_work_dir
+            out = os.path.join(base_work_dir, hot_deploy_dir, file_name)
+            out = os.path.abspath(out)
 
         # .. otherwise, we use it as-is ..
         else:
@@ -316,7 +350,7 @@ class ServiceIDE(_IDEBase):
             # the work directory that the file was moved to. This is why we need
             # to potentially fix up the location and make it point to the original one.
             fs_location = item['fs_location']
-            fs_location = self._maybe_fix_up_fs_location(fs_location)
+            fs_location = self._maybe_convert_work_to_pickup_dir(fs_location)
 
             # This is reusable
             root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
@@ -438,6 +472,9 @@ class _GetBase(_IDEBase):
         response.current_service_file_list = []
 
         if fs_location:
+
+            wait_for_file(fs_location, 5, interval=0.2)
+
             response.current_fs_location = fs_location
             response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
             response.current_file_name = os.path.basename(fs_location)
@@ -487,6 +524,7 @@ class GetFile(_GetBase):
 
         # Reusable
         fs_location = self.request.input.fs_location
+        fs_location = self._maybe_convert_pickup_to_work_dir(fs_location)
         deployment_info_list = self.get_deployment_info_list()
 
         # Build a response ..
