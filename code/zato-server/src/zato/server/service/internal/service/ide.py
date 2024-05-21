@@ -31,6 +31,8 @@ if 0:
 Default_File_Data = """
 # -*- coding: utf-8 -*-
 
+# File name: {full_path}
+
 # Zato
 from zato.server.service import Service
 
@@ -46,7 +48,7 @@ class MyService(Service):
         name = self.request.input.name
 
         # Our response to produce
-        message = f'Howdy {name}'
+        message = f'Howdy {{name}}'
 
         # Reply to our caller
         self.response.payload.salutation = message
@@ -573,7 +575,10 @@ class CreateFile(_GetBase):
 
                 # .. otherwise, simply create it ..
                 with open_w(full_path) as f:
-                    _ = f.write(Default_File_Data)
+                    data = Default_File_Data.format(**{
+                        'full_path': full_path,
+                    })
+                    _ = f.write(data)
 
                 # .. no need to continue further ..
                 break
