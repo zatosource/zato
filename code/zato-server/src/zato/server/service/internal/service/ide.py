@@ -146,7 +146,9 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _get_default_root_directory(self, all_root_dirs:'strlistdict') -> 'str':
+    def _get_default_root_directory(self, all_root_dirs:'strlistdict | None'=None) -> 'str':
+
+        all_root_dirs = all_root_dirs or self._get_all_root_directories()
 
         for item in all_root_dirs:
 
@@ -196,6 +198,35 @@ class _IDEBase(Service):
             yield item
 
 # ################################################################################################################################
+
+    def _maybe_fix_up_fs_location(self, fs_location:'str') -> 'str':
+
+        # Windows ..
+        if 'hot-deploy\\current' in fs_location:
+            needs_replace = True
+
+        # .. non-Windows ..
+        elif 'hot-deploy/current' in fs_location:
+            needs_replace = True
+
+        # .. we don't need to fix it up ..
+        else:
+            needs_replace = False
+
+        # .. we enter here if we need to fix up the name ..
+        if needs_replace:
+            file_name = os.path.basename(fs_location)
+            default_root_dir = self._get_default_root_directory()
+            out = os.path.join(default_root_dir, file_name)
+
+        # .. otherwise, we use it as-is ..
+        else:
+            out = fs_location
+
+        # .. now, we can return it to our caller.
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceIDE(_IDEBase):
@@ -234,14 +265,21 @@ class ServiceIDE(_IDEBase):
         current_service_file_list = []
 
         service_list_response = self.get_deployment_info_list()
+        service_list_response = list(service_list_response)
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
         for item in service_list_response:
             file_name = item['file_name']
-            fs_location = item['fs_location']
             service_name = item['service_name']
             line_number = item['line_number']
+
+            # The location we received may point to a hot-deployment directory
+            # but not the original one that the file was saved in. Rather, it may be
+            # the work directory that the file was moved to. This is why we need
+            # to potentially fix up the location and make it point to the original one.
+            fs_location = item['fs_location']
+            fs_location = self._maybe_fix_up_fs_location(fs_location)
 
             # This is reusable
             root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
