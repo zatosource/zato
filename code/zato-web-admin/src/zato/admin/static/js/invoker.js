@@ -146,8 +146,13 @@ $.fn.zato.invoker.on_form_ended_common = function(
     data,
 ) {
 
+    if($.fn.zato.is_object(data)) {
+        var response = data;
+    }
+    else {
+        var response = $.parseJSON(data);
+    }
     console.log("Data1 "+ data);
-    let response = $.parseJSON(data);
     $.fn.zato.invoker.on_form_ended_common_impl(options, status, response)
 
 }
