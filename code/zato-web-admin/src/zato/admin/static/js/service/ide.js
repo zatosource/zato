@@ -426,6 +426,8 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     _on_success_func = function(options, data) {
 
+        console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
+
         if($.fn.zato.is_object(data)) {
             var data = data;
         }
@@ -433,12 +435,29 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
             var data = $.parseJSON(data);
         }
 
-        console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
+        _get_current_file_service_list_func = function() {
+            let item = {}
+            item.fs_location = "";
+            item.fs_location_url_safe = "";
+            item.line_number_human = -1;
+            item.line_number_human = -1;
+            item.current_root_directory = "zato-undefined";
+            item.root_directory_count = -1;
+            item.name = "(Deploying ..)";
+
+            let out = [item];
+            return out;
+        }
 
         $.fn.zato.show_bottom_tooltip("#file-new", "Deploying ..");
-
         $.fn.zato.ide.set_current_fs_location(data.full_path);
-        $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, false, false);
+        $.fn.zato.ide.on_file_selected(
+            data.full_path,
+            data.full_path_url_safe,
+            false,
+            false,
+            _get_current_file_service_list_func,
+        );
         $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
     };
 
@@ -722,10 +741,16 @@ $.fn.zato.ide.post_load_source_object = function(
     fs_location,
     reuse_source_code,
     after_post_load_source_func,
+    get_current_file_service_list_func,
 ) {
     $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
     $.fn.zato.ide.highlight_current_file(fs_location);
+    if(get_current_file_service_list_func) {
+        current_file_service_list = get_current_file_service_list_func();
+    }
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
+
+    console.log(`Current: "${current_file_service_list}", object: "${object_name}"`);
 
     // We are going to reuse the source that we may already have cached
     // and it means that we may potentially need to set the correct deployment status ..
@@ -757,7 +782,8 @@ $.fn.zato.ide.load_source_object = function(
     object_name,
     fs_location,
     reuse_source_code,
-    after_post_load_source_func
+    after_post_load_source_func,
+    get_current_file_service_list_func,
 ) {
 
     var callback = function(data, _unused_status) {
@@ -772,7 +798,8 @@ $.fn.zato.ide.load_source_object = function(
             current_file_service_list,
             fs_location,
             reuse_source_code,
-            after_post_load_source_func
+            after_post_load_source_func,
+            get_current_file_service_list_func
         );
     }
 
@@ -983,13 +1010,9 @@ $.fn.zato.ide.on_file_selected = function(
     fs_location_url_safe,
     reuse_source_code,
     after_post_load_source_func,
-    should_load_source_object,
+    get_current_file_service_list_func,
 ) {
     //  console.log("On file selected ..")
-
-    if(should_load_source_object === undefined) {
-        should_load_source_object = true;
-    };
 
     if(reuse_source_code == null) {
         reuse_source_code = true;
@@ -1001,9 +1024,14 @@ $.fn.zato.ide.on_file_selected = function(
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
-    //if(should_load_source_object) {
-    $.fn.zato.ide.load_source_object("file", fs_location, fs_location, reuse_source_code, after_post_load_source_func);
-    //}
+    $.fn.zato.ide.load_source_object(
+        "file",
+        fs_location,
+        fs_location,
+        reuse_source_code,
+        after_post_load_source_func,
+        get_current_file_service_list_func
+    );
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
