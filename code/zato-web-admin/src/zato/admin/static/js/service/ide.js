@@ -511,7 +511,14 @@ $.fn.zato.ide.on_file_reload = function() {
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
     console.log(`Reloading file: "${fs_location}" "${fs_location_url_safe}"`)
-    $.fn.zato.ide.on_file_selected(fs_location, fs_location_url_safe, false, $.fn.zato.ide.after_file_reloaded);
+    $.fn.zato.ide.on_file_selected(
+        fs_location,
+        fs_location_url_safe,
+        false,
+        $.fn.zato.ide.after_file_reloaded,
+        null,
+        "should_convert_pickup_to_work_dir=True",
+    );
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -641,6 +648,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         var option = $("<option>");
         option.text(item.name);
         option.attr("class", "option-current-file");
+        option.attr("data-service-name", item.name);
         option.attr("data-fs-location", item.fs_location);
         option.attr("data-fs-location-url-safe", item.fs_location_url_safe);
         option.attr("data-line-number", item.line_number_human);
@@ -784,7 +792,10 @@ $.fn.zato.ide.load_source_object = function(
     reuse_source_code,
     after_post_load_source_func,
     get_current_file_service_list_func,
+    extra_qs,
 ) {
+
+    extra_qs = extra_qs || "";
 
     var callback = function(data, _unused_status) {
         let msg = data.responseText;
@@ -803,7 +814,7 @@ $.fn.zato.ide.load_source_object = function(
         );
     }
 
-    var url = String.format("/zato/service/ide/get-{0}/{1}/", object_type, object_name);
+    var url = String.format("/zato/service/ide/get-{0}/{1}/?1=1&{2}", object_type, object_name,extra_qs);
     $.fn.zato.post(url, callback);
 }
 
@@ -1011,6 +1022,7 @@ $.fn.zato.ide.on_file_selected = function(
     reuse_source_code,
     after_post_load_source_func,
     get_current_file_service_list_func,
+    extra_qs,
 ) {
     //  console.log("On file selected ..")
 
@@ -1030,7 +1042,8 @@ $.fn.zato.ide.on_file_selected = function(
         fs_location,
         reuse_source_code,
         after_post_load_source_func,
-        get_current_file_service_list_func
+        get_current_file_service_list_func,
+        extra_qs
     );
 }
 
