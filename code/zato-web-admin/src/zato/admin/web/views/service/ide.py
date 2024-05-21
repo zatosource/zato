@@ -80,6 +80,10 @@ def get_service(req:'HttpRequest', service_name:'str') -> 'HttpResponse':
 
 @method_allowed('POST')
 def get_file(req:'HttpRequest', fs_location:'str') -> 'HttpResponse':
+
+    if not fs_location:
+        raise Exception(f'FS location missing on input to get_file "{repr(fs_location)}"')
+
     return invoke_action_handler(req, 'zato.service.ide.get-file', extra={'fs_location': fs_location})
 
 # ################################################################################################################################
