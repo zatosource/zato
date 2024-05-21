@@ -112,11 +112,15 @@ def get_file_list(req:'HttpRequest') -> 'HttpResponse':
 
 @method_allowed('POST')
 def get_service_list(req:'HttpRequest') -> 'HttpResponse':
+
     fs_location = req.GET['fs_location']
     should_wait_for_services = req.GET.get('should_wait_for_services')
+    should_convert_pickup_to_work_dir = req.GET.get('should_convert_pickup_to_work_dir')
+
     return invoke_action_handler(req, 'zato.service.ide.service-ide', extra={
         'fs_location': fs_location,
         'should_wait_for_services': should_wait_for_services,
+        'should_convert_pickup_to_work_dir': should_convert_pickup_to_work_dir,
     })
 
 # ################################################################################################################################
