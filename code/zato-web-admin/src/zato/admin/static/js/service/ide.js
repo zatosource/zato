@@ -435,8 +435,13 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
         console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
 
+        //let new_url_path = `/zato/service/ide/file/${data.full_path_url_safe}/?cluster=1`
+        //window.location.href = new_url_path;
+
         $.fn.zato.ide.set_current_fs_location(data.full_path);
-        $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, $.fn.zato.ide.after_file_created);
+        //$.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false, $.fn.zato.ide.after_file_created);
+        $.fn.zato.ide.on_file_selected(data.full_path, data.full_path_url_safe, false);
+        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created);
     };
 
     _on_error_func = function(options, jq_xhr, text_status, error_message) {
@@ -1451,6 +1456,28 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func) {
+
+    _post_func = function(response) {
+        $.fn.zato.ide.on_service_list_response(response);
+        if(after_func) {
+            after_func();
+        }
+    }
+    return _post_func;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.populate_current_file_service_list_impl = function(after_func) {
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+    let url_path = "/zato/service/ide/get-service-list/?fs_location="+ current_fs_location;
+    let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
+    $.fn.zato.invoker.invoke(url_path, "", callback)
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.on_toggle_object_select = function() {
 
     let url_path;
@@ -1461,17 +1488,13 @@ $.fn.zato.ide.on_toggle_object_select = function() {
     if(current_object_select == "service") {
         url_path = "/zato/service/ide/get-file-list/";
         callback = $.fn.zato.ide.on_file_list_response;
+        $.fn.zato.invoker.invoke(url_path, "", callback)
     }
 
     // .. or from files to services.
     else {
-        let current_fs_location = $.fn.zato.ide.get_current_fs_location();
-        url_path = "/zato/service/ide/get-service-list/?fs_location="+ current_fs_location;
-        callback = $.fn.zato.ide.on_service_list_response;
+        $.fn.zato.ide.populate_current_file_service_list_impl()
     }
-
-    // Get all the objects and pass control to the callback.
-    $.fn.zato.invoker.invoke(url_path, "", callback)
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
