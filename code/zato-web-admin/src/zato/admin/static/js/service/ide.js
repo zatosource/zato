@@ -667,6 +667,9 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         if(item.name == new_service_name) {
             option.attr("selected", "selected");
             has_new_service_name_match = true;
+
+            // If we are here, it means that the current service can be invoked
+            $.fn.zato.ide.enable_invoke_button();
         }
     }
 
@@ -694,6 +697,42 @@ $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.enable_button = function(button_id) {
+
+    // Local variables
+    let button = $(button_id);
+
+    // Make it possible to use the button
+    button.removeAttr("disabled");
+    button.removeClass("no-click");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.disable_button = function(button_id) {
+
+    // Local variables
+    let button = $(button_id);
+
+    // Disable the button
+    button.attr("disabled", "disabled");
+    button.addClass("no-click");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.enable_invoke_button = function() {
+    $.fn.zato.ide.enable_button("#invoke-service");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.disable_invoke_button = function() {
+    $.fn.zato.ide.disable_button("#invoke-service");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.postprocess_file_buttons = function() {
 
     // Local variables
@@ -707,34 +746,14 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
     // Go through all the buttons ..
     for(button_id of button_id_list) {
 
-        // Loop-local variables
-        let button = $(button_id);
-
-        // let button_attrs = button.attributes;
-        // let button_id_attr = button.attr("id");
-        // let button_class_attr = button.attr("class");
-
-        // console.log("Button attrs: "+ button_attrs);
-        // console.log("Button ID: "+ button_id_attr);
-        // console.log("Button class: "+ button_class_attr);
-
         // First, clear out everything ..
-        button.removeAttr("disabled");
-        button.removeClass("no-click");
+        $.fn.zato.ide.enable_button(button_id);
 
         // .. we enter here if we don't have any current file ..
         if(!current_fs_location) {
 
-            // console.log("No current FS: "+ button_id);
-
             // .. now, indicate that this button should be disabled.
-            button.attr("disabled", "disabled");
-            button.addClass("no-click");
-
-        }
-
-        else {
-            // console.log("Found current FS: "+ button_id);
+            $.fn.zato.ide.disable_button(button_id);
         }
     }
 }
@@ -1326,6 +1345,8 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     // .. we go here if there are no services in the current file ..
 
     if(!data.current_file_service_list.length) {
+
+        // Build an option indicating that there are no services ..
         var option = `<option
             class="option-current-file"
             data-object-holder="1"
@@ -1337,6 +1358,8 @@ $.fn.zato.ide.on_service_list_response = function(response) {
             data-root-directory-count="${data.root_directory_count}"
             data-service-name=""
             >(No services in current file)</option>`;
+
+        // .. append it to our select ..
         optgroup_current_file_object.append(option);
     }
 
@@ -1384,7 +1407,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     $.fn.zato.ide.mark_as_undeployed(undeployed);
 
     // .. services can be invoked now.
-    $("#invoke-service").prop("disabled", false).removeClass("no-click");
+    $.fn.zato.ide.enable_invoke_button();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1497,7 +1520,7 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     $.fn.zato.ide.mark_as_undeployed(undeployed);
 
     // .. services cannot be invoked in the files view.
-    $("#invoke-service").prop("disabled", true).addClass("no-click");
+    $.fn.zato.ide.disable_invoke_button();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
