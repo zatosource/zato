@@ -84,6 +84,19 @@ class GetList(AdminService):
 
         for item in search_result:
 
+            # First, filter out services that aren't deployed, e.g. they may have existed at one point
+            # but right now the server doesn't have them deployed.
+
+            # Extract the name of the module that the service is implemented in ..
+            impl_name = item.impl_name
+
+            # .. check if we have any deployment info about this module ..
+            deployment_info = self.server.service_store.get_deployment_info(impl_name)
+
+            # .. if there's no file-system path for the module's file, it means it's not deployed ..
+            if not deployment_info.get('fs_location'):
+                continue
+
             item.may_be_deleted = internal_del if item.is_internal else True
 
             # Attach JSON Schema validation configuration
