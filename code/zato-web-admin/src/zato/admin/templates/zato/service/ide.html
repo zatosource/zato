@@ -123,7 +123,11 @@ key2=value2"></textarea></form>
                     <tr colspan="2" class="invoker-tr">
                         <td class="align-right">
                             <div>
-                                <input id="invoke-service" type="button" value="Invoke"/>
+                                <input
+                                    id="invoke-service"
+                                    type="button"
+                                    {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
+                                    value="Invoke"/>
                             </div>
                         </td>
                     </tr>

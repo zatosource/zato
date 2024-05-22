@@ -445,7 +445,7 @@ class _GetBase(_IDEBase):
 
         if fs_location:
 
-            wait_for_file(fs_location, 5, interval=0.2)
+            wait_for_file(fs_location, 3, interval=0.2)
 
             response.current_fs_location = fs_location
             response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
