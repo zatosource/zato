@@ -758,7 +758,7 @@ $.fn.zato.ide.post_load_source_object = function(
     }
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
 
-    console.log(`Current: "${current_file_service_list}", object: "${object_name}"`);
+    console.log(`Object: "${object_name}", reuse:"${reuse_source_code}"`); // current:"${$.fn.zato.to_dict(current_file_service_list)}"`);
 
     // We are going to reuse the source that we may already have cached
     // and it means that we may potentially need to set the correct deployment status ..
@@ -770,7 +770,7 @@ $.fn.zato.ide.post_load_source_object = function(
     // .. if we are here, we know that we have just loaded the latest source code
     // .. from the server so we also know that we don't need to deploy this file.
     else {
-        $.fn.zato.ide.set_deployment_button_status_class("not-different");
+        $.fn.zato.ide.set_deployment_button_status_not_different();
         $.fn.zato.ide.update_deployment_option_state(false);
     }
 
@@ -996,7 +996,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.maybe_set_deploy_needed = function() {
-    // console.log("In maybe set deploy needed");
+    console.log("In maybe set deploy needed");
     $.fn.zato.ide.set_deployment_status();
 }
 
@@ -1137,10 +1137,10 @@ $.fn.zato.ide.set_deployment_status = function() {
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
 
-    // console.log("Key: "+ key);
-    // console.log("Is diff: "+ is_different);
-    // console.log("Editor: ["+ editor_value + "]");
-    // console.log("Store: ["+ last_deployed + "]");
+    console.log("Key: "+ key);
+    console.log("Editor: ["+ editor_value + "]");
+    console.log("Store: ["+ last_deployed + "]");
+    console.log("Is diff: "+ is_different);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
