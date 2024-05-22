@@ -102,6 +102,7 @@
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "service" %}?cluster={{ cluster_id|default:"1" }}">List services</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "service-ide" "service" "demo.my-service" %}?cluster={{ cluster_id|default:"1" }}">IDE</a></li>
                                 </ul>
                             </li>
                             <li class="first-level" style="padding-left: 0.3rem">

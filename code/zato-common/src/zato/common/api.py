@@ -2145,6 +2145,35 @@ class URLInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
+Default_Service_File_Data = """
+# -*- coding: utf-8 -*-
+
+# File path: {full_path}
+
+# Zato
+from zato.server.service import Service
+
+class MyService(Service):
+
+    # I/O definition
+    input = '-name'
+    output = 'salutation'
+
+    def handle(self):
+
+        # Local variables
+        name = self.request.input.name or 'partner'
+
+        # Our response to produce
+        message = f'Howdy {{name}}!'
+
+        # Reply to our caller
+        self.response.payload.salutation = message
+""".lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,

@@ -13,7 +13,8 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, NotGiven, SCHEDULER, SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, default_internal_modules, Default_Service_File_Data, NotGiven, SCHEDULER, \
+     SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
@@ -794,6 +795,16 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _add_demo_service(self, fs_location:'str', full_path:'str') -> 'None':
+
+        with open_w(fs_location) as f:
+            data = Default_Service_File_Data.format(**{
+                'full_path': full_path,
+            })
+            _ = f.write(data)
+
+# ################################################################################################################################
+
     def execute(
         self,
         args:'any_',
@@ -1027,6 +1038,14 @@ class Create(ZatoCommand):
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+
+            # Prepare paths for the demo service ..
+            pickup_incoming_full_path = os.path.join(self.target_dir, 'pickup', 'incoming', 'services', 'demo.py')
+            work_dir_full_path = os.path.join(self.target_dir, 'work', 'hot-deploy', 'current', 'demo.py')
+
+            # .. and create it now.
+            self._add_demo_service(pickup_incoming_full_path, pickup_incoming_full_path)
+            self._add_demo_service(work_dir_full_path, pickup_incoming_full_path)
 
             # Sphinx APISpec files
             for file_path, contents in apispec_files.items(): # type: ignore
