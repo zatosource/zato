@@ -66,7 +66,6 @@ class IDEResponse(Model):
     # A list of files that may potentially have a service of the given name.
     current_service_file_list: 'anylist' = list_field()
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -82,6 +81,41 @@ class _IDEBase(Service):
 
     input = IDERequest
     output = IDEResponse
+
+    def before_handle(self):
+
+        # If we have any path on input ..
+        if orig_fs_location := self.request.input.fs_location:
+
+            # .. collect all the root, top-level directories we can deploy services to ..
+            all_root_dirs = self._get_all_root_directories()
+
+            # .. make sure it's an actual path ..
+            fs_location = orig_fs_location.replace('~', '/')
+
+            # .. get its canonical version ..
+
+            # .. redunant but let's keep this one ..
+            fs_location = os.path.expanduser(fs_location)
+
+            # .. this is always required ..
+            fs_location = os.path.abspath(fs_location)
+
+            # .. go through all the deployment roots ..
+            for item in all_root_dirs:
+
+                # .. check if the input path is one that belongs to that root ..
+                if fs_location.startswith(item):
+
+                    # .. we have our match, we can stop searching ..
+                    break
+
+            # .. if we are here, it means we didn't find a matching root directory ..
+            # .. so we need to raise an exception to indicate that ..
+            else:
+                raise ValueError(f'Invalid path `{orig_fs_location}`')
+
+# ################################################################################################################################
 
     def _get_service_list_by_fs_location(self, deployment_info_list:'any_', fs_location:'str') -> 'dictlist':
 
