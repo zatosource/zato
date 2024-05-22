@@ -80,7 +80,7 @@ class IDEResponse(Model):
     service_count_human: 'strnone' = None
     file_count: 'intnone' = None
     file_count_human: 'strnone' = None
-    current_file_source_code: 'strnone' = None
+    current_file_source_code: 'strnone' = ''
     service_list: 'anylist' = list_field()
     current_file_name: 'strnone' = None
     current_fs_location: 'strnone' = None
@@ -478,7 +478,10 @@ class _GetBase(_IDEBase):
             response.current_fs_location = fs_location
             response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
             response.current_file_name = os.path.basename(fs_location)
-            response.current_file_source_code = open(fs_location).read()
+
+            # We waited above but is still may not exist
+            if os.path.exists(fs_location):
+                response.current_file_source_code = open(fs_location).read()
 
         # .. get information about the current root directory ..
         info = self._get_current_root_dir_info(fs_location)
