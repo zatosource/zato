@@ -78,10 +78,11 @@ class GetList(AdminService):
     def _get_data(self, session, return_internal, include_list, internal_del): # type: ignore
 
         out = []
-        search_result = self._search(
-            service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
 
-        for item in elems_with_opaque(search_result):
+        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
+        search_result = elems_with_opaque(search_result)
+
+        for item in search_result:
 
             item.may_be_deleted = internal_del if item.is_internal else True
 
