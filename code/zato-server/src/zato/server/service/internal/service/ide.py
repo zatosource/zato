@@ -15,6 +15,7 @@ from pathlib import Path
 from time import sleep
 
 # Zato
+from zato.common.api import Default_Service_File_Data
 from zato.common.typing_ import anylist, intnone, list_field, strnone
 from zato.common.util.api import wait_for_file
 from zato.common.util.open_ import open_r, open_w
@@ -25,35 +26,6 @@ from zato.server.service import Model, Service
 
 if 0:
     from zato.common.typing_ import any_, dictlist, strlistdict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-Default_File_Data = """
-# -*- coding: utf-8 -*-
-
-# File path: {full_path}
-
-# Zato
-from zato.server.service import Service
-
-class MyService(Service):
-
-    # I/O definition
-    input = 'name'
-    output = 'salutation'
-
-    def handle(self):
-
-        # Local variables
-        name = self.request.input.name
-
-        # Our response to produce
-        message = f'Howdy {{name}}'
-
-        # Reply to our caller
-        self.response.payload.salutation = message
-""".lstrip()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -616,7 +588,7 @@ class CreateFile(_GetBase):
 
                 # .. otherwise, simply create it ..
                 with open_w(full_path) as f:
-                    data = Default_File_Data.format(**{
+                    data = Default_Service_File_Data.format(**{
                         'full_path': full_path,
                     })
                     _ = f.write(data)
