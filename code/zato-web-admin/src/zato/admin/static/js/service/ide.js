@@ -367,7 +367,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
         <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
         <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
         <input type="button" id="file-rename" value="Rename" ${button_attrs} />
-        <input type="button" id="file-delete" value="Delete" ${button_attrs} />
+        <input type="button" id="file-delete" value="Delete" ${button_attrs} onclick="$.fn.zato.ide.on_file_delete();"/>
     `;
 
     tippy("#header-left-link-file", {
@@ -388,6 +388,65 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
 $.fn.zato.ide.after_post_load_source_func = function(data) {
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_op_error_func = function(op_name) {
+    let result_header_selector = "#result-header";
+    _on_error_func = function(options, jq_xhr, text_status, error_message) {
+        console.log(`File ${op_name} impl, on error:  ${jq_xhr.status} -> ${error_message} ->  ${jq_xhr.responseText}`);
+        $(result_header_selector).text(`${jq_xhr.status} ${error_message}`);
+        $("#data-response").val(jq_xhr.responseText);
+        $.fn.zato.invoker.draw_attention([result_header_selector]);
+    };
+    return _on_error_func;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_op_success_func = function(
+    op_name,
+    placeholder_verb,
+) {
+
+    _on_success_func = function(options, data) {
+
+        console.log(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
+
+        if($.fn.zato.is_object(data)) {
+            var data = data;
+        }
+        else {
+            var data = $.parseJSON(data);
+        }
+
+        _get_current_file_service_list_func = function() {
+            let item = {}
+            item.fs_location = "";
+            item.fs_location_url_safe = "";
+            item.line_number_human = -1;
+            item.line_number_human = -1;
+            item.current_root_directory = "zato-undefined";
+            item.root_directory_count = -1;
+            item.name = `(${placeholder_verb} ..)`;
+
+            let out = [item];
+            return out;
+        }
+
+        $.fn.zato.show_bottom_tooltip(`#file-${op_name}`, `${placeholder_verb} ..`);
+        $.fn.zato.ide.set_current_fs_location(data.full_path);
+        $.fn.zato.ide.on_file_selected(
+            data.full_path,
+            data.full_path_url_safe,
+            false,
+            false,
+            _get_current_file_service_list_func,
+        );
+        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+    };
+    return _on_success_func;
+};
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
@@ -422,58 +481,23 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
     let form_id = "file-new-form";
     let options = {};
     let display_timeout = 1;
-    let result_header_selector = "#result-header";
-
-    _on_success_func = function(options, data) {
-
-        console.log("File new impl, on success: "+ $.fn.zato.to_dict(data));
-
-        if($.fn.zato.is_object(data)) {
-            var data = data;
-        }
-        else {
-            var data = $.parseJSON(data);
-        }
-
-        _get_current_file_service_list_func = function() {
-            let item = {}
-            item.fs_location = "";
-            item.fs_location_url_safe = "";
-            item.line_number_human = -1;
-            item.line_number_human = -1;
-            item.current_root_directory = "zato-undefined";
-            item.root_directory_count = -1;
-            item.name = "(Deploying ..)";
-
-            let out = [item];
-            return out;
-        }
-
-        $.fn.zato.show_bottom_tooltip("#file-new", "Deploying ..");
-        $.fn.zato.ide.set_current_fs_location(data.full_path);
-        $.fn.zato.ide.on_file_selected(
-            data.full_path,
-            data.full_path_url_safe,
-            false,
-            false,
-            _get_current_file_service_list_func,
-        );
-        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
-    };
-
-    _on_error_func = function(options, jq_xhr, text_status, error_message) {
-        console.log(`File new impl, on error:  ${jq_xhr.status} -> ${error_message} ->  ${jq_xhr.responseText}`);
-        $(result_header_selector).text(`${jq_xhr.status} ${error_message}`);
-        $("#data-response").val(jq_xhr.responseText);
-        $.fn.zato.invoker.draw_attention([result_header_selector]);
-    };
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("new", "Deploying");
+    let _on_error_func = $.fn.zato.ide.on_file_op_error_func("new");
 
     $.fn.zato.ide.build_singleton_form(form_id, {
         "file_name": file_name,
         "root_directory": current_root_directory,
     });
 
-    $.fn.zato.invoker.submit_form(url_path, "#"+form_id, options, _on_success_func, _on_error_func, display_timeout, "json");
+    $.fn.zato.invoker.submit_form(
+        url_path,
+        "#"+form_id,
+        options,
+        _on_success_func,
+        _on_error_func,
+        display_timeout,
+        "json"
+    );
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -506,6 +530,32 @@ $.fn.zato.ide.on_file_new = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_file_delete = function() {
+
+    // Local variables
+    let current_object_select = $.fn.zato.ide.get_current_object_select();
+    let fs_location = current_object_select.attr("data-fs-location");
+    let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
+    let prompt_text = `Confirm file deletion.\n\n${fs_location}`;
+
+    if(confirm(prompt_text)) {
+        console.log(`Deleting file: "${fs_location}" "${fs_location_url_safe}"`)
+    }
+
+    /*
+    $.fn.zato.ide.on_file_selected(
+        fs_location,
+        fs_location_url_safe,
+        false,
+        $.fn.zato.ide.after_file_reloaded,
+        null,
+        "should_convert_pickup_to_work_dir=True",
+    );
+    */
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_reload = function() {
     let current_object_select = $.fn.zato.ide.get_current_object_select();
     let fs_location = current_object_select.attr("data-fs-location");
@@ -520,6 +570,7 @@ $.fn.zato.ide.on_file_reload = function() {
         "should_convert_pickup_to_work_dir=True",
     );
 }
+
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
@@ -1192,10 +1243,10 @@ $.fn.zato.ide.set_deployment_status = function() {
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
 
-    console.log("Key: "+ key);
-    console.log("Editor: ["+ editor_value + "]");
-    console.log("Store: ["+ last_deployed + "]");
-    console.log("Is diff: "+ is_different);
+    // console.log("Key: "+ key);
+    // console.log("Editor: ["+ editor_value + "]");
+    // console.log("Store: ["+ last_deployed + "]");
+    // console.log("Is diff: "+ is_different);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
