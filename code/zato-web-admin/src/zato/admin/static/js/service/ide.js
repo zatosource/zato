@@ -365,9 +365,9 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
 
     let header_left_link_file_content = `
         <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
+        <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
         <input type="button" id="file-rename" value="Rename" ${button_attrs} />
         <input type="button" id="file-delete" value="Delete" ${button_attrs} />
-        <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
     `;
 
     tippy("#header-left-link-file", {
@@ -725,10 +725,26 @@ $.fn.zato.ide.enable_invoke_button = function() {
     $.fn.zato.ide.enable_button("#invoke-service");
 }
 
+$.fn.zato.ide.enable_file_rename_button = function() {
+    $.fn.zato.ide.enable_button("#file-rename");
+}
+
+$.fn.zato.ide.enable_file_delete_button = function() {
+    $.fn.zato.ide.enable_button("#file-delete");
+}
+
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.disable_invoke_button = function() {
     $.fn.zato.ide.disable_button("#invoke-service");
+}
+
+$.fn.zato.ide.disable_file_rename_button = function() {
+    $.fn.zato.ide.disable_button("#file-rename");
+}
+
+$.fn.zato.ide.disable_file_delete_button = function() {
+    $.fn.zato.ide.disable_button("#file-delete");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -737,6 +753,7 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
 
     // Local variables
     let button_id_list = ["#file-rename", "#file-delete", "#file-reload"];
+    let current_object_type = $.fn.zato.ide.get_current_object_type();
 
     // Check if we have any specific file now that we loaded an object
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
@@ -754,6 +771,12 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
 
             // .. now, indicate that this button should be disabled.
             $.fn.zato.ide.disable_button(button_id);
+        }
+
+        // .. certain buttons are disabled if we're showing services ..
+        if(current_object_type == "service") {
+            $.fn.zato.ide.disable_file_rename_button();
+            $.fn.zato.ide.disable_file_delete_button();
         }
     }
 }
@@ -886,6 +909,19 @@ $.fn.zato.ide.get_current_source_code_key = function() {
 $.fn.zato.ide.get_last_deployed_key = function() {
     let key = "zato.last-deployed." + $.fn.zato.ide.get_current_source_code_key()
     return key;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_object_type = function() {
+    let current = $("#current-object-type").val();
+    return current;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.set_current_object_type = function(value) {
+    $("#current-object-type").val(value);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1103,13 +1139,13 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     select_elem = $(select_elem);
     let option_selected = $("option:selected", select_elem);
     let is_current_file = option_selected.attr("data-is-current-file") == "1";
-    let current_object_select = $("#current-object-select").val()
+    let current_object_type = $.fn.zato.ide.get_current_object_type()
 
     // This will update the global information about what directory we are
     $.fn.zato.ide.populate_root_directory_info_from_option(option_selected);
 
     // Handle the selection of a service ..
-    if(current_object_select == "service") {
+    if(current_object_type == "service") {
 
         // .. a service within the current file was selected ..
         if(is_current_file) {
@@ -1275,14 +1311,14 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.toggle_current_object_select = function(current) {
+$.fn.zato.ide.toggle_current_object_type = function(current) {
     if(current == "service") {
         var new_current = "file";
     }
     else {
         var new_current = "service";
     }
-    $("#current-object-select").val(new_current)
+    $.fn.zato.ide.set_current_object_type(new_current);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1401,7 +1437,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     }
 
     // .. switch to services ..
-    $.fn.zato.ide.toggle_current_object_select("file");
+    $.fn.zato.ide.toggle_current_object_type("file");
 
     // .. mark the relevant select options as undeployed ..
     $.fn.zato.ide.mark_as_undeployed(undeployed);
@@ -1514,10 +1550,14 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     });
 
     // .. switch to files ..
-    $.fn.zato.ide.toggle_current_object_select("service");
+    $.fn.zato.ide.toggle_current_object_type("service");
 
     // .. mark the relevant select options as undeployed ..
     $.fn.zato.ide.mark_as_undeployed(undeployed);
+
+    // .. enable buttons that can be used in the files view ..
+    $.fn.zato.ide.enable_file_rename_button();
+    $.fn.zato.ide.enable_file_delete_button();
 
     // .. services cannot be invoked in the files view.
     $.fn.zato.ide.disable_invoke_button();
@@ -1558,10 +1598,10 @@ $.fn.zato.ide.on_toggle_object_select = function() {
 
     let url_path;
     let callback;
-    let current_object_select = $("#current-object-select").val()
+    let current_object_type = $.fn.zato.ide.get_current_object_type();
 
     // We are switching from services to files ..
-    if(current_object_select == "service") {
+    if(current_object_type == "service") {
         url_path = "/zato/service/ide/get-file-list/";
         callback = $.fn.zato.ide.on_file_list_response;
         $.fn.zato.invoker.invoke(url_path, "", callback)
