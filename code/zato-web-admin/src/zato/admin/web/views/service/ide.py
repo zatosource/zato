@@ -104,6 +104,16 @@ def create_file(req:'HttpRequest') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
+def delete_file(req:'HttpRequest') -> 'HttpResponse':
+    fs_location = req.POST['fs_location']
+    return invoke_action_handler(req, 'zato.service.ide.delete-file', extra={
+        'fs_location': fs_location,
+    })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
 def get_file_list(req:'HttpRequest') -> 'HttpResponse':
     return invoke_action_handler(req, 'zato.service.ide.get-file-list')
 

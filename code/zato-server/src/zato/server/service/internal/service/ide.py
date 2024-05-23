@@ -16,6 +16,7 @@ from time import sleep
 
 # Zato
 from zato.common.api import Default_Service_File_Data
+from zato.common.exception import BadRequest
 from zato.common.typing_ import anylist, intnone, list_field, strnone
 from zato.common.util.api import wait_for_file
 from zato.common.util.open_ import open_r, open_w
@@ -82,6 +83,24 @@ class _IDEBase(Service):
     input = IDERequest
     output = IDEResponse
 
+# ################################################################################################################################
+
+    def _normalize_fs_location(self, fs_location:'str') -> 'str':
+
+        # .. resolve the basic variables ..
+        fs_location = os.path.expanduser(fs_location)
+
+        # .. make sure it's an actual path ..
+        fs_location = fs_location.replace('~', '/')
+
+        # .. this is always required ..
+        fs_location = os.path.abspath(fs_location)
+
+        # .. now, we can return it to our caller.
+        return fs_location
+
+# ################################################################################################################################
+
     def before_handle(self):
 
         # If we have any path on input ..
@@ -90,16 +109,8 @@ class _IDEBase(Service):
             # .. collect all the root, top-level directories we can deploy services to ..
             all_root_dirs = self._get_all_root_directories()
 
-            # .. make sure it's an actual path ..
-            fs_location = orig_fs_location.replace('~', '/')
-
             # .. get its canonical version ..
-
-            # .. redunant but let's keep this one ..
-            fs_location = os.path.expanduser(fs_location)
-
-            # .. this is always required ..
-            fs_location = os.path.abspath(fs_location)
+            fs_location = self._normalize_fs_location(orig_fs_location)
 
             # .. go through all the deployment roots ..
             for item in all_root_dirs:
@@ -129,7 +140,7 @@ class _IDEBase(Service):
             if fs_location == item['fs_location']:
 
                 # This is reusable
-                _target_fs_location = self._maybe_convert_work_to_pickup_dir(fs_location)
+                _target_fs_location = self._convert_work_to_pickup_dir(fs_location)
                 root_dir_info = self._get_current_root_dir_info(_target_fs_location, all_root_dirs)
 
                 out.append({
@@ -223,7 +234,7 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _maybe_convert_work_to_pickup_dir(self, fs_location:'str') -> 'str':
+    def _convert_work_to_pickup_dir(self, fs_location:'str') -> 'str':
 
         # Windows ..
         if 'hot-deploy\\current' in fs_location:
@@ -252,7 +263,7 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def _maybe_convert_pickup_to_work_dir(self, fs_location:'str') -> 'str':
+    def _convert_pickup_to_work_dir(self, fs_location:'str') -> 'str':
 
         # Windows ..
         if 'pickup\\incoming\\services' in fs_location:
@@ -318,7 +329,8 @@ class ServiceIDE(_IDEBase):
 
         # .. or a file that we need.
         input_fs_location = input.fs_location or ''
-        input_fs_location = input_fs_location.replace('~', '/')
+        if input_fs_location:
+            input_fs_location = self._normalize_fs_location(input_fs_location)
 
         # Full path to the file with the current service's source code
         current_fs_location = input_fs_location
@@ -356,7 +368,7 @@ class ServiceIDE(_IDEBase):
             # the work directory that the file was moved to. This is why we need
             # to potentially fix up the location and make it point to the original one.
             fs_location = item['fs_location']
-            fs_location = self._maybe_convert_work_to_pickup_dir(fs_location)
+            fs_location = self._convert_work_to_pickup_dir(fs_location)
 
             # This is reusable
             root_dir_info = self._get_current_root_dir_info(fs_location, all_root_dirs)
@@ -533,7 +545,7 @@ class GetFile(_GetBase):
 
         # Reusable
         fs_location = self.request.input.fs_location
-        fs_location = self._maybe_convert_pickup_to_work_dir(fs_location)
+        fs_location = self._convert_pickup_to_work_dir(fs_location)
         deployment_info_list = self.get_deployment_info_list()
 
         # Build a response ..
@@ -638,6 +650,29 @@ class CreateFile(_GetBase):
         self.response.payload.data = data
         self.response.payload.full_path = full_path
         self.response.payload.full_path_url_safe = make_fs_location_url_safe(full_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteFile(_GetBase):
+
+    # Our I/O
+    input = 'fs_location'
+
+    def handle(self):
+
+        # Local variables
+        fs_location = self.request.input.fs_location
+
+        # Make sure the path exists ..
+        if not os.path.exists(fs_location):
+            raise BadRequest(self.cid, f'Path does not exist `{fs_location}`')
+
+        # .. and that it's a file ..
+        if not os.path.isfile(fs_location):
+            raise BadRequest(self.cid, f'Path is not a file `{fs_location}`')
+
+        work_dir = self._convert_pickup_to_work_dir(fs_location)
 
 # ################################################################################################################################
 # ################################################################################################################################
