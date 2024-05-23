@@ -537,6 +537,38 @@ $.fn.zato.ide.on_file_new = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_file_delete_impl = function(fs_location) {
+
+    // Local variables
+    let after_on_file_op_success_func = function() {
+        // $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+        console.log(`Deleted "${fs_location}"`);
+    }
+
+    let url_path = "/zato/service/ide/delete-file/";
+    let form_id = "file-delete-form";
+    let options = {};
+    let display_timeout = 1;
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("delete", "Deleting", after_on_file_op_success_func);
+    let _on_error_func = $.fn.zato.ide.on_file_op_error_func("delete");
+
+    $.fn.zato.ide.build_singleton_form(form_id, {
+        "fs_location": fs_location,
+    });
+
+    $.fn.zato.invoker.submit_form(
+        url_path,
+        "#"+form_id,
+        options,
+        _on_success_func,
+        _on_error_func,
+        display_timeout,
+        "json"
+    );
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_delete = function() {
 
     // Local variables
@@ -547,18 +579,8 @@ $.fn.zato.ide.on_file_delete = function() {
 
     if(confirm(prompt_text)) {
         console.log(`Deleting file: "${fs_location}" "${fs_location_url_safe}"`)
+        $.fn.zato.ide.on_file_delete_impl(fs_location);
     }
-
-    /*
-    $.fn.zato.ide.on_file_selected(
-        fs_location,
-        fs_location_url_safe,
-        false,
-        $.fn.zato.ide.after_file_reloaded,
-        null,
-        "should_convert_pickup_to_work_dir=True",
-    );
-    */
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
