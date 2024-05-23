@@ -407,9 +407,10 @@ $.fn.zato.ide.on_file_op_error_func = function(op_name) {
 $.fn.zato.ide.on_file_op_success_func = function(
     op_name,
     placeholder_verb,
-) {
-
-    _on_success_func = function(options, data) {
+    after_on_file_op_success_func,
+)
+{
+    let _on_success_func = function(options, data) {
 
         console.log(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
 
@@ -443,7 +444,9 @@ $.fn.zato.ide.on_file_op_success_func = function(
             false,
             _get_current_file_service_list_func,
         );
-        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+        if(after_on_file_op_success_func) {
+            after_on_file_op_success_func();
+        }
     };
     return _on_success_func;
 };
@@ -477,11 +480,15 @@ $.fn.zato.ide.after_file_created = function() {
 $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
 
     // Local variables
+    let after_on_file_op_success_func = function() {
+        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+    }
+
     let url_path = "/zato/service/ide/create-file/";
     let form_id = "file-new-form";
     let options = {};
     let display_timeout = 1;
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("new", "Deploying");
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("new", "Deploying", after_on_file_op_success_func);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func("new");
 
     $.fn.zato.ide.build_singleton_form(form_id, {
