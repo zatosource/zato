@@ -18,7 +18,7 @@ from time import sleep
 from zato.common.api import Default_Service_File_Data
 from zato.common.exception import BadRequest
 from zato.common.typing_ import anylist, intnone, list_field, strnone
-from zato.common.util.api import wait_for_file
+from zato.common.util.api import get_demo_py_fs_locations, wait_for_file
 from zato.common.util.open_ import open_r, open_w
 from zato.server.service import Model, Service
 
@@ -658,21 +658,49 @@ class DeleteFile(_GetBase):
 
     # Our I/O
     input = 'fs_location'
+    output = 'full_path', 'full_path_url_safe'
+
+    def _validate_fs_location(self, fs_location:'str') -> 'None':
+
+        # Make sure we have a path on input ..
+        if not fs_location:
+            raise BadRequest(self.cid, f'No path given on input `{fs_location}`')
+
+        # .. and that it exists ..
+        if not os.path.exists(fs_location):
+            raise BadRequest(self.cid, f'Path does not exist `{fs_location}`')
+
+        # .. and that it's actually a file.
+        if not os.path.isfile(fs_location):
+            raise BadRequest(self.cid, f'Path is not a file `{fs_location}`')
+
+# ################################################################################################################################
 
     def handle(self):
 
         # Local variables
         fs_location = self.request.input.fs_location
 
-        # Make sure the path exists ..
-        if not os.path.exists(fs_location):
-            raise BadRequest(self.cid, f'Path does not exist `{fs_location}`')
+        # .. turn the pickup location into a work directory one ..
+        work_dir_fs_location = self._convert_pickup_to_work_dir(fs_location)
 
-        # .. and that it's a file ..
-        if not os.path.isfile(fs_location):
-            raise BadRequest(self.cid, f'Path is not a file `{fs_location}`')
+        # .. validate both locations ..
+        self._validate_fs_location(fs_location)
+        self._validate_fs_location(work_dir_fs_location)
 
-        work_dir = self._convert_pickup_to_work_dir(fs_location)
+        # .. if we're here, it means that we can actually delete both locations ..
+        os.remove(fs_location)
+        self.logger.info('Deleted path %s', fs_location)
+
+        os.remove(work_dir_fs_location)
+        self.logger.info('Deleted path %s', work_dir_fs_location)
+
+        # .. find the location with the demo service ..
+        demo_py_fs = get_demo_py_fs_locations(self.server.base_dir)
+
+        # .. finally, tell the caller what our default file with services is ..
+        self.response.payload.full_path = demo_py_fs.pickup_incoming_full_path
+        self.response.payload.full_path_url_safe = make_fs_location_url_safe(demo_py_fs.pickup_incoming_full_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

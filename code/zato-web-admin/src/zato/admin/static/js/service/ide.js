@@ -442,7 +442,7 @@ $.fn.zato.ide.on_file_op_success_func = function(
             data.full_path_url_safe,
             false,
             false,
-            _get_current_file_service_list_func,
+            null, // _get_current_file_service_list_func,
         );
         if(after_on_file_op_success_func) {
             after_on_file_op_success_func();
@@ -470,6 +470,18 @@ $.fn.zato.ide.after_file_created = function() {
     // Local variables
     let elem_id_selector = "#file-new";
     let text = "OK, ready to invoke";
+
+    // Do show the tooltip now
+    $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.after_file_deleted = function() {
+
+    // Local variables
+    let elem_id_selector = "#file-delete";
+    let text = "OK, deleted";
 
     // Do show the tooltip now
     $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
@@ -541,7 +553,7 @@ $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
 
     // Local variables
     let after_on_file_op_success_func = function() {
-        // $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+        $.fn.zato.ide.populate_file_list($.fn.zato.ide.after_file_deleted);
         console.log(`Deleted "${fs_location}"`);
     }
 
@@ -1159,7 +1171,7 @@ $.fn.zato.ide.on_file_selected = function(
     get_current_file_service_list_func,
     extra_qs,
 ) {
-    //  console.log("On file selected ..")
+    console.log("On file selected ..")
 
     if(reuse_source_code == null) {
         reuse_source_code = true;
@@ -1674,17 +1686,26 @@ $.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, sho
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.populate_file_list = function(after_callback_func) {
+    let url_path = "/zato/service/ide/get-file-list/";
+    let callback = function(response) {
+        $.fn.zato.ide.on_file_list_response(response);
+        if(after_callback_func) {
+            after_callback_func();
+        }
+    }
+    $.fn.zato.invoker.invoke(url_path, "", callback)
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.on_toggle_object_select = function() {
 
-    let url_path;
-    let callback;
     let current_object_type = $.fn.zato.ide.get_current_object_type();
 
     // We are switching from services to files ..
     if(current_object_type == "service") {
-        url_path = "/zato/service/ide/get-file-list/";
-        callback = $.fn.zato.ide.on_file_list_response;
-        $.fn.zato.invoker.invoke(url_path, "", callback)
+        $.fn.zato.ide.populate_file_list();
     }
 
     // .. or from files to services.

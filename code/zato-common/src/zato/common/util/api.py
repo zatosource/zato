@@ -2159,3 +2159,20 @@ def validate_python_syntax(data:'str') -> 'None':
     _ = ast.parse(data)
 
 # ################################################################################################################################
+
+class _DemoPyFsLocations:
+    pickup_incoming_full_path:'str'
+    work_dir_full_path:'str'
+
+def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
+
+    # Local variables
+    file_name = 'demo.py'
+
+    out = _DemoPyFsLocations()
+    out.pickup_incoming_full_path = os.path.join(base_dir, 'pickup', 'incoming', 'services', file_name)
+    out.work_dir_full_path = os.path.join(base_dir, 'work', 'hot-deploy', 'current', 'demo.py')
+
+    return out
+
+# ################################################################################################################################
