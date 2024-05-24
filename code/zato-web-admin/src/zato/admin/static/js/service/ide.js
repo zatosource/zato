@@ -477,6 +477,18 @@ $.fn.zato.ide.after_file_created = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.after_file_renamed = function() {
+
+    // Local variables
+    let elem_id_selector = "#file-rename";
+    let text = "OK, renamed";
+
+    // Do show the tooltip now
+    $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.after_file_deleted = function() {
 
     // Local variables
@@ -585,6 +597,33 @@ $.fn.zato.ide.on_file_new = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_file_rename_impl = function(current_root_directory, current_file_name, new_file_name) {
+
+    let url_path = "/zato/service/ide/rename-file/";
+    let form_id = "file-rename-form";
+    let options = {};
+    let display_timeout = 1;
+    let op_name = "rename";
+    let placeholder_verb = "Renaming"
+    let after_on_file_op_success_func_impl = $.fn.zato.ide.after_file_renamed;
+
+    $.fn.zato.ide.on_file_simple_impl(
+        current_root_directory,
+        current_file_name,
+        "current_file_name",
+        new_file_name,
+        url_path,
+        form_id,
+        options,
+        display_timeout,
+        op_name,
+        placeholder_verb,
+        after_on_file_op_success_func_impl,
+    )
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_rename = function() {
 
     // Local variables
@@ -613,7 +652,7 @@ $.fn.zato.ide.on_file_rename = function() {
     // .. proceed if we've received anything ..
     if(new_file_name) {
         console.log(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
-        //$.fn.zato.ide.on_file_new_impl(current_root_directory, new_file_name);
+        $.fn.zato.ide.on_file_rename_impl(current_root_directory, current_file_name, new_file_name);
     }
 }
 

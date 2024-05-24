@@ -1788,7 +1788,10 @@ $.fn.zato.show_bottom_tooltip = function(elem_id_selector, text) {
         arrow: true,
         interactive: false,
     });
-    _tooltip[0].show();
+    // It's possible it won't exist, e.g. someone closed it manually.
+    if(_tooltip) {
+        _tooltip[0].show();
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
