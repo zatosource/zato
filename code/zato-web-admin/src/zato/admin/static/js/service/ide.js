@@ -435,7 +435,7 @@ $.fn.zato.ide.on_file_op_success_func = function(
             return out;
         }
 
-        $.fn.zato.show_bottom_tooltip(`#file-${op_name}`, `${placeholder_verb} ..`);
+        $.fn.zato.show_bottom_tooltip(`#file-${op_name}`, `${placeholder_verb} ..`, true);
         $.fn.zato.ide.set_current_fs_location(data.full_path);
         $.fn.zato.ide.on_file_selected(
             data.full_path,

@@ -5,14 +5,20 @@
     display: inline;
     color: inherit;
     animation: blink 0.8s steps(1) infinite;
-    -webkit-animation: blink 0.8s steps(1) infinite;
 }
 
 @keyframes blink {
     70% {color: #ccc;}
 }
-@-webkit-keyframes blink {
-    70% {color: #ccc;}
+
+@keyframes rainbow {
+    0%, 100% {
+        background-position: 0 0;
+    }
+
+    50% {
+        background-position: 100% 0;
+    }
 }
 
 /* ***************************** */
@@ -23,7 +29,7 @@
 }
 
 .invoker-draw-attention {
-    animation: invoker-draw-attention 0.6s 1 linear;
+    animation: invoker-draw-attention 0.6s  linear;
 }
 
 @keyframes invoker-draw-attention {
@@ -39,4 +45,10 @@
 input {
     xtext-decoration:underline;
     xcolor: #999 !important;
+}
+
+.tippy-box[role="tooltip-draw-attention"] {
+    background: linear-gradient(to right, #6666ff, #0099ff , #00ff00, #ff3399, #6666ff);
+    animation: rainbow 6s ease-in-out infinite;
+    background-size: 400% 100%;
 }
