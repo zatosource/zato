@@ -343,7 +343,12 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _delete_service_data(self, name:'str') -> 'None':
+    def _delete_service_from_odb(self, service_id:'int') -> 'None':
+        _ = self.server.invoke('zato.service.delete', service_id=service_id)
+
+# ################################################################################################################################
+
+    def _delete_service_data(self, name:'str', delete_from_odb:'bool'=False) -> 'None':
         try:
             impl_name = self.name_to_impl_name[name]     # type: str
             service_id = self.impl_name_to_id[impl_name] # type: int
@@ -351,6 +356,8 @@ class ServiceStore:
             del self.impl_name_to_id[impl_name]
             del self.name_to_impl_name[name]
             del self.services[impl_name]
+            if delete_from_odb:
+                self._delete_service_from_odb(service_id)
         except KeyError:
             # This is as expected and may happen if a service
             # was already deleted, e.g. it was in the same module
@@ -407,7 +414,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def delete_objects_by_file_path(self, file_path:'str') -> 'None':
+    def delete_objects_by_file_path(self, file_path:'str', *, delete_from_odb:'bool') -> 'None':
 
         with self.update_lock:
 
@@ -419,7 +426,7 @@ class ServiceStore:
 
             # Delete all the services
             for item in services_to_delete:
-                self._delete_service_data(item)
+                self._delete_service_data(item, delete_from_odb)
 
             # Delete all the models
             for item in models_to_delete:
