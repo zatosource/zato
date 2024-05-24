@@ -689,11 +689,14 @@ class DeleteFile(_GetBase):
         self._validate_fs_location(work_dir_fs_location)
 
         # .. if we're here, it means that we can actually delete both locations ..
-        os.remove(fs_location)
+        # os.remove(fs_location)
         self.logger.info('Deleted path %s', fs_location)
 
-        os.remove(work_dir_fs_location)
+        # os.remove(work_dir_fs_location)
         self.logger.info('Deleted path %s', work_dir_fs_location)
+
+        # .. now, delete it from our in-RAM service store ..
+        self.server.service_store.delete_objects_by_file_path(work_dir_fs_location)
 
         # .. find the location with the demo service ..
         demo_py_fs = get_demo_py_fs_locations(self.server.base_dir)
