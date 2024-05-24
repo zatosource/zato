@@ -489,22 +489,31 @@ $.fn.zato.ide.after_file_deleted = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
+$.fn.zato.ide.on_file_simple_impl = function(
+    current_root_directory,
+    file_name,
+    current_file_name_field,
+    new_file_name,
+    url_path,
+    form_id,
+    options,
+    display_timeout,
+    op_name,
+    placeholder_verb,
+    after_on_file_op_success_func_impl
+) {
 
     // Local variables
     let after_on_file_op_success_func = function() {
-        $.fn.zato.ide.populate_current_file_service_list_impl($.fn.zato.ide.after_file_created, "1");
+        $.fn.zato.ide.populate_current_file_service_list_impl(after_on_file_op_success_func_impl, "1");
     }
 
-    let url_path = "/zato/service/ide/create-file/";
-    let form_id = "file-new-form";
-    let options = {};
-    let display_timeout = 1;
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("new", "Deploying", after_on_file_op_success_func);
-    let _on_error_func = $.fn.zato.ide.on_file_op_error_func("new");
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func);
+    let _on_error_func = $.fn.zato.ide.on_file_op_error_func(op_name);
 
     $.fn.zato.ide.build_singleton_form(form_id, {
-        "file_name": file_name,
+        [current_file_name_field]: file_name,
+        "new_file_name": new_file_name,
         "root_directory": current_root_directory,
     });
 
@@ -517,6 +526,33 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
         display_timeout,
         "json"
     );
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
+
+    let url_path = "/zato/service/ide/create-file/";
+    let form_id = "file-new-form";
+    let options = {};
+    let display_timeout = 1;
+    let op_name = "new";
+    let placeholder_verb = "Deploying"
+    let after_on_file_op_success_func_impl = $.fn.zato.ide.after_file_created;
+
+    $.fn.zato.ide.on_file_simple_impl(
+        current_root_directory,
+        file_name,
+        "file_name",
+        null,
+        url_path,
+        form_id,
+        options,
+        display_timeout,
+        op_name,
+        placeholder_verb,
+        after_on_file_op_success_func_impl,
+    )
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
