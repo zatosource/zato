@@ -866,7 +866,10 @@ $.fn.zato.ide.postprocess_file_buttons = function() {
         }
 
         // .. certain buttons are disabled if we're showing services ..
-        if(current_object_type == "service") {
+        //
+        let is_service = current_object_type == "service";
+        let is_demo = current_fs_location.endsWith("demo.py");
+        if(is_service || is_demo) {
             $.fn.zato.ide.disable_file_rename_button();
             $.fn.zato.ide.disable_file_delete_button();
         }
