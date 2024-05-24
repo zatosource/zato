@@ -613,7 +613,7 @@ class CreateFile(_GetBase):
     def handle(self):
 
         # Local variables
-        output_data = ''
+        input_data = self.request.input.data or ''
         file_name = self.request.input.file_name
         root_directory = self.request.input.root_directory
 
@@ -633,27 +633,31 @@ class CreateFile(_GetBase):
         # .. make sure it's an allowed one ..
         self._validate_path(full_path)
 
+        # .. make sure all the directories leading to the file exist ..
+        Path(full_path).parent.mkdir(parents=True, exist_ok=True)
+
+        # .. prepare the data to write to and return ..
+        if input_data:
+            data_for_new_file = input_data
+
+        else:
+            if os.path.exists(full_path):
+                with open_r(full_path) as f:
+                    data_for_new_file = f.read()
+            else:
+                data_for_new_file = Default_Service_File_Data.format(**{
+                    'full_path': full_path,
+                })
+
         # .. ensure it has a prefix that we recognize ..
         for item in all_root_dirs:
 
             # .. we have a match ..
             if full_path.startswith(item):
 
-                # .. if the file already exists ..
-                if os.path.exists(full_path):
-
-                    # .. open it ..
-                    with open_r(full_path) as f:
-
-                        # .. and read its contents for later use ..
-                        output_data = f.read()
-
                 # .. otherwise, simply create it ..
                 with open_w(full_path) as f:
-                    output_data = Default_Service_File_Data.format(**{
-                        'full_path': full_path,
-                    })
-                    _ = f.write(output_data)
+                    _ = f.write(data_for_new_file)
 
                 # .. no need to continue further ..
                 break
@@ -663,7 +667,7 @@ class CreateFile(_GetBase):
             msg = f'Invalid path `{full_path}`, must start with one of: `{sorted(all_root_dirs)}`'
             raise ValueError(msg)
 
-        self.response.payload.data = output_data
+        self.response.payload.data = data_for_new_file
         self.response.payload.full_path = full_path
         self.response.payload.full_path_url_safe = make_fs_location_url_safe(full_path)
 
