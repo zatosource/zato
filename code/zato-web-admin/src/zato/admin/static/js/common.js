@@ -1778,7 +1778,13 @@ $.fn.zato.slugify = function(data) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.show_bottom_tooltip = function(elem_id_selector, text) {
+$.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_attention) {
+    if(should_draw_attention) {
+        var role = "tooltip-draw-attention";
+    }
+    else {
+        var role = "tooltip";
+    }
     let _tooltip = tippy(elem_id_selector, {
         content: text,
         allowHTML: false,
@@ -1787,6 +1793,8 @@ $.fn.zato.show_bottom_tooltip = function(elem_id_selector, text) {
         placement: "bottom",
         arrow: true,
         interactive: false,
+        inertia: true,
+        role: role,
     });
     // It's possible it won't exist, e.g. someone closed it manually.
     if(_tooltip) {
