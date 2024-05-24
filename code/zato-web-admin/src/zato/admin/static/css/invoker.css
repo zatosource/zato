@@ -47,8 +47,9 @@ input {
     xcolor: #999 !important;
 }
 
-.tippy-box[role="tooltip-draw-attention"] {
-    background: linear-gradient(to right, #6666ff, #0099ff , #00ff00, #ff3399, #6666ff);
+.tippy-box[role="tooltip-draw-attention"]
+{
+    background: linear-gradient(to right, #33f, #003366 , #009900, #cc0066, #660);
     animation: rainbow 6s ease-in-out infinite;
     background-size: 400% 100%;
 }
