@@ -344,7 +344,9 @@ class ServiceStore:
 # ################################################################################################################################
 
     def _delete_service_from_odb(self, service_id:'int') -> 'None':
-        _ = self.server.invoke('zato.service.delete', service_id=service_id)
+        _ = self.server.invoke('zato.service.delete', {
+            'id':service_id
+        })
 
 # ################################################################################################################################
 
