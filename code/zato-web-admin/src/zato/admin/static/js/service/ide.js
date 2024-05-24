@@ -366,7 +366,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     let header_left_link_file_content = `
         <input type="button" id="file-new" value="New" onclick="$.fn.zato.ide.on_file_new()";/>
         <input type="button" id="file-reload" value="Reload" ${button_attrs} onclick="$.fn.zato.ide.on_file_reload();"/>
-        <input type="button" id="file-rename" value="Rename" ${button_attrs} />
+        <input type="button" id="file-rename" value="Rename" ${button_attrs} onclick="$.fn.zato.ide.on_file_rename();"/>
         <input type="button" id="file-delete" value="Delete" ${button_attrs} onclick="$.fn.zato.ide.on_file_delete();"/>
     `;
 
@@ -549,6 +549,40 @@ $.fn.zato.ide.on_file_new = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_file_rename = function() {
+
+    // Local variables
+    let prompt_text = "Enter new file name.";
+    let fs_location = $.fn.zato.ide.get_current_fs_location();
+    let root_directory_count = $.fn.zato.ide.get_root_directory_count();
+    let current_root_directory = $.fn.zato.ide.get_current_root_directory();
+
+    let current_file_name = fs_location.replace(current_root_directory, "");
+    if(current_file_name.charAt(0) === '/' || current_file_name.charAt(0) === '\\') {
+        current_file_name = current_file_name.substring(1);
+    }
+
+    // We need an integer here ..
+    root_directory_count = Number(root_directory_count);
+
+    // .. show additional information if we have more than one root directory ..
+    if(root_directory_count > 1) {
+        prompt_text += "\n\n";
+        prompt_text += `Root directory: ${current_root_directory}\n\n`;
+    }
+
+    // .. do prompt the user ..
+    let new_file_name = prompt(prompt_text, current_file_name);
+
+    // .. proceed if we've received anything ..
+    if(new_file_name) {
+        console.log(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
+        //$.fn.zato.ide.on_file_new_impl(current_root_directory, new_file_name);
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
 
     // Local variables
@@ -619,7 +653,7 @@ $.fn.zato.ide.on_file_info = function() {
 
     // Local variables
     let form_id = "file-info-form";
-    let fs_location = $.fn.zato.ide.get_current_fs_location()
+    let fs_location = $.fn.zato.ide.get_current_fs_location();
 
     console.log(`Getting file info for: "${fs_location}"`);
 
