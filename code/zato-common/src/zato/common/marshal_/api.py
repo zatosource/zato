@@ -117,6 +117,9 @@ class Model(BaseModel):
     def __contains__(self, name):
         return hasattr(self, name)
 
+    def get(self, name):
+        return self.__getitem__(name)
+
     @classmethod
     def zato_get_fields(class_:'any_') -> 'anydict':
         fields = getattr(class_, _FIELDS) # type: anydict
