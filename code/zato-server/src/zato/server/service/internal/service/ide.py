@@ -103,20 +103,24 @@ class _IDEBase(Service):
 
     def before_handle(self):
 
+        # In the Create service, we're looking up the 'root_directory' key,
+        # in other services, it's called 'fs_location'.
+        orig_path = self.request.input.get('root_directory') or self.request.input.get('fs_location')
+
         # If we have any path on input ..
-        if orig_fs_location := self.request.input.fs_location:
+        if orig_path:
 
             # .. collect all the root, top-level directories we can deploy services to ..
             all_root_dirs = self._get_all_root_directories()
 
             # .. get its canonical version ..
-            fs_location = self._normalize_fs_location(orig_fs_location)
+            path = self._normalize_fs_location(orig_path)
 
             # .. go through all the deployment roots ..
             for item in all_root_dirs:
 
                 # .. check if the input path is one that belongs to that root ..
-                if fs_location.startswith(item):
+                if path.startswith(item):
 
                     # .. we have our match, we can stop searching ..
                     break
@@ -124,7 +128,7 @@ class _IDEBase(Service):
             # .. if we are here, it means we didn't find a matching root directory ..
             # .. so we need to raise an exception to indicate that ..
             else:
-                raise ValueError(f'Invalid path `{orig_fs_location}`')
+                raise ValueError(f'Invalid path `{orig_path}`')
 
 # ################################################################################################################################
 
