@@ -607,7 +607,7 @@ class GetFileList(_GetBase):
 class CreateFile(_GetBase):
 
     # Our I/O
-    input = 'file_name', 'root_directory', '-data'
+    input = 'root_directory', 'file_name', '-data'
     output = 'data', 'full_path', 'full_path_url_safe'
 
     def handle(self):
@@ -638,13 +638,16 @@ class CreateFile(_GetBase):
 
         # .. prepare the data to write to and return ..
         if input_data:
+            needs_new_file = True
             data_for_new_file = input_data
 
         else:
             if os.path.exists(full_path):
+                needs_new_file = False
                 with open_r(full_path) as f:
                     data_for_new_file = f.read()
             else:
+                needs_new_file = True
                 data_for_new_file = Default_Service_File_Data.format(**{
                     'full_path': full_path,
                 })
@@ -655,9 +658,13 @@ class CreateFile(_GetBase):
             # .. we have a match ..
             if full_path.startswith(item):
 
-                # .. otherwise, simply create it ..
-                with open_w(full_path) as f:
-                    _ = f.write(data_for_new_file)
+                # .. otherwise, simply create it unless it already existed ..
+                if needs_new_file:
+                    with open_w(full_path) as f:
+                        _ = f.write(data_for_new_file)
+                    self.logger.info('Created path %s', full_path)
+                else:
+                    self.logger.info('Path already exists %s', full_path)
 
                 # .. no need to continue further ..
                 break
@@ -756,11 +763,17 @@ class RenameFile(_GetBase):
 
         # .. now, we can delete it ..
         _ = self.invoke(DeleteFile, fs_location=current_file_path)
-        data
+
+        # .. and create a new one ..
+        response = self.invoke(CreateFile, **{
+            'root_directory': input.root_directory,
+            'file_name': input.new_file_name,
+            'data': data,
+        })
 
         # .. finally, build a response for our caller.
-        self.response.payload.full_path = new_file_path
-        self.response.payload.full_path_url_safe = make_fs_location_url_safe(new_file_path)
+        self.response.payload.full_path = response['full_path']
+        self.response.payload.full_path_url_safe = response['full_path_url_safe']
 
 # ################################################################################################################################
 # ################################################################################################################################
