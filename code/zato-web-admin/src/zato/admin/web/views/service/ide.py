@@ -104,6 +104,22 @@ def create_file(req:'HttpRequest') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
+def rename_file(req:'HttpRequest') -> 'HttpResponse':
+
+    root_directory = req.POST['root_directory']
+    current_file_name = req.POST['current_file_name']
+    new_file_name = req.POST['new_file_name']
+
+    return invoke_action_handler(req, 'zato.service.ide.rename-file', extra={
+        'root_directory': root_directory,
+        'current_file_name': current_file_name,
+        'new_file_name': new_file_name,
+    })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
 def delete_file(req:'HttpRequest') -> 'HttpResponse':
     fs_location = req.POST['fs_location']
     return invoke_action_handler(req, 'zato.service.ide.delete-file', extra={

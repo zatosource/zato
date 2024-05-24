@@ -183,6 +183,8 @@ urlpatterns += [
         login_required(service_ide.create_file), name='service-ide-create-file'),
     url(r'^zato/service/ide/delete-file/$',
         login_required(service_ide.delete_file), name='service-ide-delete-file'),
+    url(r'^zato/service/ide/rename-file/$',
+        login_required(service_ide.rename_file), name='service-ide-rename-file'),
     url(r'^zato/service/ide/get-file/(?P<fs_location>.*)/$',
         login_required(service_ide.get_file), name='service-ide-get-file'),
     url(r'^zato/service/ide/get-file-list/$',

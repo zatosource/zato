@@ -101,11 +101,7 @@ class _IDEBase(Service):
 
 # ################################################################################################################################
 
-    def before_handle(self):
-
-        # In the Create service, we're looking up the 'root_directory' key,
-        # in other services, it's called 'fs_location'.
-        orig_path = self.request.input.get('root_directory') or self.request.input.get('fs_location')
+    def _validate_path(self, orig_path:'str') -> 'None':
 
         # If we have any path on input ..
         if orig_path:
@@ -129,6 +125,20 @@ class _IDEBase(Service):
             # .. so we need to raise an exception to indicate that ..
             else:
                 raise ValueError(f'Invalid path `{orig_path}`')
+
+# ################################################################################################################################
+
+    def before_handle(self):
+
+        # In the Create service, we're looking up the 'root_directory' key,
+        # in other services, it's called 'fs_location'.
+        orig_path = self.request.input.get('root_directory') or self.request.input.get('fs_location')
+
+        # If we have any path on input ..
+        if orig_path:
+
+            # .. validate if it's a correct one.
+            self._validate_path(orig_path)
 
 # ################################################################################################################################
 
@@ -597,13 +607,13 @@ class GetFileList(_GetBase):
 class CreateFile(_GetBase):
 
     # Our I/O
-    input = 'file_name', 'root_directory'
+    input = 'file_name', 'root_directory', '-data'
     output = 'data', 'full_path', 'full_path_url_safe'
 
     def handle(self):
 
         # Local variables
-        data = ''
+        output_data = ''
         file_name = self.request.input.file_name
         root_directory = self.request.input.root_directory
 
@@ -613,13 +623,15 @@ class CreateFile(_GetBase):
         # Combine the two to get a full path ..
         full_path = os.path.join(root_directory, file_name)
 
-        # .. make sure it's an absolute one ..
-        full_path = os.path.expanduser(full_path)
-        full_path = os.path.abspath(full_path)
+        # .. normalize it ..
+        full_path = self._normalize_fs_location(full_path)
 
         # .. make sure this is a Python file ..
         if not full_path.endswith('.py'):
             full_path += '.py'
+
+        # .. make sure it's an allowed one ..
+        self._validate_path(full_path)
 
         # .. ensure it has a prefix that we recognize ..
         for item in all_root_dirs:
@@ -634,14 +646,14 @@ class CreateFile(_GetBase):
                     with open_r(full_path) as f:
 
                         # .. and read its contents for later use ..
-                        data = f.read()
+                        output_data = f.read()
 
                 # .. otherwise, simply create it ..
                 with open_w(full_path) as f:
-                    data = Default_Service_File_Data.format(**{
+                    output_data = Default_Service_File_Data.format(**{
                         'full_path': full_path,
                     })
-                    _ = f.write(data)
+                    _ = f.write(output_data)
 
                 # .. no need to continue further ..
                 break
@@ -651,7 +663,7 @@ class CreateFile(_GetBase):
             msg = f'Invalid path `{full_path}`, must start with one of: `{sorted(all_root_dirs)}`'
             raise ValueError(msg)
 
-        self.response.payload.data = data
+        self.response.payload.data = output_data
         self.response.payload.full_path = full_path
         self.response.payload.full_path_url_safe = make_fs_location_url_safe(full_path)
 
@@ -708,6 +720,43 @@ class DeleteFile(_GetBase):
         # .. finally, tell the caller what our default file with services is ..
         self.response.payload.full_path = demo_py_fs.pickup_incoming_full_path
         self.response.payload.full_path_url_safe = make_fs_location_url_safe(demo_py_fs.pickup_incoming_full_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RenameFile(_GetBase):
+
+    # Our I/O
+    input = 'root_directory', 'current_file_name', 'new_file_name'
+    output = 'full_path', 'full_path_url_safe'
+
+    def handle(self) -> 'None':
+
+        # Local variables
+        input = self.request.input
+
+        # We always work with combined and absolute paths
+        current_file_path = os.path.join(input.root_directory, input.current_file_name)
+        current_file_path = self._normalize_fs_location(current_file_path)
+
+        new_file_path = os.path.join(input.root_directory, input.new_file_name)
+        new_file_path = self._normalize_fs_location(current_file_path)
+
+        # Make sure that both paths are allowed
+        self._validate_path(current_file_path)
+        self._validate_path(new_file_path)
+
+        # First, get the contents of the old file ..
+        with open_r(current_file_path) as f:
+            data = f.read()
+
+        # .. now, we can delete it ..
+        _ = self.invoke(DeleteFile, fs_location=current_file_path)
+        data
+
+        # .. finally, build a response for our caller.
+        self.response.payload.full_path = new_file_path
+        self.response.payload.full_path_url_safe = make_fs_location_url_safe(new_file_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
