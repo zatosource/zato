@@ -488,6 +488,10 @@ $.fn.zato.ide.after_file_renamed = function() {
 
     // Do show the tooltip now
     $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+
+    // We have already switched to demo.py so we need to disable buttons that would rename or delete it
+    $.fn.zato.ide.disable_file_rename_button();
+    $.fn.zato.ide.disable_file_delete_button();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -500,6 +504,10 @@ $.fn.zato.ide.after_file_deleted = function() {
 
     // Do show the tooltip now
     $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+
+    // We have already switched to demo.py so we need to disable buttons that would rename or delete it
+    $.fn.zato.ide.disable_file_rename_button();
+    $.fn.zato.ide.disable_file_delete_button();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
