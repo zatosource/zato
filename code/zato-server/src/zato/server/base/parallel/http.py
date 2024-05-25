@@ -75,7 +75,13 @@ class HTTPHandler:
         wsgi_environ['zato.local_tz'] = _local_zone
         wsgi_environ['zato.request_timestamp_utc'] = request_ts_utc
         wsgi_environ['zato.request_timestamp'] = request_ts_local = request_ts_utc.replace(tzinfo=_UTC).astimezone(_local_zone)
-        wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
+
+        # .. this is always needed ..
+        wsgi_environ['zato.http.response.headers'] = {}
+
+        # .. but returning X-Zato-CID is optional ..
+        if self.needs_x_zato_cid:
+            wsgi_environ['zato.http.response.headers']['X-Zato-CID'] = cid
 
         # .. try to extract a remote address ..
         remote_addr = _no_remote_address

@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Django
 from django.urls import re_path as url
 from django.contrib.auth.decorators import login_required
-from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
+from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, audit_log, cluster, http_soap, load_balancer, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
@@ -70,6 +70,7 @@ from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
+from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.sms import twilio
 from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, rbac
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
@@ -166,32 +167,32 @@ urlpatterns += [
         login_required(service.Index()), name=service.Index.url_name),
     url(r'^zato/service/details$',
         login_required(service.Index()), name=service.Index.url_name),
-    url(r'^zato/service/last-stats/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(service.last_stats), name='service-last-stats'),
-    url(r'^zato/service/cluster/(?P<cluster_id>.*)/upload/$',
-        login_required(service.package_upload), name='service-package-upload'),
-    url(r'^zato/service/create/$',
-        login_required(service.create), name='service-create'),
+    url(r'^zato/service/upload/$',
+        login_required(service.upload), name='service-package-upload'),
     url(r'^zato/service/edit/$',
         login_required(service.Edit()), name=service.Edit.url_name),
-    url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(service.Delete()), name=service.Delete.url_name),
     url(r'^zato/service/overview/(?P<service_name>.*)/$',
         login_required(service.overview), name='service-overview'),
-    url(r'^zato/service/invoker/(?P<service_name>.*)/$',
-        login_required(service.invoker), name='service-invoker'),
-    url(r'^zato/service/source-info/(?P<service_name>.*)/$',
-        login_required(service.source_info), name='service-source-info'),
-    url(r'^zato/service/request-response/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/configure/$',
-        login_required(service.request_response_configure), name='service-request-response-configure'),
-    url(r'^zato/service/request-response/(?P<service_name>.*)/$',
-        login_required(service.request_response), name='service-request-response'),
-    url(r'^zato/service/slow-response/details/(?P<cid>.*)/(?P<service_name>.*)/$',
-        login_required(service.slow_response_details), name='service-slow-response-details'),
-    url(r'^zato/service/slow-response/(?P<service_name>.*)/$',
-        login_required(service.slow_response), name='service-slow-response'),
+    url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(service.invoke), name='service-invoke'),
+    url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
+        login_required(service_ide.get_service), name='service-ide-get-service'),
+    url(r'^zato/service/ide/create-file/$',
+        login_required(service_ide.create_file), name='service-ide-create-file'),
+    url(r'^zato/service/ide/delete-file/$',
+        login_required(service_ide.delete_file), name='service-ide-delete-file'),
+    url(r'^zato/service/ide/rename-file/$',
+        login_required(service_ide.rename_file), name='service-ide-rename-file'),
+    url(r'^zato/service/ide/get-file/(?P<fs_location>.*)/$',
+        login_required(service_ide.get_file), name='service-ide-get-file'),
+    url(r'^zato/service/ide/get-file-list/$',
+        login_required(service_ide.get_file_list), name='service-ide-get-file-list'),
+    url(r'^zato/service/ide/get-service-list/$',
+        login_required(service_ide.get_service_list), name='service-ide-get-service-list'),
+    url(r'^zato/service/ide/(?P<object_type>.*)/(?P<name>.*)/$',
+        login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
     ]
 
 # ################################################################################################################################
@@ -216,7 +217,6 @@ urlpatterns += [
     url(r'^zato/audit-log/event/delete/(?P<object_name>.*)/(?P<object_id>.*)/(?P<event_id>.*)/$',
         login_required(audit_log.delete_event), name='audit-event-delete'),
 ]
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1709,7 +1709,7 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
-    url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
+    url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
 # ################################################################################################################################
