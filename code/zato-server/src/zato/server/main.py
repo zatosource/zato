@@ -395,7 +395,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
             server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
             server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
 
-    zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
+    zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Apache')
 
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
