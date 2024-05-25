@@ -106,7 +106,7 @@ class IPCClient:
         }
 
         # .. append the business data too but skip selected ones ..
-        for key, value in request.items():
+        for key, value in (request or {}).items():
 
             # .. skip selected keys ..
             for name in ['password', 'secret', 'token']:
