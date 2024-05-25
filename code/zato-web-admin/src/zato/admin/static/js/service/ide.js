@@ -654,8 +654,10 @@ $.fn.zato.ide.on_file_rename = function() {
 
     // .. proceed if we've received anything ..
     if(new_file_name) {
-        console.log(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
-        $.fn.zato.ide.on_file_rename_impl(current_root_directory, current_file_name, new_file_name);
+        if(new_file_name != current_file_name) {
+            console.log(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
+            $.fn.zato.ide.on_file_rename_impl(current_root_directory, current_file_name, new_file_name);
+        }
     }
 }
 
