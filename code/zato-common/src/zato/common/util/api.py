@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import ast
 import copy
 import errno
 import gc
@@ -2062,6 +2063,15 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
 
 # ################################################################################################################################
 
+def needs_suffix(item:'any_') -> 'bool':
+    if isinstance(item, int):
+        len_item = item
+    else:
+        len_item = len(item)
+    return len_item == 0 or len_item > 1
+
+# ################################################################################################################################
+
 def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='', random_suffix:'str'='') -> 'str':
 
     if prefix:
@@ -2142,5 +2152,27 @@ def make_list_from_string_list(value:'str', separator:'str') -> 'strlist':
     value = [elem.strip() for elem in value if elem] # type: ignore
 
     return value
+
+# ################################################################################################################################
+
+def validate_python_syntax(data:'str') -> 'None':
+    _ = ast.parse(data)
+
+# ################################################################################################################################
+
+class _DemoPyFsLocations:
+    pickup_incoming_full_path:'str'
+    work_dir_full_path:'str'
+
+def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
+
+    # Local variables
+    file_name = 'demo.py'
+
+    out = _DemoPyFsLocations()
+    out.pickup_incoming_full_path = os.path.join(base_dir, 'pickup', 'incoming', 'services', file_name)
+    out.work_dir_full_path = os.path.join(base_dir, 'work', 'hot-deploy', 'current', 'demo.py')
+
+    return out
 
 # ################################################################################################################################

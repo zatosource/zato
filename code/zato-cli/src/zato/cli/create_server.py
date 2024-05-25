@@ -13,10 +13,11 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, NotGiven, SCHEDULER, SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, default_internal_modules, Default_Service_File_Data, NotGiven, SCHEDULER, \
+     SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
-from zato.common.util import as_bool
+from zato.common.util.api import as_bool, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
 from zato.common.events.common import Default as EventsDefault
@@ -154,7 +155,8 @@ queue_build_cap=30000000 # All queue-based connections need to initialize in tha
 http_proxy=
 locale=
 ensure_sql_connections_exist=True
-http_server_header=Zato
+http_server_header=Apache
+needs_x_zato_cid=False
 zeromq_connect_sleep=0.1
 aws_host=
 fifo_response_buffer_size=0.2 # In MB
@@ -793,6 +795,16 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _add_demo_service(self, fs_location:'str', full_path:'str') -> 'None':
+
+        with open_w(fs_location) as f:
+            data = Default_Service_File_Data.format(**{
+                'full_path': full_path,
+            })
+            _ = f.write(data)
+
+# ################################################################################################################################
+
     def execute(
         self,
         args:'any_',
@@ -1026,6 +1038,13 @@ class Create(ZatoCommand):
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+
+            # Prepare paths for the demo service ..
+            demo_py_fs = get_demo_py_fs_locations(self.target_dir)
+
+            # .. and create it now.
+            self._add_demo_service(demo_py_fs.pickup_incoming_full_path, demo_py_fs.pickup_incoming_full_path)
+            self._add_demo_service(demo_py_fs.work_dir_full_path, demo_py_fs.pickup_incoming_full_path)
 
             # Sphinx APISpec files
             for file_path, contents in apispec_files.items(): # type: ignore

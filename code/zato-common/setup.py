@@ -27,7 +27,7 @@ setup(
       author = 'Zato Source s.r.o.',
       author_email = 'info@zato.io',
       url = 'https://zato.io',
-      license = 'GNU Lesser General Public License v3 (LGPLv3)',
+      license = 'AGPLv3',
       platforms = 'OS Independent',
       description = 'Constants and utils common across the whole of Zato ESB and app server (https://zato.io)',
 
@@ -49,7 +49,7 @@ setup(
           'Intended Audience :: Healthcare Industry',
           'Intended Audience :: Information Technology',
           'Intended Audience :: Telecommunications Industry',
-          'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
+          'License :: OSI Approved :: AGPLv3',
           'Natural Language :: English',
           'Operating System :: OS Independent',
           'Programming Language :: C',

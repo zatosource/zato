@@ -1914,9 +1914,9 @@ ZATO_INFO_FILE = '.zato-info'
 # ################################################################################################################################
 
 class SourceCodeInfo:
-    """ A bunch of attributes dealing the service's source code.
+    """ Attributes describing the service's source code file.
     """
-    __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name'
+    __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name', 'line_number'
 
     def __init__(self):
         self.source = b''       # type: bytes
@@ -1926,6 +1926,7 @@ class SourceCodeInfo:
         self.hash = None        # type: str
         self.hash_method = None # type: str
         self.server_name = None # type: str
+        self.line_number = 0    # type: int
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2144,6 +2145,35 @@ class URLInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
+Default_Service_File_Data = """
+# -*- coding: utf-8 -*-
+
+# File path: {full_path}
+
+# Zato
+from zato.server.service import Service
+
+class MyService(Service):
+
+    # I/O definition
+    input = '-name'
+    output = 'salutation'
+
+    def handle(self):
+
+        # Local variables
+        name = self.request.input.name or 'partner'
+
+        # Our response to produce
+        message = f'Howdy {{name}}!'
+
+        # Reply to our caller
+        self.response.payload.salutation = message
+""".lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,
@@ -2245,6 +2275,7 @@ default_internal_modules = {
     'zato.server.service.internal.security.xpath': True,
     'zato.server.service.internal.server': True,
     'zato.server.service.internal.service': True,
+    'zato.server.service.internal.service.ide': True,
     'zato.server.service.internal.sms': True,
     'zato.server.service.internal.sms.twilio': True,
     'zato.server.service.internal.sso': True,

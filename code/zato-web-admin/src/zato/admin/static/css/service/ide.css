@@ -1,0 +1,233 @@
+/********************
+        FONTS
+*********************/
+
+@font-face {
+    font-family: Zato_IDE_Font;
+    src: url("/static/fonts/UbuntuMono-R.ttf");
+    font-weight: normal;
+    font-style: normal;
+}
+
+#main-area-container {
+    display: grid;
+    grid-template-rows: 87vh;
+    grid-template-columns: 1.0fr 1fr 0.06fr;
+    align-items: stretch;
+    height: 87vh;
+}
+
+#action-area-container {
+    display: grid;
+    grid-template-rows: 5vh 84vh;
+    align-items: stretch;
+}
+
+#action-area-header {
+    padding-top: 12px;
+    padding-left: 4px;
+    background-color: #e9e9e9;
+    border-bottom: 1px solid #ccc;
+}
+
+#action-area-header img {
+    width: 14px;
+    vertical-align: middle;
+    padding-right: 7px;
+}
+
+#action-area-header a.img-button {
+    border-right: 1px solid #d3d3d3;
+}
+
+#action-area-header a.img-button:hover {
+    background-color: #e9e9e9;
+}
+
+img.button {
+    opacity: 30%;
+}
+
+img.button.less-visible {
+    opacity: 25%;
+}
+
+img.button:hover {
+    background-color: #ccc;
+}
+
+img.button:hover {
+    opacity: 100%;
+}
+
+img.button.less-visible:hover {
+    opacity: 70%;
+}
+
+a.img-button {
+    padding: 0px;
+}
+
+span.header-text {
+    font-family: Zato_IDE_Font;
+}
+
+.side-buttons a.img-button:hover {
+    background-color: #dfdfdf;
+}
+
+.side-buttons img {
+    width: 30px;
+    padding: 15px;
+}
+
+#editor {
+    z-index: 0;
+    height: 87vh;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+#file-system-listing-div {
+    overflow-y:scroll;
+    height: 75vh;
+}
+
+#action-area {
+    height: 82vh;
+    background-color: #fff;
+    position: relative;
+}
+
+#service-select.default {
+    max-width: 70%;
+}
+
+#service-select.expanded {
+    max-width: 50rem;
+}
+
+#side-menu {
+    background-color:#dfdfdf;
+    border-left: 1px solid #bbb;
+}
+
+.file-system-listing img.fs-icon {
+    width: 16px;
+}
+
+#invoke-service-temporarily-disabled {
+    margin-right: 3px;
+}
+
+#header-left-link-deploy.different,
+#invoke-service.different
+{
+    outline: 3px double #333;
+    color: #333;
+}
+
+#header-left-link-deploy.not-different,
+#invoke-service.not-different
+{
+    outline: none;
+    color: inherit;
+}
+
+.file-system-listing {
+    width: 100%;
+}
+
+.file-system-listing tr.header {
+    background-color: #eee;
+}
+
+.file-system-listing td.header {
+    vertical-align: middle;
+    padding: 9px;
+}
+
+.file-system-listing td.header.status {
+    padding-bottom: 0px;
+}
+
+#header-status {
+    font-size: 1.1em;
+}
+
+#header-links-wrapper {
+    display: flex;
+}
+
+#header-links-right {
+    flex: 1;
+    text-align:right;
+}
+
+.header-sublink-first {
+    margin-left:6px;
+}
+
+.file-system-listing td {
+    font-size: 0.73rem;
+    padding: 3px;
+    padding-left: 9px;
+    padding-top: 4px;
+    padding-bottom: 0px;
+    vertical-align: middle;
+}
+
+.file-system-listing td.item-header {
+    width: 17px;
+}
+
+.file-system-listing td.item-name {
+    padding-top: 2px;
+    padding-left: 5px;
+    color: #000;
+}
+
+.file-system-listing td.item-name a {
+    text-decoration: none !important;
+    font-family: Zato_IDE_Font;
+    font-size: 0.92rem;
+    color: #333;
+}
+
+.file-system-listing td.item-name a.current {
+    font-weight: 600;
+    text-decoration: underline !important;
+}
+
+input.data-request {
+    width:100%;
+}
+
+input.data-request::placeholder {
+    color:#666 !important
+}
+
+td.data-input-field-name {
+    font-size: 0.86em;
+}
+
+#data-request {
+    height: 19.1vh;
+}
+
+#data-response {
+    height: 39.1vh;
+    margin-top: 3px;
+}
+
+.dimmed {
+    opacity: 70%;
+}
+
+.align-right {
+    text-align: right;
+}
+
+.no-click {
+    pointer-events: none;
+}
