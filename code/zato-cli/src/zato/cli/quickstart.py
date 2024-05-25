@@ -731,7 +731,7 @@ class Create(ZatoCommand):
         if create_components_other_than_scheduler:
             for name in server_names: # type: ignore
                 check_config.append(check_config_template.format(server_name=server_names[name]))
-                start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
+                start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+5))
                 stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
 
         check_config = '\n'.join(check_config)
@@ -765,7 +765,7 @@ class Create(ZatoCommand):
             check_config_step_number = 3
             start_steps = 6 + servers
             stop_steps = 3 + servers
-            scheduler_step_count = start_steps - 1
+            scheduler_step_count = start_steps - 2
 
             if no_scheduler:
                 start_steps -= 1
