@@ -61,6 +61,9 @@ def get_version():
     # Python 2/3 compatibility
     from zato.common.py23_.past.builtins import execfile
 
+    # Default version if not set below
+    version = '3.2'
+
     try:
 
         # Make sure the underlying git command runs in our git repository ..
@@ -73,8 +76,6 @@ def get_version():
         execfile(_version_py, _locals)
         version = 'Zato {}'.format(_locals['version'])
 
-    except IOError:
-        version = '3.2'
     finally:
         sys_info = get_sys_info()
         version = '{}-py{}.{}.{}-{}'.format(

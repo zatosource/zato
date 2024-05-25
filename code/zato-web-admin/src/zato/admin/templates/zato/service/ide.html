@@ -1,0 +1,184 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}{{ current_object_name_url_safe }} - IDE{% endblock %}
+
+{% block "content" %}
+
+<script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+<script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+<script type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
+<script type="text/javascript" src="/static/store2/store2.js"></script>
+
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+<script type="text/javascript" src="/static/js/common.js"></script>
+<script type="text/javascript" src="/static/js/invoker.js"></script>
+<script type="text/javascript" src="/static/js/service/ide.js"></script>
+
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
+<link rel="stylesheet" media="screen" href="/static/css/service/ide.css" />
+<link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
+
+<div id="main-area-container">
+    <div class="item">
+        <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
+        <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
+        <input type="hidden" id="current_root_directory" value="{{ data.current_root_directory }}"/>
+        <input type="hidden" id="root_directory_count" value="{{ data.root_directory_count }}"/>
+        <div id="editor">{{ data.current_file_source_code }}</div>
+        <form id="editor-form" class="hidden"><textarea id="data-editor" name="data-editor"></textarea></form>
+    </div>
+    <div id="action-area-container">
+        <div id="action-area-header" data-is-expanded="false">
+            <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
+            <select id="object-select" class="default" onchange="$.fn.zato.ide.on_object_select_changed(this);">
+                <optgroup label="Current file" id="optgroup-current-file">
+                    {% for service_item in data.current_file_service_list %}
+                        <option
+                            class="option-current-file"
+                            data-object-holder="1"
+                            data-is-modified="0"
+                            data-is-current-file="1"
+                            data-line-number="{{ service_item.line_number_human }}"
+                            data-fs-location="{{ service_item.fs_location }}"
+                            data-fs-location-url-safe="{{ service_item.fs_location_url_safe }}"
+                            data-current-root-directory="{{ service_item.current_root_directory }}"
+                            data-root-directory-count="{{ service_item.root_directory_count }}"
+                            {% if current_object_name == service_item.name %}selected="selected"{% endif %}
+                            data-service-name="{{ service_item.name }}">{{ service_item.name }}</option>
+                    {% empty %}
+                        <option
+                            class="option-current-file"
+                            data-object-holder="1"
+                            data-is-modified="0"
+                            data-is-current-file="1"
+                            data-line-number="-1"
+                            data-fs-location=""
+                            data-fs-location-url-safe=""
+                            data-current-root-directory="{{ data.current_root_directory }}"
+                            data-root-directory-count="{{ data.root_directory_count }}"
+                            {% if current_object_name == service_item.name %}selected="selected"{% endif %}
+                            data-service-name="">{% if data.current_fs_location %}(No services in current file){% else %}(Select a service or file){% endif %}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="All services" id="optgroup-all-services">
+                {% for service_item in data.service_list %}
+                    <option
+                        class="option-all-objects"
+                        data-object-holder="1"
+                        data-is-modified="0"
+                        data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}"
+                        data-line-number="{{ service_item.line_number_human }}"
+                        data-fs-location="{{ service_item.fs_location }}"
+                        data-fs-location-url-safe="{{ service_item.fs_location_url_safe }}"
+                        data-current-root-directory="{{ service_item.current_root_directory }}"
+                        data-root-directory-count="{{ service_item.root_directory_count }}"
+                        data-service-name="{{ service_item.name }}">{{ service_item.name }}</option>
+                {% endfor %}
+                </optgroup>
+            </select>
+            <input type="button" id="toggle-object-select" value="Toggle" onclick="$.fn.zato.ide.on_toggle_object_select();" />
+            <input type="hidden" id="current-object-type" value="service" />
+        </div>
+        <div id="action-area" class="item item-2">
+            <table class="file-system-listing">
+                <tr class="header">
+                    <td colspan="2" class="header status">
+                        <span id="header-status" class="dimmed"></span>
+                    </td>
+                </tr>
+                <tr class="header">
+                    <td colspan="2" class="header">
+                        <div id="header-links-wrapper">
+                            <div id="header-links-left"></div>
+                            <div id="header-links-right"></div>
+                        </div>
+                        <div>
+
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <div id="file-system-listing-div">
+                <table class="file-system-listing">
+
+                    {% for file_item in data.file_list %}
+                        <tr class="file-listing-tr">
+                            <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                            <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}', '{{ file_item.fs_location_url_safe }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_file_list %}current{% endif %}">{{ file_item.name }}</a></td>
+                        </tr>
+                    {% endfor %}
+
+                    <tr colspan="2" class="invoker-tr">
+                        <td>
+                            <form id="invoke-service-request-form"><textarea id="data-request" name="data-request"
+                                placeholder="Enter parameters as key=value pairs, e.g.:
+key1=value1
+key2=value2"></textarea></form>
+                        </td>
+                    </tr>
+
+                    <tr colspan="2" class="invoker-tr">
+                        <td class="align-right">
+                            <div>
+                                <input
+                                    id="invoke-service"
+                                    type="button"
+                                    {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
+                                    value="Invoke"/>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr colspan="2" class="invoker-tr">
+                        <td>
+                            <br/>
+                            <div id="singleton-form-parent" class="hidden"></div>
+                            <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
+                            <span id="invoking-please-wait" class="hidden">Invoking ..</span>
+                            <span id="deploying-please-wait" class="hidden">Deploying ..</span>
+                            <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
+                            <form id="invoke-service-form" novalidate="" method="post"></form>
+                                <textarea id="data-response"></textarea>
+                            </form>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="side-menu" class="item">
+
+        <ul class="side-buttons">
+            <li>
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('invoker')" class="img-button">
+                    <img src="/static/gfx/editor/play.png" class="button" title="Service invoker" />
+                </a>
+            </li>
+            {% if False %}
+            <li>
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('info')" class="img-button">
+                    <img src="/static/gfx/editor/icons/data-models.png" class="button" title="Data models" />
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('settings')" class="img-button">
+                    <img src="/static/gfx/editor/settings.png" class="button less-visible" title="Settings" />
+                </a>
+            </li>
+        </ul>
+
+    </div>
+  </div>
+
+<script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
+<script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript">
+    $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
+</script>
+
+{% endblock %}

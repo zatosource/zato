@@ -60,7 +60,7 @@
     function create_uploader(){
         var uploader = new qq.FileUploader({
             element: $('#uploader')[0],
-            action: 'cluster/{{ cluster_id }}/upload/',
+            action: 'upload/',
             onComplete: on_upload_complete,
             debug: true,
             template: '<div class="qq-uploader" style="width:150px">' +
@@ -137,7 +137,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "service-invoker" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td><a href="{% url "service-ide" "service" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>

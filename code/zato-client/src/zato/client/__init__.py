@@ -75,6 +75,8 @@ class _APIResponse:
         self.inner = inner
         self.is_ok = self.inner.status_code == _OK
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
+        self.response_time = self.inner.headers.get('x-response-time', '(No response time)')
+        self.headers = self.inner.headers
 
         if self.is_ok:
             self.data = loads(self.inner.text)
@@ -152,6 +154,7 @@ class _Response:
         self.data = [] if self.output_repeated else None
         self.meta = {}
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
+        self.response_time = self.inner.headers.get('x-response-time', '(No response time)')
         self.details = None
         self.init()
 
@@ -446,7 +449,7 @@ class AnyServiceInvoker(_Client):
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
-                skip_response_elem=True, **kwargs):
+                skip_response_elem=True, needs_response_time=True, **kwargs):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -471,6 +474,8 @@ class AnyServiceInvoker(_Client):
             'all_pids': all_pids,
             'timeout': timeout,
             'skip_response_elem': skip_response_elem,
+            'needs_response_time': needs_response_time,
+            'needs_headers': True,
         }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),

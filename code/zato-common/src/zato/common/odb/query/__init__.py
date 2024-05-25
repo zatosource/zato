@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,7 +24,7 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
-     CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
+     CronStyleJob, DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
      MsgNamespace, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
      OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
@@ -884,6 +884,38 @@ def service_id_list(session, cluster_id, name_list=None):
         filter(Cluster.id==Service.cluster_id).\
         filter(Cluster.id==cluster_id).\
         filter(Service.name.in_(name_list))
+
+# ################################################################################################################################
+
+def service_deployment_list(session, service_id=None, include_internal=None):
+    query = session.query(
+        DeployedService.details,
+        Server.name.label('server_name'),
+        Server.id.label('server_id'),
+        Service.id.label('service_id'),
+        Service.name.label('service_name'),
+        ).\
+        filter(DeployedService.service_id==Service.id).\
+        filter(Server.id, DeployedService.server_id==Server.id)
+
+    if service_id:
+        query = query.\
+        filter(DeployedService.service_id==service_id)
+
+    if not include_internal:
+        query = query.\
+            filter(Service.is_internal==False) # type: ignore
+
+        query = query.filter(
+            not_(
+                Service.name.startswith('zato') |
+                Service.name.startswith('pub.zato') |
+                Service.name.startswith('pub.helpers') |
+                Service.name.startswith('helpers')
+            )
+        )
+
+    return query.all()
 
 # ################################################################################################################################
 
