@@ -468,11 +468,14 @@ $.fn.zato.ide.after_file_reloaded = function() {
 $.fn.zato.ide.after_file_created = function() {
 
     // Local variables
-    let elem_id_selector = "#file-new";
-    let text = "OK, ready to invoke";
+    let main_elem_id_selector = "#file-new";
+    let main_text = "OK, created";
+    let invoke_elem_id_selector = "#invoke-service";
+    let invoke_text = "Click here to invoke";
 
-    // Do show the tooltip now
-    $.fn.zato.show_bottom_tooltip(elem_id_selector, text);
+    // Do show the tooltips now
+    $.fn.zato.show_bottom_tooltip(main_elem_id_selector, main_text);
+    $.fn.zato.show_left_tooltip(invoke_elem_id_selector, invoke_text);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
