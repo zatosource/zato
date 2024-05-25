@@ -13,13 +13,12 @@ from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from json import loads
 from traceback import format_exc
-from typing import Optional as optional
 
 # Bunch
 from bunch import bunchify
 
 # lxml
-from lxml.etree import _Element as EtreeElement
+from lxml.etree import _Element as EtreeElement # type: ignore
 from lxml.objectify import ObjectifiedElement
 
 # gevent
@@ -38,7 +37,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.commands import CommandsFacade
@@ -98,7 +97,7 @@ if 0:
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
-        modelnone, strdict, strdictnone, strstrdict, strnone, strlist
+        listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.connector import Connector
@@ -213,9 +212,9 @@ class AsyncCtx:
     cid: str
     data: str
     data_format: str
-    callback: optional[list] = None
-    zato_ctx: object
-    environ: dict
+    zato_ctx: 'any_'
+    environ: 'anydict'
+    callback: 'listnone' = None
 
 # ################################################################################################################################
 
@@ -318,7 +317,7 @@ class _WSXChannelContainer:
         self._lock = RLock()
         self._channels = {}
 
-    def invoke(self, cid:'str', conn_name:'str', **kwargs) -> 'any_':
+    def invoke(self, cid:'str', conn_name:'str', **kwargs:'any_') -> 'any_':
 
         wsx_channel:'Connector' = self.server.worker_store.web_socket_api.connectors[conn_name] # type: ignore
         wsx_channel:'ChannelWebSocket' = cast_('ChannelWebSocket', wsx_channel) # type: ignore
@@ -551,7 +550,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def get_name(class_:'type[Service]') -> 'str':
+    def get_name(class_:'type_[Service]') -> 'str': # type: ignore
         """ Returns a service's name, settings its .name attribute along. This will
         be called once while the service is being deployed.
         """
@@ -569,7 +568,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def get_impl_name(class_:'type[Service]') -> 'str':
+    def get_impl_name(class_:'type_[Service]') -> 'str': # type: ignore
         if not hasattr(class_, '__service_impl_name'):
             class_.__service_impl_name = '{}.{}'.format(class_.__service_module_name, class_.__name__)
         return class_.__service_impl_name
@@ -592,7 +591,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def zato_set_module_name(class_:'type[Service]', path:'str') -> 'str':
+    def zato_set_module_name(class_:'type_[Service]', path:'str') -> 'str': # type: ignore
         if not hasattr(class_, '__service_module_name'):
             if 'zato' in path and 'internal' in path:
                 mod_name = class_.__module__
@@ -604,7 +603,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def add_http_method_handlers(class_:'type[Service]') -> 'None':
+    def add_http_method_handlers(class_:'type_[Service]') -> 'None': # type: ignore
 
         for name in dir(class_):
             if name.startswith('handle_'):
@@ -765,7 +764,7 @@ class Service:
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
-        service.update(service, channel, server, broker_client,
+        service.update(service, channel, server, broker_client, # type: ignore
             worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
@@ -776,7 +775,7 @@ class Service:
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
         # implemented by user services.
-        if (not self.accept) or service.accept():
+        if (not self.accept) or service.accept(): # type: ignore
 
             # Assumes it goes fine by default
             e, exc_formatted = None, None
@@ -792,15 +791,18 @@ class Service:
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
-                    service.server.current_usage.incr(service.name)
+                    _ = service.server.current_usage.incr(service.name)
 
                 service.invocation_time = _utcnow()
 
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
                 if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    data = raw_request.decode('utf8')
-                    data = loads(data)
+                    if isinstance(raw_request, str):
+                        data = raw_request.decode('utf8') # type: ignore
+                        data = loads(data)
+                    else:
+                        data = raw_request
                     validation_result = service._json_schema_validator.validate(cid, data)
                     if not validation_result:
                         error = validation_result.get_error()
@@ -826,22 +828,22 @@ class Service:
                             call_hook_with_service(elem, service)
 
                 # Called before .handle - catches exceptions
-                if service.call_hooks and service.before_handle:
+                if service.call_hooks and service.before_handle: # type: ignore
                     call_hook_no_service(service.before_handle)
 
                 # Called before .handle - does not catch exceptions
-                if service.validate_input:
+                if service.validate_input: # type: ignore
                     service.validate_input()
 
                 # This is the place where the service is invoked
                 self._invoke(service, channel)
 
                 # Called after .handle - does not catch exceptions
-                if service.validate_output:
+                if service.validate_output: # type: ignore
                     service.validate_output()
 
                 # Called after .handle - catches exceptions
-                if service.call_hooks and service.after_handle:
+                if service.call_hooks and service.after_handle: # type: ignore
                     call_hook_no_service(service.after_handle)
 
                 # Call after job hooks if any are defined and we are called from the scheduler
@@ -851,7 +853,7 @@ class Service:
                             call_hook_with_service(elem, service)
 
                 # Optional, almost never overridden.
-                if service.finalize_handle:
+                if service.finalize_handle: # type: ignore
                     call_hook_no_service(service.finalize_handle)
 
             except Exception as ex:
@@ -916,7 +918,7 @@ class Service:
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
             # If if has .keys, it means it is a dict.
-            response = cast_('dict', response)
+            response = cast_('dict', response) # type: ignore
 
             keys = list(response)
             try:
@@ -936,7 +938,7 @@ class Service:
                     return response[response_elem]
 
                 # This may be a dict response from a service, in which case we return it as is
-                elif isinstance(response, dict):
+                elif isinstance(response, dict): # type: ignore
                     return response
 
             # .. otherwise, this could be a dictionary of elements other than the above
@@ -1448,11 +1450,11 @@ class PubSubHook(_Hook):
         """ Invoked each time a client unsubscribes.
         """
 
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke'
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'                   # type: ignore
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'                 # type: ignore
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke' # type: ignore
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'                     # type: ignore
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'                 # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1480,10 +1482,10 @@ class WSXHook(_Hook):
         where the incoming user's credentials are stored in.
         """
 
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'                               # type: ignore
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'                         # type: ignore
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'                   # type: ignore
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed' # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

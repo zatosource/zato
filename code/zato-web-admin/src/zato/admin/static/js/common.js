@@ -85,7 +85,6 @@ $.namespace('zato.definition.cassandra');
 $.namespace('zato.definition.kafka');
 $.namespace('zato.definition.jms_wmq');
 $.namespace('zato.docs');
-$.namespace('zato.editor');
 $.namespace('zato.email');
 $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
@@ -94,6 +93,8 @@ $.namespace('zato.groups');
 $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
+$.namespace('zato.ide');
+$.namespace('zato.invoker');
 $.namespace('zato.load_balancer');
 $.namespace('zato.message');
 $.namespace('zato.message.json_pointer');
@@ -729,6 +730,8 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
     $.fn.zato.turn_selects_into_chosen(div_id);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
     $.fn.zato.data_table._create_edit(action, title, id, remove_multirow);
 }
@@ -1207,6 +1210,12 @@ $.fn.zato.startswith = function(s, prefix) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.toggle_css_class = function(elem, remove_class, add_class) {
+    $(elem).removeClass(remove_class).addClass(add_class);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
     var elem = $(elem);
     var remove_class = '';
@@ -1222,7 +1231,7 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
         add_class = 'hidden';
         $(elem).prev().removeClass("options-expanded", 50);
     }
-    $(elem).removeClass(remove_class).addClass(add_class);
+    $.fn.zato.toggle_css_class(elem, remove_class, add_class);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1733,6 +1742,76 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
         is_valid = false;
     }
     return is_valid;
+}
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.to_dict = function(item) {
+    let out = "{" + Object.entries(item)
+        .filter(([k, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join(", ") +
+    "}";
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.is_object = function(item) {
+    return Object.prototype.toString.call(item) === '[object Object]';
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.slugify = function(data) {
+    return data
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
+  }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_tooltip_common = function(placement, elem_id_selector, text, should_draw_attention) {
+    if(should_draw_attention) {
+        var role = "tooltip-draw-attention";
+    }
+    else {
+        var role = "tooltip";
+    }
+    let _tooltip = tippy(elem_id_selector, {
+        content: text,
+        allowHTML: false,
+        theme: "dark",
+        trigger: "manual",
+        placement: placement,
+        arrow: true,
+        interactive: false,
+        inertia: true,
+        role: role,
+    });
+    // It's possible it won't exist, e.g. someone closed it manually.
+    if(_tooltip) {
+        _tooltip[0].show();
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_attention) {
+    $.fn.zato.show_tooltip_common("bottom", elem_id_selector, text, should_draw_attention);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_left_tooltip = function(elem_id_selector, text, should_draw_attention) {
+    $.fn.zato.show_tooltip_common("left", elem_id_selector, text, should_draw_attention);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

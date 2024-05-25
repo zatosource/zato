@@ -19,7 +19,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
 
 # pytz
 from pytz import UTC
@@ -36,7 +36,7 @@ from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.util.api import get_lb_client as _get_lb_client
+from zato.common.util.api import get_lb_client as _get_lb_client, validate_python_syntax
 
 # ################################################################################################################################
 
@@ -297,7 +297,7 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
 
 # ################################################################################################################################
 
-class _BaseView:
+class BaseView:
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
@@ -392,7 +392,7 @@ class _BaseView:
 
 # ################################################################################################################################
 
-class Index(_BaseView):
+class Index(BaseView):
     """ A base class upon which other index views are based.
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
@@ -628,7 +628,7 @@ class Index(_BaseView):
 
 # ################################################################################################################################
 
-class CreateEdit(_BaseView):
+class CreateEdit(BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
 
@@ -727,7 +727,7 @@ class CreateEdit(_BaseView):
 
 # ################################################################################################################################
 
-class BaseCallView(_BaseView):
+class BaseCallView(BaseView):
 
     method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
@@ -735,14 +735,18 @@ class BaseCallView(_BaseView):
     def get_input_dict(self):
         raise NotImplementedError('Must be defined in subclasses')
 
+    def build_http_response(self, response):
+        return HttpResponse()
+
     def __call__(self, req, initial_input_dict=None, *args, **kwargs):
         initial_input_dict = initial_input_dict or {}
         try:
             super(BaseCallView, self).__call__(req, *args, **kwargs)
             input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
-            req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
-            return HttpResponse()
+            response = req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
+            http_response = self.build_http_response(response)
+            return http_response
         except Exception:
             msg = '{}, e:`{}`'.format(self.error_message, format_exc())
             logger.error(msg)
@@ -860,16 +864,43 @@ def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_te
 
 # ################################################################################################################################
 
-def upload_to_server(req, cluster_id, service, error_msg_template):
+def upload_to_server(
+    client,
+    data,
+    payload_name,
+    cluster_id=1,
+    service='zato.service.upload-package',
+    error_msg_template='Deployment error, e:`{}`',
+):
+
     try:
+
+        # First, check if the source code is valid
+        validate_python_syntax(data)
+
         input_dict = {
             'cluster_id': cluster_id,
-            'payload': b64encode(req.read()),
-            'payload_name': req.GET['qqfile']
+            'payload': b64encode(data),
+            'payload_name': payload_name,
         }
-        req.zato.client.invoke(service, input_dict)
 
-        return HttpResponse(dumps({'success': True}))
+        response = client.invoke(service, input_dict)
+
+        out = {
+            'success': True,
+            'data':'OK, deployed',
+            'response_time_human': response.inner.headers.get('X-Zato-Response-Time-Human')
+        }
+
+        return HttpResponse(dumps(out))
+
+    except SyntaxError:
+        out = {
+            'success': False,
+            'data':format_exc(),
+            'response_time_human': 'default' # This is required by the frontend
+        }
+        return HttpResponseBadRequest(dumps(out))
 
     except Exception:
         msg = error_msg_template.format(format_exc())
@@ -908,22 +939,33 @@ def get_http_channel_security_id(item):
 
 # ################################################################################################################################
 
-def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
+def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra=None) -> 'any_':
 
     try:
         request = {
             'cluster_id': req.zato.cluster_id
         }
 
+        send_attrs = send_attrs or {}
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
 
+        extra = extra or {}
+        request.update(extra)
+
         logger.info('Invoking `%s` with `%s`', service_name, request)
         response = req.zato.client.invoke(service_name, request)
+        logger.info('Response received `%s`', response.data)
 
         if response.ok:
-            response_data = response.data['response_data']
+
+            if 'response_data' in (response.data or ''):
+                response_data = response.data['response_data']
+            else:
+                response_data = response.data
+
             logger.info('Invocation response -> `%s` (`%s`)', response_data, service_name)
+
             if isinstance(response_data, dict):
                 response_data = dumps(response_data)
                 logger.info('Returning `%s` from `%s`', response_data, service_name)

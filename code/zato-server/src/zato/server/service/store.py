@@ -215,7 +215,7 @@ class DeploymentInfo:
     __slots__ = 'to_process', 'total_services', 'total_size', 'total_size_human'
 
     def __init__(self):
-        self.to_process = []       # type: List
+        self.to_process = []       # type: anylist
         self.total_size = 0        # type: int
         self.total_size_human = '' # type: str
 
@@ -343,21 +343,96 @@ class ServiceStore:
 
 # ################################################################################################################################
 
+    def _delete_service_from_odb(self, service_id:'int') -> 'None':
+        _ = self.server.invoke('zato.service.delete', {
+            'id':service_id
+        })
+
+# ################################################################################################################################
+
+    def _delete_service_data(self, name:'str', delete_from_odb:'bool'=False) -> 'None':
+        try:
+            impl_name = self.name_to_impl_name[name]     # type: str
+            service_id = self.impl_name_to_id[impl_name] # type: int
+            del self.id_to_impl_name[service_id]
+            del self.impl_name_to_id[impl_name]
+            del self.name_to_impl_name[name]
+            del self.services[impl_name]
+            if delete_from_odb:
+                self._delete_service_from_odb(service_id)
+        except KeyError:
+            # This is as expected and may happen if a service
+            # was already deleted, e.g. it was in the same module
+            # that another deleted service was in.
+            pass
+
+# ################################################################################################################################
+
     def delete_service_data(self, name:'str') -> 'None':
+        with self.update_lock:
+            self._delete_service_data(name)
+
+# ################################################################################################################################
+
+    def _delete_model_data(self, name:'str') -> 'None':
+        try:
+            del self.models[name]
+        except KeyError:
+            # Same comment as in self._delete_service_data
+            pass
+
+# ################################################################################################################################
+
+    def delete_model_data(self, name:'str') -> 'None':
+        with self.update_lock:
+            self._delete_service_data(name)
+
+# ################################################################################################################################
+
+    def _collect_objects_by_file_path(self, file_path:'str', container:'stranydict', *, is_dict:'bool') -> 'strlist':
+
+        # Our response to produce
+        out = []
+
+        # Go through all the objects in the container ..
+        for value in container.values():
+
+            # .. look up the path using keys or attributes, depending on whether it's a dict value or not ..
+            if is_dict:
+                object_path = value['path']
+                object_name = value['name']
+            else:
+                object_path = value.path
+                object_name = value.name
+
+            # .. do we have a match here? ..
+            if file_path == object_path:
+
+                # .. if yes, we're going to return that path to our caller ..
+                out.append(object_name)
+
+        # .. finally, we are ready to return our output.
+        return out
+
+# ################################################################################################################################
+
+    def delete_objects_by_file_path(self, file_path:'str', *, delete_from_odb:'bool') -> 'None':
 
         with self.update_lock:
-            try:
-                impl_name = self.name_to_impl_name[name]     # type: str
-                service_id = self.impl_name_to_id[impl_name] # type: int
-                del self.id_to_impl_name[service_id]
-                del self.impl_name_to_id[impl_name]
-                del self.name_to_impl_name[name]
-                del self.services[impl_name]
-            except KeyError:
-                # This is as expected and may happen if a service
-                # was already deleted, e.g. it was in the same module
-                # that another deleted service was in.
-                pass
+
+            # Collect all services to delete
+            services_to_delete = self._collect_objects_by_file_path(file_path, self.services, is_dict=True)
+
+            # Collect all models to delete
+            models_to_delete = self._collect_objects_by_file_path(file_path, self.models, is_dict=False)
+
+            # Delete all the services
+            for item in services_to_delete:
+                self._delete_service_data(item, delete_from_odb)
+
+            # Delete all the models
+            for item in models_to_delete:
+                self._delete_model_data(item)
 
 # ################################################################################################################################
 
@@ -416,7 +491,7 @@ class ServiceStore:
 
         if not class_:
             service_id = self.get_service_id_by_name(name) # type: int
-            info = self.get_service_info_by_id(service_id) # type: dict
+            info = self.get_service_info_by_id(service_id) # type: anydict
             _class = info['service_class'] # type: type[Service]
         else:
             _class = class_
@@ -835,11 +910,11 @@ class ServiceStore:
 
         sql_services = {}
         for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
-            sql_services[item.impl_name] = {
-                'id': item.id,
-                'impl_name': item.impl_name,
-                'is_active': item.is_active,
-                'slow_threshold': item.slow_threshold,
+            sql_services[item.impl_name] = { # type: ignore
+                'id': item.id,               # type: ignore
+                'impl_name': item.impl_name, # type: ignore
+                'is_active': item.is_active, # type: ignore
+                'slow_threshold': item.slow_threshold, # type: ignore
             }
 
         # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
@@ -996,7 +1071,7 @@ class ServiceStore:
                 self.name_to_impl_name[item.name] = item.impl_name
 
                 arg_spec = getargspec(item.service_class.after_add_to_store) # type: ArgSpec
-                args = arg_spec.args # type: list
+                args = arg_spec.args # type: anylist
 
                 # GH #1018 made server the argument that the hook receives ..
                 if len(args) == 1 and args[0] == 'server':
@@ -1045,7 +1120,7 @@ class ServiceStore:
 
                 # Now that we have them, we can look up their IDs ..
                 service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
-                    [elem['name'] for elem in elems]) # type: dict
+                    [elem['name'] for elem in elems]) # type: anydict
 
                 # .. and add them for later use.
                 for item in service_id_list: # type: dict
@@ -1131,6 +1206,7 @@ class ServiceStore:
                 class_ = service.service_class
                 path = service.source_code_info.path
                 deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+                deployment_info_dict['line_number'] = service.source_code_info.line_number
                 self.deployment_info[service.impl_name] = deployment_info_dict
                 deployment_details = dumps(deployment_info_dict)
 
@@ -1333,7 +1409,7 @@ class ServiceStore:
         # .. and now we know for which services to create ConfigDict objects.
 
         query = self.odb.get_service_list_with_include(
-            session, self.server.cluster_id, deployed_service_name_list, True) # type: list
+            session, self.server.cluster_id, deployed_service_name_list, True) # type: anylist
 
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
@@ -1394,7 +1470,7 @@ class ServiceStore:
 
         for py_path in visit_py_source(dir_name):
             out.extend(self.import_models_from_file(py_path, False, base_dir))
-            gevent_sleep(0.03)
+            gevent_sleep(0.03) # type: ignore
 
         return out
 
@@ -1441,7 +1517,7 @@ class ServiceStore:
         for py_path in py_path_list:
             imported = self.import_services_from_file(py_path, False, base_dir)
             to_process.extend(imported)
-            gevent_sleep(0.03)
+            gevent_sleep(0.03) # type: ignore
 
         return to_process
 
@@ -1642,10 +1718,9 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'module_') -> 'SourceCodeInfo':
+    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'SourceCodeInfo':
         """ Returns the source code of and the FS path to the given module.
         """
-
         source_info = SourceCodeInfo()
         try:
             file_name = mod.__file__ or ''
@@ -1660,6 +1735,9 @@ class ServiceStore:
             source_info.path = inspect.getsourcefile(mod) or 'no-source-file'
             source_info.hash = sha256(source_info.source).hexdigest()
             source_info.hash_method = 'SHA-256'
+
+            # The line number this class object is defined on
+            source_info.line_number = inspect.findsource(class_)[1]
 
         except IOError:
             if has_trace1:
@@ -1719,7 +1797,7 @@ class ServiceStore:
         service.name = name
         service.impl_name = impl_name
         service.service_class = class_
-        service.source_code_info = self._get_source_code_info(mod)
+        service.source_code_info = self._get_source_code_info(mod, class_)
 
         return service
 
