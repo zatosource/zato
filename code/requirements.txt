@@ -103,7 +103,7 @@ pyparsing==2.4.2
 pyprof2calltree==1.4.5
 python-dateutil==2.8.2
 python-editor==1.0.1
-python-memcached==1.59
+python-memcached==1.62
 tabulate==0.9.0
 python-stdnum==1.14
 pytz==2020.1
