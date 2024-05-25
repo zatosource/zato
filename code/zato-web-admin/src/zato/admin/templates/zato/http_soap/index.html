@@ -330,7 +330,7 @@
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td><a href="{% url "service-invoker" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td><a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                             <td class='ignore'>
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>

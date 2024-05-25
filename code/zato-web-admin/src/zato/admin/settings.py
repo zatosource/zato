@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,9 +36,13 @@ SSL_KEY_FILE = None
 from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
 from zato.common.util.api import get_engine_url
-from zato.admin.zato_settings import *  # NOQA
+from zato.admin.zato_settings import *  # type: ignore
 
-logging.addLevelName('TRACE1', TRACE1)
+# ################################################################################################################################
+# ################################################################################################################################
+
+logging.addLevelName('TRACE1', TRACE1) # type: ignore
+
 if log_config:
     with open_r(log_config) as f:
         try:
@@ -49,9 +53,12 @@ if log_config:
 else:
     logging.basicConfig(level=logging.DEBUG)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Session timeout
 _session_timeout_env_key = 'Zato_Dashboard_Session_Timeout'
-_session_timeout_default = 60 * 60 * 24 * 30 # In seconds, default = one month
+_session_timeout_default = 60 * 60 * 24 * 1 # In seconds, default = one day
 SESSION_COOKIE_AGE = os.environ.get(_session_timeout_env_key) or _session_timeout_default
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
@@ -64,7 +71,10 @@ USE_I18N = True
 
 DEBUG = os.environ.get('Zato_Dashboard_Debug_Enabled') or False
 
-if csrf_trusted_origins := os.environ.get('Zato_Django_CSRF_TRUSTED_ORIGINS'):
+_crsf_env1 = 'Zato_Dashboard_CSRF_Trusted_Origins'
+_crsf_env2 = 'Zato_Django_CSRF_TRUSTED_ORIGINS'
+
+if csrf_trusted_origins := (os.environ.get(_crsf_env1) or os.environ.get(_crsf_env2)):
     CSRF_TRUSTED_ORIGINS = [f'{csrf_trusted_origins}']
 
 APPEND_SLASH = True
@@ -85,8 +95,9 @@ MEDIA_URL = '/static/'
 ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]
-CSP_IMG_SRC     = ["'self'"]
+CSP_IMG_SRC     = ["'self'", "data:"]
 CSP_STYLE_SRC   = ["'self'"]
+CSP_FONT_SRC   = ["'self'"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
 CSP_CONNECT_SRC = ["'self'"]
 CSP_FORM_ACTION = ["'self'"]
@@ -150,14 +161,14 @@ LOGIN_REDIRECT_URL = '/'
 if 'DATABASES' in globals():
 
     # So that Django doesn't complain about an unknown engine type
-    if db_type.startswith('mysql'):
+    if db_type.startswith('mysql'): # type: ignore
         db_type = 'mysql'
 
-    db_data = DATABASES['default']
-    db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
+    db_data = DATABASES['default'] # type: ignore
+    db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type] # type: ignore
 
     for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT', 'OPTIONS'):
-        globals()['DATABASE_{}'.format(name)] = DATABASES['default'].get(name)
+        globals()['DATABASE_{}'.format(name)] = DATABASES['default'].get(name) # type: ignore
 
     db_data['db_type'] = db_type
 
@@ -179,7 +190,7 @@ if 'DATABASES' in globals():
     SASession.configure(bind=engine)
 
     # Settings DB
-    _settings_db_path = os.path.join(config_dir, 'config', 'repo', 'settings.db')
+    _settings_db_path = os.path.join(config_dir, 'config', 'repo', 'settings.db') # type: ignore
     _settings_db_session = scoped_session(sessionmaker())
     _settings_db_engine = create_engine('sqlite:///{}'.format(_settings_db_path))
     _settings_db_session.configure(bind=_settings_db_engine)
@@ -189,7 +200,7 @@ if 'DATABASES' in globals():
 else:
     ADMIN_INVOKE_NAME = 'dummy'
     ADMIN_INVOKE_PASSWORD = 'dummy'
-    DATABASES = {}
+    DATABASES = {} # type: ignore
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
 
