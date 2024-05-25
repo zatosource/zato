@@ -1778,7 +1778,7 @@ $.fn.zato.slugify = function(data) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_attention) {
+$.fn.zato.show_tooltip_common = function(placement, elem_id_selector, text, should_draw_attention) {
     if(should_draw_attention) {
         var role = "tooltip-draw-attention";
     }
@@ -1790,7 +1790,7 @@ $.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_att
         allowHTML: false,
         theme: "dark",
         trigger: "manual",
-        placement: "bottom",
+        placement: placement,
         arrow: true,
         interactive: false,
         inertia: true,
@@ -1800,6 +1800,18 @@ $.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_att
     if(_tooltip) {
         _tooltip[0].show();
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_attention) {
+    $.fn.zato.show_tooltip_common("bottom", elem_id_selector, text, should_draw_attention);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_left_tooltip = function(elem_id_selector, text, should_draw_attention) {
+    $.fn.zato.show_tooltip_common("left", elem_id_selector, text, should_draw_attention);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

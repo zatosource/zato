@@ -49,7 +49,7 @@ input {
 
 .tippy-box[role="tooltip-draw-attention"]
 {
-    background: linear-gradient(to right, #33f, #003366 , #009900, #cc0066, #660);
+    background: linear-gradient(to right, #33f, #036 , #090, #c06, #660);
     animation: rainbow 6s ease-in-out infinite;
     background-size: 400% 100%;
 }
