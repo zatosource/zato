@@ -86,6 +86,11 @@ span.header-text {
     height: 87vh;
     border-right: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
+    font-family: Zato_IDE_Font;
+}
+
+textarea {
+    font-family: Zato_IDE_Font;
 }
 
 #file-system-listing-div {
