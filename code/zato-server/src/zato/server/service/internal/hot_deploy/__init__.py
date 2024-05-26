@@ -235,8 +235,7 @@ class Create(AdminService):
     ) -> 'DeploymentCtx':
 
         if not should_deploy_in_place:
-            with open(file_name, 'w', encoding='utf-8') as f:
-                payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+            with open(file_name, 'wb') as f:
                 _ = f.write(payload)
 
         model_name_list = self._deploy_models(current_work_dir, file_name)
