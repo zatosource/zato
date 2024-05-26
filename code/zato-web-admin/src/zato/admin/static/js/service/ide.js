@@ -34,7 +34,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         enableLiveAutocompletion: true,
         newLineMode: "unix",
         fontSize: 16,
-        fontFamily: "Ubuntu Mono",
+        fontFamily: "Zato_IDE_Font",
         cursorStyle: "ace"
     });
 
