@@ -896,7 +896,7 @@ def service_deployment_list(session, service_id=None, include_internal=None):
         Service.name.label('service_name'),
         ).\
         filter(DeployedService.service_id==Service.id).\
-        filter(Server.id, DeployedService.server_id==Server.id)
+        filter(DeployedService.server_id==Server.id)
 
     if service_id:
         query = query.\
