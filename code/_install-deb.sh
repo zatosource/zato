@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
@@ -18,7 +20,7 @@ if ! [ -x "$(command -v lsb_release)" ]; then
 fi
 
 if [[ "$INSTALL_PYTHON" == "y" ]]; then
-  PYTHON_DEPENDENCIES="$PY_BINARY $PY_BINARY-dev $PY_BINARY-pip"
+  PYTHON_DEPENDENCIES="$PY_BINARY $PY_BINARY-dev"
 fi
 
 sudo apt-get install -y \
@@ -35,8 +37,11 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
+# Needed for Ubuntu 24.04+
+sudo rm -rf /usr/lib/python3.*/EXTERNALLY-MANAGED
+
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install -U virtualenv==20.8.1
+$PY_BINARY -m pip install -U virtualenv==20.8.1 --break-system-packages
 
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m virtualenv $CURDIR
