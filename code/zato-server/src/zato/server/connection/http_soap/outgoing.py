@@ -636,7 +636,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. if yes, try to parse the response accordingly ..
         if _is_json:
             try:
-                response.data = loads(response.text) # type: ignore
+                response.data = loads(response.text or '""') # type: ignore
             except ValueError as e:
                 raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
