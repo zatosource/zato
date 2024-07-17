@@ -68,6 +68,7 @@ MarkupSafe==2.1.1
 mccabe==0.6.1
 mock==3.0.5
 more-itertools==9.0.0
+mypy-extensions>=1.0.0,<2.0.0
 ndg-httpsclient==0.4.0
 netaddr==0.8.0
 netifaces==0.11.0
