@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from datetime import datetime
 from logging import getLogger
+from sys import maxsize
 from traceback import format_exc
 
 # gevent
@@ -247,7 +248,7 @@ class BaseObserver:
         self,
         snapshot_maker,      # type: BaseRemoteSnapshotMaker
         path,                # type: str
-        max_iters,           # type: int
+        max_iters=maxsize,   # type: int
         log_stop_event=True, # type: bool
         *args,               # type: any_
         **kwargs             # type: any_
