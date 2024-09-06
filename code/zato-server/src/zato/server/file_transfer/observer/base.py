@@ -34,7 +34,7 @@ if 0:
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
-    BaseRemoteSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -144,7 +144,7 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def get_dir_snapshot(path, is_recursive:'bool') -> 'str':
+    def get_dir_snapshot(path, is_recursive:'bool') -> 'str': # type: ignore
         """ Returns an implementation-specific snapshot of a directory.
         """
         raise NotImplementedError()
@@ -337,7 +337,7 @@ class BaseObserver:
                     # will be triggered from the scheduler and we treat the scheduler job's interval
                     # as the sleep time.
                     if self.is_local:
-                        sleep(timeout)
+                        sleep(timeout) # type: ignore
 
         except Exception:
             logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
