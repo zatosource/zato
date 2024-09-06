@@ -77,7 +77,6 @@ odoo-client-lib==1.2.2
 openpyxl==3.0.5
 orjson==3.9.15
 oslo.config==9.0.0
-# pandas==1.5.0
 parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1
@@ -87,7 +86,6 @@ pg8000==1.13.1
 prettytable==3.5.0
 psutil==5.9.4
 py-cpuinfo==3.3.0
-# pyarrow==9.0.0
 pyaml==20.4.0
 pyasn1==0.4.8
 pycparser==2.21
@@ -98,7 +96,7 @@ pygments==2.15.0
 PyJWT==2.5.0
 pymongo==4.6.3
 PyMySQL==1.1.1
-pyOpenSSL==24.0.0
+pyOpenSSL==24.2.1
 pyotp==2.6.0
 pyparsing==2.4.2
 pyprof2calltree==1.4.5
@@ -157,7 +155,6 @@ zato-ext-simple-rbac==0.1.1
 ciso8601==2.2.0; sys_platform == 'linux'
 ConcurrentLogHandler==0.9.1; sys_platform == 'linux'
 greenify==0.3.2; sys_platform == 'linux'
-# hiredis==2.0.0; sys_platform == 'linux'
 inotify-simple==1.3.5; sys_platform == 'linux'
 memray==1.4.1; sys_platform == 'linux'
 newrelic==8.4.0; sys_platform == 'linux'
