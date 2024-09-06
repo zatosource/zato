@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from datetime import datetime
 from logging import getLogger
+from sys import maxsize
 from traceback import format_exc
 
 # gevent
@@ -33,7 +34,7 @@ if 0:
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
-    BaseRemoteSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -143,7 +144,7 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def get_dir_snapshot(path, is_recursive:'bool') -> 'str':
+    def get_dir_snapshot(path, is_recursive:'bool') -> 'str': # type: ignore
         """ Returns an implementation-specific snapshot of a directory.
         """
         raise NotImplementedError()
@@ -247,7 +248,7 @@ class BaseObserver:
         self,
         snapshot_maker,      # type: BaseRemoteSnapshotMaker
         path,                # type: str
-        max_iters,           # type: int
+        max_iters=maxsize,   # type: int
         log_stop_event=True, # type: bool
         *args,               # type: any_
         **kwargs             # type: any_
@@ -336,7 +337,7 @@ class BaseObserver:
                     # will be triggered from the scheduler and we treat the scheduler job's interval
                     # as the sleep time.
                     if self.is_local:
-                        sleep(timeout)
+                        sleep(timeout) # type: ignore
 
         except Exception:
             logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
