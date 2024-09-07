@@ -98,7 +98,7 @@ check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 # ################################################################################################################################
 
 start_servers_template = """
-$ZATO_BIN start $BASE_DIR/{server_name} --verbose
+$ZATO_BIN start $BASE_DIR/{server_name} --verbose --env-file /opt/hot-deploy/enmasse/env.ini
 $ZATO_BIN wait --path $BASE_DIR/{server_name}
 echo [{step_number}/$STEPS] {server_name} started
 """
