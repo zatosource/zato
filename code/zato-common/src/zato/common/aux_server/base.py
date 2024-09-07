@@ -484,6 +484,7 @@ class AuxServer:
             return_data = return_data.encode('utf8')
 
             start_response(status_code, headers)
+
             return [return_data]
 
 # ################################################################################################################################
