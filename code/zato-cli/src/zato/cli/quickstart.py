@@ -98,7 +98,7 @@ check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 # ################################################################################################################################
 
 start_servers_template = """
-$ZATO_BIN start $BASE_DIR/{server_name} --verbose
+$ZATO_BIN start $BASE_DIR/{server_name} --verbose --env-file /opt/hot-deploy/enmasse/env.ini
 $ZATO_BIN wait --path $BASE_DIR/{server_name}
 echo [{step_number}/$STEPS] {server_name} started
 """
@@ -110,6 +110,8 @@ zato_qs_start_head_template = """#!/bin/bash
 
 set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
+
+{preamble_script}
 
 {script_dir}
 ZATO_BIN={zato_bin}
@@ -318,6 +320,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
+    opts.append({'name':'--preamble-script', 'help':'Extra script to add to startup scripts'})
 
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
@@ -425,6 +428,9 @@ class Create(ZatoCommand):
         from zato.common.util.api import get_engine, get_session
 
         random.seed()
+
+        # Possibly used by startup scripts
+        preamble_script = self.get_arg('preamble_script')
 
         # We handle both ..
         admin_invoke_password = self.get_arg('admin_invoke_password')
@@ -781,6 +787,7 @@ class Create(ZatoCommand):
             web_admin_step_count -= 1
 
         zato_qs_start_head = zato_qs_start_head_template.format(
+            preamble_script=preamble_script,
             zato_bin=zato_bin,
             script_dir=script_dir,
             cluster_name=cluster_name,
