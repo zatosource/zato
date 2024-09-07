@@ -473,13 +473,21 @@ class AuxServer:
             status_text = Common_IPC.Status_OK
             status_code = StatusCode.OK
 
+            logger.info('In call 07')
+
         except Exception:
+
+            logger.info('In call 08')
 
             # We are here because there was an exception
             logger.warning(format_exc())
 
+            logger.info('In call 09')
+
             status_text = 'error'
             status_code = StatusCode.InternalError
+
+            logger.info('In call 10')
 
         finally:
 
@@ -490,11 +498,19 @@ class AuxServer:
                 'response': response
             }
 
+            logger.info('In call 11')
+
             # .. make sure that we return bytes representing a JSON object ..
             return_data = dumps(return_data)
             return_data = return_data.encode('utf8')
 
+            logger.info('In call 12 %r', start_response)
+            logger.info('In call 13 %r', status_code)
+            logger.info('In call 14 %r', headers)
+
             start_response(status_code, headers)
+
+            logger.info('In call 15')
             return [return_data]
 
 # ################################################################################################################################
