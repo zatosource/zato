@@ -438,7 +438,7 @@ class AuxServer:
     def __call__(self, env:'anydict', start_response:'callable_') -> 'byteslist':
 
         logger.info('')
-        logger.info('In call 01')
+        logger.info('In call 01 ***')
 
         cid      = '<cid-unassigned>'
         response = {}
