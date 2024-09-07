@@ -21,6 +21,7 @@ from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileCreatedEvent,
 
 # Zato
 from zato.common.api import FILE_TRANSFER
+from zato.common.typing_ import cast_
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.server.file_transfer.common import source_type_to_snapshot_maker_class
