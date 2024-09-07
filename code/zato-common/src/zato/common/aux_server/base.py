@@ -437,26 +437,37 @@ class AuxServer:
 
     def __call__(self, env:'anydict', start_response:'callable_') -> 'byteslist':
 
+        logger.info('')
+        logger.info('In call 01')
+
         cid      = '<cid-unassigned>'
         response = {}
 
         status_text = '<status_text-unassigned>'
         status_code = StatusCode.ServiceUnavailable
 
+        logger.info('In call 02')
+
         try:
 
             # Assign a new cid
             cid = '{}{}'.format(self.cid_prefix, new_cid())
 
+            logger.info('In call 03')
+
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
+
+            logger.info('In call 04 -> %r', request)
 
             # .. this is where we expect to find Basic Auth credentials ..
             credentials = env.get('HTTP_AUTHORIZATION') or ''
 
             # .. if there was any, invoke the business function ..
             if request:
+                logger.info('In call 05 -> %r', credentials)
                 response = self.handle_api_request(request, credentials)
+                logger.info('In call 06 -> %r', response)
 
             # If we are here, it means that there was no exception
             status_text = Common_IPC.Status_OK
