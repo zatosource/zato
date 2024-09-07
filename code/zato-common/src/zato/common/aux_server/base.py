@@ -173,7 +173,7 @@ class AuxServerConfig:
             secrets_conf=secrets_conf,
             require_exists=True
         )
-        config.raw_config = raw_config
+        config.raw_config = raw_config # type: ignore
         config.main = cast_('Bunch', raw_config)
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
@@ -352,11 +352,11 @@ class AuxServer:
         config.parent_server_pid  = parent_server_pid
 
         if not config.username:
-            username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8') # type: ignore
             config.username = username
 
         if not config.password:
-            password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8') # type: ignore
             config.password = password
 
         if callback_func:
