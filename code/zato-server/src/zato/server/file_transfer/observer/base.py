@@ -23,6 +23,7 @@ from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileCreatedEvent,
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.server.file_transfer.common import source_type_to_snapshot_maker_class
 from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 # ################################################################################################################################
@@ -110,6 +111,10 @@ class BaseObserver:
 
     def _start(self, observer_start_args:'any_') -> 'None':
 
+        snapshot_maker = source_type_to_snapshot_maker_class[self.source_type]
+        snapshot_maker = cast_('BaseRemoteSnapshotMaker', snapshot_maker)
+        snapshot_maker.connect()
+
         for path in self.path_list:
 
             # Start only for paths that are valid - all invalid ones
@@ -117,7 +122,7 @@ class BaseObserver:
             if self.is_path_valid(path):
                 logger.info('Starting %s file observer `%s` for `%s` (%s)',
                     self.observer_type_name, path, self.name, self.observer_type_impl)
-                _ = spawn_greenlet(self._observe_func, path, observer_start_args)
+                _ = spawn_greenlet(self._observe_func, snapshot_maker, path, maxsize, True, observer_start_args)
             else:
                 logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type_impl)
 
