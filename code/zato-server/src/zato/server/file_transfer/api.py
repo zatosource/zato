@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -30,13 +30,15 @@ from zato.common.api import FILE_TRANSFER
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux, is_non_linux
+from zato.server.file_transfer.common import source_type_ftp, source_type_local, source_type_sftp, \
+    source_type_to_snapshot_maker_class
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
 from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
 from zato.server.file_transfer.observer.local_ import LocalObserver
 from zato.server.file_transfer.observer.ftp import FTPObserver
 from zato.server.file_transfer.observer.sftp import SFTPObserver
-from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMaker, SFTPSnapshotMaker
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -50,30 +52,17 @@ if 0:
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
-
-source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
-source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
-source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
+# ################################################################################################################################
 
 source_type_to_observer_class = {
     source_type_ftp:   FTPObserver,
     source_type_local: LocalObserver,
     source_type_sftp:  SFTPObserver,
-}
-
-source_type_to_config = {
-    source_type_ftp:  'out_ftp',
-    source_type_sftp: 'out_sftp',
-}
-
-source_type_to_snapshot_maker_class = {
-    source_type_ftp:   FTPSnapshotMaker,
-    source_type_local: LocalSnapshotMaker,
-    source_type_sftp:  SFTPSnapshotMaker,
 }
 
 # ################################################################################################################################
@@ -468,7 +457,7 @@ class FileTransferAPI:
                         src_path = os.path.normpath(os.path.join(dir_name, event.name))
 
                         # Get a list of all observer objects interested in that file ..
-                        observer_list = self.inotify_path_to_observer_list[dir_name] # type: list
+                        observer_list:'anylist' = self.inotify_path_to_observer_list[dir_name]
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
@@ -479,7 +468,7 @@ class FileTransferAPI:
             except Exception:
                 logger.warning('Exception in inotify.read() `%s`', format_exc())
             finally:
-                sleep(0.25)
+                sleep(0.25) # type: ignore
 
 # ################################################################################################################################
 
@@ -493,7 +482,7 @@ class FileTransferAPI:
         for observer in self.observer_list: # type: LocalObserver
 
             for path in observer.path_list: # type: str
-                observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
+                observer_list:'anylist' = self.inotify_path_to_observer_list.setdefault(path, [])
                 observer_list.append(observer)
 
         # Maps missing paths to all the observers interested in it.
@@ -517,7 +506,7 @@ class FileTransferAPI:
                 # it will add start the observer itself.
                 for path in observer.path_list:
                     if not observer.is_path_valid(path):
-                        path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
+                        path_observer_list:'anylist' = missing_path_to_inspector.setdefault(path, [])
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
                 # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
@@ -561,7 +550,7 @@ class FileTransferAPI:
             if path in observer.path_list:
 
                 # .. it was, so we append an inspector for the path, pointing to current observer.
-                path_observer_list = path_to_inspector.setdefault(path, []) # type: list
+                path_observer_list:'anylist' = path_to_inspector.setdefault(path, [])
                 path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
         return path_to_inspector
