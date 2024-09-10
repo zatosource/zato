@@ -117,6 +117,10 @@ class SchedulerFacade:
             }
         )
 
+        # .. check if we shouldn't go further to extract the actual response ..
+        if not 'id' in response:
+            response = response['zato_scheduler_job_create_response']
+
         # .. and return its ID to the caller.
         return response['id'] # type: ignore
 
