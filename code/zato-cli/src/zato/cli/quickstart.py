@@ -430,7 +430,7 @@ class Create(ZatoCommand):
         random.seed()
 
         # Possibly used by startup scripts
-        preamble_script = self.get_arg('preamble_script')
+        preamble_script = self.get_arg('preamble_script') or '# No preamble script'
 
         # We handle both ..
         admin_invoke_password = self.get_arg('admin_invoke_password')
