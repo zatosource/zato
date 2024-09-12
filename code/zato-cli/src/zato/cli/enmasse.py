@@ -106,6 +106,7 @@ zato_name_prefix = (
 # ################################################################################################################################
 
 def has_name_zato_prefix(name:'str') -> 'bool':
+    name = name or ''
     for prefix in zato_name_prefix:
         if name.startswith(prefix):
             return True
