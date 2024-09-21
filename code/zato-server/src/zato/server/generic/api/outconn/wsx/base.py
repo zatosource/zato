@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,6 +17,7 @@ from gevent import sleep as _gevent_sleep
 # Zato
 from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
 from zato.common.typing_ import cast_
+from zato.common.util.config import resolve_name
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn.wsx.client_generic import _NonZatoWSXClient
 from zato.server.generic.api.outconn.wsx.client_zato import ZatoWSXClient
@@ -61,6 +62,7 @@ class WSXClient:
     def __init__(self, server:'ParallelServer', config:'strdict') -> 'None':
         self.server = server
         self.config = config
+        self.config['name'] = resolve_name(self.config['name'])
         self.is_zato = self.config['is_zato']
         self.impl = cast_('any_', None)
         self.address_masked = self.config['address_masked']

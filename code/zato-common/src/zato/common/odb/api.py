@@ -1445,7 +1445,8 @@ class ODBManager(SessionWrapper):
     def get_pubsub_endpoint_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub endpoints.
         """
-        return query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
+        out = query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
+        return out
 
 # ################################################################################################################################
 
