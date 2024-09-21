@@ -160,7 +160,6 @@ memray==1.4.1; sys_platform == 'linux'
 newrelic==8.4.0; sys_platform == 'linux'
 sh==1.14.3; sys_platform == 'linux'
 portalocker==2.6.0
-posix-ipc==1.0.0; sys_platform != 'Windows'
 psycopg2-binary==2.9.5; sys_platform == 'linux'
 pysimdjson==5.0.2; sys_platform == 'linux'
 pysolr==3.9.0; sys_platform == 'linux'
