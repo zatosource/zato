@@ -20,7 +20,7 @@ from gevent.queue import Empty, Queue
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
-from zato.common.util.config import replace_query_string_items
+from zato.common.util.config import resolve_name, replace_query_string_items
 from zato.common.util.python_ import get_python_id
 
 # ################################################################################################################################
@@ -348,6 +348,7 @@ class Wrapper:
     def __init__(self, config:'Bunch', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
+        self.config['name'] = resolve_name(self.config['name'])
         self.config['username_pretty'] = self.config['username'] or '(None)'
         self.server = server
         self.python_id = get_python_id(self)
