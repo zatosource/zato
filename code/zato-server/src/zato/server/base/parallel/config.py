@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-# pylint: disable=attribute-defined-outside-init
 
 # stdlib
 from contextlib import closing
@@ -18,6 +16,7 @@ from zato.common.api import AuditLog, RATE_LIMIT
 from zato.common.audit_log import LogContainerConfig
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.util.api import asbool
+from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
@@ -354,6 +353,7 @@ class ConfigLoader:
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
+            hs_item['name'] = resolve_name(hs_item['name'])
             hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 

@@ -23,6 +23,7 @@ from parse import PARSE_RE as parse_re
 from zato.common.api import EnvConfigCtx, EnvVariable, SCHEDULER, Secret_Shadow, URLInfo
 from zato.common.const import SECRETS
 from zato.common.ext.configobj_ import ConfigObj
+from zato.common.util.tcp import get_current_ip
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,6 +43,11 @@ logger = getLogger(__name__)
 
 # Values of these generic attributes may contain query string elements that have to be masked out
 mask_attrs = ['address']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_sys_current_ip = 'Zato_Sys_Current_IP'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,6 +238,19 @@ def get_env_config_value(
 
     # .. now, we can return the value to our caller.
     return value
+
+# ################################################################################################################################
+
+def resolve_name(name:'str') -> 'str':
+
+    suffix = '.' + zato_sys_current_ip
+
+    if isinstance(name, str): # type: ignore
+        if name.endswith(suffix):
+            current_ip = get_current_ip()
+            name = name.replace(zato_sys_current_ip, current_ip)
+
+    return name
 
 # ################################################################################################################################
 
