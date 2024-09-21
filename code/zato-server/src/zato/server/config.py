@@ -24,7 +24,7 @@ from zato.common.py23_.past.builtins import unicode
 # Zato
 from zato.common.api import ZATO_NONE
 from zato.common.const import SECRETS
-from zato.common.util.config import resolve_value
+from zato.common.util.config import resolve_name, resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
@@ -210,6 +210,8 @@ class ConfigDict:
                     item_name = item.name
                 else:
                     item_name = item.get_name()
+
+                item_name = resolve_name(item_name)
 
                 if list_config:
                     list_dict = Bunch()

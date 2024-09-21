@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import errno
@@ -15,6 +13,7 @@ from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # gevent
 from gevent import socket
@@ -256,6 +255,22 @@ def parse_address(address):
 
     # .. and now we can return the result.
     return host, port
+
+# ################################################################################################################################
+
+def get_current_ip():
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+
+    try:
+        s.connect(('192.0.2.0', 1))
+        out = s.getsockname()[0]
+    except Exception:
+        out = 'noip-' + uuid4().hex
+    finally:
+        s.close()
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
