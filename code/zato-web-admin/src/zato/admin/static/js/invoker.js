@@ -137,7 +137,7 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
     }
 
     $("#result-header").text(status);
-    $("#data-response").text(response_data);
+    $("#data-response").text(JSON.stringify(response_data));
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
