@@ -118,6 +118,7 @@ class ModuleCtx:
 
     class Include_Type:
         All  = 'all'
+        Cache = 'cache'
         LDAP = 'ldap'
         SQL  = 'sql'
         PubSub = 'pubsub'
@@ -201,6 +202,7 @@ ModuleCtx.Enmasse_Type = {
     # REST connections
     'channel_plain_http': ModuleCtx.Include_Type.REST,
     'outconn_plain_http': ModuleCtx.Include_Type.REST,
+    'zato_cache_builtin': ModuleCtx.Include_Type.Cache,
     'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
     'zato_generic_connection': ModuleCtx.Include_Type.LDAP,
 
@@ -324,6 +326,13 @@ ModuleCtx.Enmasse_Attr_List_Include = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Exclude = {
+
+    # Cache definitions
+    'zato_cache_builtin': [
+        'cache_id',
+        'current_size',
+        'opaque1',
+    ],
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -1317,7 +1326,7 @@ class DependencyScanner:
                 continue
 
             # Special-case HTTP connections
-            if item_type == 'http_soap': # type: ignore
+            if item_type in ('http_soap', 'web_socket'): # type: ignore
                 dep_key = resolve_security_field_name(item)
 
             if dep_key not in item:
@@ -3410,19 +3419,21 @@ class Enmasse(ManageCommand):
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
 
-        # .. we enter here if there is anything to be explicitly process ..
+        # .. we enter here if there is anything to be explicitly processed ..
         if attr_list_include or attr_list_exclude:
 
             # .. go through everything that we have ..
             for attr in item_copy:
 
                 # .. remove from the item that we are returning any attr that is not to be included
-                if attr not in attr_list_include:
-                    _ = item.pop(attr, None)
+                if attr_list_include:
+                    if attr not in attr_list_include:
+                        _ = item.pop(attr, None)
 
                 # .. remove any attribute that is explictly configured to be excluded ..
-                if attr in attr_list_exclude:
-                    _ = item.pop(attr, None)
+                if attr_list_exclude:
+                    if attr in attr_list_exclude:
+                        _ = item.pop(attr, None)
 
         # .. optionally, rename selected attributes ..
         for old_name, new_name in attr_list_rename.items():
@@ -3510,7 +3521,7 @@ class Enmasse(ManageCommand):
         # .. service ID's are never returned ..
         _ = item.pop('service_id', None)
 
-        # .. the is_active flag is never returned if it is of it default value, which is True ..
+        # .. the is_active flag is never returned if it has its default value, which is True ..
         if item.get('is_active') is True:
             _ = item.pop('is_active', None)
 
@@ -3872,8 +3883,8 @@ class Enmasse(ManageCommand):
         warn_err, warn_no, error_no = self.get_warnings_errors(items)
         table = self.get_table(warn_err)
 
-        warn_plural = '' if warn_no == 1 else 's'
-        error_plural = '' if error_no == 1 else 's'
+        warn_plural = '' if warn_no == 1 else 's'   # type: ignore
+        error_plural = '' if error_no == 1 else 's' # type: ignore
 
         if warn_no or error_no:
             if error_no:
