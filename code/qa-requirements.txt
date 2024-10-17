@@ -1,3 +1,4 @@
+blinker==1.7.0
 mypy
 openapi-spec-validator
 playwright
