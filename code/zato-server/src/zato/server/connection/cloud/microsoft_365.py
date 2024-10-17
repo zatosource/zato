@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -50,7 +50,7 @@ class Microsoft365Client:
 
         tenant_id = config['tenant_id']
         client_id = config['client_id']
-        secret_value = config.get('secret_value') or config['password']
+        secret_value = config.get('secret_value') or config.get('secret') or config['password']
 
         credentials = (client_id, secret_value)
 
