@@ -199,7 +199,7 @@ class ModuleCtx:
 
 # ################################################################################################################################
 
-zato_generic_connection_microsoft_365 =  'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365
+zato_generic_connection_microsoft_365 = 'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365
 
 _enmasse_type_generic = (
     ModuleCtx.Include_Type.LDAP,
@@ -707,11 +707,11 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
 
     # Generic connections - Cloud Microsoft 365
     zato_generic_connection_microsoft_365: [
+        'type_',
         'name',
         'client_id',
         'tenant_id',
         'scopes',
-        'type_',
     ]
 }
 
@@ -3027,7 +3027,6 @@ class InputParser:
 
                 # .. add type hints ..
                 item = cast_('strdict', item)
-
 
                 # .. what configuration to look up depends on whether it's a generic connection or not ..
                 if is_generic_connection:
