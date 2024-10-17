@@ -329,6 +329,14 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'hook_service_name',
     ],
 
+    # Generic connections - Cloud Microsoft 365
+    'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365: [
+        'client_id',
+        'name',
+        'scopes',
+        'tenant_id',
+        'type_',
+    ]
 }
 
 # ################################################################################################################################
@@ -682,6 +690,15 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'delivery_server',
         'topic_list',
     ],
+
+    # Generic connections - Cloud Microsoft 365
+    'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365: [
+        'name',
+        'client_id',
+        'tenant_id',
+        'scopes',
+        'type_',
+    ]
 
 }
 
