@@ -199,6 +199,8 @@ class ModuleCtx:
 
 # ################################################################################################################################
 
+zato_generic_connection_microsoft_365 =  'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365
+
 _enmasse_type_generic = (
     ModuleCtx.Include_Type.LDAP,
     ModuleCtx.Include_Type.Microsoft_365,
@@ -330,7 +332,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
     ],
 
     # Generic connections - Cloud Microsoft 365
-    'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365: [
+    zato_generic_connection_microsoft_365: [
         'client_id',
         'name',
         'scopes',
@@ -367,6 +369,9 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
 
 # ################################################################################################################################
 
+#
+# This is used during export
+#
 ModuleCtx.Enmasse_Attr_List_Rename = {
 
     # Security definitions
@@ -377,7 +382,7 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
     # Pub/sub endpoints
     'pubsub_endpoint':  {
         'sec_name':'security_name'
-    }
+    },
 
 }
 
@@ -566,6 +571,15 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     'outgoing_rest': {
         'security_name': Zato_No_Security,
         'merge_url_params_req': True,
+    },
+
+    # Generic connections - Cloud Microsoft 365
+    zato_generic_connection_microsoft_365: {
+        'is_channel': False,
+        'is_internal': False,
+        'is_outconn': True,
+        'pool_size': 20,
+        'sec_use_rbac': False,
     }
 }
 
@@ -692,14 +706,13 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     ],
 
     # Generic connections - Cloud Microsoft 365
-    'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365: [
+    zato_generic_connection_microsoft_365: [
         'name',
         'client_id',
         'tenant_id',
         'scopes',
         'type_',
     ]
-
 }
 
 # ################################################################################################################################
@@ -2982,6 +2995,9 @@ class InputParser:
         # .. add values for attributes that are optional ..
         for def_type, items in data.items():
 
+            # .. reusable ..
+            is_generic_connection = def_type == 'zato_generic_connection'
+
             # .. replace new names with old ones but only for specific types ..
             if item_type_name_map_reverse_by_type := ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type.get(def_type):
 
@@ -3002,9 +3018,6 @@ class InputParser:
                                     # .. if we are here, we know we can swap the names ..
                                     item[old_name] = item.pop(new_name)
 
-            # .. for attributes that should be populated if they do not exist ..
-            attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(def_type) or {}
-
             # .. go through each definition ..
             for item in items:
 
@@ -3014,6 +3027,18 @@ class InputParser:
 
                 # .. add type hints ..
                 item = cast_('strdict', item)
+
+
+                # .. what configuration to look up depends on whether it's a generic connection or not ..
+                if is_generic_connection:
+                    wrapper_type = item['type_']
+                    by_type_key = f'{def_type}_{wrapper_type}'
+
+                else:
+                    by_type_key = def_type
+
+                # .. for attributes that should be populated if they do not exist ..
+                attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(by_type_key) or {}
 
                 # .. everything is active unless it is configured not to be ..
                 if not 'is_active' in item:
