@@ -120,11 +120,13 @@ class ModuleCtx:
         All  = 'all'
         Cache = 'cache'
         LDAP = 'ldap'
+        Microsoft_365 = 'cloud-microsoft-365'
         SQL  = 'sql'
         PubSub = 'pubsub'
         REST = 'rest'
         Scheduler = 'scheduler'
         Security = 'security'
+        WebSockets = 'websockets'
 
     # An indicator that this is an include directive
     Item_Type_Include = 'include'
@@ -197,6 +199,14 @@ class ModuleCtx:
 
 # ################################################################################################################################
 
+zato_generic_connection_microsoft_365 = 'zato_generic_connection_' + ModuleCtx.Include_Type.Microsoft_365
+
+_enmasse_type_generic = (
+    ModuleCtx.Include_Type.LDAP,
+    ModuleCtx.Include_Type.Microsoft_365,
+    ModuleCtx.Include_Type.WebSockets,
+)
+
 ModuleCtx.Enmasse_Type = {
 
     # REST connections
@@ -204,7 +214,7 @@ ModuleCtx.Enmasse_Type = {
     'outconn_plain_http': ModuleCtx.Include_Type.REST,
     'zato_cache_builtin': ModuleCtx.Include_Type.Cache,
     'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
-    'zato_generic_connection': ModuleCtx.Include_Type.LDAP,
+    'zato_generic_connection': _enmasse_type_generic,
 
     # Security definitions
     'def_sec': ModuleCtx.Include_Type.Security,
@@ -321,6 +331,14 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'hook_service_name',
     ],
 
+    # Generic connections - Cloud Microsoft 365
+    zato_generic_connection_microsoft_365: [
+        'client_id',
+        'name',
+        'scopes',
+        'tenant_id',
+        'type_',
+    ]
 }
 
 # ################################################################################################################################
@@ -351,6 +369,9 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
 
 # ################################################################################################################################
 
+#
+# This is used during export
+#
 ModuleCtx.Enmasse_Attr_List_Rename = {
 
     # Security definitions
@@ -361,7 +382,7 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
     # Pub/sub endpoints
     'pubsub_endpoint':  {
         'sec_name':'security_name'
-    }
+    },
 
 }
 
@@ -550,6 +571,15 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     'outgoing_rest': {
         'security_name': Zato_No_Security,
         'merge_url_params_req': True,
+    },
+
+    # Generic connections - Cloud Microsoft 365
+    zato_generic_connection_microsoft_365: {
+        'is_channel': False,
+        'is_internal': False,
+        'is_outconn': True,
+        'pool_size': 20,
+        'sec_use_rbac': False,
     }
 }
 
@@ -675,6 +705,14 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'topic_list',
     ],
 
+    # Generic connections - Cloud Microsoft 365
+    zato_generic_connection_microsoft_365: [
+        'type_',
+        'name',
+        'client_id',
+        'tenant_id',
+        'scopes',
+    ]
 }
 
 # ################################################################################################################################
@@ -2957,6 +2995,9 @@ class InputParser:
         # .. add values for attributes that are optional ..
         for def_type, items in data.items():
 
+            # .. reusable ..
+            is_generic_connection = def_type == 'zato_generic_connection'
+
             # .. replace new names with old ones but only for specific types ..
             if item_type_name_map_reverse_by_type := ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type.get(def_type):
 
@@ -2977,9 +3018,6 @@ class InputParser:
                                     # .. if we are here, we know we can swap the names ..
                                     item[old_name] = item.pop(new_name)
 
-            # .. for attributes that should be populated if they do not exist ..
-            attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(def_type) or {}
-
             # .. go through each definition ..
             for item in items:
 
@@ -2989,6 +3027,17 @@ class InputParser:
 
                 # .. add type hints ..
                 item = cast_('strdict', item)
+
+                # .. what configuration to look up depends on whether it's a generic connection or not ..
+                if is_generic_connection:
+                    wrapper_type = item['type_']
+                    by_type_key = f'{def_type}_{wrapper_type}'
+
+                else:
+                    by_type_key = def_type
+
+                # .. for attributes that should be populated if they do not exist ..
+                attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(by_type_key) or {}
 
                 # .. everything is active unless it is configured not to be ..
                 if not 'is_active' in item:
@@ -3340,16 +3389,19 @@ class Enmasse(ManageCommand):
         # Get an include type that matches are item type ..
         enmasse_include_type = ModuleCtx.Enmasse_Type.get(item_type)
 
+        if not isinstance(enmasse_include_type, (list, tuple)):
+            enmasse_include_type = [enmasse_include_type]
+
         # .. if there is no match, it means that we do not write it on output ..
         if not enmasse_include_type:
             return False
 
         # .. check further if this type is what we had on input ..
-        if not enmasse_include_type in include_type:
+        for elem in enmasse_include_type:
+            if elem in include_type:
+                return True
+        else:
             return False
-
-        # .. if we are here, we know we should write this type to output.
-        return True
 
 # ################################################################################################################################
 
@@ -3743,6 +3795,9 @@ class Enmasse(ManageCommand):
         # .. go through everything that we collected in earlier steps in the process ..
         for item_type, items in iteritems(output): # type: ignore
 
+            # .. reusable ..
+            is_generic_connection = item_type == 'zato_generic_connection'
+
             # .. add type hints ..
             items = cast_('dictlist', items)
 
@@ -3765,10 +3820,20 @@ class Enmasse(ManageCommand):
                     continue
 
                 # .. this is required because generic connections are differentiated ..
-                # .. by their embedded 'type_' attribute, rather but item_type itself ..
-                if item_type == 'zato_generic_connection':
+                # .. by their embedded 'type_' attribute, rather than by item_type itself ..
+                if is_generic_connection:
                     wrapper_type = item['type_']
                     attr_key = f'{item_type}_{wrapper_type}'
+
+                    # .. make sure to filter out include types embedded in generic connections, ..
+                    # .. but first, confirm if we are not to return all the types ..
+                    if not ModuleCtx.Include_Type.All in include_type:
+
+                        # .. if we are here, it means that we need to check the actual include type ..
+                        # .. which will be equal to the generic connection's wrapper type ..
+                        if not wrapper_type in include_type:
+                            continue
+
                 else:
                     attr_key = item_type
 

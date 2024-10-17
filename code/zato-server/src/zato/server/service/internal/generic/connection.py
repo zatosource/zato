@@ -433,7 +433,7 @@ class ChangePassword(ChangePasswordBase):
         opaque1 = loads(opaque1)
 
         client_id = opaque1['client_id']
-        secret_value = opaque1['secret_value']
+        secret_value = opaque1.get('secret_value') or opaque1.get('secret') or opaque1['password']
 
         credentials = (client_id, secret_value)
 
