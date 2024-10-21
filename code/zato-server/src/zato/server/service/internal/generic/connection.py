@@ -426,6 +426,12 @@ class ChangePassword(ChangePasswordBase):
         query = urlsplit(auth_url).query
         parsed = parse_qs(query)
 
+        print()
+        print(111, auth_url)
+        print(222, query)
+        print(333, parsed)
+        print()
+
         state = parsed['state']
         state = state[0]
 
