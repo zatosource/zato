@@ -426,11 +426,11 @@ class ChangePassword(ChangePasswordBase):
         query = urlsplit(auth_url).query
         parsed = parse_qs(query)
 
-        print()
-        print(111, auth_url)
-        print(222, query)
-        print(333, parsed)
-        print()
+        self.logger.info('*' * 80)
+        self.logger.info('111 %r', auth_url)
+        self.logger.info('222 %r', query)
+        self.logger.info('333 %r', parsed)
+        self.logger.info('*' * 80)
 
         state = parsed['state']
         state = state[0]
