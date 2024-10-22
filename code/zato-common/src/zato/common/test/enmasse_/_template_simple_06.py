@@ -34,6 +34,15 @@ pubsub_topic:
 
   - name: /demo/enmasse/simple-06/topic-01.{test_suffix}
   - name: /demo/enmasse/simple-06/topic-02.{test_suffix}
+
+zato_generic_connection:
+
+  - name: '{test_suffix}.Microsoft365'
+    type_: cloud-microsoft-365
+    tenant_id: {test_suffix} - My Teant ID
+    client_id: {test_suffix} - My Client ID
+    secret: "{test_suffix} - My Secret"
+    scopes: https://graph.microsoft.com/.default
 """
 
 # ################################################################################################################################
