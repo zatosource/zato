@@ -121,11 +121,11 @@ handlers:
         class: logging.StreamHandler
         stream: ext://sys.stdout
     http_access_log:
-        formatter: {server_log_max_size}
+        formatter: default
         class: {log_handler_class}
         filename: './logs/http_access.log'
         mode: 'a'
-        maxBytes: 20000000
+        maxBytes: {server_log_max_size}
         backupCount: 10
         encoding: 'utf8'
     admin:
