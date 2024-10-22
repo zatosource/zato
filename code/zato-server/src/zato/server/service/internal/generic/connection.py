@@ -413,6 +413,9 @@ class ChangePassword(ChangePasswordBase):
 
     def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session:'any_', instance:'any_') -> 'None':
 
+        # Disabled, no longer in use
+        return
+
         # stdlib
         from json import dumps, loads
         from urllib.parse import parse_qs, urlsplit
@@ -425,12 +428,6 @@ class ChangePassword(ChangePasswordBase):
 
         query = urlsplit(auth_url).query
         parsed = parse_qs(query)
-
-        self.logger.info('*' * 80)
-        self.logger.info('111 %r', auth_url)
-        self.logger.info('222 %r', query)
-        self.logger.info('333 %r', parsed)
-        self.logger.info('*' * 80)
 
         state = parsed['state']
         state = state[0]

@@ -707,10 +707,10 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
 
     # Generic connections - Cloud Microsoft 365
     zato_generic_connection_microsoft_365: [
-        'type_',
         'name',
-        'client_id',
+        'type_',
         'tenant_id',
+        'client_id',
         'scopes',
     ]
 }
