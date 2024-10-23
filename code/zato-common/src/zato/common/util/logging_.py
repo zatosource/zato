@@ -114,7 +114,7 @@ handlers:
         filename: './logs/server.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 10
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     stdout:
         formatter: colour
@@ -126,7 +126,7 @@ handlers:
         filename: './logs/http_access.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 10
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     admin:
         formatter: default
@@ -174,7 +174,7 @@ handlers:
         filename: './logs/pubsub.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 10
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     pubsub_overflow:
         formatter: default
@@ -182,7 +182,7 @@ handlers:
         filename: './logs/pubsub-overflow.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 50
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     pubsub_audit:
         formatter: default
@@ -190,7 +190,7 @@ handlers:
         filename: './logs/pubsub-audit.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 50
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     rbac:
         formatter: default
@@ -214,7 +214,7 @@ handlers:
         filename: './logs/web_socket.log'
         mode: 'a'
         maxBytes: {server_log_max_size}
-        backupCount: 10
+        backupCount: {server_log_backup_count}
         encoding: 'utf8'
     ibm_mq:
         formatter: default
@@ -312,9 +312,16 @@ def get_logging_conf_contents() -> 'str':
     else:
         server_log_max_size = 1000000000 # 1 GB by default
 
+    # This can be overridden by users
+    if server_log_backup_count := os.environ.get('Zato_Server_Log_Backup_Count'):
+        server_log_backup_count = int(server_log_backup_count)
+    else:
+        server_log_backup_count = 2
+
     return logging_conf_contents.format(
         log_handler_class=log_handler_class,
         server_log_max_size=server_log_max_size,
+        server_log_backup_count=server_log_backup_count,
     )
 
 # ################################################################################################################################
