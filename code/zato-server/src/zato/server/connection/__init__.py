@@ -18,7 +18,7 @@ from bunch import Bunch, bunchify
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 try:
-    import cloghandler
+    import zato.common_cloghandler as cloghandler
 except ImportError:
     pass
 else:

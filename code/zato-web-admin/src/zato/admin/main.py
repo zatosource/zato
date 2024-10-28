@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 try:
-    import cloghandler # type: ignore
+    import zato.common_cloghandler as cloghandler # type: ignore
 except ImportError:
     pass
 else:
