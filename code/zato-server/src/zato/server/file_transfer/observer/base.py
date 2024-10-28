@@ -47,6 +47,14 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Ignore exceptions coming from locations that include these patterns
+path_patters_to_ignore = [
+    'env/bin/python',
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PathCreatedEvent:
     def __init__(self, src_path:'str', is_dir:'bool') -> 'None':
         self.src_path = src_path
@@ -345,9 +353,20 @@ class BaseObserver:
                     if self.is_local:
                         sleep(timeout) # type: ignore
 
-        except Exception:
-            logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
-                self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+        except Exception as e:
+
+            # Reusable
+            e_str = str(e)
+
+            # Certain locations should be ignored ..
+            for item in path_patters_to_ignore:
+                if item in e_str:
+                    break
+
+            # .. otherwise, we log what happened.
+            else:
+                logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
+                    self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
         if log_stop_event:
             logger.warning('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
