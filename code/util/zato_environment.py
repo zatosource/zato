@@ -17,7 +17,7 @@ from subprocess import check_output, PIPE, Popen
 
 try:
     from distutils.dir_util import copy_tree
-except ImportError:
+except(ImportError, ModuleNotFoundError):
     from setuptools._distutils.dir_util import copy_tree
 
 # ################################################################################################################################
