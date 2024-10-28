@@ -20,7 +20,6 @@ dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
 debugpy
 decorator==5.1.0
-dictalchemy==0.1.2.6
 dill==0.2.5
 distro==1.5.0
 Django==4.2.16
