@@ -28,7 +28,6 @@ docformatter==0.8
 dropbox==10.10.0
 elasticsearch==7.15.2
 faker==8.12.1
-fastparquet==2022.11.0
 fhirpy==1.3.0
 flake8==4.0.1
 flake8-bugbear
