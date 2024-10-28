@@ -346,7 +346,7 @@ class BaseObserver:
                         sleep(timeout) # type: ignore
 
         except Exception:
-            logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
+            logger.warning('Exception 2 in %s file observer `%s` e:`%s (%s t:%s)',
                 self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
         if log_stop_event:
