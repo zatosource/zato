@@ -17,7 +17,7 @@ crontab==0.22.9
 cryptography==43.0.1
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
-dateparser==0.7.6
+dateparser==1.2.0
 debugpy
 decorator==5.1.0
 dill==0.2.5
