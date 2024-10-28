@@ -41,7 +41,7 @@ fi
 sudo rm -rf /usr/lib/python3.*/EXTERNALLY-MANAGED
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install -U virtualenv==20.8.1 distutils --break-system-packages
+$PY_BINARY -m pip install -U virtualenv==20.8.1 setuptools --break-system-packages
 
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m virtualenv $CURDIR
