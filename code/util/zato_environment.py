@@ -13,12 +13,8 @@ import os
 import platform
 import sys
 from pathlib import Path
+from shutil import copytree
 from subprocess import check_output, PIPE, Popen
-
-try:
-    from distutils.dir_util import copy_tree
-except(ImportError, ModuleNotFoundError):
-    from setuptools._distutils.dir_util import copy_tree
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -670,7 +666,7 @@ class EnvironmentManager:
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 
         # Recursively copy all the patches, overwriting any files found
-        _ = copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
+        _ = copytree(patches_dir, dest_dir, dirs_exist_ok=True)
 
         logger.info('Copied patches from %s -> %s', patches_dir, dest_dir)
 
