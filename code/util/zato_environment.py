@@ -41,8 +41,8 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-pip_deps_windows     = 'setuptools==57.4.0 wheel'
-pip_deps_non_windows = 'setuptools==57.4.0 wheel pip'
+pip_deps_windows     = 'setuptools==75.2.0 wheel'
+pip_deps_non_windows = 'setuptools==75.2.0 wheel pip'
 pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
@@ -287,7 +287,7 @@ class EnvironmentManager:
         needs_stdout:'bool'=False,
         needs_stderr:'bool'=False,
         log_stderr:'bool'=True,
-        use_check_output:'bool'=False
+        use_check_output:'bool'=True
     ) -> 'str | None':
 
         logger.info('Running `%s`', command)
