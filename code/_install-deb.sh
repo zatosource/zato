@@ -44,7 +44,7 @@ curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.8.1 setuptools --break-system-packages
 
 echo Installing virtualenv in $CURDIR
-$PY_BINARY -m virtualenv $CURDIR
+DEB_PYTHON_INSTALL_LAYOUT=deb $PY_BINARY -m virtualenv $CURDIR
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
