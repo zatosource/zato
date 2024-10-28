@@ -75,7 +75,7 @@ odoo-client-lib==1.2.2
 openpyxl==3.0.5
 orjson==3.9.15
 oslo.config==9.0.0
-parse-type==0.3.4
+parse-type==0.6.4
 parse==1.6.6
 passlib==1.7.1
 Paste==3.5.2
