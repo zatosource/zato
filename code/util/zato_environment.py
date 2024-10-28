@@ -12,9 +12,13 @@ import logging
 import os
 import platform
 import sys
-from distutils.dir_util import copy_tree
 from pathlib import Path
 from subprocess import check_output, PIPE, Popen
+
+try:
+    from distutils.dir_util import copy_tree
+except ImportError:
+    from setuptools._distutils.dir_util import copy_tree
 
 # ################################################################################################################################
 # ################################################################################################################################
