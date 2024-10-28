@@ -69,7 +69,7 @@ mypy-extensions>=1.0.0,<2.0.0
 ndg-httpsclient==0.4.0
 netaddr==0.8.0
 netifaces==0.11.0
-o365==2.0.26
+o365==2.0.37
 odoo-client-lib==1.2.2
 openpyxl==3.0.5
 orjson==3.9.15
