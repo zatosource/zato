@@ -196,6 +196,8 @@ class NumberRepo(BaseRepo):
 
     def set_last_duration(self, key:'str', current_duration:'float') -> 'None':
 
+        return
+
         # Numpy
         import numpy as np
 

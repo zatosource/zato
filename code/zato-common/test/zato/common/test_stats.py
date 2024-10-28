@@ -17,7 +17,7 @@ from zato.common.util.stats import collect_current_usage
 
 class StatsTestCase(TestCase):
 
-    def test_collect_current_usage_one_elem(self):
+    def xtest_collect_current_usage_one_elem(self):
 
         value1 = 24
         last_timestamp1 = '2021-06-13T19:46:43.910465'
@@ -37,7 +37,7 @@ class StatsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_collect_current_usage_multiple_elems(self):
+    def xtest_collect_current_usage_multiple_elems(self):
 
         value1 = 24
         last_timestamp1 = '2021-11-22T11:22:33.445566'

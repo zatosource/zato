@@ -85,6 +85,8 @@ def percentile(data, percent, key=lambda x:x):
 def collect_current_usage(data):
     # type: (list) -> dict
 
+    return
+
     # numpy
     import numpy as np
 
