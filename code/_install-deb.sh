@@ -51,6 +51,7 @@ source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
 $CURDIR/bin/python -m ensurepip --upgrade
+ln -s $CURDIR/bin/pip3 $CURDIR/bin/pip
 PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
 
 echo ⭐ Successfully installed `zato --version`
