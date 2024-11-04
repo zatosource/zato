@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -18,17 +16,31 @@ from time import time, sleep
 # Sarge
 from sarge import run as sarge_run, shell_format
 
-# Python 2/3 compatibility
-from six import PY2
-
 # Zato
-from zato.common.api import CLI_ARG_SEP
-from zato.common.util.open_ import open_r
+try:
+    from zato.common.api import CLI_ARG_SEP
+except ImportError:
+    CLI_ARG_SEP = 'Zato_Zato_Zato' # type: ignore
 
+try:
+    from zato.common.util.open_ import open_r
+except ImportError:
+    default_encoding = 'utf8'
+    def open_r(path:'str', encoding:'str'=default_encoding) -> 'textio_':
+        return open(path, 'r', encoding=encoding)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strdict, textio_
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 stderr_sleep_fg = 0.9
@@ -37,7 +49,7 @@ stderr_sleep_bg = 1.2
 # ################################################################################################################################
 
 # This is for convenience of switching to a newer version of sarge in the future. Newer versions use async_ instead of async.
-async_keyword = 'async_' if PY2 else 'async_'
+async_keyword = 'async_'
 
 # ################################################################################################################################
 
@@ -57,7 +69,7 @@ is_windows = 'windows' in system.lower()
 
 # ################################################################################################################################
 
-def get_executable():
+def get_executable() -> 'str':
     """ Returns the wrapper which pip uses for executing Zato commands,
     the one with all the dependencies added to PYTHONPATH.
     """
@@ -76,13 +88,13 @@ class _StdErr:
         'Could not load pykafka.rdkafka extension.'
     ]
 
-    def __init__(self, path, timeout):
+    def __init__(self, path:'str', timeout:'float') -> 'None':
         self.path = path
         self.timeout = timeout
 
 # ################################################################################################################################
 
-    def wait_for_error(self):
+    def wait_for_error(self) -> 'None':
         now = time()
 
         while time() - now < self.timeout:
@@ -96,15 +108,28 @@ class _StdErr:
 
 # ################################################################################################################################
 
-    def should_ignore(self, err):
+    def should_ignore(self, err:'str') -> 'bool':
         for item in self.ignored:
             if err.endswith(item):
                 return True
+        else:
+            return False
 
 # ################################################################################################################################
 
-def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
-        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword) -> 'int':
+def start_process(
+        component_name:'str',
+        executable:'str',
+        run_in_fg:'bool',
+        cli_options:'str | None',
+        extra_cli_options:'str'='',
+        on_keyboard_interrupt:'any_'=None,
+        failed_to_start_err:'int'=-100,
+        extra_options:'strdict | None'=None,
+        stderr_path:'str | None'=None,
+        stdin_data:'str | None'=None,
+        async_keyword:'str'=async_keyword
+    ) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
@@ -128,7 +153,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
     try:
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
 
-        run_kwargs = {
+        run_kwargs:'strdict' = {
             async_keyword: False if run_in_fg else True,
         }
 
@@ -160,21 +185,30 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
 
     finally:
         # We can now return the exit code to our caller
-        return exit_code
+        return exit_code # type: ignore
 
 # ################################################################################################################################
 
-def start_python_process(component_name, run_in_fg, py_path, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-        extra_options=None, stderr_path=None, stdin_data=None) -> 'int':
+def start_python_process(
+        component_name:'str',
+        run_in_fg:'bool',
+        py_path:'str',
+        program_dir:'str',
+        on_keyboard_interrupt:'any_'=None,
+        failed_to_start_err:'int'=-100,
+        extra_options:'strdict | None'=None,
+        stderr_path:'str | None'=None,
+        stdin_data:'str | None'=None
+    ) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
-    options = {
+    options:'strdict' = {
         'fg': run_in_fg,
     }
     if extra_options:
         options.update(extra_options)
 
-    options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
+    options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items()) # type: ignore
 
     py_path_option = shell_format('-m {0}', py_path)
     program_dir_option = shell_format('{0}', program_dir) if program_dir else ''
