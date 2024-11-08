@@ -69,7 +69,7 @@ class IPCAPI:
 
         server_type_suffix = f':{pid}'
 
-        IPCServer.start(
+        IPCServer.start_from_repo_location(
             base_dir=base_dir,
             bind_host=bind_host,
             bind_port=bind_port,
