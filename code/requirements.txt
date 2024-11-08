@@ -65,7 +65,7 @@ lxml==4.9.1
 Mako==1.2.2
 markdown==3.3.4
 MarkupSafe==2.1.1
-mccabe==0.6.1
+mccabe==0.7.0
 mock==3.0.5
 more-itertools==9.0.0
 mypy-extensions>=1.0.0,<2.0.0
