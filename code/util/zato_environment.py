@@ -454,7 +454,6 @@ class EnvironmentManager:
         # These cannot be installed via requirements.txt
         packages = [
             'cython==0.29.32',
-            'numpy==1.22.3',
             'pyOpenSSL==23.0.0',
             'zato-ext-bunch==1.2'
         ]
