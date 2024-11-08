@@ -188,7 +188,7 @@ class Create(ZatoCommand):
             raise Exception('No cluster found in `{}`'.format(args))
         else:
 
-            cluster_id_list.sort()
+            _ = cluster_id_list.sort()
             return cluster_id_list[0][0] # type: ignore
 
 # ################################################################################################################################
