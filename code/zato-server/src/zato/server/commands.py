@@ -114,7 +114,7 @@ class CommandsFacade:
     def _append_result_details(
         self,
         out:         'CommandResult',
-        result:      'CompletedProcess',
+        result:      'CompletedProcess', # type: ignore
         encoding:    'str',
         replace_char:'str',
     ) -> 'None':
@@ -202,7 +202,7 @@ class CommandsFacade:
             timeout = cast_('float', timeout or None)
 
             # .. invoke the command ..
-            result:'CompletedProcess' = subprocess_run(
+            result:'CompletedProcess' = subprocess_run( # type: ignore
                 command, input=stdin, timeout=timeout, shell=True, capture_output=True)
 
             # .. if we are here, it means that there was no timeout ..
