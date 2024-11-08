@@ -99,7 +99,7 @@ class AuxServerConfig:
 
         odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
         odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
-        odb.pool.ping(odb.fs_sql_config)
+        _ = odb.pool.ping(odb.fs_sql_config)
 
         return odb
 
