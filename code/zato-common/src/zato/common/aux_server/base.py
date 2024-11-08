@@ -314,7 +314,7 @@ class AuxServer:
 # ################################################################################################################################
 
     @classmethod
-    def start(
+    def start_from_repo_location(
         class_,                # type: type_[AuxServer]
         *,
         base_dir=None,         # type: strnone
@@ -373,6 +373,18 @@ class AuxServer:
         class_.after_config_hook(config, repo_location)
 
         # Run the server now
+        class_._start(config)
+
+# ################################################################################################################################
+
+    @classmethod
+    def start_from_config(class_:'type_[AuxServer]', config:'AuxServerConfig') -> 'None':
+        class_._start(config)
+
+# ################################################################################################################################
+
+    @classmethod
+    def _start(class_:'type_[AuxServer]', config:'AuxServerConfig') -> 'None':
         try:
             class_(config).serve_forever()
         except Exception:
