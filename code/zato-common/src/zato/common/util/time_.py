@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
-from time import time
+from time import time, time_ns
 import logging
 
 # Arrow
@@ -81,6 +81,11 @@ def utcnow_as_ms(_time=time):
     to use alternative implementations on different systems.
     """
     return _time()
+
+# ################################################################################################################################
+
+def utcnow_from_ns():
+    return time_ns() // 1_000_000
 
 # ################################################################################################################################
 
