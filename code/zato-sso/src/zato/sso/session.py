@@ -41,9 +41,12 @@ if 0:
     from zato.sso.totp_ import TOTPAPI
     from zato.sso.user import User
 
+    anytuple = anytuple
     Bunch = Bunch
     Callable = Callable
+    ParallelServer = ParallelServer
     SSOUser = SSOUser
+    TOTPAPI = TOTPAPI # type: ignore
     User = User
 
     boolnone = boolnone
