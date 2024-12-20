@@ -68,8 +68,6 @@ from zato.simpleio import CySimpleIO
 # ################################################################################################################################
 
 if 0:
-
-    from inspect import ArgSpec
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
     from zato.common.odb.api import ODBManager
@@ -78,6 +76,11 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
+    callable_ = callable_
+    intstrdict = intstrdict
+    strdictdict = strdictdict
+    strintdict = strintdict
+    stroriter = stroriter
     ConfigStore      = ConfigStore
     HotDeployProject = HotDeployProject
     ODBManager       = ODBManager
@@ -551,6 +554,7 @@ class ServiceStore:
 
         # Local aliases
         _Class_SimpleIO = None # type: ignore
+        _Class_SimpleIO = _Class_SimpleIO # For flake8
 
         # Set up enforcement of what other services a given service can invoke
         try:

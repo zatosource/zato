@@ -24,7 +24,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, callable_, strcalldict, strdict
     from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.pubsub.model import Subscription
-
+    anydict = anydict
     PubSubMessage = PubSubMessage
     Subscription = Subscription
 
