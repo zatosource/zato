@@ -2,6 +2,10 @@
 Defines base constant and base container for constants.
 
 """
+
+# type: ignore
+# flake8: noqa
+
 import types
 
 from collections import OrderedDict as odict

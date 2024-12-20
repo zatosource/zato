@@ -30,8 +30,8 @@ if 0:
     from zato.common.rate_limiting.limiter import BaseLimiter
     from zato.common.typing_ import callable_, dict_, list_, strdict
     from zato.distlock import LockManager
-
-    # For pyflakes
+    callable_ = callable_
+    dict_ = dict_
     BaseLimiter = BaseLimiter
     LockManager = LockManager
 

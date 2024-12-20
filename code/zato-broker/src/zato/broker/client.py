@@ -19,7 +19,6 @@ from orjson import dumps
 
 # Requests
 from requests import post as requests_post
-from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
@@ -31,6 +30,7 @@ from zato.common.util.platform_ import is_non_windows
 # ################################################################################################################################
 
 if 0:
+    from requests.models import Response
     from zato.client import AnyServiceInvoker
     from zato.common.typing_ import any_, anydict, strdict, strdictnone
     from zato.server.connection.server.rpc.api import ServerRPC
@@ -249,7 +249,7 @@ class BrokerClient:
 # ################################################################################################################################
 
     def invoke_sync(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
-        response = self._rpc_invoke(msg, **kwargs) # type: Response
+        response:'Response' = self._rpc_invoke(msg, **kwargs)
         if response.text:
             out = loads(response.text)
             return out

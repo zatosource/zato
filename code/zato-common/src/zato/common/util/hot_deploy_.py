@@ -22,6 +22,7 @@ from zato.common.util.file_system import resolve_path
 
 if 0:
     from zato.common.typing_ import iterator_, list_, pathlist, strdictdict
+    strdictdict = strdictdict
 
 # ################################################################################################################################
 # ################################################################################################################################

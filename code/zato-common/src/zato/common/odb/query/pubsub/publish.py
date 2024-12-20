@@ -26,6 +26,9 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, callable_, callnone, strdictlist
     from zato.server.pubsub.model import sublist
+    callable_ = callable_
+    callnone = callnone
+    SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################

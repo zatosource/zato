@@ -33,6 +33,8 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, intstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
+    anylist = anylist
+    intstrdict = intstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################

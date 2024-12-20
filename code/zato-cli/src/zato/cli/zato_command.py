@@ -16,6 +16,7 @@ from zato.common.typing_ import cast_
 if 0:
     from argparse import ArgumentParser
     from zato.common.typing_ import any_, callnone, dictlist, strlist, tuple_
+    callnone = callnone
 
 # ################################################################################################################################
 # ################################################################################################################################
