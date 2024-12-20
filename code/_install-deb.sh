@@ -7,8 +7,8 @@ while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
 # Python version to use needs to be provided by our caller
-PY_BINARY=python3.12
-#INSTALL_PYTHON=${2:-y}
+PY_BINARY=$1
+INSTALL_PYTHON=${2:-y}
 echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 
 # Always run an update so there are no surprises later on when it actually
@@ -19,15 +19,15 @@ if ! [ -x "$(command -v lsb_release)" ]; then
   sudo apt-get install -y lsb-release
 fi
 
-#if [[ "$INSTALL_PYTHON" == "y" ]]; then
-#  PYTHON_DEPENDENCIES="$PY_BINARY $PY_BINARY-dev"
-#fi
+if [[ "$INSTALL_PYTHON" == "y" ]]; then
+  PYTHON_DEPENDENCIES="$PY_BINARY $PY_BINARY-dev"
+fi
 
-#sudo apt-get install -y \
-#    build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
-#    libffi-dev libkeyutils-dev libldap2-dev libpq-dev \
-#    libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
-#    swig uuid-dev uuid-runtime wget zlib1g-dev lsb-release ${PYTHON_DEPENDENCIES}
+sudo apt-get install -y \
+    build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
+    libffi-dev libkeyutils-dev libldap2-dev libpq-dev \
+    libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
+    swig uuid-dev uuid-runtime wget zlib1g-dev lsb-release ${PYTHON_DEPENDENCIES}
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting
@@ -38,18 +38,18 @@ then
 fi
 
 # Needed for Ubuntu 24.04+
-#sudo rm -rf /usr/lib/python3.*/EXTERNALLY-MANAGED
+sudo rm -rf /usr/lib/python3.*/EXTERNALLY-MANAGED
 
-#curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-#$PY_BINARY -m pip install -U virtualenv==20.8.1 --break-system-packages
+curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
+$PY_BINARY -m pip install -U virtualenv==20.8.1 --break-system-packages
 
-#echo Installing virtualenv in $CURDIR
+echo Installing virtualenv in $CURDIR
 $PY_BINARY -m venv $CURDIR
 
-#echo Activating virtualenv in $CURDIR
+echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
-#echo Setting up environment in $CURDIR
+echo Setting up environment in $CURDIR
 PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
 
 echo ⭐ Successfully installed `zato --version`
