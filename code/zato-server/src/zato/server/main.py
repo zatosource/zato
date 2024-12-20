@@ -34,14 +34,6 @@ import ssl
 import sys
 from logging.config import dictConfig
 
-# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
-
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
@@ -317,7 +309,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
     with open_r(logging_conf_path) as f:
-        logging_config = yaml.load(f, yaml.FullLoader)
+        _logging_config:'str' = f.read()
+        _logging_config = _logging_config.replace('ConcurrentRotatingFileHandler', 'RotatingFileHandler')
+
+        logging_config = yaml.safe_load(_logging_config)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)

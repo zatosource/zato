@@ -57,20 +57,6 @@ class BaseOldStr(type):
 
 
 def unescape(s):
-    """
-    Interprets strings with escape sequences
-
-    Example:
-    >>> s = unescape(r'abc\\def')   # i.e. 'abc\\\\def'
-    >>> print(s)
-    'abc\def'
-    >>> s2 = unescape('abc\\ndef')
-    >>> len(s2)
-    8
-    >>> print(s2)
-    abc
-    def
-    """
     return s.encode().decode('unicode_escape')
 
 
