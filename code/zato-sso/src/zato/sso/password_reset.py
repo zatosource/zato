@@ -39,7 +39,7 @@ if 0:
     from zato.common.typing_ import anydict, anylist, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.email import SMTPConnection
-
+    anylist = anylist
     Callable = Callable
     ParallelServer = ParallelServer
     SMTPConnection = SMTPConnection

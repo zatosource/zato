@@ -45,6 +45,11 @@ if 0:
     from zato.common.typing_ import anydict, callable_, callnone
     from zato.server.base.parallel import ParallelServer
     from zato.sso.totp_ import TOTPAPI
+    anydict = anydict
+    callnone = callnone
+    callable_ = callable_
+    ParallelServer = ParallelServer
+    TOTPAPI = TOTPAPI # type: ignore
 
 # ################################################################################################################################
 

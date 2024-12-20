@@ -36,6 +36,9 @@ if 0:
     from bunch import Bunch
     from zato.common.odb.model import SSOUser
     from zato.common.typing_ import any_, anylist, boolnone, callable_, callnone, intnone
+    boolnone = boolnone
+    callnone = callnone
+    intnone = intnone
 
     SSOUser = SSOUser
 
