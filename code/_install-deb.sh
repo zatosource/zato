@@ -41,6 +41,14 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
+# Make sure we use Python 3.12 under Ubuntu 24.04
+if [[ "$(lsb_release -sir)" =~ '24.04' ]]
+then
+    if [[ "$PY_BINARY" == "python3" ]]; then
+      PY_BINARY=python3.12
+    fi
+fi
+
 # Needed for Ubuntu 24.04+
 sudo rm -rf /usr/lib/python3.*/EXTERNALLY-MANAGED
 
