@@ -4,6 +4,7 @@ openapi-spec-validator
 playwright
 pylint
 pyright==1.1.266
+pytest==8.3.4
 requests-openapi
 selenium==4.2.0
 selenium-wire
