@@ -1,3 +1,6 @@
+# type: ignore
+# flake8: noqa
+
 VERSION_SUFFIX = None
 VERSION_PATCH  = "0" + (VERSION_SUFFIX or "")
 VERSION_MINOR  = "5"

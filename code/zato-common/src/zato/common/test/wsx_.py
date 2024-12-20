@@ -23,6 +23,9 @@ if 0:
     from zato.common.typing_ import any_, anydict, stranydict, strintdict, strlist, strlistnone
     from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
     from zato.server.generic.api.outconn.wsx.client_zato import _ZatoWSXClientImpl
+    anydict = anydict
+    strintdict = strintdict
+    _ZatoWSXClientImpl = _ZatoWSXClientImpl
 
 # ################################################################################################################################
 # ################################################################################################################################

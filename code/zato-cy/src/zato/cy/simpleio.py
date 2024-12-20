@@ -1471,7 +1471,6 @@ class CySimpleIO:
     def _set_up_xml_config(self):
 
         attrs:list  = ['namespace', 'pretty_print', 'encoding', 'declaration']
-        attr:object
         attr_values:dict  = {}
         namespace:object
         pretty_print:object

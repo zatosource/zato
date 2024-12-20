@@ -30,6 +30,7 @@ if 0:
 
     Field = Field
     Service = Service
+    ParallelServer = ParallelServer
     SIOServerConfig = SIOServerConfig
 
 # ################################################################################################################################

@@ -24,6 +24,7 @@ from zato.common.defaults import http_plain_server_port
 if 0:
     from zato.common.ext.imbox import Imbox
     from zato.common.typing_ import any_
+    Imbox = Imbox
 
 # ################################################################################################################################
 
