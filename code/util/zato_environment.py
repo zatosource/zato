@@ -425,10 +425,14 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_pip_install_zato_packages(self, packages:'strlist') -> 'None':
+    def run_pip_install_zato_packages(self, packages:'strlist', allow_editable:'bool'=True) -> 'None':
 
         # All the -e arguments that pip will receive
         pip_args = []
+
+        # This is used everywhere except with Cython
+        if allow_editable:
+            pip_args.append('--use-pep517')
 
         # Build the arguments
         for name in packages:
@@ -478,13 +482,12 @@ class EnvironmentManager:
     def pip_install_zato_packages(self) -> 'None':
 
         # Note that zato-common must come first.
-        packages = [
+        editable_packages = [
             'zato-common',
             'zato-agent',
             'zato-broker',
             'zato-cli',
             'zato-client',
-            'zato-cy',
             'zato-distlock',
             'zato-hl7',
             'zato-lib',
@@ -496,7 +499,12 @@ class EnvironmentManager:
             'zato-testing',
         ]
 
-        self.run_pip_install_zato_packages(packages)
+        non_editable_packages = [
+            'zato-cy'
+        ]
+
+        self.run_pip_install_zato_packages(editable_packages)
+        self.run_pip_install_zato_packages(non_editable_packages, allow_editable=False)
 
 # ################################################################################################################################
 

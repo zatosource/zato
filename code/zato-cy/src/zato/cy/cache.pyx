@@ -22,14 +22,10 @@ from time import time
 from arrow import Arrow
 
 # Cython
-from cpython.dict cimport PyDict_Contains, PyDict_DelItem, PyDict_GetItem, PyDict_Items, PyDict_Keys, PyDict_SetItem, \
-    PyDict_Values
-from cpython.int cimport PyInt_AS_LONG,  PyInt_FromLong, PyInt_GetMax
-from cpython.list cimport PyList_GET_SIZE, PyList_Insert, PyList_SetSlice
+from cpython.list cimport PyList_SetSlice
 from cpython.object cimport Py_EQ, PyObject, PyObject_RichCompareBool
 from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
-#from posix.time cimport timeval, timezone, gettimeofday
 
 # gevent
 from gevent.lock import RLock
@@ -268,19 +264,19 @@ cdef class Cache:
 
     def __contains__(self, object key):
         with self._lock:
-            return PyDict_Contains(self._data, key)
+            return self._data.__contains__(key)
 
 # ################################################################################################################################
 
     def __len__(self):
         with self._lock:
-            return PyList_GET_SIZE(self._index)
+            return self._index.__len__()
 
 # ################################################################################################################################
 
     cpdef list keys(self):
         with self._lock:
-            return PyDict_Keys(self._data)
+            return self._data.keys()
 
 # ################################################################################################################################
 
@@ -298,7 +294,7 @@ cdef class Cache:
 
     cpdef list values(self):
         with self._lock:
-            return PyDict_Values(self._data)
+            return self._data.values()
 
 # ################################################################################################################################
 
@@ -310,7 +306,7 @@ cdef class Cache:
 
     cpdef list items(self):
         with self._lock:
-            return PyDict_Items(self._data)
+            return self._data.items()
 
 # ################################################################################################################################
 
@@ -606,7 +602,7 @@ cdef class Cache:
         if key is known to be in self._index or self._data and only with self._lock held.
         """
         cdef Py_ssize_t index_idx = 0
-        cdef Py_ssize_t cache_size = PyList_GET_SIZE(self._index)
+        cdef Py_ssize_t cache_size = self._index.__len__()
         cdef bint index_key_eq
 
         while index_idx < cache_size:
@@ -620,7 +616,7 @@ cdef class Cache:
         """ Returns position the key given on input currently holds or None if key is not found.
         """
         with self._lock:
-            if PyDict_Contains(self._data, key):
+            if self._data.__contains__(key):
                 return self._get_index(key)
 
 # ################################################################################################################################
@@ -653,7 +649,7 @@ cdef class Cache:
         cdef Entry entry
         cdef double _now
         cdef double _orig_now = 0.0
-        cdef Py_ssize_t cache_size = PyList_GET_SIZE(self._index)
+        cdef Py_ssize_t cache_size = self._index.__len__()
         cdef Py_ssize_t index_idx
         cdef bint old_key_eq
         cdef long hits_per_position
@@ -680,8 +676,8 @@ cdef class Cache:
         self.set_ops += 1
 
         # Ok, we have this key in cache
-        if PyDict_Contains(self._data, key):
-            entry = <Entry>PyDict_GetItem(self._data, key)
+        if self._data.__contains__(key):
+            entry = <Entry>self._data.__getitem__(key)
 
             # If we have a key that previously was not using expiry, we must set it now if expiry is given on input.
             if not entry.expires_at:
@@ -717,7 +713,7 @@ cdef class Cache:
 
             # Make sure there is room for the new key
             if cache_size == self.max_size:
-                PyDict_DelItem(self._data, self._index.pop())
+                self._data.__delitem__(self._index.pop())
 
             # Actually insert entry
             entry = Entry()
@@ -732,8 +728,8 @@ cdef class Cache:
             entry.expires_at = 0.0 if not expiry else _now + expiry
             entry.set_metadata()
 
-            PyDict_SetItem(self._data, key, entry)
-            PyList_Insert(self._index, 0, key)
+            self._data.__setitem__(key, entry)
+            self._index.__insert__(0, key)
 
         # If any output dict for metadata was passed in by reference, set its requires items.
         if meta_ref is not None:
@@ -1103,15 +1099,15 @@ cdef class Cache:
 
             # We have the key's position so we can now update per-position counter
             # to be able to offer statistics on how often a key is found at a given position.
-            hits_per_position = PyInt_AS_LONG(<object>PyDict_GetItem(self.hits_per_position, index_idx))
+            hits_per_position = <object>self.hits_per_position.__getitem__(index_idx)
             hits_per_position += 1
-            PyDict_SetItem(self.hits_per_position, index_idx, PyInt_FromLong(hits_per_position))
+            self.hits_per_position.__setitem__(index_idx, hits_per_position)
 
             # Remove key from index
             index_key = self._remove_from_index_by_idx(index_idx)
 
             # Now insert the key back at the head position.
-            PyList_Insert(self._index, 0, index_key)
+            self._index.__insert__(0, index_key)
 
             # Update last/prev access information + hits
             entry.prev_read = entry.last_read
@@ -1525,7 +1521,7 @@ cdef class Cache:
             deleted = self._expired_on_op[:]
 
             # Collect keys still in cache
-            for key, value in PyDict_Items(self._data):
+            for key, value in self._data.items():
                 expires_at = value.expires_at
                 if expires_at and _now > expires_at:
                     self._delete(key)
