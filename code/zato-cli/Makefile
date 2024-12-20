@@ -5,7 +5,7 @@ Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-cli
 
 run-tests:
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/enmasse_/test_*.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/enmasse_/test_*.py -s
 	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_openapi.py
 	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_service_invoke.py
 
