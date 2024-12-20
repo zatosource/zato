@@ -25,7 +25,10 @@ if 0:
     from zato.common.typing_ import any_, anylist, anytuple, stranydict
     from zato.server.connection.http_soap.url_data import URLData
     from zato.server.connection.web_socket import WebSocket
+    anytuple = anytuple
+    stranydict = stranydict
     URLData = URLData
+    WebSocket = WebSocket
 
 # ################################################################################################################################
 # ################################################################################################################################

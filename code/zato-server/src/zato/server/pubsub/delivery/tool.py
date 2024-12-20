@@ -32,7 +32,7 @@ if 0:
     from collections.abc import ValuesView
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.pubsub import HandleNewMessageCtx
-    from zato.common.typing_ import any_, boolnone, callable_, callnone, dict_, dictlist, intset, set_, strlist, tuple_
+    from zato.common.typing_ import any_, anydict, boolnone, callable_, callnone, dict_, dictlist, intset, set_, strlist, tuple_
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import Message
 

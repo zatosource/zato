@@ -37,6 +37,8 @@ if 0:
     from requests import Response
     from zato.common.pubsub import PubSubMessage
     from zato.common.typing_ import any_, anydict, anytuple
+    anydict = anydict
+    PubSubMessage = PubSubMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
