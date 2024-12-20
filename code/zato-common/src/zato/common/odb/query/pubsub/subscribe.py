@@ -22,7 +22,12 @@ if 0:
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, boolnone, intnone, strnone
+    any_ = any_
+    boolnone = boolnone
+    intnone = intnone
+    strnone = strnone
     Column = Column
+    SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################

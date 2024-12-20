@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # dictalchemy
-from dictalchemy import make_class_dictable
+from zato.common.ext.dictalchemy import make_class_dictable
 
 # SQLAlchemy
 from sqlalchemy import Text, TypeDecorator

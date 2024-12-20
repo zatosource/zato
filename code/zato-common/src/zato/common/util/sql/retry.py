@@ -20,6 +20,7 @@ from sqlalchemy.exc import InternalError as SAInternalError, OperationalError as
 
 if 0:
     from zato.common.typing_ import any_, callable_
+    callable_ = callable_
 
 # ################################################################################################################################
 # ################################################################################################################################

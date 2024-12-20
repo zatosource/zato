@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -105,7 +105,7 @@ def main():
     cmd_line_options = parse_cmd_line_options(cmd_line_options)
 
     env_file = cmd_line_options.get('env_file') or ''
-    populate_environment_from_file(env_file)
+    _ = populate_environment_from_file(env_file)
 
     env_dir = os.environ.get('ZATO_DASHBOARD_BASE_DIR')
 

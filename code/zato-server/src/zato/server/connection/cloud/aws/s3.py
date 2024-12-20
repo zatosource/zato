@@ -6,13 +6,14 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+'''
 # stdlib
 from logging import getLogger
 
 # Boto
-from boto.s3.bucket import Bucket
-from boto.s3.connection import NoHostProvided, S3Connection
-from boto.s3.key import Key
+from boto3.s3.bucket import Bucket
+from boto3.s3.connection import NoHostProvided, S3Connection
+from boto3.s3.key import Key
 
 # Zato
 from zato.common.api import ZATO_NONE
@@ -78,3 +79,4 @@ class S3Wrapper(Wrapper):
 
 # ################################################################################################################################
 # ################################################################################################################################
+'''

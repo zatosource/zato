@@ -34,6 +34,9 @@ from zato.common.util.json_ import json_loads
 
 if 0:
     from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strdict, strnone, type_
+    callnone = callnone
+    intnone = intnone
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################

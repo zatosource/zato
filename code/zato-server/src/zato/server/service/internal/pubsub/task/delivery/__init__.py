@@ -20,6 +20,7 @@ if 0:
     from zato.common.typing_ import anylist, anytuple
     from zato.server.pubsub.delivery.task import DeliveryTask
     from zato.server.pubsub.delivery.tool import PubSubTool
+    anytuple = anytuple
     DeliveryTask = DeliveryTask
     PubSubTool = PubSubTool
 

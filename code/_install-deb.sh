@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
@@ -21,6 +21,10 @@ fi
 
 if [[ "$INSTALL_PYTHON" == "y" ]]; then
   PYTHON_DEPENDENCIES="$PY_BINARY $PY_BINARY-dev"
+fi
+
+if [[ "$PY_BINARY" == "python3.8" ]]; then
+  sudo apt-get install --reinstall python3.8-distutils
 fi
 
 sudo apt-get install -y \
@@ -44,7 +48,13 @@ curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.8.1 --break-system-packages
 
 echo Installing virtualenv in $CURDIR
-$PY_BINARY -m virtualenv $CURDIR
+
+# This is for Python 3.12
+if [[ "$PY_BINARY" == "python3.12" ]]; then
+  $PY_BINARY -m venv $CURDIR
+else
+  $PY_BINARY -m virtualenv $CURDIR
+fi
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate

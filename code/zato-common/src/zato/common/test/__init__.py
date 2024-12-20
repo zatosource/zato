@@ -56,6 +56,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
+    ODBManager = ODBManager
     SearchResults = SearchResults
 
 # ################################################################################################################################

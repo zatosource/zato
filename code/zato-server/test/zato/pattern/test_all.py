@@ -22,7 +22,6 @@ from zato.common.ext.dataclasses import dataclass
 from zato.common.util import spawn_greenlet
 from zato.server.pattern.api import ParallelExec
 from zato.server.pattern.base import ParallelBase
-from zato.server.pattern.model import ParallelCtx
 from zato.server.service import PatternsFacade
 
 # ################################################################################################################################
@@ -174,7 +173,6 @@ class PatternBaseTestCase(BaseTestCase):
         params_ctx = self.get_default_params(cache, lock)
 
         def fake_invoke(ctx):
-            # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
             self.assertEqual(ctx.source_name, params_ctx.source_name)
@@ -201,7 +199,6 @@ class PatternBaseTestCase(BaseTestCase):
         custom_cid = fake.pystr()
 
         def fake_invoke(ctx):
-            # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, custom_cid)
             self.assertEqual(ctx.source_name, params_ctx.source_name)
@@ -229,7 +226,6 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_target = fake.pystr()
 
         def fake_invoke(ctx):
-            # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
             self.assertEqual(ctx.source_name, params_ctx.source_name)
@@ -257,7 +253,6 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_target = fake.pystr()
 
         def fake_invoke(ctx):
-            # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
             self.assertEqual(ctx.source_name, params_ctx.source_name)
@@ -285,7 +280,6 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_target = None
 
         def fake_invoke(ctx):
-            # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
             self.assertEqual(ctx.source_name, params_ctx.source_name)

@@ -312,7 +312,7 @@ class GetListMeta(AdminServiceMeta):
         cls.SimpleIO = GetListMeta.get_sio(attrs=attrs, name=name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
-        return super(GetListMeta, cls).__init__(cls)
+        super(GetListMeta, cls).__init__(cls)
 
     @staticmethod
     def get_data(get_data_func):
@@ -349,7 +349,7 @@ class CreateEditMeta(AdminServiceMeta):
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
         cls.SimpleIO = CreateEditMeta.get_sio(attrs=attrs, name=name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
-        return super(CreateEditMeta, cls).__init__(cls)
+        super(CreateEditMeta, cls).__init__(cls)
 
     @staticmethod
     def handle(attrs):
@@ -492,7 +492,7 @@ class DeleteMeta(AdminServiceMeta):
             skip_input_required=True,
         )
         cls.handle = DeleteMeta.handle(attrs)
-        return super(DeleteMeta, cls).__init__(cls)
+        super(DeleteMeta, cls).__init__(cls)
 
     @staticmethod
     def handle(attrs):
@@ -585,7 +585,7 @@ class PingMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         cls.SimpleIO = PingMeta.get_sio(attrs=attrs, name=name, input_required=['id'], output_optional=['info', 'id'])
         cls.handle = PingMeta.handle(attrs)
-        return super(PingMeta, cls).__init__(cls)
+        super(PingMeta, cls).__init__(cls)
 
     @staticmethod
     def handle(attrs):

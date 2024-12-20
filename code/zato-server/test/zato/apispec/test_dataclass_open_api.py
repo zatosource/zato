@@ -23,6 +23,7 @@ from zato.server.service.internal.helpers import MyDataclassService
 
 if 0:
     from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 

@@ -31,6 +31,7 @@ if 0:
     from bunch import Bunch
     from zato.common.audit_log import AuditLog
     from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
+    byteslist = byteslist
 
 # ################################################################################################################################
 # ################################################################################################################################

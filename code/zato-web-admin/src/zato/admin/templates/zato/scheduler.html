@@ -5,6 +5,13 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:-4px !important;
+        }
+    </style>
+    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
