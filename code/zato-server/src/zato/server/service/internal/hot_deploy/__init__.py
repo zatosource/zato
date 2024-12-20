@@ -34,6 +34,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
+    strbytes = strbytes
     InRAMService = InRAMService
 
 # ################################################################################################################################

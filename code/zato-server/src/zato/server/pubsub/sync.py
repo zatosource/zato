@@ -19,8 +19,6 @@ from gevent.lock import RLock
 # Zato
 from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dict_, dictlist, intsetdict, strlist, \
-     strdictdict, strset, strsetdict
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
@@ -28,8 +26,16 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dict_, dictlist, intsetdict, strlist, \
+        strdictdict, strset, strsetdict
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.model import Endpoint
+    any_ = any_
+    anyset = anyset
+    anytuple = anytuple
+    dict_ = dict_
+    strset = strset
+    Endpoint = Endpoint
 
 # ################################################################################################################################
 

@@ -111,7 +111,11 @@ if 0:
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
     from zato.simpleio import CySimpleIO
-
+    anydictnone = anydictnone
+    callnone = callnone
+    dictnone = dictnone
+    modelnone = modelnone
+    strdictnone = strdictnone
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     callable_ = callable_
