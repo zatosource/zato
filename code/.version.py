@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,7 +17,7 @@ from subprocess import PIPE, run as subprocess_run
 # ################################################################################################################################
 
 # Cannot use built in __file__ because we are execfile'd
-_file = inspect.currentframe().f_code.co_filename
+_file = inspect.currentframe().f_code.co_filename # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +48,7 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 
 #
-# This is last git commit ID.
+# This is the last git commit ID.
 #
 # Make sure to use -C to specify the git directory instead of navigating to it directly;
 # the latter may result in spurious pip errors, such as:
@@ -78,7 +78,7 @@ except Exception as e:
     else:
         suffix = platform_system
 
-    version = f'3.2-nogit-{suffix}'
+    version = f'3.3-nogit-{suffix}'
 else:
 
     major = release['major']
