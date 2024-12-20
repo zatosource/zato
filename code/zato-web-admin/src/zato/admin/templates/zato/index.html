@@ -262,12 +262,14 @@
                                         </ul>
                                     </li>
                                     <li class="child">
+                                        {% if False %}
                                         <a class="menu-link" href="#">AWS &rarr;</a>
                                         <ul>
                                             <li class="child">
                                                 <a class="menu-link" href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:"1" }}">S3</a>
                                             </li>
                                         </ul>
+                                        {% endif %}
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-dropbox">Dropbox</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
@@ -277,6 +279,7 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Vendors &darr;</a>
                                 <ul>
+                                    {% if False %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Amazon &rarr;</a>
                                         <ul>
@@ -285,6 +288,7 @@
                                             </li>
                                         </ul>
                                     </li>
+                                    {% endif %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
