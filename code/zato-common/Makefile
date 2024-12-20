@@ -6,11 +6,11 @@ Zato_Package_Name=zato-common
 
 run-tests:
 	echo "Running tests in zato-common"
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/common/test_kv_data_api.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/common/test_util.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/common/marshall_/test_attach.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/common/marshall_/test_validation.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/common/marshall_/test_json_to_dataclass.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/common/test_kv_data_api.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/common/test_util.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/common/marshall_/test_attach.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/common/marshall_/test_validation.py -s
+	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/common/marshall_/test_json_to_dataclass.py -s
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)

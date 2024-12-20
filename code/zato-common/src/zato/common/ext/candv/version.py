@@ -1,0 +1,10 @@
+# type: ignore
+# flake8: noqa
+
+VERSION_SUFFIX = None
+VERSION_PATCH  = "0" + (VERSION_SUFFIX or "")
+VERSION_MINOR  = "5"
+VERSION_MAJOR  = "1"
+
+VERSION_INFO = (VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH)
+VERSION = ".".join([str(x) for x in VERSION_INFO])

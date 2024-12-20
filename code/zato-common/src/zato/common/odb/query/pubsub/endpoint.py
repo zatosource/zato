@@ -23,7 +23,9 @@ if 0:
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, intnone
+    intnone = intnone
     Column = Column
+    SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################

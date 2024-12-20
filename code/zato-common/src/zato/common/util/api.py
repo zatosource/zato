@@ -22,7 +22,6 @@ import signal
 import threading
 import socket
 import sys
-import unicodedata
 from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
@@ -134,6 +133,8 @@ if 0:
     from zato.client import ZatoClient
     from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlist, strlistnone, strnone, strset
     iterable = iterable
+    strlistnone = strlistnone
+    strnone = strnone
 
 # ################################################################################################################################
 
@@ -1848,52 +1849,6 @@ def get_sql_engine_display_name(engine, fs_sql_config):
 
 def pretty_format_float(value):
     return ('%f' % value).rstrip('0').rstrip('.') if value else value
-
-# ################################################################################################################################
-# The slugify function below is taken from Django:
-
-"""
-Copyright (c) Django Software Foundation and individual contributors.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-    1. Redistributions of source code must retain the above copyright notice,
-       this list of conditions and the following disclaimer.
-
-    2. Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-
-    3. Neither the name of Django nor the names of its contributors may be used
-       to endorse or promote products derived from this software without
-       specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
-def slugify(value, allow_unicode=False):
-    """ Convert to ASCII if 'allow_unicode' is False. Convert spaces to underscores.
-    Remove characters that aren't alphanumerics, underscores, or hyphens.
-    Convert to lowercase. Also strip leading and trailing whitespace.
-    """
-    if allow_unicode:
-        value = unicodedata.normalize('NFKC', value)
-        value = re.sub('[^\w\s-]', '', value, flags=re.U).strip().lower() # noqa: W605
-        return re.sub('[-\s]+', '_', value, flags=re.U) # noqa: W605
-    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub('[^\w\s-]', '', value).strip().lower() # noqa: W605
-    return re.sub('[-\s]+', '_', value) # noqa: W605
 
 # ################################################################################################################################
 

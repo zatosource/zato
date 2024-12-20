@@ -26,6 +26,7 @@ try:
     from zato.common.util.open_ import open_r
 except ImportError:
     default_encoding = 'utf8'
+
     def open_r(path:'str', encoding:'str'=default_encoding) -> 'textio_':
         return open(path, 'r', encoding=encoding)
 

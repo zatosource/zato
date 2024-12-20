@@ -57,7 +57,6 @@ flake8:
 	echo "Flake8 checks OK"
 
 static-check:
-	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
@@ -99,7 +98,6 @@ scheduler-tests:
 
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
-	$(CURDIR)/code/bin/pip install -U nose --use-feature=no-binary-enable-wheel-cache --no-binary :all:
 	npx -y playwright install
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/

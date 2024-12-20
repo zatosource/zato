@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,7 +17,7 @@ from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
-from inspect import getargspec, getmodule, getmro, getsourcefile, isclass
+from inspect import getmodule, getmro, getsourcefile, isclass
 from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from random import randint
 from shutil import copy as shutil_copy
@@ -68,8 +68,6 @@ from zato.simpleio import CySimpleIO
 # ################################################################################################################################
 
 if 0:
-
-    from inspect import ArgSpec
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
     from zato.common.odb.api import ODBManager
@@ -78,6 +76,11 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
+    callable_ = callable_
+    intstrdict = intstrdict
+    strdictdict = strdictdict
+    strintdict = strintdict
+    stroriter = stroriter
     ConfigStore      = ConfigStore
     HotDeployProject = HotDeployProject
     ODBManager       = ODBManager
@@ -551,6 +554,7 @@ class ServiceStore:
 
         # Local aliases
         _Class_SimpleIO = None # type: ignore
+        _Class_SimpleIO = _Class_SimpleIO # For flake8
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -1070,17 +1074,7 @@ class ServiceStore:
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
-                arg_spec = getargspec(item.service_class.after_add_to_store) # type: ArgSpec
-                args = arg_spec.args # type: anylist
-
-                # GH #1018 made server the argument that the hook receives ..
-                if len(args) == 1 and args[0] == 'server':
-                    hook_arg = self.server
-
-                # .. but for backward-compatibility we provide the hook with the logger object by default.
-                else:
-                    hook_arg = logger
-
+                hook_arg = self.server
                 item.service_class.after_add_to_store(hook_arg)
 
 # ################################################################################################################################

@@ -47,8 +47,10 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
-
+    boolnone = boolnone
+    tuplist = tuplist
     Field = Field
+    ParallelServer = ParallelServer
     Service = Service
 
 # ################################################################################################################################

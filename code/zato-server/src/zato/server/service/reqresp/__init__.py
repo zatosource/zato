@@ -63,6 +63,8 @@ if 0:
     # Zato - Cython
     from zato.simpleio import CySimpleIO
 
+    callable_ = callable_
+    strnone = strnone
     AMQPFacade = AMQPFacade
     Arrow = Arrow
     ConfigDict = ConfigDict

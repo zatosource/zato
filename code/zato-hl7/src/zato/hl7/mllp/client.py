@@ -21,6 +21,10 @@ if 0:
     from socket import AddressFamily, socket as Socket, SocketKind
     from bunch import Bunch
     from zato.common.typing_ import any_, type_
+    type_ = type_
+    AddressFamily = AddressFamily
+    Socket = Socket
+    SocketKind = SocketKind
 
 # ################################################################################################################################
 # ################################################################################################################################
