@@ -46,6 +46,7 @@ if [[ "$(lsb_release -sir)" =~ '24.04' ]]
 then
     if [[ "$PY_BINARY" == "python3" ]]; then
       PY_BINARY=python3.12
+      sudo apt-get install python3.12-venv
     fi
 fi
 
