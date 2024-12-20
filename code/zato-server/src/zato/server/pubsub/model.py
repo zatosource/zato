@@ -23,13 +23,14 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
+from zato.common.typing_ import list_
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, intnone, list_, optional, strlist, strtuple
+    from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, intnone, optional, strlist, strtuple
     from zato.server.pubsub.delivery.message import msgnone
     anylist = anylist
     intnone = intnone
