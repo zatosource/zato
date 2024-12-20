@@ -709,6 +709,7 @@ class WorkerStore(_WorkerStoreBase):
         #     ('cloud_aws_s3', S3Wrapper),
         # )
         data = []
+        S3Wrapper = None
 
         for config_key, wrapper in data:
             config_attr = getattr(self.worker_config, config_key)
@@ -2378,6 +2379,7 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an AWS S3 connection.
         """
+        S3Wrapper = None
         msg.password = self.server.decrypt(msg.password)
 
         self._update_aws_config(msg)
