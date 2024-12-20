@@ -17,7 +17,7 @@ from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
-from inspect import getargspec, getmodule, getmro, getsourcefile, isclass
+from inspect import getargs, getmodule, getmro, getsourcefile, isclass
 from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from random import randint
 from shutil import copy as shutil_copy
@@ -1070,8 +1070,7 @@ class ServiceStore:
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
-                arg_spec = getargspec(item.service_class.after_add_to_store) # type: ArgSpec
-                args = arg_spec.args # type: anylist
+                args = getargs(item.service_class.after_add_to_store) # type: anylist
 
                 # GH #1018 made server the argument that the hook receives ..
                 if len(args) == 1 and args[0] == 'server':

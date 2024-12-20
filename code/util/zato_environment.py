@@ -464,7 +464,7 @@ class EnvironmentManager:
         packages = [
             'cython==3.1.0a1',
             'pyOpenSSL==23.0.0',
-            'zato-ext-bunch==1.2'
+            'zato-ext-bunch==1.2',
         ]
 
         # This needs to be installed here rather than via requirements.txt
