@@ -28,9 +28,9 @@ config_dir = None
 DATABASES = None
 db_type = None
 django_sqlalchemy_engine = None
-SSL_CA_CERTS = None
-SSL_CERT_FILE = None
-SSL_KEY_FILE = None
+SSL_CA_CERTS = None  # type: ignore
+SSL_CERT_FILE = None # type: ignore
+SSL_KEY_FILE = None  # type: ignore
 
 # Zato
 from zato.common.api import TRACE1
