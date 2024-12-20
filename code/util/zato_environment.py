@@ -14,12 +14,13 @@ import platform
 import sys
 from pathlib import Path
 from subprocess import check_output, PIPE, Popen
+from sys import version as py_version
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist, strnone
+    from zato.common.typing_ import any_, strlist, strnone # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +41,13 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-pip_deps_windows     = 'setuptools==75.6.0 wheel'
-pip_deps_non_windows = 'setuptools==75.6.0 wheel pip'
+if '3.8' in py_version:
+    setuptools_version = '57.4.0'
+else:
+    setuptools_version = '75.6.0'
+
+pip_deps_windows     = f'setuptools=={setuptools_version} wheel'
+pip_deps_non_windows = f'setuptools=={setuptools_version} wheel pip'
 pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
@@ -1026,7 +1032,7 @@ _path_created = {}
 # ################################################################################################################################
 # ################################################################################################################################
 
-def mkpath(name, mode=0o777, verbose=1, dry_run=0):
+def mkpath(name, mode=0o777, verbose=1, dry_run=0): # type: ignore
     """Create a directory and any missing ancestor directories.
 
     If the directory already exists (or if 'name' is the empty string, which
@@ -1080,7 +1086,7 @@ def mkpath(name, mode=0o777, verbose=1, dry_run=0):
             try:
                 os.mkdir(head, mode)
             except OSError as exc:
-                if not (exc.errno == errno.EEXIST and os.path.isdir(head)):
+                if not (exc.errno == errno.EEXIST and os.path.isdir(head)): # type: ignore
                     raise Exception("could not create '%s': %s" % (head, exc.args[-1]))
             created_dirs.append(head)
 
@@ -1090,8 +1096,8 @@ def mkpath(name, mode=0o777, verbose=1, dry_run=0):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
-              preserve_symlinks=0, update=0, verbose=1, dry_run=0):
+def copy_tree(src, dst, preserve_mode=1, preserve_times=1, # type: ignore
+              preserve_symlinks=0, update=0, verbose=1, dry_run=0): # type: ignore
     """Copy an entire directory tree 'src' to a new location 'dst'.
 
     Both 'src' and 'dst' must be directory names.  If 'src' is not a
@@ -1123,7 +1129,7 @@ def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
             raise Exception("error listing files in '%s': %s" % (src, e.strerror))
 
     if not dry_run:
-        mkpath(dst, verbose=verbose)
+        mkpath(dst, verbose=verbose) # type: ignore
 
     outputs = []
 
@@ -1149,7 +1155,7 @@ def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
                           preserve_times, preserve_symlinks, update,
                           verbose=verbose, dry_run=dry_run))
         else:
-            copy_file(src_name, dst_name, preserve_mode,
+            copy_file(src_name, dst_name, preserve_mode, # type: ignore
                       preserve_times, update, verbose=verbose,
                       dry_run=dry_run)
             outputs.append(dst_name)
@@ -1159,7 +1165,7 @@ def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _copy_file_contents(src, dst, buffer_size=16*1024):
+def _copy_file_contents(src, dst, buffer_size=16*1024): # type: ignore
     """Copy the file 'src' to 'dst'; both must be filenames.  Any error
     opening either file, reading from 'src', or writing to 'dst', raises
     DistutilsFileError.  Data is read/written in chunks of 'buffer_size'
@@ -1197,7 +1203,7 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
                 break
 
             try:
-                fdst.write(buf)
+                fdst.write(buf) # type: ignore
             except OSError as e:
                 raise Exception("could not write to '%s': %s" % (dst, e.strerror))
     finally:
@@ -1209,8 +1215,8 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def copy_file(src, dst, preserve_mode=1, preserve_times=1, update=0,
-              link=None, verbose=1, dry_run=0):
+def copy_file(src, dst, preserve_mode=1, preserve_times=1, update=0, # type: ignore
+              link=None, verbose=1, dry_run=0): # type: ignore
     """Copy a file 'src' to 'dst'.  If 'dst' is a directory, then 'src' is
     copied there with the same name; otherwise, it must be a filename.  (If
     the file exists, it will be ruthlessly clobbered.)  If 'preserve_mode'
