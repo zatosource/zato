@@ -25,6 +25,12 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry, sql_query_wit
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anytuple, intnone, intset, listnone, strlist
+    anytuple = anytuple
+    intnone = intnone
+    intset = intset
+    listnone = listnone
+    strlist = strlist
+    SASession = SASession
 
 # ################################################################################################################################
 

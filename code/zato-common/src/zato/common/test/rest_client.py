@@ -30,7 +30,10 @@ from zato.sso import status_code
 if 0:
     from requests import Response
     from zato.common.typing_ import any_, anydictnone, anytuple, callable_, optional
-
+    anytuple = anytuple
+    callable_ = callable_
+    optional = optional
+    Response = Response
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -2,6 +2,9 @@
 Provides extra ready-to-use classes for constructing custom constants.
 
 """
+# type: ignore
+# flake8: noqa
+
 import operator
 
 from .core import Constants

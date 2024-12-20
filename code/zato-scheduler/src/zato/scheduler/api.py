@@ -35,7 +35,8 @@ from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 if 0:
     from zato.broker.client import BrokerClient
     from zato.common.typing_ import strdict, strdictnone
-    from zato.scheduler.server import Config
+    from zato.scheduler.server import SchedulerServerConfig
+    BrokerClient = BrokerClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +62,7 @@ class SchedulerAPI:
     """ The job scheduler server. All of the operations assume the data was already validated
     by relevant Zato public API services.
     """
-    def __init__(self, config:'Config'=None, run:'bool'=False):
+    def __init__(self, config:'SchedulerServerConfig'=None, run:'bool'=False):
         self.config = config
         self.broker_client = None # type: BrokerClient
         self.config.on_job_executed_cb = self.on_job_executed

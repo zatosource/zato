@@ -29,7 +29,7 @@ config_template = """{{
 }}
 """
 
-zato_config_template = """
+zato_config_template = r"""
 # ##############################################################################
 
 global

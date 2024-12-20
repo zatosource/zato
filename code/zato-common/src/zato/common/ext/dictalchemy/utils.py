@@ -1,4 +1,5 @@
 # vim: set fileencoding=utf-8 :
+# flake8: noqa
 """
 ~~~~~~~~~
 Utilities

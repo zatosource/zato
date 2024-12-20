@@ -22,7 +22,6 @@ import signal
 import threading
 import socket
 import sys
-import unicodedata
 from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
@@ -134,6 +133,8 @@ if 0:
     from zato.client import ZatoClient
     from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlist, strlistnone, strnone, strset
     iterable = iterable
+    strlistnone = strlistnone
+    strnone = strnone
 
 # ################################################################################################################################
 

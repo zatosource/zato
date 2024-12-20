@@ -21,6 +21,9 @@ from zato.common.util.time_ import utcnow_as_ms
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import anylist, intlist, strlistempty
+    intlist = intlist
+    strlistempty = strlistempty
+    SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################

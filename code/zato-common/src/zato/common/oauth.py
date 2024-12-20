@@ -27,6 +27,8 @@ from zato.common.typing_ import dataclass
 
 if 0:
     from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict, strnone
+    callable_ = callable_
+    intanydict = intanydict
 
 # ################################################################################################################################
 # ################################################################################################################################
