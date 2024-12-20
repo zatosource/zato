@@ -1041,7 +1041,8 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = load(open_r(os.path.join(self.component_dir, found)))
+        with open_r(os.path.join(self.component_dir, found)) as f:
+            json_data = load(f)
 
         os.chdir(self.component_dir)
 
