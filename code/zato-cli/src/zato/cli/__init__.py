@@ -430,7 +430,7 @@ class ZatoCommand:
         # stdlib
         import logging
         import sys
-        from imp import reload
+        from importlib import reload
 
         # Zato
         from zato.common.util.file_system import fs_safe_now
