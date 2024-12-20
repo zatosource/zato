@@ -50,7 +50,7 @@ $PY_BINARY -m pip install -U virtualenv==20.8.1 --break-system-packages
 echo Installing virtualenv in $CURDIR
 
 # This is for Python 3.12
-if [[ "$INSTALL_PYTHON" == "python3.12" ]]; then
+if [[ "$PY_BINARY" == "python3.12" ]]; then
   $PY_BINARY -m venv $CURDIR
 else
   $PY_BINARY -m virtualenv $CURDIR

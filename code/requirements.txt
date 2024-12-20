@@ -143,6 +143,7 @@ zato-vault-client==1.3
 zope.event==4.5.0
 zxcvbn==4.4.28
 
+zato-ext-concurrent-log-handler==0.9.1
 zato-ext-inotifyx==0.3.1; sys_platform == 'linux'
 zato-ext-paodate==1.3
 zato-ext-python-tds==1.11.2
