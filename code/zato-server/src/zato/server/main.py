@@ -11,6 +11,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
+# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
+
 # Note that the order of patching matters, just like in patch_all
 patch_os()
 patch_time()
