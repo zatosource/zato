@@ -52,6 +52,9 @@ code/*/dist
 geckodriver.log
 hotfixes
 lib/
+node_modules/
+package-lock.json
+package.json
 pidfile
 vscode
 *.egg-info*
