@@ -40,8 +40,8 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-pip_deps_windows     = 'setuptools==57.4.0 wheel'
-pip_deps_non_windows = 'setuptools==57.4.0 wheel pip'
+pip_deps_windows     = 'setuptools==75.6.0 wheel'
+pip_deps_non_windows = 'setuptools==75.6.0 wheel pip'
 pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
@@ -452,14 +452,14 @@ class EnvironmentManager:
 
         # These cannot be installed via requirements.txt
         packages = [
-            'cython==0.29.32',
+            'cython==3.1.0a1',
             'pyOpenSSL==23.0.0',
             'zato-ext-bunch==1.2'
         ]
 
         # This needs to be installed here rather than via requirements.txt
-        if not is_windows:
-            packages.append('posix-ipc==1.0.0')
+        #if not is_windows:
+        #    packages.append('posix-ipc==1.0.0')
 
         for package in packages:
 
@@ -1008,6 +1008,80 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+# cache for by mkpath() -- in addition to cheapening redundant calls,
+# eliminates redundant "creating /foo/bar/baz" messages in dry-run mode
+_path_created = {}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def mkpath(name, mode=0o777, verbose=1, dry_run=0):
+    """Create a directory and any missing ancestor directories.
+
+    If the directory already exists (or if 'name' is the empty string, which
+    means the current directory, which of course exists), then do nothing.
+    Raise DistutilsFileError if unable to create some directory along the way
+    (eg. some sub-path exists, but is a file rather than a directory).
+    If 'verbose' is true, print a one-line summary of each mkdir to stdout.
+    Return the list of directories actually created.
+    """
+
+    global _path_created
+
+    # Detect a common bug -- name is None
+    if not isinstance(name, str):
+        raise Exception("mkpath: 'name' must be a string (got %r)" % (name,))
+
+    # XXX what's the better way to handle verbosity? print as we create
+    # each directory in the path (the current behaviour), or only announce
+    # the creation of the whole path? (quite easy to do the latter since
+    # we're not using a recursive algorithm)
+
+    name = os.path.normpath(name)
+    created_dirs = []
+    if os.path.isdir(name) or name == '':
+        return created_dirs
+    if _path_created.get(os.path.abspath(name)):
+        return created_dirs
+
+    (head, tail) = os.path.split(name)
+    tails = [tail]                      # stack of lone dirs to create
+
+    while head and tail and not os.path.isdir(head):
+        (head, tail) = os.path.split(head)
+        tails.insert(0, tail)          # push next higher dir onto stack
+
+    # now 'head' contains the deepest directory that already exists
+    # (that is, the child of 'head' in 'name' is the highest directory
+    # that does *not* exist)
+    for d in tails:
+        #print "head = %s, d = %s: " % (head, d),
+        head = os.path.join(head, d)
+        abs_head = os.path.abspath(head)
+
+        if _path_created.get(abs_head):
+            continue
+
+        if verbose >= 1:
+            logger.info("creating %s", head)
+
+        if not dry_run:
+            try:
+                os.mkdir(head, mode)
+            except OSError as exc:
+                if not (exc.errno == errno.EEXIST and os.path.isdir(head)):
+                    raise Exception("could not create '%s': %s" % (head, exc.args[-1]))
+            created_dirs.append(head)
+
+        _path_created[abs_head] = 1
+    return created_dirs
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
               preserve_symlinks=0, update=0, verbose=1, dry_run=0):
     """Copy an entire directory tree 'src' to a new location 'dst'.
@@ -1056,7 +1130,7 @@ def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
         if preserve_symlinks and os.path.islink(src_name):
             link_dest = os.readlink(src_name)
             if verbose >= 1:
-                log.info("linking %s -> %s", dst_name, link_dest)
+                logger.info("linking %s -> %s", dst_name, link_dest)
             if not dry_run:
                 os.symlink(link_dest, dst_name)
             outputs.append(dst_name)
@@ -1073,6 +1147,56 @@ def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
             outputs.append(dst_name)
 
     return outputs
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _copy_file_contents(src, dst, buffer_size=16*1024):
+    """Copy the file 'src' to 'dst'; both must be filenames.  Any error
+    opening either file, reading from 'src', or writing to 'dst', raises
+    DistutilsFileError.  Data is read/written in chunks of 'buffer_size'
+    bytes (default 16k).  No attempt is made to handle anything apart from
+    regular files.
+    """
+    # Stolen from shutil module in the standard library, but with
+    # custom error-handling added.
+    fsrc = None
+    fdst = None
+    try:
+        try:
+            fsrc = open(src, 'rb')
+        except OSError as e:
+            raise Exception("could not open '%s': %s" % (src, e.strerror))
+
+        if os.path.exists(dst):
+            try:
+                os.unlink(dst)
+            except OSError as e:
+                raise Exception("could not delete '%s': %s" % (dst, e.strerror))
+
+        try:
+            fdst = open(dst, 'wb')
+        except OSError as e:
+            raise Exception("could not create '%s': %s" % (dst, e.strerror))
+
+        while True:
+            try:
+                buf = fsrc.read(buffer_size)
+            except OSError as e:
+                raise Exception("could not read from '%s': %s" % (src, e.strerror))
+
+            if not buf:
+                break
+
+            try:
+                fdst.write(buf)
+            except OSError as e:
+                raise Exception("could not write to '%s': %s" % (dst, e.strerror))
+    finally:
+        if fdst:
+            fdst.close()
+        if fsrc:
+            fsrc.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1117,19 +1241,23 @@ def copy_file(src, dst, preserve_mode=1, preserve_times=1, update=0,
 
     if False and update and not newer(src, dst):
         if verbose >= 1:
-            log.debug("not copying %s (output up-to-date)", src)
+            logger.debug("not copying %s (output up-to-date)", src)
         return (dst, 0)
 
     try:
+        # for generating verbose output in 'copy_file()'
+        _copy_action = { None:   'copying',
+                 'hard': 'hard linking',
+                 'sym':  'symbolically linking' }
         action = _copy_action[link]
     except KeyError:
         raise ValueError("invalid value '%s' for 'link' argument" % link)
 
     if verbose >= 1:
         if os.path.basename(dst) == os.path.basename(src):
-            log.info("%s %s -> %s", action, src, dir)
+            logger.info("%s %s -> %s", action, src, dir)
         else:
-            log.info("%s %s -> %s", action, src, dst)
+            logger.info("%s %s -> %s", action, src, dst)
 
     if dry_run:
         return (dst, 1)

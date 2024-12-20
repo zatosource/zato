@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # dictalchemy
-from dictalchemy.utils import asdict
+from zato.common.ext.dictalchemy.utils import asdict
 
 # Python 2/3 compatibility
 from six import add_metaclass
