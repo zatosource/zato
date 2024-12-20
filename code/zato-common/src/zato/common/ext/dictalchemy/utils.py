@@ -117,7 +117,7 @@ def asdict(model, exclude=None, exclude_underscore=None, exclude_pk=None,
 
     data = dict([(k, getattr(model, k)) for k in attrs])
 
-    for (rel_key, orig_args) in follow.iteritems():
+    for (rel_key, orig_args) in follow.items():
 
         try:
             rel = getattr(model, rel_key)
@@ -147,7 +147,7 @@ def asdict(model, exclude=None, exclude_underscore=None, exclude_pk=None,
         elif isinstance(rel, dict):
             rel_data = {}
 
-            for (child_key, child) in rel.iteritems():
+            for (child_key, child) in rel.items():
                 if hasattr(child, method):
                     rel_data[child_key] = getattr(child, method)(**args)
                 else:
@@ -271,7 +271,7 @@ def fromdict(model, data, exclude=None, exclude_underscore=None,
         setattr(model, k, data[k])
 
     # Update simple relations
-    for (k, args) in follow.iteritems():
+    for (k, args) in follow.items():
         if k not in data:
             continue
         if k not in relations:
@@ -288,7 +288,7 @@ def iter(model):
 
     Yields everything returned by `asdict`.
     """
-    for i in model.asdict().iteritems():
+    for i in model.asdict().items():
         yield i
 
 
