@@ -86,7 +86,6 @@ We don't currently support these modules, but would like to::
 
 import sys
 import logging
-import imp
 import contextlib
 import types
 import copy
@@ -234,27 +233,6 @@ MOVES = [('collections', 'UserList', 'UserList', 'UserList'),
         ]
 
 
-# A minimal example of an import hook:
-# class WarnOnImport(object):
-#     def __init__(self, *args):
-#         self.module_names = args
-#
-#     def find_module(self, fullname, path=None):
-#         if fullname in self.module_names:
-#             self.path = path
-#             return self
-#         return None
-#
-#     def load_module(self, name):
-#         if name in sys.modules:
-#             return sys.modules[name]
-#         module_info = imp.find_module(name, self.path)
-#         module = imp.load_module(name, *module_info)
-#         sys.modules[name] = module
-#         flog.warning("Imported deprecated module %s", name)
-#         return module
-
-
 class RenameImport(object):
     """
     A class for import hooks mapping Py3 module names etc. to the Py2 equivalents.
@@ -321,8 +299,12 @@ class RenameImport(object):
                 flog.debug('What to do here?')
 
         name = bits[0]
-        module_info = imp.find_module(name, path)
-        return imp.load_module(name, *module_info)
+
+        from importlib.util import find_spec as find_module
+        from importlib import import_module as load_module
+
+        module_info = find_module(name, path)
+        return load_module(name, *module_info)
 
 
 class hooks(object):

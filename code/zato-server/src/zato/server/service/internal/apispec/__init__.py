@@ -158,7 +158,7 @@ class GetSphinx(Service):
         return bunchify({
             'ns': unicode(idx),
             'orig_name': name,
-            'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores # noqa: W605
+            'sphinx_name': name.replace('_', r'\_'), # Needed for Sphinx to ignore undescores # noqa: W605
             'name': name_fs_safe,
             'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
             'file_name': file_name,
@@ -196,7 +196,7 @@ class GetSphinx(Service):
 
         # Find the longest elements for each column
         for elem in chain(input, output):
-            elem.name_sphinx = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks # noqa: W605
+            elem.name_sphinx = elem.name.replace('_', r'\_') # Sphinx treats _ as hyperlinks # noqa: W605
 
             len_elem_name_sphinx = len(elem.name_sphinx)
             len_elem_subtype     = len(elem.subtype)

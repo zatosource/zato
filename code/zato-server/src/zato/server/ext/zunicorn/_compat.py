@@ -287,7 +287,7 @@ if PY26:
         return v
 
 else:
-    from zato.server.ext.zunicorn.six.moves.urllib.parse import urlsplit
+    from urllib.parse import urlsplit
 
 # For pyflakes
 urlsplit = urlsplit
