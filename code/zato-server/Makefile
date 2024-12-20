@@ -7,31 +7,31 @@ Zato_Package_Name=zato-server
 
 pubsub-tests:
 	echo "Running pub/sub tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/pubsub/test_pubapi_rest.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/pubsub/test_pubapi_rest.py -s
 	$(Zato_Python_Dir)/py        $(CURDIR)/test/zato/pubsub/test_pubapi_services.py
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/pubsub/test_publish.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/pubsub/test_publish.py -s
 
 wsx-tests:
 	echo "Running WSX tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/wsx/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/wsx/test_*.py -s
 
 kvdb-tests:
 	echo "Running KVDB tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/kvdb/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/kvdb/test_*.py -s
 
 run-tests:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) pubsub-tests
 	$(MAKE) wsx-tests
 	$(MAKE) kvdb-tests
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/test_sio_*.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/file_transfer/test_*.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/test_sio_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/file_transfer/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(Zato_Python_Dir)/py        $(CURDIR)/test/zato/commands_/test_*.py
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/rest/test_*.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/pattern/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/rest/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/server_rpc/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/stats/test_*.py -s
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)

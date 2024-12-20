@@ -33,6 +33,7 @@ if 0:
     from zato.common.typing_ import any_, dtnone, intnone, stranydict
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import Cache
+    Entry = Entry
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -126,7 +126,7 @@ class _WrapperBase(Service):
             _name         = _orig_name
             _wrapper_type = request.get('wrapper_type')
             if _wrapper_type:
-                name = f'{_wrapper_type }.{_name}'
+                name = f'{_wrapper_type}.{_name}'
             else:
                 name = _name
             request['name'] = name

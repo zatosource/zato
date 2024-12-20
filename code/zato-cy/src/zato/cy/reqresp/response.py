@@ -37,6 +37,7 @@ from zato.common.py23_.past.builtins import unicode as past_unicode
 if 0:
     from zato.common.typing_ import any_
     from zato.simpleio import CySimpleIO
+    any_ = any_
     CySimpleIO = CySimpleIO
     past_unicode = past_unicode
 

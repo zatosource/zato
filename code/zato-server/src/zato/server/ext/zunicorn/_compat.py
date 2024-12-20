@@ -49,7 +49,7 @@ from zato.common.py23_.past.builtins import execfile, unicode
 def _check_if_pyc(fname):
     """Return True if the extension is .pyc, False if .py
     and None if otherwise"""
-    from imp import find_module
+    from importlib.util import find_spec as find_module
     from os.path import realpath, dirname, basename, splitext
 
     # Normalize the file-path for the find_module()
@@ -68,7 +68,6 @@ def _check_if_pyc(fname):
 
 def _get_codeobj(pyfile):
     """ Returns the code object, given a python file """
-    from imp import PY_COMPILED, PY_SOURCE
 
     result, fileobj, fullpath = _check_if_pyc(pyfile)
 
@@ -80,25 +79,12 @@ def _get_codeobj(pyfile):
     finally:
         fileobj.close()
 
-    # This is a .pyc file. Treat accordingly.
-    if result is PY_COMPILED:
-        # .pyc format is as follows:
-        # 0 - 4 bytes: Magic number, which changes with each create of .pyc file.
-        #              First 2 bytes change with each marshal of .pyc file. Last 2 bytes is "\r\n".
-        # 4 - 8 bytes: Datetime value, when the .py was last changed.
-        # 8 - EOF: Marshalled code object data.
-        # So to get code object, just read the 8th byte onwards till EOF, and
-        # UN-marshal it.
+    try:
         import marshal
         code_obj = marshal.loads(data[8:])
-
-    elif result is PY_SOURCE:
+    except Exception:
         # This is a .py file.
         code_obj = compile(data, fullpath, 'exec')
-
-    else:
-        # Unsupported extension
-        raise Exception("Input file is unknown format: {0}".format(fullpath))
 
     # Return code object
     return code_obj
@@ -301,7 +287,7 @@ if PY26:
         return v
 
 else:
-    from zato.server.ext.zunicorn.six.moves.urllib.parse import urlsplit
+    from urllib.parse import urlsplit
 
 # For pyflakes
 urlsplit = urlsplit

@@ -25,6 +25,7 @@ if 0:
     from zato.common.crypto.totp_ import TOTPManager
     from zato.common.test.config import TestConfig
 
+    type_ = type_
     TestConfig = TestConfig
     TOTPManager = TOTPManager
 

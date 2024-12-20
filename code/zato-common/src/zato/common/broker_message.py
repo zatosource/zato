@@ -9,12 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from inspect import isclass
 
-# candv
-from candv import Constants as _Constants, ValueConstant as _ValueConstant
-
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import cmp
+
+from zato.common.ext.candv import Constants as _Constants, ValueConstant as _ValueConstant
 
 class Constants(_Constants):
     values = _Constants.constants

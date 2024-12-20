@@ -35,7 +35,7 @@ class GetList(DataDictService):
         self.response.payload[:] = self.get_data()
 
 class _CreateEdit(DataDictService):
-    NAME_PATTERN = '\w+' # noqa: W605
+    NAME_PATTERN = r'\w+' # noqa: W605
     NAME_RE = re.compile(NAME_PATTERN)
 
     class SimpleIO(AdminSIO):

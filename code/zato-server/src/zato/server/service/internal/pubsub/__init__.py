@@ -24,6 +24,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 if 0:
     from zato.common.typing_ import anydict, anylist, anytuple, stranydict, strlist
     from zato.server.pubsub.delivery.tool import PubSubTool
+    anytuple = anytuple
+    stranydict = stranydict
     PubSubTool = PubSubTool
 
 # ################################################################################################################################

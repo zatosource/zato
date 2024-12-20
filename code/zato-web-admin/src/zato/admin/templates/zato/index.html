@@ -97,7 +97,9 @@
                 <nav class="menu">
                     <div class="nav-container">
                         <ul class="first-level left">
+                            {% if False %}
                             <li class="first-level"><a class="menu-link" href="{% url "cluster" %}">Clusters</a></li>
+                            {% endif %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
                                 <ul>
@@ -109,7 +111,11 @@
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>
+
+                                    {% if False %}
                                     <li class="child"><a class="menu-link" href="{% url "security-aws" %}?cluster={{ cluster_id|default:"1" }}">AWS</a></li>
+                                    {% endif %}
+
                                     <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}?cluster={{ cluster_id|default:"1" }}">Bearer tokens</a></li>
                                     {% if False %}
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-org" %}?cluster={{ cluster_id|default:"1" }}">Organizations</a></li>
@@ -174,7 +180,9 @@
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
+                                            {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
+                                            {% endif %}
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
@@ -256,12 +264,14 @@
                                         </ul>
                                     </li>
                                     <li class="child">
+                                        {% if False %}
                                         <a class="menu-link" href="#">AWS &rarr;</a>
                                         <ul>
                                             <li class="child">
                                                 <a class="menu-link" href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:"1" }}">S3</a>
                                             </li>
                                         </ul>
+                                        {% endif %}
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-dropbox">Dropbox</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
@@ -271,6 +281,7 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Vendors &darr;</a>
                                 <ul>
+                                    {% if False %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Amazon &rarr;</a>
                                         <ul>
@@ -279,6 +290,7 @@
                                             </li>
                                         </ul>
                                     </li>
+                                    {% endif %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
