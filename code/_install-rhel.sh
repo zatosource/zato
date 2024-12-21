@@ -7,7 +7,7 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
 INSTALL_PYTHON=${2:-y}
-echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
+echo "*** Zato RHEL installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
 
@@ -39,10 +39,9 @@ fi
 
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
-    keyutils-libs-devel libev libev-devel libevent-devel libffi libffi-devel \
-    libxml2-devel libxslt-devel libyaml-devel openldap-devel openssl \
-    openssl-devel patch postgresql-devel suitesparse swig uuid \
-    uuid-devel wget ${PYTHON_DEPENDENCIES}
+    libffi libffi-devel \
+    libyaml-devel openldap-devel openssl \
+    openssl-devel patch postgresql-devel suitesparse wget ${PYTHON_DEPENDENCIES}
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
