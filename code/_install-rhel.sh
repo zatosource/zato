@@ -39,8 +39,7 @@ fi
 
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
-    libffi libffi-devel \
-    libyaml-devel openldap-devel openssl \
+    libffi libffi-devel openldap-devel openssl \
     openssl-devel patch postgresql-devel suitesparse wget ${PYTHON_DEPENDENCIES}
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
