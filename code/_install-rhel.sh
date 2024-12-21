@@ -35,8 +35,17 @@ fi
 
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
-    libffi libffi-devel openldap-devel openssl python3-devel \
+    libffi libffi-devel openldap-devel openssl \
     openssl-devel patch postgresql-devel suitesparse wget ${PYTHON_DEPENDENCIES}
+
+sudo ${INSTALL_CMD} install -y python3.12-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.13-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.14-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.15-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.16-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.17-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.18-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.19-devel 1> /dev/null 2>& 1 || true
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
