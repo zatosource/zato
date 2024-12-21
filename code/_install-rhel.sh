@@ -7,7 +7,7 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
 INSTALL_PYTHON=${2:-y}
-echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
+echo "*** Zato RHEL installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
 
@@ -20,10 +20,6 @@ then
     then
         sudo ${INSTALL_CMD} install -y redhat-lsb-core > /dev/null 2>&1 || true
     fi
-fi
-
-if [[ "$INSTALL_PYTHON" == "y" ]]; then
-    PYTHON_DEPENDENCIES="python3-devel"
 fi
 
 os_version=`lsb_release -sir > /dev/null 2>&1 || true`
@@ -39,10 +35,17 @@ fi
 
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
-    keyutils-libs-devel libev libev-devel libevent-devel libffi libffi-devel \
-    libxml2-devel libxslt-devel libyaml-devel openldap-devel openssl \
-    openssl-devel patch postgresql-devel suitesparse swig uuid \
-    uuid-devel wget ${PYTHON_DEPENDENCIES}
+    libffi libffi-devel openldap-devel openssl \
+    openssl-devel patch postgresql-devel suitesparse wget ${PYTHON_DEPENDENCIES}
+
+sudo ${INSTALL_CMD} install -y python3.12-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.13-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.14-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.15-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.16-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.17-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.18-devel 1> /dev/null 2>& 1 || true
+sudo ${INSTALL_CMD} install -y python3.19-devel 1> /dev/null 2>& 1 || true
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
