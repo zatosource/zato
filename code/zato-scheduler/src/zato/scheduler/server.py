@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,7 @@ from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_config, store_pidfile
+from zato.common.util.api import as_bool, get_config, store_pidfile
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -74,8 +74,13 @@ class SchedulerServer(AuxServer):
         # Configures a client to Zato servers
         self.zato_client = set_up_zato_client(config.main)
 
+        # Should the scheduler be started
+        _should_run_scheduler = os.environ.get('Zato_Start_Scheduler') or True
+        _should_run_scheduler = as_bool(_should_run_scheduler)
+        self.should_run_scheduler = _should_run_scheduler
+
         # SchedulerAPI
-        self.scheduler_api = SchedulerAPI(self.config)
+        self.scheduler_api = SchedulerAPI(self.config) # type: ignore
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
 
 # ################################################################################################################################
@@ -141,7 +146,10 @@ class SchedulerServer(AuxServer):
 # ################################################################################################################################
 
     def serve_forever(self) -> 'None':
-        self.scheduler_api.serve_forever()
+        if self.should_run_scheduler:
+            self.scheduler_api.serve_forever()
+        else:
+            logger.info('Not starting the scheduler')
         super().serve_forever()
 
 # ################################################################################################################################
