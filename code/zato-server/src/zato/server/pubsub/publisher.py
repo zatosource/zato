@@ -257,7 +257,7 @@ class Publisher:
         else:
             has_gd = request.has_gd
             if has_gd not in (None, '', ZATO_NONE):
-                if not isinstance(has_gd, bool):
+                if not isinstance(has_gd, bool): # type: ignore
                     raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
             else:
                 has_gd = topic.has_gd
