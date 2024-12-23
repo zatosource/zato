@@ -180,19 +180,19 @@ echo [$STEPS/$STEPS] Dashboard started
 # ################################################################################################################################
 
 zato_qs_cluster_starting = """
-echo Starting Zato cluster $CLUSTER
+echo Starting Zato environment $CLUSTER
 """
 
 zato_qs_cluster_started = """
-echo Zato cluster $CLUSTER started
+echo Zato environment $CLUSTER started
 """
 
 zato_qs_cluster_stopping = """
-echo Stopping Zato cluster $CLUSTER
+echo Stopping Zato environment $CLUSTER
 """
 
 zato_qs_cluster_stopped = """
-echo Zato cluster $CLUSTER stopped
+echo Zato environment $CLUSTER stopped
 """
 
 # ################################################################################################################################
@@ -309,11 +309,11 @@ class CryptoMaterialLocation:
 # ################################################################################################################################
 
 class Create(ZatoCommand):
-    """ Quickly creates a working cluster
+    """ Quickly creates a working environment.
     """
     needs_empty_dir = True
     opts:'any_' = deepcopy(common_odb_opts)
-    opts.append({'name':'--cluster-name', 'help':'Name to be given to the new cluster'})
+    opts.append({'name':'--cluster-name', 'help':'Name to be given to the new environment'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
@@ -847,14 +847,14 @@ class Create(ZatoCommand):
 
             self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
 
-        self.logger.info('Quickstart cluster {} created'.format(cluster_name))
+        self.logger.info('Quickstart environment {} created'.format(cluster_name))
 
         if admin_created:
             self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore
         else:
             self.logger.info('User [admin] already exists in the ODB')
 
-        self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
+        self.logger.info('Start the environment by issuing this command: %s', zato_qs_start_path)
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
 # ################################################################################################################################
