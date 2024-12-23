@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -80,7 +80,7 @@ class SchedulerServer(AuxServer):
         self._should_start_scheduler = _should_start_scheduler
 
         # SchedulerAPI
-        self.scheduler_api = SchedulerAPI(self.config)
+        self.scheduler_api = SchedulerAPI(self.config) # type: ignore
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
 
 # ################################################################################################################################
