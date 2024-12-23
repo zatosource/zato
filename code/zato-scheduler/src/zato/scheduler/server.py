@@ -75,9 +75,9 @@ class SchedulerServer(AuxServer):
         self.zato_client = set_up_zato_client(config.main)
 
         # Should the scheduler be started
-        _should_start_scheduler = os.environ.get('Zato_Start_Scheduler') or True
-        _should_start_scheduler = as_bool(_should_start_scheduler)
-        self._should_start_scheduler = _should_start_scheduler
+        _should_run_scheduler = os.environ.get('Zato_Start_Scheduler') or True
+        _should_run_scheduler = as_bool(_should_run_scheduler)
+        self.should_run_scheduler = _should_run_scheduler
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
@@ -146,7 +146,7 @@ class SchedulerServer(AuxServer):
 # ################################################################################################################################
 
     def serve_forever(self) -> 'None':
-        if self._should_start_scheduler:
+        if self.should_run_scheduler:
             self.scheduler_api.serve_forever()
         else:
             logger.info('Not starting the scheduler')
