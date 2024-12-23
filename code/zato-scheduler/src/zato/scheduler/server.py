@@ -16,7 +16,7 @@ from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_config, store_pidfile
+from zato.common.util.api import as_bool, get_config, store_pidfile
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -73,6 +73,11 @@ class SchedulerServer(AuxServer):
 
         # Configures a client to Zato servers
         self.zato_client = set_up_zato_client(config.main)
+
+        # Should the scheduler be started
+        _should_start_scheduler = os.environ.get('Zato_Start_Scheduler') or True
+        _should_start_scheduler = as_bool(_should_start_scheduler)
+        self._should_start_scheduler = _should_start_scheduler
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
@@ -141,7 +146,10 @@ class SchedulerServer(AuxServer):
 # ################################################################################################################################
 
     def serve_forever(self) -> 'None':
-        self.scheduler_api.serve_forever()
+        if self._should_start_scheduler:
+            self.scheduler_api.serve_forever()
+        else:
+            logger.info('Not starting the scheduler')
         super().serve_forever()
 
 # ################################################################################################################################
