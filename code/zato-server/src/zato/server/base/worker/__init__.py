@@ -1049,6 +1049,9 @@ class WorkerStore(_WorkerStoreBase):
     def init_pubsub(self) -> 'None':
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
+        if not self.server.should_run_pubsub:
+            logger.info('Not starting publish/subscribe')
+            return
 
         # This is a pub/sub tool for delivery of Zato services within this server
         service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)

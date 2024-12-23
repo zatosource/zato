@@ -55,7 +55,7 @@ from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
-from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
+from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
     register_diag_handlers, save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
@@ -253,6 +253,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
+
+        # Should pub/sub be started
+        _should_run_pubsub = os.environ.get('Zato_Start_PubSub') or True
+        _should_run_pubsub = as_bool(_should_run_pubsub)
+        self.should_run_pubsub = _should_run_pubsub
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
