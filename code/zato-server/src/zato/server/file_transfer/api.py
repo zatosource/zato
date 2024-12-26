@@ -664,8 +664,8 @@ class FileTransferAPI:
         # we cannot rely on inotify at all.
         env_key = 'ZATO_HOT_DEPLOY_PREFER_SNAPSHOTS'
 
-        # Our preference is not to use inotify
-        if os.environ.get(env_key):
+        # Our preference is not to use inotify (always)
+        if os.environ.get(env_key) or True:
             return False
 
         # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
