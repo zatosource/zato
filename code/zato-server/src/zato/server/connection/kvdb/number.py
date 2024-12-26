@@ -193,38 +193,4 @@ class NumberRepo(BaseRepo):
             self.in_ram_store[key] = 0
 
 # ################################################################################################################################
-
-    def set_last_duration(self, key:'str', current_duration:'float') -> 'None':
-
-        # Numpy
-        import numpy as np
-
-        with self.update_lock:
-
-            per_key_dict = self.current_value[key]
-            previous_duration = per_key_dict[_stats_key_per_key_last_duration]
-
-            if previous_duration:
-                to_compare = [previous_duration, current_duration]
-                new_min  = min(to_compare)
-                new_max  = max(to_compare)
-                new_mean = np.mean(to_compare)
-            else:
-                new_min  = current_duration
-                new_max  = current_duration
-                new_mean = current_duration
-
-            # We need to check the exact class here instead of using isinstance(new_mean, float)
-            # because numpy.float64 is a subclass of float. It is good when the mean
-            # is used in computations but when it comes to JSON serialisation it really
-            # needs to be a float rather than np.float64. That is why here we turn float64 into a real float.
-            uses_numpy = new_mean.__class__ is np.float64
-            new_mean = new_mean.item() if uses_numpy else new_mean # type: ignore
-
-            per_key_dict[_stats_key_per_key_last_duration] = current_duration
-            per_key_dict[_stats_key_per_key_min]  = new_min
-            per_key_dict[_stats_key_per_key_max]  = new_max
-            per_key_dict[_stats_key_per_key_mean] = new_mean
-
-# ################################################################################################################################
 # ################################################################################################################################
