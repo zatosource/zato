@@ -35,7 +35,6 @@ from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
-from zato.common.util.stats import combine_table_data
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Float, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
