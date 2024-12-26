@@ -73,7 +73,6 @@ from zato.server.base.parallel.subprocess_.api import CurrentState as Subprocess
      StartConfig as SubprocessStartConfig
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
-from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -301,7 +300,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
-        self.connector_events = ZatoEventsIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
@@ -1374,7 +1372,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
             SFTPIPC.ipc_config_name: config.has_sftp,
-            ZatoEventsIPC.ipc_config_name: config.has_stats,
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
@@ -1438,13 +1435,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'sync_threshold': EventsDefault.sync_threshold,
             'sync_interval': EventsDefault.sync_interval,
         }
-
-        if self.component_enabled['stats']:
-            _ = self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
-
-            # Wait until the events connector started - this will let other parts
-            # of the server assume that it is always available.
-            _ = wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
