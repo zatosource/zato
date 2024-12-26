@@ -5,7 +5,7 @@ while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
 # Our default branch
-Zato_Default_Branch=support/3.2
+Zato_Default_Branch=support/3.3
 
 # Always switch to a support branch first
 git checkout "${Zato_Default_Branch}" 2>/dev/null || git checkout -b "${Zato_Default_Branch}" "origin/${Zato_Default_Branch}"
