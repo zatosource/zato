@@ -35,7 +35,6 @@ from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
-from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Float, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -169,14 +168,7 @@ class GetStatsTable(AdminService):
 
     def handle(self):
 
-        # Invoke all servers and all PIDs..
-        response = self.server.rpc.invoke_all(_GetStatsTable.get_name())
-
-        # .. combine responses ..
-        response = combine_table_data(response.data)
-
-        # .. and return the response.
-        self.response.payload[:] = response
+        self.response.payload[:] = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,19 +228,6 @@ class _Get(AdminService):
             self.response.payload.is_internal = service.is_internal
             self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
-
-        usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name}) # type: ignore
-        usage_response = collect_current_usage(usage_response.data) # type: any_
-
-        if usage_response:
-
-            self.response.payload.usage          = usage_response[StatsKey.PerKeyValue]
-            self.response.payload.last_duration  = usage_response[StatsKey.PerKeyLastDuration]
-            self.response.payload.last_timestamp = usage_response[StatsKey.PerKeyLastTimestamp]
-
-            self.response.payload.usage_min  = usage_response[StatsKey.PerKeyMin]
-            self.response.payload.usage_max  = usage_response[StatsKey.PerKeyMax]
-            self.response.payload.usage_mean = usage_response[StatsKey.PerKeyMean]
 
 # ################################################################################################################################
 # ################################################################################################################################
