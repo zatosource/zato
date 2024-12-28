@@ -22,7 +22,7 @@ register = template.Library()
 # Taken from https://djangosnippets.org/snippets/38/ and slightly updated
 
 @register.filter
-def bunchget(obj, args):
+def bunchget(obj, args): # type: ignore
     """ Try to get an attribute from an object.
 
     Example: {% if block|bunchget:"editable,True" %}
@@ -47,7 +47,7 @@ def bunchget(obj, args):
 # Taken from https://stackoverflow.com/a/16609498
 
 @register.simple_tag
-def url_replace(request, field, value):
+def url_replace(request, field, value): # type: ignore
     dict_ = request.GET.copy()
     dict_[field] = value
 
@@ -56,13 +56,13 @@ def url_replace(request, field, value):
 # ################################################################################################################################
 
 @register.filter
-def no_value_indicator(value):
+def no_value_indicator(value): # type: ignore
     return value or mark_safe('<span class="form_hint">---</span>')
 
 # ################################################################################################################################
 
 @register.filter
-def format_float(value, digits=5):
+def format_float(value, digits=5): # type: ignore
 
     if not value:
         return 0
@@ -83,13 +83,13 @@ def format_float(value, digits=5):
 # ################################################################################################################################
 
 @register.filter
-def stats_float(value):
+def stats_float(value): # type: ignore
     return value if value else '< 0.01'
 
 # ################################################################################################################################
 
 @register.filter
-def get_item(elems, idx):
+def get_item(elems, idx): # type: ignore
     try:
         value = elems[idx]
         return value
@@ -99,20 +99,20 @@ def get_item(elems, idx):
 # ################################################################################################################################
 
 @register.filter
-def endswith(value, suffix):
+def endswith(value, suffix): # type: ignore
     if value and suffix:
         return value.endswith(suffix)
 
 # ################################################################################################################################
 
 @register.filter
-def get_os_variable(_ignored, name):
+def get_os_variable(_ignored, name): # type: ignore
     return os.environ.get(name)
 
 # ################################################################################################################################
 
 @register.filter
-def replace_in_string(item, config):
+def replace_in_string(item, config): # type: ignore
     config = config.strip()
     config = config.split(',')
     config = [elem.strip() for elem in config]
