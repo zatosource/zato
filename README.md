@@ -39,7 +39,7 @@ class SampleServiceREST(Service):
         # Request to send ..
         request = {'user_id':123, 'balance':1357, 'currency':'USD'}
 
-        # .. get a connection to the "Billing" endpoint ..
+        # .. get a connection to our previously created REST endpoint ..
         conn = self.out.rest['Billing'].conn
 
         # .. invoke it ..
