@@ -20,7 +20,7 @@ and more.
   <a href="https://zato.io"><img alt="ESB, API Integrations and Automation in Python" src="https://upcdn.io/kW15bqq/raw/root/static/img/intro/bus.png" /></a>
 </p>
 
-## Sample Python API service
+## How does it look like in practice?
 
 ```python
 # -*- coding: utf-8 -*-
@@ -34,19 +34,20 @@ class SampleServiceREST(Service):
     def handle(self):
 
         # Request to send ..
-        request = {'user_id':123, 'balance':'1357', 'currency':'USD'}
+        request = {'user_id':123, 'balance':1357, 'currency':'USD'}
 
         # .. get a connection to the "Billing" endpoint ..
         conn = self.out.rest['Billing'].conn
 
         # .. invoke it ..
-        result = conn.post(self.cid, request)
+        response = conn.post(self.cid, request)
 
-        # .. read the JSON response ..
-        json_response = result.data
+        #
+        # .. here, a real service would process the response ..
+        #
 
-        # .. and return it to our caller.
-        self.response.payload = json_response
+        # .. but in this sample, we simply return it to our caller.
+        self.response.payload = response.data
 ```
 
 ## Learn more
