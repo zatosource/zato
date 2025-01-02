@@ -36,22 +36,16 @@ class SampleServiceREST(Service):
         # Python dict representing the payload we want to send across
         payload = {'billing':'395.7', 'currency':'USD'}
 
-        # Python dict with all the query parameters, including path and query string
-        params = {'cust_id':'39175', 'phone_no':'271637517', 'priority':'normal'}
-
-        # Headers the endpoint expects
-        headers = {'X-App-Name': 'MyApp', 'X-Environment':'Production'}
-
         # Obtains a connection object
         conn = self.out.rest['Billing'].conn
 
         # Invoke the resource providing all the information on input
-        response = conn.post(self.cid, payload, params, headers=headers)
+        response = conn.post(self.cid, payload)
 
         # The response is auto-deserialized for us to a Python dict
         json_dict = response.data
 
-        # Assign the returned dict to our response - Zato will serialise it to JSON
+        # Assign the returned dict to our response - Zato will serialize it to JSON
         # and our caller will get a JSON message from us.
         self.response.payload = json_dict
 ```
