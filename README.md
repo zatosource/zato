@@ -22,7 +22,9 @@ and more.
 
 ## What does it look like in practice?
 
-<img src="https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba" alt="" width="400"/>
+<center>
+<img src="https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba" alt="" width="800"/>
+</center>
 
 ```python
 # -*- coding: utf-8 -*-
