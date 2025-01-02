@@ -33,14 +33,14 @@ class SampleServiceREST(Service):
     """
     def handle(self):
 
-        # Python dict representing the payload we want to send across
-        payload = {'billing':'395.7', 'currency':'USD'}
+        # Python dict representing the request we want to send across
+        request = {'billing':'395.7', 'currency':'USD'}
 
         # Obtains a connection object
         conn = self.out.rest['Billing'].conn
 
         # Invoke the resource providing all the information on input
-        response = conn.post(self.cid, payload)
+        response = conn.post(self.cid, request)
 
         # The response is auto-deserialized for us to a Python dict
         json_dict = response.data
