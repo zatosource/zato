@@ -20,10 +20,9 @@ and more.
   <a href="https://zato.io"><img alt="ESB, API Integrations and Automation in Python" src="https://upcdn.io/kW15bqq/raw/root/static/img/intro/bus.png" /></a>
 </p>
 
-## How does it look like in practice?
+## What does it look like in practice?
 
-![image](https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba | width=400)
-
+<img src="https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba" alt="" width="400"/>
 
 ```python
 # -*- coding: utf-8 -*-
