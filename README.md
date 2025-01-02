@@ -56,7 +56,7 @@ class SampleServiceREST(Service):
 
 ## Learn more
 
-Visit https://zato.io for details, including:
+Visit https://zato.io for the details, including:
 
 * [Downloads](https://zato.io/en/docs/3.2/admin/guide/install/index.html)
 * [Screenshots](https://zato.io/en/docs/3.2/intro/screenshots.html)
