@@ -22,7 +22,7 @@ and more.
 
 ## How does it look like in practice?
 
-![image](https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba)
+![image](https://github.com/user-attachments/assets/058b3ace-ddc3-47a3-b803-302122419aba | width=400)
 
 
 ```python
