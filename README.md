@@ -33,21 +33,20 @@ class SampleServiceREST(Service):
     """
     def handle(self):
 
-        # Python dict representing the request we want to send across
-        request = {'billing':'395.7', 'currency':'USD'}
+        # Request to send ..
+        request = {'user_id':123, 'balance':'1357', 'currency':'USD'}
 
-        # Obtains a connection object
+        # .. get a connection to the "Billing" endpoint ..
         conn = self.out.rest['Billing'].conn
 
-        # Invoke the resource providing all the information on input
-        response = conn.post(self.cid, request)
+        # .. invoke it ..
+        result = conn.post(self.cid, request)
 
-        # The response is auto-deserialized for us to a Python dict
-        json_dict = response.data
+        # .. read the JSON response ..
+        json_response = result.data
 
-        # Assign the returned dict to our response - Zato will serialize it to JSON
-        # and our caller will get a JSON message from us.
-        self.response.payload = json_dict
+        # .. and return it to our caller.
+        self.response.payload = json_response
 ```
 
 ## Learn more
