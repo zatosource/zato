@@ -35,11 +35,17 @@ from typing import           \
     Union as union_
 
 # typing-extensions
-from typing_extensions import \
-    TypeAlias as typealias_ # type: ignore
+try:
+    from typing_extensions import \
+        TypeAlias as typealias_ # type: ignore
+except Exception:
+    typealias_ = None
 
 # dacite
-from dacite.core import from_dict
+try:
+    from dacite.core import from_dict
+except Exception:
+    from_dict = None
 
 # stdlib
 from dataclasses import * # type: ignore
