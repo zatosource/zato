@@ -27,14 +27,11 @@ and more.
 </p>
 
 ```python
-# -*- coding: utf-8 -*-
-
 # Zato
 from zato.server.service import Service
 
 class SampleServiceREST(Service):
-    """ A sample service that invokes a REST API endpoint.
-    """
+
     def handle(self):
 
         # Request to send ..
@@ -46,11 +43,7 @@ class SampleServiceREST(Service):
         # .. invoke it ..
         response = conn.post(self.cid, request)
 
-        #
-        # .. here, a real service would process the response ..
-        #
-
-        # .. but in this sample, we simply return it to our caller.
+        # .. and return the response to our caller.
         self.response.payload = response.data
 ```
 
