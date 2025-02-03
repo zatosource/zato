@@ -19,7 +19,7 @@ from builtins import bytes
 from zato.common.ext.future.utils import iterkeys
 
 # Zato
-from zato.common.api import BROKER, SCHEDULER, StatsKey
+from zato.common.api import BROKER, SCHEDULER
 from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
