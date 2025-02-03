@@ -35,4 +35,4 @@ jobs:
         with:
           timeout_seconds: 3600
           max_attempts: 3
-          command: mkdir -p /tmp/src-zato && git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1
+          command: mkdir -p /tmp/src-zato && git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.3 && ./code/install.sh && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1
