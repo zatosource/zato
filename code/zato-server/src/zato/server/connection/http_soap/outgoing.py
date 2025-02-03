@@ -781,7 +781,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 data = callback(data, cid=cid, id=id, model=model, callback=callback)
 
             # .. and return the data to our caller ..
-            return data
+            return data, response
 
 RESTWrapper = HTTPSOAPWrapper
 
