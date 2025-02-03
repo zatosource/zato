@@ -31,7 +31,7 @@ from zato.common.py23_ import maxint
 # Zato
 from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, PUBSUB, \
-     WEB_SOCKET, zato_no_op_marker
+     RESTAdapterResponse, WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
@@ -1523,6 +1523,7 @@ class RESTAdapter(Service):
     get_query_string = None
     get_auth_bearer  = None
     get_sec_def_name = None
+    needs_raw_response = False
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1549,12 +1550,15 @@ class RESTAdapter(Service):
         auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ):
+        # Type checks
+        data:'any_'
+        raw_response:'any_'
 
         # Get the actual REST connection ..
         conn:'RESTWrapper' = self.out.rest[conn_name].conn
 
         # .. invoke the system and map its response back through the callback callable ..
-        out:'any_' = conn.rest_call(
+        data, raw_response = conn.rest_call(
             cid=self.cid,
             data=data,
             model=model, # type: ignore
@@ -1567,8 +1571,11 @@ class RESTAdapter(Service):
             log_response=log_response,
         )
 
-        # .. and return the result to our caller.
-        return out
+        # .. and return the result to our caller, optionally returning the raw response as well ..
+        if self.needs_raw_response:
+            return RESTAdapterResponse(data, raw_response)
+        else:
+            return data
 
 # ################################################################################################################################
 

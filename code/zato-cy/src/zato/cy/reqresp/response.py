@@ -25,7 +25,7 @@ from lxml.objectify import ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common.api import DATA_FORMAT, simple_types, ZATO_OK
+from zato.common.api import DATA_FORMAT, RESTAdapterResponse, simple_types, ZATO_OK
 from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
 
@@ -47,7 +47,7 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-direct_payload:tuple = simple_types + (EtreeElement, ObjectifiedElement)
+direct_payload:tuple = simple_types + (RESTAdapterResponse, EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,7 +148,7 @@ class Response:
                 self._payload = value
 
             # 2b)
-            # .. otherwise, we will try to serialise it ..
+            # .. otherwise, we will try to serialize it ..
             else:
 
                 # 2b1)
