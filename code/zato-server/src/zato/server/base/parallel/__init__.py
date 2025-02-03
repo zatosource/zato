@@ -1245,16 +1245,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Per-process IPC tasks
         self.init_ipc()
 
-        if is_posix:
-            connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
-
-            if self.component_enabled['stats']:
-
-                # Statistics
-                events_config = cast_('anydict', connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True))
-                events_tcp_port = events_config['port']
-                self._run_stats_client(events_tcp_port)
-
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
             'server': self,
@@ -1429,12 +1419,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             fs_data_path = os.path.join(self.work_dir, fs_data_path, self.events_dir, 'zato.events')
             fs_data_path = os.path.abspath(fs_data_path)
             fs_data_path = os.path.normpath(fs_data_path)
-
-        extra_options_kwargs = {
-            'fs_data_path': fs_data_path,
-            'sync_threshold': EventsDefault.sync_threshold,
-            'sync_interval': EventsDefault.sync_interval,
-        }
 
 # ################################################################################################################################
 
