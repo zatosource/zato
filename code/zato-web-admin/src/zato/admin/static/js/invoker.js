@@ -125,7 +125,7 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     if(has_response) {
         if($.fn.zato.is_object(response.data)) {
-            response_data = $.fn.zato.to_json(response.data);
+            response_data = response.data; //$.fn.zato.to_json(response.data); JSON Parsing and Quotes
         }
         else {
             response_data = response.data;

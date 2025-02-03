@@ -218,11 +218,13 @@ td.data-input-field-name {
 
 #data-request {
     height: 19.1vh;
+    font-size: 1rem;
 }
 
 #data-response {
     height: 39.1vh;
     margin-top: 3px;
+    font-size: 1rem;
 }
 
 .dimmed {
