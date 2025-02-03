@@ -538,7 +538,7 @@ class MarshalAPI:
                 # .. check if this was an optional field.
                 is_required = not (union_with is _None_Type)
 
-            # Represents a current field in the model in the context of the input dict ..
+            # Represents the current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)
             field_ctx.is_required = is_required
             field_ctx.field_type = field_type
