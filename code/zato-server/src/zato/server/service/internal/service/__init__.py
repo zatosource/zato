@@ -68,6 +68,12 @@ def _store_stats(suffix:'str') -> 'None':
     except Exception:
         pass
 
+stats_ignore = {
+    'demo.my-service',
+    'pub.zato.ping',
+    'zato.service.is-deployed',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -673,7 +679,7 @@ class Invoke(AdminService):
                         payload = payload['data'] # type: ignore
 
         id = self.request.input.get('id')
-        name = self.request.input.get('name')
+        name = self.request.input.get('name') or ''
         pid = self.request.input.get('pid') or 0
         all_pids = self.request.input.get('all_pids')
         timeout = self.request.input.get('timeout') or None
@@ -687,29 +693,31 @@ class Invoke(AdminService):
         suffix = name.replace('zato.', '', 1)
 
         # Extract the details, if required.
-        if name == 'zato.generic.connection.get-list':
-            conn_type = 'init'
-            try:
-                conn_type = payload.get('type_', 'notype') # type: ignore
-            except Exception:
-                conn_type = 'noget'
-            finally:
-                suffix += f'/{conn_type}'
+        if name not in stats_ignore:
+            if 'zato' in name:
+                if name == 'zato.generic.connection.get-list':
+                    conn_type = 'init'
+                    try:
+                        conn_type = payload.get('type_', 'notype') # type: ignore
+                    except Exception:
+                        conn_type = 'noget'
+                    finally:
+                        suffix += f'/{conn_type}'
 
-        elif name == 'zato.http-soap.get-list':
-            connection = 'init'
-            transport = 'init'
-            try:
-                connection = payload.get('connection', 'noconn') # type: ignore
-                transport = payload.get('transport', 'notransport') # type: ignore
-            except Exception:
-                connection = 'noget'
-                transport = 'noget'
-            finally:
-                suffix += f'/{connection}/{transport}'
+                elif name == 'zato.http-soap.get-list':
+                    connection = 'init'
+                    transport = 'init'
+                    try:
+                        connection = payload.get('connection', 'noconn') # type: ignore
+                        transport = payload.get('transport', 'notransport') # type: ignore
+                    except Exception:
+                        connection = 'noget'
+                        transport = 'noget'
+                    finally:
+                        suffix += f'/{connection}/{transport}'
 
-        # Store statistics
-        _ = spawn(_store_stats, suffix)
+                # Store statistics
+                _ = spawn(_store_stats, suffix)
 
         if name and id:
             raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
