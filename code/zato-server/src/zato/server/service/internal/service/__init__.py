@@ -72,6 +72,7 @@ stats_ignore = {
     'demo.my-service',
     'pub.zato.ping',
     'zato.service.is-deployed',
+    'zato.outgoing.sql.auto-ping',
 }
 
 # ################################################################################################################################
