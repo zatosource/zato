@@ -30,7 +30,7 @@ and more.
 # Zato
 from zato.server.service import Service
 
-class SampleServiceREST(Service):
+class RESTService(Service):
 
     def handle(self):
 
