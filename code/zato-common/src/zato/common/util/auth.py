@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 from base64 import b64decode
 
@@ -17,6 +18,7 @@ from six import PY2
 # Zato
 from zato.common.api import AUTH_RESULT
 from zato.common.crypto.api import is_string_equal
+from zato.common.util.api import as_bool
 from zato.server.connection.http_soap import Forbidden
 
 logger = getLogger('zato')
@@ -56,6 +58,11 @@ try:
     from yaml import CDumper as Dumper
 except ImportError:                      # pragma: no cover
     from yaml import Dumper              # pragma: no cover
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,7 +176,7 @@ def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-def check_basic_auth(cid, auth, expected_username, expected_password):
+def check_basic_auth(cid, auth, expected_username, expected_password, _needs_details=_needs_details):
     """ A low-level call for checking HTTP Basic Auth credentials.
     """
     result = extract_basic_auth(cid, auth, raise_on_error=False)
@@ -178,6 +185,15 @@ def check_basic_auth(cid, auth, expected_username, expected_password):
         username, password = result
     else:
         return result[1]
+
+    if _needs_details:
+        logger.info('*' * 60)
+
+        logger.info('Username received: `%s`', username)
+        logger.info('Username expected: `%s`', expected_username)
+
+        logger.info('Password received: `%s`', password)
+        logger.info('Password expected: `%s`', expected_password)
 
     if is_string_equal(username, expected_username) and is_string_equal(password, expected_password):
         return True
