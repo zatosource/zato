@@ -135,6 +135,11 @@ _ipc_timeout = IPC.Default.Timeout
 # ################################################################################################################################
 # ################################################################################################################################
 
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
@@ -805,6 +810,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
+
+        if _needs_details:
+            logger.info('*' * 60)
+            logger.info('Checking pickup self.base_dir `%s`', self.base_dir)
+            logger.info('Checking pickup self.pickup_config `%s`', self.pickup_config)
+            logger.info('Checking pickup Source_Directory `%s`', HotDeploy.Source_Directory)
 
         # Service sources from user-defined hot-deployment configuration ..
         for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config, HotDeploy.Source_Directory):
