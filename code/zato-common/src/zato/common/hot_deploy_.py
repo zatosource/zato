@@ -38,6 +38,8 @@ pickup_order_patterns = [
     '  core*/**',
     '  channel*/**',
     '  adapter*/**',
+    '  api*/**',
+    '  services*/**',
     '  **/enmasse*.y*ml',
 ]
 
