@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from pathlib import Path
 from zato.common.api import HotDeploy
 from zato.common.hot_deploy_ import HotDeployProject, pickup_order_patterns
 from zato.common.typing_ import cast_
+from zato.common.util.api import as_bool
 from zato.common.util.env import get_list_from_environment
 from zato.common.util.file_system import resolve_path
 
@@ -28,6 +30,11 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +58,12 @@ def get_project_info(
 
         # .. if any is found, append it for later use ..
         project_dirs.append(item)
+
+    if _needs_details:
+        logger.info('*' * 60)
+        logger.info('Root path %s', root_path)
+        logger.info('Src. dir name %s', src_dir_name)
+        logger.info('Project dirs %s', project_dirs)
 
     # .. now, go through all the project directories found and construct project objects ..
     # .. along with their directories to pick up code from ..

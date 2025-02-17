@@ -327,7 +327,7 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $(".invoker-tr").show();
 
     // Left-hand side links
-    $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
+    // $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     //$.fn.zato.ide.add_header_left_link("previous", "◄ Req.");

@@ -581,7 +581,7 @@ class GetFileList(_GetBase):
         # .. go through all the top-level roots ..
         for dir_name, files in out.items():
 
-            # .. make sure we take into services and models into account here ..
+            # .. make sure we take services and models into account here ..
             if dir_name.endswith('src-zato'):
                 _dir_name = os.path.join(dir_name, 'impl', 'src')
             else:
