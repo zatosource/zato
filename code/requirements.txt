@@ -10,7 +10,7 @@ chardet==5.2.0
 click==8.1.7
 configparser==7.1.0
 crontab==1.0.1
-cryptography==43.0.1
+cryptography==44.0.1
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
