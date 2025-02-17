@@ -151,6 +151,7 @@ key2=value2"></textarea></form>
             </div>
         </div>
     </div>
+    {% if False %}
     <div id="side-menu" class="item">
 
         <ul class="side-buttons">
@@ -159,21 +160,19 @@ key2=value2"></textarea></form>
                     <img src="/static/gfx/editor/play.png" class="button" title="Service invoker" />
                 </a>
             </li>
-            {% if False %}
             <li>
                 <a href="javascript:$.fn.zato.ide.switch_to_action_area('info')" class="img-button">
                     <img src="/static/gfx/editor/icons/data-models.png" class="button" title="Data models" />
                 </a>
             </li>
-            {% endif %}
             <li>
                 <a href="javascript:$.fn.zato.ide.switch_to_action_area('settings')" class="img-button">
                     <img src="/static/gfx/editor/settings.png" class="button less-visible" title="Settings" />
                 </a>
             </li>
         </ul>
-
     </div>
+    {% endif %}
   </div>
 
 <script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
