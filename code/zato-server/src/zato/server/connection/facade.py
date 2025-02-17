@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,6 +16,15 @@ from arrow import Arrow
 # datetutil
 from dateutil.parser import parse as dt_parse
 from dateutil.tz.tz import tzutc
+
+# requests
+from requests import \
+    delete as requests_delete, \
+    get    as requests_get,    \
+    head   as requests_head,   \
+    patch  as requests_patch,  \
+    post   as requests_post,   \
+    put    as requests_put
 
 # Zato
 from zato.common.api import SCHEDULER
@@ -36,6 +45,11 @@ if 0:
 ################################################################################################################################
 
 _utz_utc = timezone.utc
+
+################################################################################################################################
+################################################################################################################################
+
+_http_methods = {'delete', 'get', 'head', 'patch', 'post', 'put'}
 
 ################################################################################################################################
 ################################################################################################################################
@@ -143,6 +157,26 @@ class RESTFacade:
     def init(self, cid:'str', _out_plain_http:'ConfigDict') -> 'None':
         self.cid = cid
         self._out_plain_http = _out_plain_http
+
+# ################################################################################################################################
+
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_delete(*args, **kwargs)
+
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_get(*args, **kwargs)
+
+    def head(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_head(*args, **kwargs)
+
+    def patch(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_patch(*args, **kwargs)
+
+    def post(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_post(*args, **kwargs)
+
+    def put(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return requests_put(*args, **kwargs)
 
 # ################################################################################################################################
 
