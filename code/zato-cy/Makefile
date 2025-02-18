@@ -24,10 +24,10 @@ simpleio:
 	$(MAKE) build
 
 reqresp-tests:
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
 
 simpleio-tests:
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
 	echo "Running tests in $(Zato_Package_Name)"

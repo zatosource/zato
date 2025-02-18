@@ -18,7 +18,7 @@ clean:
 	find $(CURDIR) -name '*.egg-info' -exec rm -rf {} +
 
 hl7-tests:
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/hl7/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/hl7/test_*.py -s
 
 run-tests:
 	$(MAKE) hl7-tests
