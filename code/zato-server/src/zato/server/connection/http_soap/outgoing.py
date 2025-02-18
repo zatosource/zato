@@ -719,9 +719,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         params=None,  # type: strdictnone
         headers=None, # type: strdictnone
         method='',    # type: str
-        sec_def_name=None, # type: any_
-        auth_scopes=None,  # type: any_
-        log_response=True, # type: bool
+        sec_def_name=None,    # type: any_
+        auth_scopes=None,     # type: any_
+        log_response=True,    # type: bool
+        needs_exception=True, # type: bool
     ) -> 'any_':
 
         # Invoke the system ..
@@ -736,7 +737,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 headers=headers,
             )
         except Exception as e:
-            logger.warn('Caught an exception -> %s -> %s', e, format_exc())
+            if needs_exception:
+                raise
+            else:
+                logger.warn('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..
