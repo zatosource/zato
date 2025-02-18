@@ -13,9 +13,9 @@ pylint:
 
 run-tests:
 	echo "Running access checks in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/admin/access/test_login_logout.py -s --nologcapture
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/admin/access/test_pubsub.py -s --nologcapture
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/admin/access/test_index.py -s --nologcapture
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/admin/access/test_login_logout.py -s --nologcapture
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/admin/access/test_pubsub.py -s --nologcapture
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/admin/access/test_index.py -s --nologcapture
 	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/admin/playwright_/test_*.py -s --nologcapture
 
 flake8:
