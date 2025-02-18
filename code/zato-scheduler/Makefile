@@ -7,7 +7,7 @@ Zato_Package_Name=zato-scheduler
 
 run-tests:
 	echo "Running tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/pytests $(CURDIR)/test/zato/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/test_*.py -s
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)

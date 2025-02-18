@@ -1558,7 +1558,7 @@ class RESTAdapter(Service):
         conn:'RESTWrapper' = self.out.rest[conn_name].conn
 
         # .. invoke the system and map its response back through the callback callable ..
-        data, raw_response = conn.rest_call(
+        response = conn.rest_call(
             cid=self.cid,
             data=data,
             model=model, # type: ignore
@@ -1571,11 +1571,14 @@ class RESTAdapter(Service):
             log_response=log_response,
         )
 
-        # .. and return the result to our caller, optionally returning the raw response as well ..
-        if self.needs_raw_response:
-            return RESTAdapterResponse(data, raw_response)
-        else:
-            return data
+        if response is not None:
+            data, raw_response = response
+
+            # .. and return the result to our caller, optionally returning the raw response as well ..
+            if self.needs_raw_response:
+                return RESTAdapterResponse(data, raw_response)
+            else:
+                return data
 
 # ################################################################################################################################
 

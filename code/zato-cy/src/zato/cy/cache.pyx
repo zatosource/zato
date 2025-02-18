@@ -264,13 +264,13 @@ cdef class Cache:
 
     def __contains__(self, object key):
         with self._lock:
-            return self._data.__contains__(key)
+            return key in self._data
 
 # ################################################################################################################################
 
     def __len__(self):
         with self._lock:
-            return self._index.__len__()
+            return len(self._index)
 
 # ################################################################################################################################
 
@@ -602,7 +602,7 @@ cdef class Cache:
         if key is known to be in self._index or self._data and only with self._lock held.
         """
         cdef Py_ssize_t index_idx = 0
-        cdef Py_ssize_t cache_size = self._index.__len__()
+        cdef Py_ssize_t cache_size = len(self._index)
         cdef bint index_key_eq
 
         while index_idx < cache_size:
@@ -616,7 +616,7 @@ cdef class Cache:
         """ Returns position the key given on input currently holds or None if key is not found.
         """
         with self._lock:
-            if self._data.__contains__(key):
+            if key in self._data:
                 return self._get_index(key)
 
 # ################################################################################################################################
@@ -649,7 +649,7 @@ cdef class Cache:
         cdef Entry entry
         cdef double _now
         cdef double _orig_now = 0.0
-        cdef Py_ssize_t cache_size = self._index.__len__()
+        cdef Py_ssize_t cache_size = len(self._index)
         cdef Py_ssize_t index_idx
         cdef bint old_key_eq
         cdef long hits_per_position
@@ -676,8 +676,8 @@ cdef class Cache:
         self.set_ops += 1
 
         # Ok, we have this key in cache
-        if self._data.__contains__(key):
-            entry = <Entry>self._data.__getitem__(key)
+        if key in self._data:
+            entry = <Entry>self._data[key]
 
             # If we have a key that previously was not using expiry, we must set it now if expiry is given on input.
             if not entry.expires_at:
@@ -713,7 +713,7 @@ cdef class Cache:
 
             # Make sure there is room for the new key
             if cache_size == self.max_size:
-                self._data.__delitem__(self._index.pop())
+                del self._data[self._index.pop()]
 
             # Actually insert entry
             entry = Entry()
@@ -728,8 +728,8 @@ cdef class Cache:
             entry.expires_at = 0.0 if not expiry else _now + expiry
             entry.set_metadata()
 
-            self._data.__setitem__(key, entry)
-            self._index.__insert__(0, key)
+            self._data[key] = entry
+            self._index.insert(0, key)
 
         # If any output dict for metadata was passed in by reference, set its requires items.
         if meta_ref is not None:
@@ -1099,15 +1099,15 @@ cdef class Cache:
 
             # We have the key's position so we can now update per-position counter
             # to be able to offer statistics on how often a key is found at a given position.
-            hits_per_position = <object>self.hits_per_position.__getitem__(index_idx)
+            hits_per_position = <object>self.hits_per_position[index_idx]
             hits_per_position += 1
-            self.hits_per_position.__setitem__(index_idx, hits_per_position)
+            self.hits_per_position[index_idx] = hits_per_position
 
             # Remove key from index
             index_key = self._remove_from_index_by_idx(index_idx)
 
             # Now insert the key back at the head position.
-            self._index.__insert__(0, index_key)
+            self._index.insert(0, index_key)
 
             # Update last/prev access information + hits
             entry.prev_read = entry.last_read
