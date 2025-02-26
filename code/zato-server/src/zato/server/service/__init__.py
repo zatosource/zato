@@ -1694,8 +1694,18 @@ class BusinessCentralAdapter(Service):
 # ################################################################################################################################
 
     def get_model(self) -> 'any_':
-        # Don't return anything by default
+        # Don't return anything by default because models are optional
         pass
+
+# ################################################################################################################################
+
+    def get_conn_name(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_base_url(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
@@ -1703,12 +1713,14 @@ class BusinessCentralAdapter(Service):
 
         # Get our configurarion
         model = self.model or self.get_model()
+        conn_name = self.conn_name or self.get_conn_name()
+        base_url = self.base_url = self.get_base_url()
 
         # Build a full address ..
-        address_full = f'{self.base_url}/{endpoint}'
+        address_full = f'{base_url}/{endpoint}'
 
         # .. get the connection ..
-        conn = self.cloud.ms365.get(self.conn_name).conn # type: ignore
+        conn = self.cloud.ms365.get(conn_name).conn # type: ignore
 
         # .. obtain a new client ..
         with conn.client() as client:
