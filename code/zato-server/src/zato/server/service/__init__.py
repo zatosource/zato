@@ -1540,7 +1540,7 @@ class RESTAdapter(Service):
         self,
         conn_name,     # type: str
         *,
-        data='',       # type: str
+        data='',       # type: ignore
         model=None,    # type: modelnone
         callback=None, # type: callnone
         params=None,   # type: strdictnone
