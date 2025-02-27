@@ -1714,7 +1714,7 @@ class BusinessCentralAdapter(Service):
         # Get our configurarion
         model = self.model or self.get_model()
         conn_name = self.conn_name or self.get_conn_name()
-        base_url = self.base_url = self.get_base_url()
+        base_url = self.base_url or self.get_base_url()
 
         # Build a full address ..
         address_full = f'{base_url}/{endpoint}'
