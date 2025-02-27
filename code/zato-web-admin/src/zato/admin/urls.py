@@ -37,6 +37,7 @@ from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
+from zato.admin.web.views import demo
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
@@ -94,6 +95,16 @@ urlpatterns = [
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Demo
+
+    url(r'^demo/$',
+        login_required(demo.index), name='demo-index'),
     ]
 
 # ################################################################################################################################

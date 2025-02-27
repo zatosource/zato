@@ -1,0 +1,24 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pyodide Demo{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pyodide Demo</h2>
+
+{% endblock %}
