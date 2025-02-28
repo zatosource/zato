@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
+from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from json import loads
 from traceback import format_exc
@@ -1540,7 +1540,7 @@ class RESTAdapter(Service):
         self,
         conn_name,     # type: str
         *,
-        data='',       # type: str
+        data='',       # type: ignore
         model=None,    # type: modelnone
         callback=None, # type: callnone
         params=None,   # type: strdictnone
@@ -1681,6 +1681,89 @@ class RESTAdapter(Service):
 
         # .. and return it to our caller.
         self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BusinessCentralAdapter(Service):
+
+    model     = None
+    conn_name = None
+    base_url  = None
+
+# ################################################################################################################################
+
+    def get_model(self) -> 'any_':
+        # Don't return anything by default because models are optional
+        pass
+
+# ################################################################################################################################
+
+    def get_conn_name(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_base_url(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def _invoke_bc(self, endpoint:'str') -> 'anydictnone':
+
+        # Get our configurarion
+        model = self.model or self.get_model()
+        conn_name = self.conn_name or self.get_conn_name()
+        base_url = self.base_url or self.get_base_url()
+
+        # Build a full address ..
+        address_full = f'{base_url}/{endpoint}'
+
+        # .. get the connection ..
+        conn = self.cloud.ms365.get(conn_name).conn # type: ignore
+
+        # .. obtain a new client ..
+        with conn.client() as client:
+
+            # .. make sure our access token is fresh ..
+            client.refresh()
+
+            # .. make the request ..
+            response = client.impl.connection.get(address_full)
+
+            # .. do we have a 200 OK ..
+            if response.status_code == OK:
+
+                # .. if yes, we can extract our response ..
+                data = response.json()
+
+                # .. if we have a model ..
+                if model:
+
+                    # .. is the response a list of values ..
+                    list_value = data.get('value', NOT_GIVEN)
+
+                    # .. try to extract all the objects if we actually have a list ..
+                    if isinstance(list_value, list):
+                        _model_data = []
+                        for item in list_value:
+                            _model = model.from_dict(item)
+                            _model_data.append(_model)
+
+                    # .. or we can map the response as is ..
+                    else:
+                        _model_data = model.from_dict(data)
+
+                    # .. map the result to the object we're returning ..
+                    data = _model_data
+
+                # .. now, we can return the result to the caller.
+                return data
+
+            # .. otherwise, raise an exception.
+            else:
+                msg = f'Endpoint invocation error ({response.status_code}) -> {response.text}'
+                raise Exception(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
