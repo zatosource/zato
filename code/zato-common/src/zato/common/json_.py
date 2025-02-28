@@ -73,6 +73,10 @@ def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple,
             elif isinstance(value, ObjectId):
                 value = 'ObjectId({})'.format(value)
 
+            # For Zato models
+            elif hasattr(value, 'to_dict'):
+                value = value.to_dict()
+
             else:
                 # We do not know how to serialize it
                 raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
@@ -85,9 +89,20 @@ def dumps(data, indent=4):
 
     if data is not None:
 
+        # Make sure we can serialize all the values ..
         if isinstance(data, dict):
             for key, value in data.items():
                 data[key] = _ensure_serializable(value)
+
+        # .. check if it's a list of models ..
+        elif data and isinstance(data, list) and hasattr(data[0], 'to_dict'):
+            _data = []
+            for item in data:
+                _item = item.to_dict()
+                _data.append(_item)
+            data = _data
+
+        # .. serialize non-simple types ..
         else:
             data = _ensure_serializable(data)
 
