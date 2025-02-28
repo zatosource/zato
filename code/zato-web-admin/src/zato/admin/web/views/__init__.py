@@ -875,8 +875,9 @@ def upload_to_server(
 
     try:
 
-        # First, check if the source code is valid
-        validate_python_syntax(data)
+        # First, if it's Python code, check if the source code is valid
+        if payload_name.endswith('.py'):
+            validate_python_syntax(data)
 
         input_dict = {
             'cluster_id': cluster_id,
