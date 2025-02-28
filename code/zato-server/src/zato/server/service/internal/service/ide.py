@@ -181,15 +181,17 @@ class _IDEBase(Service):
         out[self.server.hot_deploy_config.pickup_dir] = []
 
         # .. now, we can append all the user-defined directories ..
-        for key, value in sorted(self.server.pickup_config.items()):
+        pickup_config_items = sorted(self.server.pickup_config.items())
+        for key, value in pickup_config_items:
             if not value:
                 continue
             if key.startswith(('hot-deploy.user', 'user_conf')):
-                if not 'patterns' in value:
-                    pickup_from = value['pickup_from']
-                    if pickup_from.endswith('/'):
-                        pickup_from = pickup_from[:-1]
-                    out[pickup_from] = []
+                pickup_from = value['pickup_from']
+                if pickup_from.endswith('/'):
+                    pickup_from = pickup_from[:-1]
+                if not os.path.isabs(pickup_from):
+                    pickup_from = os.path.join(self.server.base_dir, pickup_from)
+                out[pickup_from] = []
 
         return out
 
@@ -588,15 +590,16 @@ class GetFileList(_GetBase):
                 _dir_name = dir_name
 
             # .. extract all the Python files recursively ..
-            for py_file in sorted(Path(_dir_name).glob('**/*.py')):
-                py_file_name = str(py_file)
-                root_dir_info = self._get_current_root_dir_info(py_file_name)
-                files.append({
-                    'file_name': py_file_name,
-                    'file_name_url_safe': make_fs_location_url_safe(py_file_name),
-                    'current_root_directory': root_dir_info.current_root_directory,
-                    'root_directory_count': root_dir_info.root_directory_count,
-                })
+            for pattern in ['*.py', '*.ini', '*.yml', '*.yaml']:
+                for py_file in sorted(Path(_dir_name).rglob(pattern)):
+                    py_file_name = str(py_file)
+                    root_dir_info = self._get_current_root_dir_info(py_file_name)
+                    files.append({
+                        'file_name': py_file_name,
+                        'file_name_url_safe': make_fs_location_url_safe(py_file_name),
+                        'current_root_directory': root_dir_info.current_root_directory,
+                        'root_directory_count': root_dir_info.root_directory_count,
+                    })
 
         # .. finally, we can return the response to our caller.
         self.response.payload = out
