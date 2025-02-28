@@ -95,7 +95,7 @@ def dumps(data, indent=4):
                 data[key] = _ensure_serializable(value)
 
         # .. check if it's a list of models ..
-        elif isinstance(data, list) and hasattr(data[0], 'to_dict'):
+        elif data and isinstance(data, list) and hasattr(data[0], 'to_dict'):
             _data = []
             for item in data:
                 _item = item.to_dict()
