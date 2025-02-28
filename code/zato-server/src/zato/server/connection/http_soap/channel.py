@@ -914,7 +914,19 @@ class RequestHandler:
                             if hasattr(response.payload, 'getvalue'):
                                 value = response.payload.getvalue() # type: ignore
                             else:
-                                value = dumps(response.payload)
+                                # Check if it's a list of models ..
+                                is_model_list = isinstance(response.payload, list) and isinstance(response.payload[0], Model)
+
+                                # .. if it is one, we need to turn each of the models into a dict ..
+                                if is_model_list:
+                                    value = []
+                                    for item in response.payload:
+                                        value.append(item.to_dict())
+                                    value = dumps(value)
+
+                                # .. it's not a list of models.
+                                else:
+                                    value = dumps(response.payload)
                     else:
                         value = ''
                     response.payload = value
