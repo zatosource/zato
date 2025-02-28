@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from json import loads
+from re import findall
 from traceback import format_exc
 
 # Bunch
@@ -1693,6 +1694,69 @@ class BusinessCentralAdapter(Service):
 
 # ################################################################################################################################
 
+    def _find_placeholders(self, text:'str', pattern:'str'=r'\{([^{}]+)\}') -> 'strlist':
+        matches = findall(pattern, text)
+        return matches
+
+# ################################################################################################################################
+
+    def _replace_placeholders_by_input(self, text:'str', placeholders:'strlist') -> 'str':
+
+        # Local variables
+        found = {}
+
+        # We go here if we don't have any input at all
+        if not self.request.raw_request:
+            missing = placeholders
+        else:
+
+            missing = []
+
+            for item in placeholders:
+                if item in self.request.raw_request:
+                    value = self.request.raw_request[item]
+                    value = str(value)
+                    found[item] = value
+                else:
+                    missing.append(item)
+
+        # Report any missing input elements
+        if missing:
+            suffix = 's ' if len(missing) > 1 else ' '
+            raise Exception(f'Element{suffix}missing on input -> `{sorted(missing)}` ')
+
+        for name, value in found.items():
+            pattern = '{' + name + '}'
+            text = text.replace(pattern, value)
+
+        return text
+
+# ################################################################################################################################
+
+    def _replace_placeholders_by_file(self, text:'str', placeholder:'str') -> 'str':
+        pass
+
+# ################################################################################################################################
+
+    def _replace_placeholders(self, text:'str') -> 'str':
+
+        # Find all the placeholders to replace ..
+        placeholders = self._find_placeholders(text)
+
+        # .. if there are none, we can return early ..
+        if not placeholders:
+            return text
+
+        # .. we go here if we need to wait a value in a config file ..
+        if ':' in text:
+            return self._replace_placeholders_by_file(text, placeholders[0])
+
+        # .. or we go here if we need to wait a value or values on input.
+        else:
+            return self._replace_placeholders_by_input(text, placeholders)
+
+# ################################################################################################################################
+
     def get_model(self) -> 'any_':
         # Don't return anything by default because models are optional
         pass
@@ -1709,12 +1773,12 @@ class BusinessCentralAdapter(Service):
 
 # ################################################################################################################################
 
-    def _invoke_bc(self, endpoint:'str') -> 'anydictnone':
+    def _invoke_bc(self, endpoint:'str', base_url:'str | None') -> 'anydictnone':
 
         # Get our configurarion
         model = self.model or self.get_model()
         conn_name = self.conn_name or self.get_conn_name()
-        base_url = self.base_url or self.get_base_url()
+        base_url = base_url or self.get_base_url()
 
         # Build a full address ..
         address_full = f'{base_url}/{endpoint}'
