@@ -1,0 +1,60 @@
+# ################################################################################################################################
+
+[rule_1]
+rule
+    ABC_BANK_001
+when
+    x < {max_x} and
+    amount > {min_amount} and
+    income_ratio > 0.4
+then
+    addition = 2.5
+    extra_requirements = True
+    max_term_years = 3
+
+# ################################################################################################################################
+
+[rule_2]
+rule
+    TELCO_002
+docs
+    This is a docstring
+    it can be multiline
+when
+    transaction_type != customer_type
+    transaction_amount > {transaction_amount}
+    (transaction_category == 'fixed' or transaction_time_hour between 1 and 5)
+    title.as_upper == "QBC"
+    doc_id =~ "AAABBB\s\S+"
+    d"{my_date}" == t'15-11-25 00:00:00'
+    hello == 123 # This is a comment too
+then
+    score = 85
+    block_transaction = True
+    notification_channel = 'email', 'app_alert'
+    outbound_channel = 'sms', {channel}
+    """
+    This is a multi
+    line comment
+    """
+
+# ################################################################################################################################
+
+[rule_3]
+rule
+    Payments_003
+when
+    account_balance_average > 500000 and
+    customer_segment == 'private_banking' and
+    relationship_tenure_years > 2
+then
+    fee_waiver = True
+    dedicated_advisor = True
+    status = {'key1':'value1', 'key2':'value2'}
+    '''
+    offer = '123'
+    This is a multiline
+    comment
+    '''
+
+# ################################################################################################################################
