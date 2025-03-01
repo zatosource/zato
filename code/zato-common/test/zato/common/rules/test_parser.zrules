@@ -9,7 +9,6 @@ when
     x < {max_x} and
     amount > {min_amount} and
     income_ratio > 0.4
-
 then
     addition = 2.5
     extra_requirements = True
