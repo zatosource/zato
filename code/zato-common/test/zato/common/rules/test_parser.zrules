@@ -20,9 +20,13 @@ rule
 docs
     This is a docstring
     it can be multiline
+defaults
+    a = 123
+    b = 456
+    max = 567
 when
     transaction_type != customer_type
-    transaction_amount > {transaction_amount}
+    transaction_amount > default.transaction_amount
     (transaction_category == 'fixed' or transaction_time_hour between 1 and 5)
     title.as_upper == "QBC"
     doc_id =~ "AAABBB\s\S+"
@@ -32,7 +36,7 @@ then
     score = 85
     block_transaction = True
     notification_channel = 'email', 'app_alert'
-    outbound_channel = 'sms', {channel}
+    outbound_channel = 'sms', channel
     """
     This is a multi
     line comment
