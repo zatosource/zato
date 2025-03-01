@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import ast
 import re
 
+# rule-engine
+import rule_engine
+
 # ################################################################################################################################
 
 if 0:
@@ -156,7 +159,15 @@ if __name__ == "__main__":
     file_name = sys.argv[1]
     rules = parse_rules_file(file_name)
 
-    print(json.dumps(rules, indent=2))
+    demo = rules['rule_4']
+    request = {'abc':123}
+
+    rule = rule_engine.Rule(demo['when'])
+    result = rule.matches(request)
+
+    print(111, json.dumps(demo, indent=2))
+    print(222, result)
+    print(333, demo['then'])
 
 # ################################################################################################################################
 # ################################################################################################################################

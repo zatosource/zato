@@ -16,10 +16,12 @@ then
 
 [rule_2]
 rule
-    TELCO_002
+    "TELCO_002"
 docs
+    """
     This is a docstring
     it can be multiline
+    """
 defaults
     a = 123
     b = 456
@@ -60,5 +62,16 @@ then
     This is a multiline
     comment
     '''
+# ################################################################################################################################
+
+[rule_4]
+rule
+    Demo_004
+when
+    abc == 123
+then
+    fee_waiver = True
+    dedicated_advisor = True
+    status = {'key1':'value1', 'key2':'value2'}
 
 # ################################################################################################################################
