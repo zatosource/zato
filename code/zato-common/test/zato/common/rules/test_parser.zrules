@@ -25,13 +25,13 @@ defaults
     b = 456
     max = 567
 when
-    transaction_type != customer_type
-    transaction_amount > default.transaction_amount
-    (transaction_category == 'fixed' or transaction_time_hour between 1 and 5)
-    title.as_upper == "QBC"
-    doc_id =~ "AAABBB\s\S+"
-    d"{my_date}" == t'15-11-25 00:00:00'
-    hello == 123 # This is a comment too
+    transaction_type != customer_type and
+    transaction_amount > default.transaction_amount and
+    (transaction_category == 'fixed' or transaction_time_hour between 1 and 5) and
+    title.as_upper == "QBC" and
+    doc_id =~ "AAABBB\s\S+" and
+    d"{my_date}" == t'15-11-25 00:00:00' and
+    hello == 123 # This is a comment too and
 then
     score = 85
     block_transaction = True
@@ -75,7 +75,8 @@ invoke
     result2 = abc.service2(request2)
 when
     abc == 123 or
-    result1.customer_type in ['abc', 'def']
+    abc == 456
+    # result1.customer_type in ['abc', 'def']
 then
     fee_waiver = True
     dedicated_advisor = True
