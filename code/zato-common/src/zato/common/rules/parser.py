@@ -15,6 +15,7 @@ import rule_engine
 
 # Zato
 from zato.common.util.open_ import open_r
+from zato.common.util.sorted_dict import SortedDict
 
 # ################################################################################################################################
 
@@ -90,7 +91,8 @@ def parse_assignments(text:'str') -> 'strdict':
 # ################################################################################################################################
 
 def parse_data(data:'str', container_name:'str') -> 'strdict':
-    rules_dict = {}
+
+    rules_dict = SortedDict()
 
     # Pattern to find each rule block, starting with "rule" keyword
     rule_pattern = r'(?:^|\n)\s*rule\s+(.*?)(?=\n\s*rule\s+|\Z)'
