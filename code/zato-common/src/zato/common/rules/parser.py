@@ -131,8 +131,7 @@ def parse_rules_content(content: str) -> 'strdict':
 
             # Post-process each section type
             if section_name == 'when':
-                cleaned_section = ' and '.join(line.strip() for line in cleaned_section.splitlines() if line.strip())
-                cleaned_section = cleaned_section.replace('and and', 'and')
+                cleaned_section = ' '.join(elem.strip() for elem in cleaned_section.splitlines())
 
             elif section_name in {'defaults', 'then', 'invoke'}:
                 # Parse assignments into dict
@@ -179,7 +178,7 @@ if __name__ == "__main__":
     print(111, json.dumps(rules, indent=2))
 
     demo = rules['rule_4']
-    request = {'abc':123}
+    request = {'abc':456}
     rule = rule_engine.Rule(demo['when'])
     result = rule.matches(request)
     print(222, result)
