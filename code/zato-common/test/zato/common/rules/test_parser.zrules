@@ -3,11 +3,9 @@
 
 rule
     ABC_BANK_001
-docs
-    This is a docstring
 when
-    x < {max_x} and
-    amount > {min_amount} and
+    x < max_x and
+    amount > min_amount and
     income_ratio > 0.4
 then
     addition = 2.5
@@ -27,10 +25,10 @@ defaults
 when
     transaction_type != customer_type and
     transaction_amount > default.transaction_amount and
-    (transaction_category == 'fixed' or transaction_time_hour between 1 and 5) and
+    (transaction_category == 'fixed' or transaction_time_hour == 5) and
     title.as_upper == "QBC" and
     doc_id =~ "AAABBB\s\S+" and
-    d"{my_date}" == t'15-11-25 00:00:00' and
+    abc == d'2025-01-01T00:00:00' and
     hello == 123 # This is a comment too and
 then
     score = 85
