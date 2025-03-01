@@ -74,8 +74,8 @@ invoke
     result1 = abc.service1(request1)
     result2 = abc.service2(request2)
 when
-    abc == 123
-    # result1.customer_type in ['abc', 'def']
+    abc == 123 or
+    result1.customer_type in ['abc', 'def']
 then
     fee_waiver = True
     dedicated_advisor = True
