@@ -848,29 +848,39 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # We assume that it will be always one of these file name suffixes,
         # note that we are not reading enmasse (.yaml and .yml) files here,
         # even though directories with enmasse files may be among what we have in self.user_conf_location_extra.
-        suffixes_supported = ('.ini', '.conf')
+        suffixes_supported = ('.ini', '.conf', '.zrules')
 
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
+
+            # Reusable
+            file_name = file_name.lower()
 
             # Reject files that actually contain environment variables
             if file_name == EnvFile.Default:
                 continue
 
             # Reject files with suffixes that we do not recognize
-            if not file_name.lower().endswith(suffixes_supported):
+            if not file_name.endswith(suffixes_supported):
                 continue
 
-            user_conf_full_path = os.path.join(dir_name, file_name)
-            user_config_name = get_user_config_name(file_name)
-            conf = get_config_from_file(user_conf_full_path, file_name)
+            # Load rules ..
+            if file_name.endswith('.zrules'):
+                logger.info('Read rules from `%s` (dir:%s)', file_name, dir_name)
 
-            # Not used at all in this type of configuration
-            _:'any_' = conf.pop('user_config_items', None)
+            # .. load a config file ..
+            else:
 
-            self.user_config[user_config_name] = conf
+                user_conf_full_path = os.path.join(dir_name, file_name)
+                user_config_name = get_user_config_name(file_name)
+                conf = get_config_from_file(user_conf_full_path, file_name)
 
-            logger.info('Read user config `%s` from `%s` (dir:%s)', user_config_name, file_name, dir_name)
+                # Not used at all in this type of configuration
+                _:'any_' = conf.pop('user_config_items', None)
+
+                self.user_config[user_config_name] = conf
+
+                logger.info('Read user config `%s` from `%s` (dir:%s)', user_config_name, file_name, dir_name)
 
 # ################################################################################################################################
 

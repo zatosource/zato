@@ -590,7 +590,7 @@ class GetFileList(_GetBase):
                 _dir_name = dir_name
 
             # .. extract all the Python files recursively ..
-            for pattern in ['*.py', '*.ini', '*.yml', '*.yaml']:
+            for pattern in ['*.py', '*.ini', '*.yml', '*.yaml', '*.zrules']:
                 for py_file in sorted(Path(_dir_name).rglob(pattern)):
                     py_file_name = str(py_file)
                     root_dir_info = self._get_current_root_dir_info(py_file_name)
