@@ -87,50 +87,64 @@ def parse_rule_assignments(text:'str') -> 'strdict':
 # ################################################################################################################################
 
 def parse_rules_content(content: str) -> 'strdict':
-
     rules_dict = {}
 
-    # Regular expression to find rule blocks
-    rule_pattern = r'\[(rule_[^\]]+)\](.*?)(?=\[rule_|\Z)'
-    rule_matches = re.findall(rule_pattern, content, re.DOTALL)
+    # Pattern to find each rule block, starting with "rule" keyword
+    rule_pattern = r'(?:^|\n)\s*rule\s+(.*?)(?=\n\s*rule\s+|\Z)'
+    rule_blocks = re.findall(rule_pattern, content, re.DOTALL)
 
-    for rule_name, rule_content in rule_matches:
+    for rule_block in rule_blocks:
+
+        rule_block = f'rule {rule_block}'  # Add the rule keyword back for section processing
         rule_dict = {}
 
-        # First find all section headers (docs, when, then)
-        section_headers = re.finditer(r'\b(rule|docs|when|then|defaults)\b', rule_content)
+        # Find all section headers
+        section_headers = re.finditer(r'\b(rule|docs|when|then|invoke|defaults)\b', rule_block)
         section_positions = [(m.group(1), m.start()) for m in section_headers]
 
-        # Add the end position of the rule content
-        section_positions.append(('end', len(rule_content)))
+        # Add the end position of the rule block
+        section_positions.append(('end', len(rule_block)))
 
-        # Process each section ..
-        for idx in range(len(section_positions) - 1):
-            section_name = section_positions[idx][0]
-            start_pos = section_positions[idx][1] + len(section_name)  # Skip the section name
-            end_pos = section_positions[idx + 1][1]
+        # Process each section
+        for sec_idx in range(len(section_positions) - 1):
+            section_name = section_positions[sec_idx][0]
+            start_pos = section_positions[sec_idx][1] + len(section_name)  # Skip the section name
+            end_pos = section_positions[sec_idx + 1][1]
 
-            # .. extract the section content ..
-            section_content = rule_content[start_pos:end_pos].strip()
+            # Extract the section content
+            section_content = rule_block[start_pos:end_pos].strip()
 
-            # .. remove comments ..
+            # For the rule section, extract just the rule name
+            if section_name == 'rule':
+
+                # Use a different name
+                section_name = 'name'
+
+                # Clean and extract rule name
+                rule_name = remove_comments(section_content).strip()
+
+                rule_dict[section_name] = rule_name
+                continue
+
+            # Remove comments for other sections
             cleaned_section = remove_comments(section_content)
 
-            # .. post process the sections ..
+            # Post-process each section type
             if section_name == 'when':
-                cleaned_section = ' and '.join(elem.strip() for elem in cleaned_section.splitlines())
+                cleaned_section = ' and '.join(line.strip() for line in cleaned_section.splitlines() if line.strip())
                 cleaned_section = cleaned_section.replace('and and', 'and')
 
-            elif section_name in {'defaults', 'then'}:
+            elif section_name in {'defaults', 'then', 'invoke'}:
+                # Parse assignments into dict
                 cleaned_section = parse_rule_assignments(cleaned_section)
 
-            # .. add it to rule dictionary ..
+            # Add processed section to rule dictionary
             rule_dict[section_name] = cleaned_section
 
-        # .. add the rule to the rules dictionary ..
+        # Create the rule ID and add to rules dictionary
+        rule_name = rule_dict['name']
         rules_dict[rule_name] = rule_dict
 
-    # .. and return everything to our caller.
     return rules_dict
 
 # ################################################################################################################################
@@ -159,15 +173,17 @@ if __name__ == "__main__":
     file_name = sys.argv[1]
     rules = parse_rules_file(file_name)
 
+    print(111, json.dumps(rules, indent=2))
+
     demo = rules['rule_4']
     request = {'abc':123}
-
     rule = rule_engine.Rule(demo['when'])
     result = rule.matches(request)
-
-    print(111, json.dumps(demo, indent=2))
     print(222, result)
-    print(333, demo['then'])
+
+    # print(111, json.dumps(demo, indent=2))
+    # print(222, result)
+    # print(333, demo['then'])
 
 # ################################################################################################################################
 # ################################################################################################################################
