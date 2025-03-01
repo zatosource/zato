@@ -3,10 +3,13 @@
 
 rule
     ABC_BANK_001
+docs
+    This is a docstring
 when
     x < {max_x} and
     amount > {min_amount} and
     income_ratio > 0.4
+
 then
     addition = 2.5
     extra_requirements = True
@@ -18,7 +21,6 @@ rule
     TELCO_002
 docs
     This is a docstring
-    it can be multiline
 defaults
     a = 123
     b = 456
@@ -45,6 +47,9 @@ then
 
 rule
     Payments_003
+docs
+    This is a docstring
+    it can be multiline
 when
     account_balance_average > 500000 and
     customer_segment == 'private_banking' and
@@ -63,6 +68,9 @@ then
 
 rule
     rule_4
+docs
+    This is a docstring
+    it can be multiline
 invoke
     result1 = abc.service1(request1)
     result2 = abc.service2(request2)
