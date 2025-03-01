@@ -13,22 +13,25 @@ import re
 # rule-engine
 import rule_engine
 
+# Zato
+from zato.common.util.open_ import open_r
+
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import strdict
 
 # ################################################################################################################################
 
-def parse_rules_file(file_path: str) -> 'strdict':
-    with open(file_path, 'r') as f:
-        content = f.read()
-
-    return parse_rules_content(content)
+def parse_file(path:'str | Path', container_name:'str') -> 'strdict':
+    with open_r(path) as f:
+        data = f.read()
+    return parse_data(data, container_name)
 
 # ################################################################################################################################
 
-def parse_rule_assignments(text:'str') -> 'strdict':
+def parse_assignments(text:'str') -> 'strdict':
 
     # Remove multi-line comments (both """ and ''')
     text = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', text, flags=re.DOTALL)
@@ -86,12 +89,12 @@ def parse_rule_assignments(text:'str') -> 'strdict':
 
 # ################################################################################################################################
 
-def parse_rules_content(content: str) -> 'strdict':
+def parse_data(data:'str', container_name:'str') -> 'strdict':
     rules_dict = {}
 
     # Pattern to find each rule block, starting with "rule" keyword
     rule_pattern = r'(?:^|\n)\s*rule\s+(.*?)(?=\n\s*rule\s+|\Z)'
-    rule_blocks = re.findall(rule_pattern, content, re.DOTALL)
+    rule_blocks = re.findall(rule_pattern, data, re.DOTALL)
 
     for rule_block in rule_blocks:
 
@@ -135,7 +138,7 @@ def parse_rules_content(content: str) -> 'strdict':
 
             elif section_name in {'defaults', 'then', 'invoke'}:
                 # Parse assignments into dict
-                cleaned_section = parse_rule_assignments(cleaned_section)
+                cleaned_section = parse_assignments(cleaned_section)
 
             elif section_name == 'docs':
                 cleaned_section = '\n'.join(elem.strip() for elem in cleaned_section.splitlines())
@@ -144,8 +147,10 @@ def parse_rules_content(content: str) -> 'strdict':
             rule_dict[section_name] = cleaned_section
 
         # Create the rule ID and add to rules dictionary
-        rule_name = rule_dict['name']
-        rules_dict[rule_name] = rule_dict
+        full_name = container_name + '_' + rule_dict['name']
+        rules_dict[full_name] = rule_dict
+        rule_dict['container_name'] = container_name
+        rule_dict['full_name'] = full_name
 
     return rules_dict
 
@@ -173,7 +178,7 @@ if __name__ == "__main__":
     import sys
 
     file_name = sys.argv[1]
-    rules = parse_rules_file(file_name)
+    rules = parse_file(file_name)
 
     print(111, json.dumps(rules, indent=2))
 
