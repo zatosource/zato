@@ -112,6 +112,7 @@ repoze.profile==2.3
 requests==2.32.0
 requests-ntlm==1.2.0
 requests-toolbelt==0.9.1
+rule-engine==4.5.3
 sarge==0.1.7.post1
 setproctitle==1.3.2
 simplejson==3.17.6
