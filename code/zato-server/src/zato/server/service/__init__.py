@@ -1689,8 +1689,9 @@ class RESTAdapter(Service):
 class BusinessCentralAdapter(Service):
 
     model     = None
-    conn_name = None
-    base_url  = None
+    conn_name = cast_('str', None)
+    base_url  = cast_('str', None)
+    endpoint  = cast_('str', None)
 
 # ################################################################################################################################
 
@@ -1730,11 +1731,33 @@ class BusinessCentralAdapter(Service):
             text = text.replace(pattern, value)
 
         return text
-
 # ################################################################################################################################
 
     def _replace_placeholders_by_file(self, text:'str', placeholder:'str') -> 'str':
-        pass
+
+        # Extrac the config file's name ..
+        file_name, path = placeholder.split(':')
+        file_base = file_name.split('.')[0]
+
+        # .. and the path in that file leading to our value ..
+        path = path.split('.')
+
+        # .. get the actual config file now ..
+        config = self.config[file_base]
+
+        # .. we're going to traverse that element ..
+        value = config
+
+        # .. keep traversing until we've run out of the path elements ..
+        while path:
+            elem = path.pop(0)
+            try:
+                value = value[elem]
+            except KeyError:
+                raise Exception(f'Key not found -> `{placeholder}` -> `{elem}` in `{sorted(value)}`')
+
+        # .. finally, we can return our value to the caller.
+        return value
 
 # ################################################################################################################################
 
@@ -1773,7 +1796,7 @@ class BusinessCentralAdapter(Service):
 
 # ################################################################################################################################
 
-    def _invoke_bc(self, endpoint:'str', base_url:'str | None') -> 'anydictnone':
+    def _invoke_business_central(self, endpoint:'str', base_url:'str | None') -> 'anydictnone':
 
         # Get our configurarion
         model = self.model or self.get_model()
@@ -1828,6 +1851,15 @@ class BusinessCentralAdapter(Service):
             else:
                 msg = f'Endpoint invocation error ({response.status_code}) -> {response.text}'
                 raise Exception(msg)
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        endpoint = self._replace_placeholders(self.endpoint)
+        base_url = self._replace_placeholders(self.base_url)
+
+        self.response.payload = self._invoke_business_central(endpoint, base_url)
 
 # ################################################################################################################################
 # ################################################################################################################################
