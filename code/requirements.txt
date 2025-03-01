@@ -91,7 +91,7 @@ pygments==2.15.0
 PyJWT==2.5.0
 pymongo==4.6.3
 PyMySQL==1.1.1
-pyOpenSSL==24.2.1
+pyOpenSSL==25.0.0
 pyotp==2.6.0
 pyparsing==2.4.2
 pyprof2calltree==1.4.5
