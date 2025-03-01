@@ -22,7 +22,7 @@ from zato.common.rules.parser import parse_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dict_, strdict
+    from zato.common.typing_ import anydict, dict_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +33,7 @@ def handle(self): # type: ignore
     rules = ['hr_ABC_BANK_001', 'hr_TELCO_002', 'hr_Payments_003']
 
     # Match a rule by its full name
-    result = self.rules.default_ABC_BANK_001.match(input)
+    result = self.rules.demo_ABC_BANK_001.match(input)
 
     # Match all rules from a specific container
     result = self.rules.hr.match(input)
@@ -56,6 +56,12 @@ def handle(self): # type: ignore
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MatchResult:
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class Rule(Model):
     full_name: 'str'
@@ -66,6 +72,11 @@ class Rule(Model):
     when: 'str'
     when_impl: 'RuleImpl'
     then: 'str'
+
+    def match(self, data:'anydict') -> 'MatchResult':
+        result = self.when_impl.matches(data)
+        result
+        print('RRR-1', result)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,11 +90,19 @@ class Container(Model):
         self.name = name
         self._rules = {}
 
+    def __getattr__(self, name:'str') -> 'Rule':
+        pass
+
     def add_rule(self, rule:'Rule') -> 'None':
         self._rules[rule.full_name] = rule
 
     def delete_rule(self, full_name:'str') -> 'None':
         _ = self._rules.pop(full_name, None)
+
+    def match(self, data:'anydict') -> 'MatchResult':
+        result = self.when_impl.matches(data)
+
+        print(333, result)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,12 +117,39 @@ class RulesManager:
         self._containers = {}
         self._lock = RLock()
 
+    def __getattr__(self, name:'str') -> 'Rule | Container':
+
+        # Check if we have a matching container
+        if name in self._containers:
+
+            # .. if yes, return it to the caller ..
+            return self._containers[name]
+
+        # .. try to see if we have a rule of that name ..
+        elif name in self._all_rules:
+
+            # .. if yes, return that rule ..
+            return self._all_rules[name]
+
+        # .. otherwise, give up
+        else:
+            raise AttributeError(f'No such rule, container or attribute -> {name}')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_parsed_rules(self, parsed:'strdict') -> 'None':
+    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'None':
+
+        # First, delete that container completely ..
+        _ = self._containers.pop(container_name, None)
+
+        # .. recreate it ..
+        container = Container(container_name)
+        self._containers[container.name] = container
 
         # .. go through each rule found ..
+        # .. and note that we're iterating the full names alpabetically (because parsed is a SortedDict) ..
+        # .. so the container's own dict will also always iterate over them alphabetically ..
         for full_name, rule_data in parsed.items():
 
             # .. build a new rule ..
@@ -120,21 +166,10 @@ class RulesManager:
             # .. make sure to delete it first from the global dict ..
             _ = self._all_rules.pop(rule.full_name, None)
 
-            # .. now, get the container to delete it from ..
-            if container := self._containers.get(rule.container_name):
-
-                # .. delete that rule from the container as well ..
-                container.delete_rule(rule.full_name)
-
-            # .. or create a container if we didn't have one ..
-            else:
-                container = Container(rule.container_name)
-                self._containers[container.name] = container
-
             # .. we can now add it to the global dict ..
             self._all_rules[rule.full_name] = rule
 
-            # .. and add our rule to it.
+            # .. and to the container as well.
             container.add_rule(rule)
 
 # ################################################################################################################################
@@ -148,7 +183,7 @@ class RulesManager:
             parsed = parse_file(file_path, file_name)
 
             # .. and load it all.
-            self.load_parsed_rules(parsed)
+            self.load_parsed_rules(parsed, file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,8 +206,16 @@ if __name__ == "__main__":
 
     root_dir = sys.argv[1]
 
-    manager = RulesManager()
-    _ = manager.load_rules_from_directory(root_dir)
+    rules = RulesManager()
+    _ = rules.load_rules_from_directory(root_dir)
+
+    print(111, rules._all_rules)
+
+    data = {'abc': 123}
+    rule = rules.demo_rule_4
+    result = rule.match(data)
+
+    print(999, result)
 
 # ################################################################################################################################
 # ################################################################################################################################
