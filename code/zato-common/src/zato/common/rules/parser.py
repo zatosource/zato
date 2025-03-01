@@ -138,6 +138,9 @@ def parse_rules_content(content: str) -> 'strdict':
                 # Parse assignments into dict
                 cleaned_section = parse_rule_assignments(cleaned_section)
 
+            elif section_name == 'docs':
+                cleaned_section = '\n'.join(elem.strip() for elem in cleaned_section.splitlines())
+
             # Add processed section to rule dictionary
             rule_dict[section_name] = cleaned_section
 
