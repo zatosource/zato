@@ -96,9 +96,16 @@ class Container(Model):
     def delete_rule(self, full_name:'str') -> 'None':
         _ = self._rules.pop(full_name, None)
 
-    def match(self, data:'anydict') -> 'MatchResult':
-        print(333, data)
-        TODO
+    def match(self, data:'anydict') -> 'MatchResult | None':
+
+        # Go through all the rules we have ..
+        for rule in self._rules.values():
+
+            # .. if we have a match ..
+            if match_result := rule.match(data):
+
+                # .. return it to our caller.
+                return match_result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,6 +119,9 @@ class RulesManager:
         self._all_rules = {}
         self._containers = {}
         self._lock = RLock()
+
+    def __getitem__(self, name:'str') -> 'Rule | Container':
+        return getattr(self, name)
 
     def __getattr__(self, name:'str') -> 'Rule | Container':
 
@@ -241,9 +251,13 @@ if __name__ == "__main__":
     result1 = rules.demo_rule_4.match(data)
     print(111, result1)
 
-    # 2) Accept the first matching rule from a specific container
-    result2 = rules.demo.match(data)
-    print(222, result2)
+    # 2) Accept the first matching rule from a specific container (by attr)
+    # result2 = rules.demo.match(data)
+    # print(222, result2)
+
+    # 3) Accept the first matching rule from a specific container (by dict)
+    # result = rules['demo'].match(data)
+    # print(222, result2)
 
 # ################################################################################################################################
 # ################################################################################################################################
