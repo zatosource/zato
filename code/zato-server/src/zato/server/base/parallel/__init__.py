@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -54,6 +54,7 @@ from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
+from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
@@ -324,6 +325,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # A wrapper for outgoing WSX connections
         self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(self, GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
+
+        # Rule engine
+        self.rules = RulesManager()
 
         # The main config store
         self.config = ConfigStore()
@@ -866,6 +870,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Load rules ..
             if file_name.endswith('.zrules'):
+                self.rules.load_rules_from_file(os.path.join(dir_name, file_name), file_name)
                 logger.info('Read rules from `%s` (dir:%s)', file_name, dir_name)
 
             # .. load a config file ..
