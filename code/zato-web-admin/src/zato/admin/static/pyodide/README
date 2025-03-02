@@ -1,0 +1,14 @@
+Pyodide installation:
+
+Download pyodide-core-x.x.x.tar.bz2 from github releases page [https://github.com/pyodide/pyodide/releases] and decompress to your chosen directory:
+Example: `wget -qO- https://github.com/pyodide/pyodide/releases/download/0.27.3/pyodide-core-0.27.3.tar.bz2 | tar -xvjf - -C ./code/zato-web-admin/src/zato/admin/static`
+
+Notes:
+You'll see a difference in the time it takes Pyodide to load in Firefox vs Chrome, I think this is because Chrome supports caching webassembly code.
+
+There are multiple ways to load your application code into the Pyodide filesystem. The following two methods are detailed in this demo:
+- Loading files manually through pyodide.FS:
+    This involves creating individual directories and files to mirror your application code structure in the Pyodide instance.
+- Building a wheel/archive of your application code and installing it with Pyodide:
+    Once built, the archive can be loaded directly into Pyodide
+    - Example: `python3 -m build`

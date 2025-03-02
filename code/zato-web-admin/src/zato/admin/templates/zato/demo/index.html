@@ -16,9 +16,58 @@
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
+    {% comment %} Pyodide {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/pyodide/pyodide.js"></script>
+
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pyodide Demo</h2>
+<script type="text/javascript">
+    async function main(){
+        /*
+            Loading files individually into Pyodide
+        */
+        const pythonDirectory = "/static/python/src/";
+        const pythonFiles = [
+            "foo/bar.py",
+            "foo/baz.py",
+            "foo/js.py",
+        ];
+        const pythonFilesResponse = {};
+        for (let pythonFile of pythonFiles) {
+            pythonFilesResponse[pythonFile] = fetch(`${pythonDirectory}${pythonFile}`);
+        }
+        let pyodide = await loadPyodide();
+
+        // can check this by running pyodide.FS.cwd() and can change this by running pyodide.FS.chdir(...)
+        const pyodideDirectory = "/home/pyodide";
+        pyodide.FS.mkdirTree(`${pyodideDirectory}/foo`);
+        for (let [fileName, pythonResponse] of Object.entries(pythonFilesResponse)) {
+            const text = await (await pythonResponse).text();
+            pyodide.FS.writeFile(`${pyodideDirectory}/${fileName}`, text);
+        }
+        console.log(pyodide.runPython(`
+from foo import bar, baz, js
+
+print("hello from inside pyodide")
+bar.hello_bar()
+baz.hello_baz()
+js.create_element()
+"print this outside of pyodide"
+        `));
+
+        /*
+            Using an archive to load application code
+        */
+        const mainPy = await (await fetch(`/static/python/main.py`)).text();
+        const pyodide2 = await loadPyodide();
+        const archive = await fetch("/static/python/dist/foo-0.0.1-py3-none-any.whl");
+        await pyodide2.unpackArchive(await archive.arrayBuffer(), "wheel", {extractDir: "/lib/python3.12/site-packages"});
+        pyodide2.runPython(mainPy);
+    }
+    main();
+</script>
+<h2 class="zato">Pyodide Demo Test</h2>
+<div id="pyodide-demo-container"></div>
 
 {% endblock %}
