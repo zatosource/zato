@@ -22,42 +22,22 @@ from zato.common.rules.parser import parse_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dict_, strdict
+    from zato.common.typing_ import any_, anydict, dict_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def handle(self): # type: ignore
+@dataclass(init=False)
+class MatchResult(Model):
+    _has_matched: 'bool'
+    then:'any_'
+    full_name:'str'
 
-    input = 'abc = 123'
-    rules = ['hr_ABC_BANK_001', 'hr_TELCO_002', 'hr_Payments_003']
+    def __init__(self, has_matched:'bool') -> 'None':
+        self._has_matched = has_matched
 
-    # Match a rule by its full name
-    result = self.rules.demo_ABC_BANK_001.match(input)
-
-    # Match all rules from a specific container
-    result = self.rules.hr.match(input)
-    result = self.rules['hr'].match(input)
-
-    # Match named rules, no matter which container they're from
-    result = self.rules.match(input, rules=rules)
-
-    # Match a named rule from the demo container
-    result = self.rules.demo.Payments_003.match(input)
-    result = self.rules.demo['Payments_003'].match(input)
-
-    # Match a specific rule from a specific container
-    result = self.rules.hr.rule_4.match(input)
-    result = self.rules.hr['rule_4'].match(input)
-    result = self.rules['hr']['rule_4'].match(input)
-
-    print(111, result)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MatchResult:
-    pass
+    def __bool__(self) -> 'bool':
+        return self._has_matched
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,9 +54,19 @@ class Rule(Model):
     then: 'str'
 
     def match(self, data:'anydict') -> 'MatchResult':
-        result = self.when_impl.matches(data)
-        result
-        print('RRR-1', result)
+
+        # Evaluate our rule ..
+        has_matched = self.when_impl.matches(data)
+
+        # .. build a result object ..
+        match_result = MatchResult(has_matched)
+
+        # .. populate all the attributes ..
+        match_result.then = self.then
+        match_result.full_name = self.full_name
+
+        # .. finally, return the result to the caller.
+        return match_result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,6 +188,35 @@ class RulesManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def handle(self): # type: ignore
+
+    input = 'abc = 123'
+    rules = ['hr_ABC_BANK_001', 'hr_TELCO_002', 'hr_Payments_003']
+
+    # 1) Match a rule by its full name
+    result = self.rules.demo_ABC_BANK_001.match(input)
+
+    # 2) Accept the first matching rule from a specific container
+    result = self.rules.hr.match(input)
+    result = self.rules['hr'].match(input)
+
+    # 3) Accept the first matching rule, no matter which container they're from
+    result = self.rules.match(input, rules=rules)
+
+    # 4) Match a named rule from the demo container
+    result = self.rules.demo.Payments_003.match(input)
+    result = self.rules.demo['Payments_003'].match(input)
+
+    # 5) Match a specific rule from a specific container
+    result = self.rules.hr.rule_4.match(input)
+    result = self.rules.hr['rule_4'].match(input)
+    result = self.rules['hr']['rule_4'].match(input)
+
+    print(111, result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == "__main__":
 
     # stdlib
@@ -208,13 +227,15 @@ if __name__ == "__main__":
     rules = RulesManager()
     _ = rules.load_rules_from_directory(root_dir)
 
-    print(111, rules._all_rules)
+    # print(111, rules._all_rules)
 
     data = {'abc': 123}
-    rule = rules.demo_rule_4
-    result = rule.match(data)
 
-    print(999, result)
+    # 1) Match a rule by its full name
+    _ = rules.demo_rule_4.match(data)
+
+    # 2) Accept the first matching rule from a specific container
+    _ = rules.demo.rule_4.match(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
