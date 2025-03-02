@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import ast
 import re
 
+# Bunch
+from bunch import bunchify
+
 # rule-engine
 import rule_engine
 
@@ -82,10 +85,14 @@ def parse_assignments(text:'str') -> 'strdict':
             else:
                 # Single value case
                 try:
-                    parsed[key] = ast.literal_eval(value)
+                    value = ast.literal_eval(value)
+                    if isinstance(value, dict):
+                        value = bunchify(value)
+                    parsed[key] = value
                 except (SyntaxError, ValueError):
                     parsed[key] = value
 
+    parsed = bunchify(parsed)
     return parsed
 
 # ################################################################################################################################
