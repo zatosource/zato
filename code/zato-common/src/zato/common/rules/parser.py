@@ -29,7 +29,7 @@ if 0:
 # ################################################################################################################################
 
 def parse_file(path:'str | Path', container_name:'str') -> 'strdict':
-    with open_r(path) as f:
+    with open_r(path) as f: # type: ignore
         data = f.read()
     return parse_data(data, container_name)
 
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     import sys
 
     file_name = sys.argv[1]
-    rules = parse_file(file_name)
+    rules = parse_file(file_name, 'demo')
 
     print(111, json.dumps(rules, indent=2))
 
