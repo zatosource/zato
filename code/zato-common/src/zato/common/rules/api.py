@@ -213,7 +213,13 @@ class RulesManager:
             rule.name = rule_data['name']
             rule.container_name = rule_data['container_name']
             rule.when = rule_data['when']
-            rule.when_impl = RuleImpl(rule.when)
+
+            try:
+                rule.when_impl = RuleImpl(rule.when)
+            except Exception as e:
+                logger.warn(f'Rule loading error -> {full_name} -> {rule.when} -> {e}')
+                continue
+
             rule.then = rule_data['then']
             rule.defaults = rule_data.get('defaults', {})
             rule.docs = rule_data.get('docs', '')
