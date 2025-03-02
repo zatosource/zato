@@ -53,6 +53,9 @@ class Rule(Model):
     when_impl: 'RuleImpl'
     then: 'str'
 
+    def __getattr__(self, name:'str') -> 'any_':
+        pass
+
     def match(self, data:'anydict') -> 'MatchResult':
 
         # Evaluate our rule ..
@@ -81,7 +84,11 @@ class Container(Model):
         self._rules = {}
 
     def __getattr__(self, name:'str') -> 'Rule':
-        pass
+        full_name = self.name + '_' + name
+        if rule := self._rules.get(full_name):
+            return rule
+        else:
+            raise AttributeError(f'No such rule -> {full_name}')
 
     def add_rule(self, rule:'Rule') -> 'None':
         self._rules[rule.full_name] = rule
@@ -196,21 +203,20 @@ def handle(self): # type: ignore
     # 1) Match a rule by its full name
     result = self.rules.demo_ABC_BANK_001.match(input)
 
-    # 2) Accept the first matching rule from a specific container
+    # 2) Accept the first matching rule from a specific container (by attr)
     result = self.rules.hr.match(input)
+
+    # 3) Accept the first matching rule from a specific container (by dict)
     result = self.rules['hr'].match(input)
 
-    # 3) Accept the first matching rule, no matter which container they're from
+    # 4) Accept the first matching rule, no matter which container they're from
     result = self.rules.match(input, rules=rules)
 
-    # 4) Match a named rule from the demo container
+    # 5) Match a named rule from the demo container (by attr)
     result = self.rules.demo.Payments_003.match(input)
-    result = self.rules.demo['Payments_003'].match(input)
 
-    # 5) Match a specific rule from a specific container
-    result = self.rules.hr.rule_4.match(input)
-    result = self.rules.hr['rule_4'].match(input)
-    result = self.rules['hr']['rule_4'].match(input)
+    # 6) Match a named rule from the demo container (by dict)
+    result = self.rules.demo['Payments_003'].match(input)
 
     print(111, result)
 
@@ -232,10 +238,12 @@ if __name__ == "__main__":
     data = {'abc': 123}
 
     # 1) Match a rule by its full name
-    _ = rules.demo_rule_4.match(data)
+    result1 = rules.demo_rule_4.match(data)
+    print(111, result1)
 
     # 2) Accept the first matching rule from a specific container
-    _ = rules.demo.rule_4.match(data)
+    result2 = rules.demo.match(data)
+    print(222, result2)
 
 # ################################################################################################################################
 # ################################################################################################################################
