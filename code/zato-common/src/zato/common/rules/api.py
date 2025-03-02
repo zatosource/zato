@@ -335,25 +335,25 @@ if __name__ == "__main__":
     # 3) Accept the first matching rule, no matter which container they're from
 
     '''
-    _rules = ['demo_rule_4b', 'demo_rule_4']
+    _rules = ['demo_rule_3b', 'demo_rule_3']
     result3 = rules.match(data, rules=_rules)
     print(333, result3)
 
     # 4) Match a named rule from the demo container (by attr)
-    result4 = rules.demo.rule_4.match(data)
+    result4 = rules.demo.rule_3.match(data)
     print(444, result4)
 
     # 5) Match a named rule from the demo container (by dict)
-    result5 = rules.demo['rule_4'].match(data) # type: ignore
+    result5 = rules.demo['rule_3'].match(data) # type: ignore
     print(555, result5)
 
     # 6) Accept a named rule by its name (by attr)
-    result6 = rules.demo_rule_4.match(data)
+    result6 = rules.demo_rule_3.match(data)
     print(666, result6)
     '''
 
     # 7) Accept a named rule by its name (by attr)
-    result7 = rules['demo_rule_4'].match(data)
+    result7 = rules['demo_rule_3'].match(data)
     print(777, result7)
 
 # ################################################################################################################################
