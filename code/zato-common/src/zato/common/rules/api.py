@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
@@ -48,6 +49,7 @@ class Rule(Model):
     name: 'str'
     container_name: 'str'
     docs: 'str'
+    defaults: 'strdict'
     invoke: 'strdict'
     when: 'str'
     when_impl: 'RuleImpl'
@@ -58,7 +60,28 @@ class Rule(Model):
 
     def match(self, data:'anydict') -> 'MatchResult':
 
-        # Evaluate our rule ..
+        # Local variables
+        needs_defaults = False
+
+        # Check if we need to add some of the default values ..
+        if self.defaults:
+            for key in self.defaults:
+                if key not in data:
+                    needs_defaults = True
+                    break
+
+        # .. populate the data with any missing elements ..
+        if needs_defaults:
+
+            # .. make a deep copy so as not to change the input ..
+            data = deepcopy(data)
+
+            # .. now, add all the missing keys ..
+            for key, value in self.defaults.items():
+                if key not in data:
+                    data[key] = value
+
+        # .. evaluate our rule ..
         has_matched = self.when_impl.matches(data)
 
         # .. build a result object ..
@@ -183,6 +206,7 @@ class RulesManager:
             rule.when = rule_data['when']
             rule.when_impl = RuleImpl(rule.when)
             rule.then = rule_data['then']
+            rule.defaults = rule_data.get('defaults', {})
             rule.docs = rule_data.get('docs', '')
             rule.invoke = rule_data.get('invoke', '')
 
@@ -276,6 +300,8 @@ if __name__ == "__main__":
     # print(222, result2)
 
     # 3) Accept the first matching rule, no matter which container they're from
+
+    '''
     _rules = ['demo_rule_4b', 'demo_rule_4']
     result3 = rules.match(data, rules=_rules)
     print(333, result3)
@@ -291,6 +317,7 @@ if __name__ == "__main__":
     # 6) Accept a named rule by its name (by attr)
     result6 = rules.demo_rule_4.match(data)
     print(666, result6)
+    '''
 
     # 7) Accept a named rule by its name (by attr)
     result7 = rules['demo_rule_4'].match(data)
