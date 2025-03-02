@@ -144,6 +144,20 @@ class RulesManager:
         else:
             raise AttributeError(f'No such rule, container or attribute -> {name}')
 
+    def match(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
+
+        # Go through our input ..
+        for _rule_name in rules:
+
+            # .. get the actual rule ..
+            rule = self[_rule_name]
+
+            # .. if we have a match ..
+            if result := rule.match(data):
+
+                # .. return it to our caller.
+                return result
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -261,12 +275,17 @@ if __name__ == "__main__":
     # result = rules['demo'].match(data)
     # print(222, result2)
 
+    # 3) Accept the first matching rule, no matter which container they're from
+    _rules = ['demo_rule_4b', 'demo_rule_4']
+    result3 = rules.match(data, rules=_rules)
+    print(333, result3)
+
     # 4) Match a named rule from the demo container (by attr)
     result4 = rules.demo.rule_4.match(data)
     print(444, result4)
 
     # 5) Match a named rule from the demo container (by dict)
-    result5 = rules.demo['rule_4'].match(data)
+    result5 = rules.demo['rule_4'].match(data) # type: ignore
     print(555, result5)
 
     # 6) Accept a named rule by its name (by attr)
