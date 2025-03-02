@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from copy import deepcopy
 from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 from threading import RLock
 
@@ -23,7 +24,12 @@ from zato.common.rules.parser import parse_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dict_, strdict
+    from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,7 +190,10 @@ class RulesManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'None':
+    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'strlist':
+
+        # Our response to produce
+        out = []
 
         # First, delete that container completely ..
         _ = self._containers.pop(container_name, None)
@@ -216,32 +225,56 @@ class RulesManager:
             # .. we can now add it to the global dict ..
             self._all_rules[rule.full_name] = rule
 
-            # .. and to the container as well.
+            # .. add it to the container as well ..
             container.add_rule(rule)
 
+            # .. append it for later use ..
+            out.append(rule.full_name)
+
+        # .. finally, we can return a list of what we loaded.
+        return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_rules_from_file(self, file_path:'str | Path', file_name:'str') -> 'None':
+    def load_rules_from_file(self, file_path:'str | Path') -> 'strlist':
+
+        file_name = Path(file_path).name
+        file_name = file_name.replace('.zrules', '')
 
         with self._lock:
 
             # Parse the contents of the file ..
             parsed = parse_file(file_path, file_name)
 
-            # .. and load it all.
-            self.load_parsed_rules(parsed, file_name)
+            # .. load it all ..
+            result = self.load_parsed_rules(parsed, file_name)
+
+            # .. log what was loaded ...
+            logger.info(f'Loaded rules: {result}')
+
+            # .. and tell the caller what we loaded.
+            return result
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_rules_from_directory(self, root_dir:'str') -> 'None':
+    def load_rules_from_directory(self, root_dir:'str') -> 'strlist':
+
+        # Our response to produce
+        out = []
 
         # Go through all the matching files ..
         for elem in Path(root_dir).glob('*.zrules'):
 
-            # .. and read them all in.
-            self.load_rules_from_file(elem, elem.stem)
+            # .. read them all in.
+            result = self.load_rules_from_file(elem)
+
+            # .. append it for later use ..
+            out.extend(result)
+
+        # .. and return the list of what was loaded to our caller.
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

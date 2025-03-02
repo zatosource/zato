@@ -151,7 +151,7 @@ class _OnUpdate(Service):
     def handle(self) -> 'None':
 
         # For later use
-        ctx = from_dict(UpdateCtx, self.request.input) # type: UpdateCtx
+        ctx = from_dict(UpdateCtx, self.request.input) # type: ignore
 
         #
         # First, we need to combine relative_dir with our own server's root directory.
@@ -261,7 +261,10 @@ class _OnUpdate(Service):
 # ################################################################################################################################
 
     def _get_update_type(self, file_path:'str') -> 'str':
-        return ''
+        if '.zrules' in file_path:
+            return 'rules'
+        else:
+            return ''
 
 # ################################################################################################################################
 
@@ -286,6 +289,9 @@ class OnUpdateUserConf(_OnUpdate):
     def _is_env_file(self, file_path:'str') -> 'bool':
         return EnvFile.Default in file_path
 
+    def _is_rules_file(self, file_path:'str') -> 'bool':
+        return file_path.endswith('.zrules')
+
 # ################################################################################################################################
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
@@ -293,6 +299,10 @@ class OnUpdateUserConf(_OnUpdate):
         # We enter here if this is a file with environment variables ..
         if self._is_env_file(ctx.full_path):
             self.server.update_environment_variables_from_file(ctx.full_path)
+
+        # .. or a rules file ..
+        elif self._is_rules_file(ctx.full_path):
+            _ = self.server.rules.load_rules_from_file(ctx.full_path)
 
         # .. otherwise, this is a file with user configuration.
         else:
@@ -311,6 +321,8 @@ class OnUpdateUserConf(_OnUpdate):
 
         if self._is_env_file(file_path):
             return EnvFile.Default
+        elif self._is_rules_file(file_path):
+            return 'rules'
         else:
             return self.update_type
 

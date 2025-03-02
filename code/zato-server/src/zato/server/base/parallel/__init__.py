@@ -870,7 +870,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Load rules ..
             if file_name.endswith('.zrules'):
-                self.rules.load_rules_from_file(os.path.join(dir_name, file_name), file_name)
+                _ = self.rules.load_rules_from_file(os.path.join(dir_name, file_name))
                 logger.info('Read rules from `%s` (dir:%s)', file_name, dir_name)
 
             # .. load a config file ..
