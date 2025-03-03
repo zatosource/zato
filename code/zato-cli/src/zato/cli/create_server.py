@@ -389,6 +389,65 @@ service_sources_contents = """
 
 # ################################################################################################################################
 
+demo_zrules_contents = """
+# ################################################################################################################################
+
+rule
+    Airport_01_Flight_Delays
+docs
+    "Handles passenger notifications and accommodations during flight delays exceeding threshold times."
+when
+    flight_delay > 120 and
+    passenger.type in ['platinum', 'diamond'] and
+    is_international == True
+then
+    send_notification = True
+    offer_accomodation = True
+    template = 'DelayAlert'
+
+# ################################################################################################################################
+
+rule
+    Airport_02_Passenger_Flow
+docs
+    "Optimizes processing point operations in response to passenger volume and terminal congestion."
+defaults
+    max_wait_time = 25
+when
+    processing_point.wait_time > max_wait_time and
+    departing_flights_count.next_hour >= 5 and
+    terminal.passenger_density > 75
+then
+    should_open_lane = True
+    redeploy_staff = 'FloatingAssistant'
+    staff_count = 2
+
+# ################################################################################################################################
+
+rule
+    rule_3
+docs
+    This is a docstring
+    it can be multiline
+defaults
+    max = {'a':'b'}
+invoke
+    result1 = abc.service1(request1)
+    result2 = abc.service2(request2)
+when
+    abc == 123 or
+    abc == 456
+    # result1.customer_type in ['abc', 'def']
+then
+    fee_waiver = True
+    dedicated_advisor = True
+    status = {'key1':'value1', 'key2':'value2'}
+
+# ################################################################################################################################
+""".strip()
+
+# ################################################################################################################################
+
 user_conf_contents = """[sample_section]
 string_key=sample_string
 list_key=sample,list
@@ -977,9 +1036,15 @@ class Create(ZatoCommand):
             is_windows = 'windows' in system.lower()
 
             if not is_windows:
+                user_conf_dir = os.path.join(self.target_dir, 'config', 'repo', 'user-conf')
                 user_conf_src = os.path.join(self.target_dir, 'pickup', 'incoming', 'user-conf')
-                user_conf_dest = os.path.join(self.target_dir, 'config', 'repo', 'user-conf')
-                os.symlink(user_conf_src, user_conf_dest)
+                os.symlink(user_conf_src, user_conf_dir)
+
+                # Add default rules
+                demo_zrules_loc = os.path.join(user_conf_dir, 'demo.zrules')
+                demo_zrules = open_w(demo_zrules_loc)
+                _ = demo_zrules.write(demo_zrules_contents)
+                demo_zrules.close()
 
             fernet1 = Fernet(secret_key)
 
