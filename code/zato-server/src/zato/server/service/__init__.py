@@ -1515,7 +1515,6 @@ class RESTAdapter(Service):
     log_response     = False
     map_response     = None
     get_conn_name    = None
-    get_auth         = None
     get_auth_scopes  = None
     get_path_params  = None
     get_method       = None
