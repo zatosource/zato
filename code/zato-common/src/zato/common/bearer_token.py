@@ -163,12 +163,12 @@ class BearerTokenManager:
             config.client_id_field: config.username,
             config.client_secret_field: config.password,
             'grant_type': config.grant_type,
-            'scopes': config.scopes
+            'scope': config.scopes
         }
 
         # .. scopes are optional ..
         if _scopes:
-            request['scopes'] = _scopes
+            request['scope'] = _scopes
 
         # .. extra fields are optional ..
         if config.extra_fields:
