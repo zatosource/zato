@@ -513,6 +513,8 @@
                                 {{ create_form.security }}
                             </td>
                         </tr>
+
+                        {% if connection == 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">
                                 Security groups
@@ -521,6 +523,8 @@
                             <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
                             </td>
                         </tr>
+                        {% endif %}
+
                         <tr class="api-client-groups-options-block hidden">
                             <td class="to-ignore"></td>
                             <td>
@@ -581,7 +585,7 @@
 
                         {% endif %}
 
-                        {% if connection == 'channel' %}
+                        {% if False %}
                         <tr>
                             <td style="vertical-align:middle">
                             Cache
@@ -603,7 +607,7 @@
                         {% include "zato/include/rate-limiting/create.html" %}
                         {% endif %}
 
-                        {% if False and connection == 'channel' %}
+                        {% if False  %}
                             {% include "zato/include/audit-log/create.html" %}
                         {% endif %}
 
@@ -743,6 +747,8 @@
                                 {{ edit_form.security }}
                             </td>
                         </tr>
+
+                        {% if connection == 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">
                                 Security groups
@@ -751,6 +757,7 @@
                             <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
                             </td>
                         </tr>
+                        {% endif %}
                         <tr class="api-client-groups-options-block hidden">
                             <td class="to-ignore"></td>
                             <td>
@@ -817,7 +824,7 @@
                         {% include "zato/include/rate-limiting/edit.html" %}
                         {% endif %}
 
-                        {% if connection == 'channel' %}
+                        {% if False %}
                             {% include "zato/include/audit-log/edit.html" %}
                         {% endif %}
 
