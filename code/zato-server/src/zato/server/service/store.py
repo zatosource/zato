@@ -715,6 +715,7 @@ class ServiceStore:
                 class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
 
                 class_._worker_config = service_store.server.worker_store.worker_config
+                class_.rules = service_store.server.rules
 
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
