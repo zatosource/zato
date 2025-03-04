@@ -145,6 +145,10 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
             if section_name == 'when':
                 cleaned_section = ' '.join(elem.strip() for elem in cleaned_section.splitlines())
 
+                # Update boolean values
+                cleaned_section = cleaned_section.replace('== True', '== true')
+                cleaned_section = cleaned_section.replace('== False', '== False')
+
             elif section_name in {'defaults', 'then', 'invoke'}:
                 # Parse assignments into dict
                 cleaned_section = parse_assignments(cleaned_section)

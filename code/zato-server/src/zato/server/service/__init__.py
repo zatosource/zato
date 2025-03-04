@@ -97,6 +97,7 @@ if 0:
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
+    from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
@@ -474,6 +475,9 @@ class Service:
 
     # Processing time in milliseconds
     processing_time: 'float'
+
+    # Rule engine
+    rules: 'RulesManager'
 
     component_enabled_sms: 'bool'
     component_enabled_hl7: 'bool'
