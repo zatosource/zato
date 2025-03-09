@@ -1529,7 +1529,7 @@ class RESTAdapter(Service):
     get_sec_def_name = None
     needs_raw_response = False
 
-    max_retries        = 1
+    max_retries        = 0
     retry_sleep_time   = 2
 
     has_query_string_id   = False
