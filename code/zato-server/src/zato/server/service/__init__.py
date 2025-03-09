@@ -1531,6 +1531,7 @@ class RESTAdapter(Service):
 
     max_retries        = 0
     retry_sleep_time   = 2
+    retry_backoff_threshold = 3
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1578,6 +1579,7 @@ class RESTAdapter(Service):
             log_response=log_response,
             max_retries=self.max_retries,
             retry_sleep_time=self.retry_sleep_time,
+            retry_backoff_threshold=self.retry_backoff_threshold,
         )
 
         if response is not None:
