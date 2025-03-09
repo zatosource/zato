@@ -725,7 +725,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         auth_scopes=None,     # type: any_
         log_response=True,    # type: bool
         needs_exception=True, # type: bool
-        max_retries=1,        # type: int
+        max_retries=0,        # type: int
         retry_sleep_time=2,   # type: int
     ) -> 'any_':
 
