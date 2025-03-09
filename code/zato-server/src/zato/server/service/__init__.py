@@ -97,6 +97,7 @@ if 0:
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
+    from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
@@ -474,6 +475,9 @@ class Service:
 
     # Processing time in milliseconds
     processing_time: 'float'
+
+    # Rule engine
+    rules: 'RulesManager'
 
     component_enabled_sms: 'bool'
     component_enabled_hl7: 'bool'
@@ -1525,6 +1529,9 @@ class RESTAdapter(Service):
     get_sec_def_name = None
     needs_raw_response = False
 
+    max_retries        = 1
+    retry_sleep_time   = 2
+
     has_query_string_id   = False
     query_string_id_param = None
 
@@ -1569,6 +1576,8 @@ class RESTAdapter(Service):
             sec_def_name=sec_def_name,
             auth_scopes=auth_scopes,
             log_response=log_response,
+            max_retries=self.max_retries,
+            retry_sleep_time=self.retry_sleep_time,
         )
 
         if response is not None:
