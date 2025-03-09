@@ -1532,6 +1532,7 @@ class RESTAdapter(Service):
     max_retries        = 0
     retry_sleep_time   = 2
     retry_backoff_threshold = 3
+    retry_backoff_multiplier = 2
 
     has_query_string_id   = False
     query_string_id_param = None
