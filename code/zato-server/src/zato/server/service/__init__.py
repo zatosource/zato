@@ -1529,6 +1529,9 @@ class RESTAdapter(Service):
     get_sec_def_name = None
     needs_raw_response = False
 
+    max_retries        = 1
+    retry_sleep_time   = 2
+
     has_query_string_id   = False
     query_string_id_param = None
 
@@ -1573,6 +1576,8 @@ class RESTAdapter(Service):
             sec_def_name=sec_def_name,
             auth_scopes=auth_scopes,
             log_response=log_response,
+            max_retries=self.max_retries,
+            retry_sleep_time=self.retry_sleep_time,
         )
 
         if response is not None:
