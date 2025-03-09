@@ -238,6 +238,8 @@ class BaseHTTPSOAPWrapper:
     ) -> '_RequestsResponse':
 
         # Local variables
+        max_retries = kwargs.get('max_retries')
+        retry_sleep_time = kwargs.get('retry_sleep_time')
         params = kwargs.get('params')
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
@@ -723,6 +725,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         auth_scopes=None,     # type: any_
         log_response=True,    # type: bool
         needs_exception=True, # type: bool
+        max_retries=1,        # type: int
+        retry_sleep_time=2,   # type: int
     ) -> 'any_':
 
         # Invoke the system ..
@@ -735,6 +739,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 auth_scopes=auth_scopes,
                 params=params,
                 headers=headers,
+                max_retries=max_retries,
+                retry_sleep_time=retry_sleep_time,
             )
         except Exception as e:
             if needs_exception:
