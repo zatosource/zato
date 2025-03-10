@@ -1,178 +1,1400 @@
-{% extends "zato/index.html" %}
-
-{% block html_title %}SMS Twilio connections{% endblock %}
-
-{% block "extra_css" %}
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Patterns</title>
+    <!-- JointJS CSS -->
     <link rel="stylesheet" type="text/css" href="/static/css/joint.min.css">
-
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 220px;
+            background-color: #f5f5f5;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+        }
 
         #paper {
             width: 100%;
-            top: 0;
-            left: 0;
+            height: 100%;
+            position: absolute;
+            overflow: hidden;
+        }
+
+        .palette-section {
+            margin-bottom: 15px;
+        }
+
+        .palette-header {
+            font-weight: bold;
+            margin-bottom: 8px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .palette-item {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: move;
+            user-select: none;
+            text-align: center;
+        }
+
+        .palette-item:hover {
+            background-color: #e9e9e9;
+        }
+
+        .toolbar {
+            background-color: #333;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar button {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .toolbar button:hover {
+            background-color: #777;
+        }
+
+        .properties-panel {
+            width: 240px;
+            background-color: #f5f5f5;
+            border-left: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .properties-panel label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .properties-panel input, .properties-panel select {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .properties-header {
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .zoom-controls button {
+            margin: 3px;
+            cursor: pointer;
+        }
+
+        .empty-properties {
+            color: #777;
+            font-style: italic;
+            margin-top: 20px;
+            text-align: center;
         }
     </style>
-
-{% endblock %}
-
-{% block "extra_js" %}
-
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-
+    <!-- Dependencies -->
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/lodash.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/backbone.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/joint.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="palette-section">
+                <div class="palette-header">Node</div>
+                <div class="palette-item" data-type="task">Service</div>
+                <div class="palette-item" data-type="process">Split / Join</div>
+                <div class="palette-item" data-type="process">Parallel</div>
+            </div>
 
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+            <div class="palette-section">
+                <div class="palette-header">Events</div>
+                <div class="palette-item" data-type="start">Start</div>
+                <div class="palette-item" data-type="end">End</div>
+                <div class="palette-item" data-type="timer">Timer</div>
+            </div>
 
+            <div class="palette-section">
+                <div class="palette-header">Connectors</div>
+                <div class="palette-item" data-type="link">Link</div>
+            </div>
 
-{% endblock %}
+            <div class="palette-section">
+                <div class="palette-header">Actions</div>
+                <button id="clear-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Clear Diagram</button>
+                <button id="save-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Save Diagram</button>
+                <button id="load-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Load Diagram</button>
+            </div>
+        </div>
 
-{% block "content" %}
-<h2 class="zato">Patterns</h2>
+        <div class="main-content">
+            <div class="toolbar">
+                <button id="undo-button">Undo</button>
+                <button id="redo-button">Redo</button>
+                <button id="zoom-in">Zoom In</button>
+                <button id="zoom-out">Zoom Out</button>
+                <button id="zoom-to-fit">Fit to View</button>
+                <button id="validate-button">Validate</button>
+                <button id="export-json">Export JSON</button>
+                <button id="export-png">Export PNG</button>
+            </div>
+            <div id="paper"></div>
 
-Hello paper
-<div id="paper"></div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Create a graph (model)
-        var graph = new joint.dia.Graph();
+            <div class="zoom-controls">
+                <button id="pan-paper">Pan Mode</button>
+            </div>
+        </div>
 
-        // Create a paper (view)
-        var paper = new joint.dia.Paper({
-            el: document.getElementById('paper'),
-            model: graph,
-            width: "100%",
-            gridSize: 10,
-            drawGrid: true,
-            background: {
-                color: 'rgba(0, 0, 0, 0.1)'
-            }
-        });
+        <div class="properties-panel">
+            <div class="properties-header">Properties</div>
+            <div id="properties-content">
+                <div class="empty-properties">Select an element to view properties</div>
+            </div>
+        </div>
+    </div>
 
-        // Create some elements
-        var rect = new joint.shapes.standard.Rectangle();
-        rect.position(100, 30);
-        rect.resize(100, 40);
-        rect.attr({
-            body: {
-                fill: '#3498db',
-                stroke: '#2980b9',
-                strokeWidth: 2
-            },
-            label: {
-                text: 'Rectangle',
-                fill: 'white'
-            }
-        });
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configure custom shapes
+            configureCustomShapes();
 
-        var circle = new joint.shapes.standard.Circle();
-        circle.position(400, 30);
-        circle.resize(50, 50);
-        circle.attr({
-            body: {
-                fill: '#e74c3c',
-                stroke: '#c0392b',
-                strokeWidth: 2
-            },
-            label: {
-                text: 'Circle',
-                fill: 'white'
-            }
-        });
+            // Initialize workflow editor
+            var graph = new joint.dia.Graph();
 
-        // Add elements to the graph
-        graph.addCells([rect, circle]);
-
-        // Create a link between the two shapes
-        var link = new joint.shapes.standard.Link();
-        link.source(rect);
-        link.target(circle);
-        link.attr({
-            line: {
-                stroke: '#333333',
-                strokeWidth: 2
-            }
-        });
-
-        // Add the link to the graph
-        graph.addCell(link);
-
-        // Enable element dragging
-        paper.on('element:pointerdown', function(elementView) {
-            elementView.model.toFront();
-        });
-
-        // Define a custom shape
-        joint.shapes.custom = {};
-        joint.shapes.custom.MyShape = joint.shapes.standard.Rectangle.extend({
-            defaults: joint.util.deepSupplement({
-                type: 'custom.MyShape',
-                attrs: {
-                    body: {
-                        fill: '#9b59b6',
-                        stroke: '#8e44ad',
-                        strokeWidth: 2
+            var paper = new joint.dia.Paper({
+                el: document.getElementById('paper'),
+                model: graph,
+                width: '100%',
+                height: '100%',
+                gridSize: 10,
+                drawGrid: true,
+                background: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                },
+                defaultLink: new joint.shapes.standard.Link({
+                    attrs: {
+                        line: {
+                            stroke: '#333333',
+                            strokeWidth: 2,
+                            targetMarker: {
+                                type: 'path',
+                                d: 'M 10 -5 0 0 10 5 z'
+                            }
+                        }
                     },
-                    label: {
-                        text: 'Custom Shape',
-                        fill: 'white'
+                    router: { name: 'manhattan' },
+                    connector: { name: 'rounded' }
+                }),
+                highlighting: {
+                    default: {
+                        name: 'stroke',
+                        options: {
+                            padding: 6,
+                            attrs: {
+                                'stroke-width': 3,
+                                stroke: '#4666E5'
+                            }
+                        }
                     }
-                }
-            }, joint.shapes.standard.Rectangle.prototype.defaults)
-        });
-
-        // Create an instance of your custom shape
-        var myShape = new joint.shapes.custom.MyShape();
-        myShape.position(250, 150);
-        myShape.resize(120, 60);
-
-        // Add it to the graph
-        graph.addCell(myShape);
-
-        // Save the graph
-        function saveGraph() {
-            var graphJSON = graph.toJSON();
-            localStorage.setItem('savedGraph', JSON.stringify(graphJSON));
-            console.log('Graph saved!');
-        }
-
-        // Load the graph
-        function loadGraph() {
-            var savedGraph = localStorage.getItem('savedGraph');
-            if (savedGraph) {
-                graph.fromJSON(JSON.parse(savedGraph));
-                console.log('Graph loaded!');
-            } else {
-                console.log('No saved graph found!');
-            }
-        }
-
-        // Handle clicks on elements
-        paper.on('element:pointerclick', function(elementView) {
-            var element = elementView.model;
-            console.log('Element clicked:', element.id);
-
-            // You can highlight the clicked element
-            element.attr({
-                body: {
-                    stroke: '#ffd700',
-                    strokeWidth: 4
+                },
+                interactive: {
+                    linkMove: true,
+                    elementMove: true,
+                    arrowheadMove: true
                 }
             });
+
+            // Enhance the paper's interactive settings for better snapping behavior
+            paper.options.snapLinks = {
+                radius: 20  // The distance within which a link end will snap to a magnet
+            };
+
+            paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
+                // You can add custom validation logic here if needed
+                return targetMagnet != null; // Only allow connections to magnets/ports
+            };
+
+        // Add this right after the paper initialization, before assigning event handlers
+        // Add selection functionality
+        var selection = {
+            // Elements that have been selected
+            cells: [],
+            // Enable rubberband selection
+            createSelectionBox: function() {
+                this.box = document.createElement('div');
+                this.box.style.position = 'absolute';
+                this.box.style.border = '1px dashed blue';
+                this.box.style.backgroundColor = 'rgba(0, 0, 255, 0.1)';
+                this.box.style.pointerEvents = 'none';
+                document.querySelector('.main-content').appendChild(this.box);
+            },
+            // Set rubberband position and size
+            updateSelectionBox: function(x1, y1, x2, y2) {
+                if (!this.box) this.createSelectionBox();
+                var paperOffset = paper.el.getBoundingClientRect();
+
+                var left = Math.min(x1, x2);
+                var top = Math.min(y1, y2);
+                var width = Math.abs(x2 - x1);
+                var height = Math.abs(y2 - y1);
+
+                this.box.style.left = left + 'px';
+                this.box.style.top = top + 'px';
+                this.box.style.width = width + 'px';
+                this.box.style.height = height + 'px';
+                this.box.style.display = 'block';
+            },
+            // Remove the rubberband
+            removeSelectionBox: function() {
+                if (this.box && this.box.parentNode) {
+                    this.box.parentNode.removeChild(this.box);
+                    this.box = null;
+                }
+            },
+            // Select elements inside the selection box
+            selectElements: function(x1, y1, x2, y2) {
+                var paperOffset = paper.el.getBoundingClientRect();
+                var localX1 = x1 - paperOffset.left;
+                var localY1 = y1 - paperOffset.top;
+                var localX2 = x2 - paperOffset.left;
+                var localY2 = y2 - paperOffset.top;
+
+                // Convert to paper coordinates
+                var scale = paper.scale();
+                var p1 = paper.clientToLocalPoint({ x: localX1, y: localY1 });
+                var p2 = paper.clientToLocalPoint({ x: localX2, y: localY2 });
+
+                // Create selection rectangle
+                var rect = {
+                    x: Math.min(p1.x, p2.x),
+                    y: Math.min(p1.y, p2.y),
+                    width: Math.abs(p2.x - p1.x),
+                    height: Math.abs(p2.y - p1.y)
+                };
+
+                // Find elements inside the rectangle
+                var elements = graph.getElements().filter(function(el) {
+                    var bbox = el.getBBox();
+                    return (
+                        bbox.x >= rect.x &&
+                        bbox.x + bbox.width <= rect.x + rect.width &&
+                        bbox.y >= rect.y &&
+                        bbox.y + bbox.height <= rect.y + rect.height
+                    );
+                });
+
+                // Select elements
+                this.clear();
+                elements.forEach(this.add.bind(this));
+            },
+            // Add element to selection
+            add: function(element) {
+                if (!element || this.cells.indexOf(element) > -1) return;
+                this.cells.push(element);
+                this.highlight(element);
+            },
+            // Remove element from selection
+            remove: function(element) {
+                var index = this.cells.indexOf(element);
+                if (index === -1) return;
+                this.cells.splice(index, 1);
+                this.unhighlight(element);
+            },
+            // Clear all selections
+            clear: function() {
+                this.cells.forEach(this.unhighlight);
+                this.cells = [];
+            },
+            // Toggle element selection
+            toggle: function(element, ctrlKey) {
+                if (!element) return;
+
+                if (!ctrlKey) {
+                    // If ctrl is not pressed, clear selection and select just this element
+                    this.clear();
+                    this.add(element);
+                } else {
+                    // If ctrl is pressed, toggle the element's selection
+                    var index = this.cells.indexOf(element);
+                    if (index === -1) {
+                        this.add(element);
+                    } else {
+                        this.remove(element);
+                    }
+                }
+            },
+            // Select all elements
+            selectAll: function() {
+                this.clear();
+                graph.getElements().forEach(this.add.bind(this));
+            },
+            // Highlight selected element
+            highlight: function(element) {
+                var view = element.findView(paper);
+                if (view) {
+                    view.highlight(null, {
+                        highlighter: {
+                            name: 'stroke',
+                            options: {
+                                padding: 8,
+                                attrs: {
+                                    'stroke': '#2196F3',
+                                    'stroke-width': 2,
+                                    'stroke-dasharray': '5,5'
+                                }
+                            }
+                        }
+                    });
+                }
+            },
+            // Remove highlight from element
+            unhighlight: function(element) {
+                var view = element.findView(paper);
+                if (view) view.unhighlight();
+            }
+        };
+
+
+            // Zoom controls
+            document.getElementById('zoom-in').addEventListener('click', function() {
+                var currentScale = paper.scale().sx;
+                paper.scale(currentScale * 1.2);
+            });
+
+            document.getElementById('zoom-out').addEventListener('click', function() {
+                var currentScale = paper.scale().sx;
+                paper.scale(currentScale * 0.8);
+            });
+
+            document.getElementById('zoom-to-fit').addEventListener('click', function() {
+                paper.scaleContentToFit({ padding: 50 });
+            });
+
+            // Pan mode
+            var isPanning = false;
+            document.getElementById('pan-paper').addEventListener('click', function() {
+                isPanning = !isPanning;
+                if (isPanning) {
+                    this.textContent = 'Selection Mode';
+                    paper.setInteractivity(false);
+                } else {
+                    this.textContent = 'Pan Mode';
+                    paper.setInteractivity(true);
+                }
+            });
+
+            // Initialize panning
+            paper.on('blank:pointerdown', function(evt, x, y) {
+                if (isPanning) {
+                    var scale = paper.scale();
+                    var originalPoint = { x: x * scale.sx, y: y * scale.sy };
+
+                    document.onmousemove = function(e) {
+                        var dx = (e.clientX - originalPoint.x) / scale.sx;
+                        var dy = (e.clientY - originalPoint.y) / scale.sy;
+                        paper.translate(paper.translate().tx + dx, paper.translate().ty + dy);
+                    };
+
+                    document.onmouseup = function() {
+                        document.onmousemove = null;
+                        document.onmouseup = null;
+                    };
+                }
+            });
+
+            // Save and load functionality
+            document.getElementById('save-graph').addEventListener('click', function() {
+                var jsonString = JSON.stringify(graph.toJSON());
+                localStorage.setItem('workflow', jsonString);
+                alert('Workflow diagram saved!');
+            });
+
+            document.getElementById('load-graph').addEventListener('click', function() {
+                var savedGraph = localStorage.getItem('workflow');
+                if (savedGraph) {
+                    graph.fromJSON(JSON.parse(savedGraph));
+                    alert('Workflow diagram loaded!');
+                } else {
+                    alert('No saved workflow found!');
+                }
+            });
+
+            document.getElementById('clear-graph').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the diagram?')) {
+                    graph.clear();
+                }
+            });
+
+            // Make items draggable from palette
+            setupDraggablePalette(graph, paper);
+
+            // Setup properties panel
+            setupPropertiesPanel(graph, paper);
+
+            // Setup connection points for easier linking
+            setupConnectionPoints(paper);
+
+            // Add validation for workflow
+            setupValidation(graph);
+
+            // Enable export functionality
+            setupExport(graph);
+
+            // Make paper responsive
+            window.addEventListener('resize', function() {
+                // No need to adjust width as it's 100%
+                paper.setDimensions('100%', document.querySelector('.main-content').offsetHeight - document.querySelector('.toolbar').offsetHeight);
+            });
+
+            // Initialize paper size
+            paper.setDimensions('100%', document.querySelector('.main-content').offsetHeight - document.querySelector('.toolbar').offsetHeight);
         });
 
-        // Handle clicks on links
-        paper.on('link:pointerclick', function(linkView) {
-            var link = linkView.model;
-            console.log('Link clicked:', link.id);
-        });
+        function configureCustomShapes() {
+            // Custom shapes for workflow elements
 
+            // Task shape (rectangle)
+            joint.shapes.workflow = {};
+            joint.shapes.workflow.Task = joint.shapes.standard.Rectangle.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.Task',
+                    size: { width: 120, height: 60 },
+                    attrs: {
+                        body: {
+                            fill: '#FFFFFF',
+                            stroke: '#5F95FF',
+                            strokeWidth: 2,
+                            rx: 4,
+                            ry: 4
+                        },
+                        label: {
+                            text: 'Service',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Rectangle.prototype.defaults)
+            });
+
+            // Process shape (rectangle with different styling)
+            joint.shapes.workflow.Process = joint.shapes.standard.Rectangle.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.Process',
+                    size: { width: 120, height: 60 },
+                    attrs: {
+                        body: {
+                            fill: '#FFFFFF',
+                            stroke: '#813d9c',
+                            strokeWidth: 2,
+                            rx: 0,
+                            ry: 0
+                        },
+                        label: {
+                            text: 'Split / Join',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Rectangle.prototype.defaults)
+            });
+
+            // Decision shape (diamond)
+            joint.shapes.workflow.Decision = joint.shapes.standard.Polygon.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.Decision',
+                    size: { width: 120, height: 80 },
+                    attrs: {
+                        body: {
+                            refPoints: '0,10 10,0 20,10 10,20',
+                            fill: '#FFFFFF',
+                            stroke: '#FF8C00',
+                            strokeWidth: 2
+                        },
+                        label: {
+                            text: 'Decision',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Polygon.prototype.defaults)
+            });
+
+            // Start shape (circle)
+            joint.shapes.workflow.Start = joint.shapes.standard.Circle.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.Start',
+                    size: { width: 60, height: 60 },
+                    attrs: {
+                        body: {
+                            fill: '#FFFFFF',
+                            stroke: '#2ECC71',
+                            strokeWidth: 2
+                        },
+                        label: {
+                            text: 'Start',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Circle.prototype.defaults)
+            });
+
+            // End shape (circle with different styling)
+            joint.shapes.workflow.End = joint.shapes.standard.Circle.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.End',
+                    size: { width: 60, height: 60 },
+                    attrs: {
+                        body: {
+                            fill: '#FFFFFF',
+                            stroke: '#E74C3C',
+                            strokeWidth: 2
+                        },
+                        label: {
+                            text: 'End',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Circle.prototype.defaults)
+            });
+
+            // Timer shape (circle with clock icon)
+            joint.shapes.workflow.Timer = joint.shapes.standard.Circle.extend({
+                defaults: joint.util.deepSupplement({
+                    type: 'workflow.Timer',
+                    size: { width: 60, height: 60 },
+                    attrs: {
+                        body: {
+                            fill: '#FFFFFF',
+                            stroke: '#9B59B6',
+                            strokeWidth: 2
+                        },
+                        label: {
+                            text: 'Timer',
+                            fill: '#333333',
+                            fontFamily: 'Arial',
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            textVerticalAnchor: 'middle',
+                            textAnchor: 'middle'
+                        }
+                    }
+                }, joint.shapes.standard.Circle.prototype.defaults)
+            });
+        }
+
+// Replace the setupDraggablePalette function with this improved version:
+function setupDraggablePalette(graph, paper) {
+    // Make palette items draggable
+    var paletteItems = document.querySelectorAll('.palette-item');
+
+    paletteItems.forEach(function(item) {
+        item.addEventListener('mousedown', function(event) {
+            var type = event.target.getAttribute('data-type');
+            var element;
+
+            // Create a new element based on the type
+            switch (type) {
+                case 'task':
+                    element = new joint.shapes.workflow.Task();
+                    break;
+                case 'process':
+                    element = new joint.shapes.workflow.Process();
+                    break;
+                case 'decision':
+                    element = new joint.shapes.workflow.Decision();
+                    break;
+                case 'start':
+                    element = new joint.shapes.workflow.Start();
+                    break;
+                case 'end':
+                    element = new joint.shapes.workflow.End();
+                    break;
+                case 'timer':
+                    element = new joint.shapes.workflow.Timer();
+                    break;
+                case 'link':
+                    // Enable link drawing mode
+                    paper.setInteractivity({ linkMove: true });
+                    paper.options.defaultLink = new joint.shapes.standard.Link({
+                        attrs: {
+                            line: {
+                                stroke: '#333333',
+                                strokeWidth: 2,
+                                targetMarker: {
+                                    type: 'path',
+                                    d: 'M 10 -5 0 0 10 5 z'
+                                }
+                            }
+                        },
+                        router: { name: 'manhattan' },
+                        connector: { name: 'rounded' }
+                    });
+
+                    // Set interactive flag for creating links
+                    paper.options.interactive = { linkPinning: false };
+                    paper.options.interactive.addLinkFromMagnet = true;
+                    return;
+            }
+
+            if (!element) return;
+
+            // Calculate a safe position within the paper
+            var paperEl = paper.el;
+            var paperRect = paperEl.getBoundingClientRect();
+
+            // Make sure we have valid dimensions
+            var paperWidth = paperRect.width || 1000;
+            var paperHeight = paperRect.height || 800;
+
+            // Calculate a position within the visible area of the paper
+            // Use specific values rather than random to avoid NaN issues
+            var position = {
+                x: Math.max(100, Math.min(paperWidth - 150, paperWidth / 2)),
+                y: Math.max(100, Math.min(paperHeight - 150, paperHeight / 2))
+            };
+
+            // Position the element and add to graph
+            element.position(position.x, position.y);
+            graph.addCell(element);
+
+            console.log('Element added at position:', position);
+        });
     });
-</script>
+}
 
-{% endblock %}
+
+        function setupPropertiesPanel(graph, paper) {
+            var propertiesContent = document.getElementById('properties-content');
+            var selectedElement = null;
+
+            paper.on('element:pointerclick', function(elementView) {
+                selectedElement = elementView.model;
+                updatePropertiesPanel(selectedElement);
+            });
+
+            paper.on('link:pointerclick', function(linkView) {
+                selectedElement = linkView.model;
+                updatePropertiesPanel(selectedElement);
+            });
+
+            paper.on('blank:pointerclick', function() {
+                selectedElement = null;
+                propertiesContent.innerHTML = '<div class="empty-properties">Select an element to view properties</div>';
+            });
+
+            function updatePropertiesPanel(element) {
+                if (!element) return;
+
+                propertiesContent.innerHTML = '';
+
+                var isLink = element.isLink();
+
+                // Common properties
+                var idLabel = document.createElement('label');
+                idLabel.innerText = 'ID:';
+                propertiesContent.appendChild(idLabel);
+
+                var idInput = document.createElement('input');
+                idInput.type = 'text';
+                idInput.value = element.id;
+                idInput.readOnly = true;
+                propertiesContent.appendChild(idInput);
+
+                // Element-specific properties
+                if (!isLink) {
+                    // Label
+                    var labelLabel = document.createElement('label');
+                    labelLabel.innerText = 'Label:';
+                    propertiesContent.appendChild(labelLabel);
+
+                    var labelInput = document.createElement('input');
+                    labelInput.type = 'text';
+                    labelInput.value = element.attr('label/text') || '';
+                    labelInput.addEventListener('change', function() {
+                        element.attr('label/text', this.value);
+                    });
+                    propertiesContent.appendChild(labelInput);
+
+                    // Fill color
+                    var fillLabel = document.createElement('label');
+                    fillLabel.innerText = 'Fill Color:';
+                    propertiesContent.appendChild(fillLabel);
+
+                    var fillInput = document.createElement('input');
+                    fillInput.type = 'color';
+                    fillInput.value = element.attr('body/fill') || '#FFFFFF';
+                    fillInput.addEventListener('change', function() {
+                        element.attr('body/fill', this.value);
+                    });
+                    propertiesContent.appendChild(fillInput);
+
+                    // Stroke color
+                    var strokeLabel = document.createElement('label');
+                    strokeLabel.innerText = 'Border Color:';
+                    propertiesContent.appendChild(strokeLabel);
+
+                    var strokeInput = document.createElement('input');
+                    strokeInput.type = 'color';
+                    strokeInput.value = element.attr('body/stroke') || '#000000';
+                    strokeInput.addEventListener('change', function() {
+                        element.attr('body/stroke', this.value);
+                    });
+                    propertiesContent.appendChild(strokeInput);
+
+                    // Width
+                    var widthLabel = document.createElement('label');
+                    widthLabel.innerText = 'Width:';
+                    propertiesContent.appendChild(widthLabel);
+
+                    var widthInput = document.createElement('input');
+                    widthInput.type = 'number';
+                    widthInput.min = 20;
+                    widthInput.max = 500;
+                    widthInput.value = element.get('size').width || 100;
+                    widthInput.addEventListener('change', function() {
+                        var size = element.get('size');
+                        element.resize(parseInt(this.value), size.height);
+                    });
+                    propertiesContent.appendChild(widthInput);
+
+                    // Height
+                    var heightLabel = document.createElement('label');
+                    heightLabel.innerText = 'Height:';
+                    propertiesContent.appendChild(heightLabel);
+
+                    var heightInput = document.createElement('input');
+                    heightInput.type = 'number';
+                    heightInput.min = 20;
+                    heightInput.max = 500;
+                    heightInput.value = element.get('size').height || 100;
+                    heightInput.addEventListener('change', function() {
+                        var size = element.get('size');
+                        element.resize(size.width, parseInt(this.value));
+                    });
+                    propertiesContent.appendChild(heightInput);
+
+                    // Custom data section
+                    var customDataLabel = document.createElement('label');
+                    customDataLabel.innerText = 'Custom Data:';
+                    propertiesContent.appendChild(customDataLabel);
+
+                    var customDataInput = document.createElement('textarea');
+                    customDataInput.rows = 5;
+                    customDataInput.value = JSON.stringify(element.get('customData') || {}, null, 2);
+                    customDataInput.addEventListener('change', function() {
+                        try {
+                            var customData = JSON.parse(this.value);
+                            element.set('customData', customData);
+                            this.style.borderColor = '';
+                        } catch (e) {
+                            this.style.borderColor = 'red';
+                        }
+                    });
+                    propertiesContent.appendChild(customDataInput);
+
+                } else {
+                    // Link properties
+
+                    // Link label
+                    var linkLabelLabel = document.createElement('label');
+                    linkLabelLabel.innerText = 'Label:';
+                    propertiesContent.appendChild(linkLabelLabel);
+
+                    var linkLabelInput = document.createElement('input');
+                    linkLabelInput.type = 'text';
+                    linkLabelInput.value = element.label(0) ? element.label(0).attrs.text.text : '';
+                    linkLabelInput.addEventListener('change', function() {
+                        if (this.value) {
+                            element.label(0, {
+                                position: 0.5,
+                                attrs: {
+                                    text: { text: this.value }
+                                }
+                            });
+                        } else {
+                            element.removeLabel(0);
+                        }
+                    });
+                    propertiesContent.appendChild(linkLabelInput);
+
+                    // Link color
+                    var linkColorLabel = document.createElement('label');
+                    linkColorLabel.innerText = 'Line Color:';
+                    propertiesContent.appendChild(linkColorLabel);
+
+                    var linkColorInput = document.createElement('input');
+                    linkColorInput.type = 'color';
+                    linkColorInput.value = element.attr('line/stroke') || '#000000';
+                    linkColorInput.addEventListener('change', function() {
+                        element.attr('line/stroke', this.value);
+                    });
+                    propertiesContent.appendChild(linkColorInput);
+
+                    // Link thickness
+                    var linkThicknessLabel = document.createElement('label');
+                    linkThicknessLabel.innerText = 'Line Thickness:';
+                    propertiesContent.appendChild(linkThicknessLabel);
+
+                    var linkThicknessInput = document.createElement('input');
+                    linkThicknessInput.type = 'number';
+                    linkThicknessInput.min = 1;
+                    linkThicknessInput.max = 10;
+                    linkThicknessInput.value = element.attr('line/strokeWidth') || 2;
+                    linkThicknessInput.addEventListener('change', function() {
+                        element.attr('line/strokeWidth', parseInt(this.value));
+                    });
+                    propertiesContent.appendChild(linkThicknessInput);
+
+                    // Link style
+                    var linkStyleLabel = document.createElement('label');
+                    linkStyleLabel.innerText = 'Line Style:';
+                    propertiesContent.appendChild(linkStyleLabel);
+
+                    var linkStyleSelect = document.createElement('select');
+                    var styles = [
+                        { value: '', text: 'Solid' },
+                        { value: '5,5', text: 'Dashed' },
+                        { value: '2,2', text: 'Dotted' },
+                        { value: '10,5,5,5', text: 'Dash Dot' }
+                    ];
+
+                    styles.forEach(function(style) {
+                        var option = document.createElement('option');
+                        option.value = style.value;
+                        option.text = style.text;
+                        linkStyleSelect.appendChild(option);
+                    });
+
+                    linkStyleSelect.value = element.attr('line/strokeDasharray') || '';
+                    linkStyleSelect.addEventListener('change', function() {
+                        element.attr('line/strokeDasharray', this.value);
+                    });
+                    propertiesContent.appendChild(linkStyleSelect);
+
+                    // Router type
+                    var routerLabel = document.createElement('label');
+                    routerLabel.innerText = 'Router Type:';
+                    propertiesContent.appendChild(routerLabel);
+
+                    var routerSelect = document.createElement('select');
+                    var routers = [
+                        { value: 'normal', text: 'Normal' },
+                        { value: 'manhattan', text: 'Manhattan' },
+                        { value: 'metro', text: 'Metro' },
+                        { value: 'orthogonal', text: 'Orthogonal' }
+                    ];
+
+                    routers.forEach(function(router) {
+                        var option = document.createElement('option');
+                        option.value = router.value;
+                        option.text = router.text;
+                        routerSelect.appendChild(option);
+                    });
+
+                    var currentRouter = '';
+                    if (element.get('router')) {
+                        currentRouter = element.get('router').name || 'normal';
+                    }
+
+                    routerSelect.value = currentRouter;
+                    routerSelect.addEventListener('change', function() {
+                        element.router(this.value !== 'normal' ? { name: this.value } : null);
+                    });
+                    propertiesContent.appendChild(routerSelect);
+                }
+
+                // Delete button for any element
+                var deleteButton = document.createElement('button');
+                deleteButton.innerText = 'Delete Element';
+                deleteButton.style.backgroundColor = '#E74C3C';
+                deleteButton.style.color = 'white';
+                deleteButton.style.border = 'none';
+                deleteButton.style.padding = '8px';
+                deleteButton.style.marginTop = '15px';
+                deleteButton.style.width = '100%';
+                deleteButton.style.cursor = 'pointer';
+
+                deleteButton.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to delete this element?')) {
+                        element.remove();
+                        propertiesContent.innerHTML = '<div class="empty-properties">Select an element to view properties</div>';
+                    }
+                });
+
+                propertiesContent.appendChild(deleteButton);
+            }
+        }
+    // Setup connection points for easier linking between elements
+    function setupConnectionPoints(paper) {
+        // Enable link creation from elements with ports
+        paper.on('element:pointerdown', function(elementView, evt) {
+            paper.options.interactive = {
+                linkPinning: false,
+                addLinkFromMagnet: true
+            };
+        });
+
+        // Create connecting ports when element is added
+        paper.model.on('add', function(cell) {
+            if (cell.isElement()) {
+                // Add ports for connections
+                if (!cell.hasPorts()) {
+                    addDefaultPorts(cell);
+                }
+            }
+        });
+
+        // Add default ports to the element
+        function addDefaultPorts(element) {
+            // Skip if the element already has ports
+            if (element.prop('ports/items')) return;
+
+            // Define port groups
+            element.prop('ports/groups/in', {
+                position: {
+                    name: 'left'
+                },
+                attrs: {
+                    circle: {
+                        r: 6,
+                        magnet: true,
+                        stroke: '#31d0c6',
+                        strokeWidth: 2,
+                        fill: '#fff'
+                    }
+                },
+                label: {
+                    position: {
+                        name: 'left',
+                        args: {
+                            y: 10
+                        }
+                    }
+                }
+            });
+
+            element.prop('ports/groups/out', {
+                position: {
+                    name: 'right'
+                },
+                attrs: {
+                    circle: {
+                        r: 6,
+                        magnet: true,
+                        stroke: '#31d0c6',
+                        strokeWidth: 2,
+                        fill: '#fff'
+                    }
+                },
+                label: {
+                    position: {
+                        name: 'right',
+                        args: {
+                            y: 10
+                        }
+                    }
+                }
+            });
+
+            // Add the ports based on element type
+            if (element.get('type') === 'workflow.Decision') {
+                // Decision has multiple outputs
+                element.addPorts([
+                    { group: 'in', id: 'in' },
+                    { group: 'out', id: 'yes', attrs: { text: { text: 'Yes' } } },
+                    { group: 'out', id: 'no', attrs: { text: { text: 'No' } } }
+                ]);
+            } else if (element.get('type') === 'workflow.Start') {
+                // Start only has outputs
+                element.addPorts([
+                    { group: 'out', id: 'out' }
+                ]);
+            } else if (element.get('type') === 'workflow.End') {
+                // End only has inputs
+                element.addPorts([
+                    { group: 'in', id: 'in' }
+                ]);
+            } else {
+                // Standard elements have in and out ports
+                element.addPorts([
+                    { group: 'in', id: 'in' },
+                    { group: 'out', id: 'out' }
+                ]);
+            }
+        }
+    }
+
+    // Setup validation for workflow diagrams
+    function setupValidation(graph) {
+        document.getElementById('validate-button').addEventListener('click', function() {
+            var validationResults = validateWorkflow(graph);
+            displayValidationResults(validationResults);
+        });
+
+        function validateWorkflow(graph) {
+            var cells = graph.getCells();
+            var validationResults = {
+                valid: true,
+                errors: [],
+                warnings: []
+            };
+
+            // Check for isolated elements (no connections)
+            cells.forEach(function(cell) {
+                if (cell.isElement()) {
+                    var connected = false;
+                    cells.forEach(function(otherCell) {
+                        if (otherCell.isLink()) {
+                            if (otherCell.getSourceElement() === cell || otherCell.getTargetElement() === cell) {
+                                connected = true;
+                            }
+                        }
+                    });
+
+                    if (!connected) {
+                        validationResults.warnings.push({
+                            type: 'Isolated Element',
+                            id: cell.id,
+                            message: 'Element "' + (cell.attr('label/text') || cell.id) + '" is not connected to any other element.'
+                        });
+                    }
+                }
+            });
+
+            // Check for start and end nodes
+            var hasStart = false;
+            var hasEnd = false;
+
+            cells.forEach(function(cell) {
+                if (cell.get('type') === 'workflow.Start') {
+                    hasStart = true;
+                }
+                if (cell.get('type') === 'workflow.End') {
+                    hasEnd = true;
+                }
+            });
+
+            if (!hasStart) {
+                validationResults.errors.push({
+                    type: 'Missing Start',
+                    message: 'Workflow is missing a Start node.'
+                });
+                validationResults.valid = false;
+            }
+
+            if (!hasEnd) {
+                validationResults.errors.push({
+                    type: 'Missing End',
+                    message: 'Workflow is missing an End node.'
+                });
+                validationResults.valid = false;
+            }
+
+            // Check for unreachable elements
+            if (hasStart) {
+                var reachable = {};
+                var startNodes = cells.filter(function(cell) {
+                    return cell.get('type') === 'workflow.Start';
+                });
+
+                function markReachable(element) {
+                    if (reachable[element.id]) return;
+                    reachable[element.id] = true;
+
+                    var outgoingLinks = graph.getConnectedLinks(element, { outbound: true });
+                    outgoingLinks.forEach(function(link) {
+                        var target = link.getTargetElement();
+                        if (target) {
+                            markReachable(target);
+                        }
+                    });
+                }
+
+                startNodes.forEach(markReachable);
+
+                cells.forEach(function(cell) {
+                    if (cell.isElement() && cell.get('type') !== 'workflow.Start' && !reachable[cell.id]) {
+                        validationResults.warnings.push({
+                            type: 'Unreachable Element',
+                            id: cell.id,
+                            message: 'Element "' + (cell.attr('label/text') || cell.id) + '" is not reachable from any Start node.'
+                        });
+                    }
+                });
+            }
+
+            // Check for cycles (basic check)
+            var visited = {};
+            var recStack = {};
+            var hasCycle = false;
+
+            function checkCycle(element) {
+                if (!visited[element.id]) {
+                    visited[element.id] = true;
+                    recStack[element.id] = true;
+
+                    var outgoingLinks = graph.getConnectedLinks(element, { outbound: true });
+                    for (var i = 0; i < outgoingLinks.length; i++) {
+                        var target = outgoingLinks[i].getTargetElement();
+                        if (target) {
+                            if (!visited[target.id] && checkCycle(target)) {
+                                return true;
+                            } else if (recStack[target.id]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                recStack[element.id] = false;
+                return false;
+            }
+
+            cells.forEach(function(cell) {
+                if (cell.isElement() && !visited[cell.id]) {
+                    if (checkCycle(cell)) {
+                        hasCycle = true;
+                    }
+                }
+            });
+
+            if (hasCycle) {
+                validationResults.warnings.push({
+                    type: 'Cycle Detected',
+                    message: 'The workflow contains cycles (loops). Make sure this is intentional.'
+                });
+            }
+
+            return validationResults;
+        }
+
+        function displayValidationResults(results) {
+            var message = '';
+
+            if (results.valid && results.warnings.length === 0) {
+                message = 'Validation successful: No issues found.';
+            } else {
+                if (!results.valid) {
+                    message += '<strong>Validation Failed</strong><br><br>';
+                    message += '<span style="color: #E74C3C; font-weight: bold;">Errors:</span><br>';
+                    results.errors.forEach(function(error) {
+                        message += '• ' + error.type + ': ' + error.message + '<br>';
+                    });
+                    message += '<br>';
+                }
+
+                if (results.warnings.length > 0) {
+                    message += '<span style="color: #F39C12; font-weight: bold;">Warnings:</span><br>';
+                    results.warnings.forEach(function(warning) {
+                        message += '• ' + warning.type + ': ' + warning.message + '<br>';
+                    });
+                }
+            }
+
+            // Show the validation results in a custom modal
+            var modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.4)';
+            modal.style.zIndex = '1000';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+
+            var modalContent = document.createElement('div');
+            modalContent.style.backgroundColor = '#fefefe';
+            modalContent.style.margin = 'auto';
+            modalContent.style.padding = '20px';
+            modalContent.style.border = '1px solid #888';
+            modalContent.style.width = '50%';
+            modalContent.style.maxHeight = '70%';
+            modalContent.style.overflow = 'auto';
+            modalContent.style.borderRadius = '5px';
+
+            var closeButton = document.createElement('span');
+            closeButton.innerHTML = '&times;';
+            closeButton.style.color = '#aaa';
+            closeButton.style.float = 'right';
+            closeButton.style.fontSize = '28px';
+            closeButton.style.fontWeight = 'bold';
+            closeButton.style.cursor = 'pointer';
+
+            closeButton.onclick = function() {
+                document.body.removeChild(modal);
+            };
+
+            var title = document.createElement('h3');
+            title.textContent = 'Workflow Validation Results';
+            title.style.marginTop = '0';
+
+            var content = document.createElement('div');
+            content.innerHTML = message;
+
+            modalContent.appendChild(closeButton);
+            modalContent.appendChild(title);
+            modalContent.appendChild(content);
+            modal.appendChild(modalContent);
+
+            document.body.appendChild(modal);
+        }
+    }
+
+    // Setup export functionality
+    function setupExport(graph) {
+        // Export as JSON
+        document.getElementById('export-json').addEventListener('click', function() {
+            var jsonObject = graph.toJSON();
+
+            // Prepare cleaned version of the workflow
+            var exportObject = {
+                version: '1.0',
+                metadata: {
+                    title: 'Workflow Export',
+                    date: new Date().toISOString(),
+                    author: 'No-Code Workflow Editor'
+                },
+                graph: jsonObject
+            };
+
+            var jsonString = JSON.stringify(exportObject, null, 2);
+            downloadFile('workflow.json', jsonString, 'application/json');
+        });
+
+        // Export as PNG
+        document.getElementById('export-png').addEventListener('click', function() {
+            // Convert SVG to canvas and then to PNG
+            var svgElement = document.querySelector('#paper svg');
+
+            if (!svgElement) {
+                alert('No diagram to export');
+                return;
+            }
+
+            var serializer = new XMLSerializer();
+            var svgString = serializer.serializeToString(svgElement);
+
+            // Create a canvas element
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+
+            // Set canvas dimensions to match the SVG
+            var svgRect = svgElement.getBoundingClientRect();
+            canvas.width = svgRect.width;
+            canvas.height = svgRect.height;
+
+            // Create an image from the SVG
+            var image = new Image();
+            image.onload = function() {
+                // Fill canvas with white background
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw the image onto the canvas
+                context.drawImage(image, 0, 0);
+
+                // Convert canvas to data URL and download
+                var pngData = canvas.toDataURL('image/png');
+                downloadFile('workflow.png', pngData, 'image/png', true);
+            };
+
+            // Convert SVG to data URL
+            image.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+        });
+
+        // Helper function to download a file
+        function downloadFile(filename, data, type, isDataURL) {
+            var link = document.createElement('a');
+            link.download = filename;
+
+            if (isDataURL) {
+                link.href = data;
+            } else {
+                var blob = new Blob([data], {type: type});
+                link.href = window.URL.createObjectURL(blob);
+            }
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+
+
+    </script>
+</body>
+</html>
