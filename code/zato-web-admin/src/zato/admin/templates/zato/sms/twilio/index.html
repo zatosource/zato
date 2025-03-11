@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>Flows</title>
     <link rel="stylesheet" type="text/css" href="/static/css/joint.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pyscript/pyscript-core-2025.3.1.css">
     <link rel="stylesheet" type="text/css" href="/static/css/flows/style.css">
     <style>
     </style>
@@ -13,6 +14,10 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/lodash.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/backbone.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/joint.min.js"></script>
+
+    <!-- PyScript -->
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/brython-src/brython.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/brython-src/brython_stdlib.js"></script>
 
     <!-- Application JavaScript - Split into modular files -->
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/shapes.js"></script>
@@ -26,33 +31,36 @@
 </head>
 <body>
     <div class="container">
+        <!-- Update this section in your index.html file -->
         <div class="sidebar">
             <div class="palette-section">
-                <div class="palette-header">Node</div>
-                <div class="palette-item" data-type="task">Service</div>
-                <div class="palette-item" data-type="process">Split / Join</div>
-                <div class="palette-item" data-type="process">Parallel</div>
-            </div>
-
-            <div class="palette-section">
-                <div class="palette-header">Events</div>
-                <div class="palette-item" data-type="start">Start</div>
-                <div class="palette-item" data-type="end">End</div>
+                <div class="palette-header">Input/Output</div>
+                <div class="palette-item" data-type="start">Input</div>
+                <div class="palette-item" data-type="end">Output</div>
                 <div class="palette-item" data-type="timer">Timer</div>
             </div>
 
             <div class="palette-section">
-                <div class="palette-header">Connectors</div>
+                <div class="palette-header">Processing</div>
+                <div class="palette-item" data-type="task">Compute</div>
+                <div class="palette-item" data-type="process">Transform</div>
+                <div class="palette-item" data-type="decision">Filter</div>
+            </div>
+
+            <div class="palette-section">
+                <div class="palette-header">Integration</div>
+                <div class="palette-item" data-type="database">Database</div>
+                <div class="palette-item" data-type="message">Message</div>
                 <div class="palette-item" data-type="link">Link</div>
             </div>
 
             <div class="palette-section">
                 <div class="palette-header">Actions</div>
-                <button id="clear-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Clear Diagram</button>
-                <button id="save-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Save Diagram</button>
-                <button id="load-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Load Diagram</button>
+                <button id="clear-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Clear Flow</button>
+                <button id="save-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Save Flow</button>
+                <button id="load-graph" style="width: 100%; padding: 8px; margin-top: 5px;">Load Flow</button>
             </div>
-        </div>
+</div>
 
         <div class="main-content">
             <div class="toolbar">
