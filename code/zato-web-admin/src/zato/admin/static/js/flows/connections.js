@@ -6,19 +6,41 @@ function setupConnectionPoints(paper) {
         return;
     }
 
-    // Enable link creation from elements with ports
-    paper.on('element:pointerdown', function(elementView, evt) {
-        paper.options.interactive = {
-            linkPinning: false,
-            addLinkFromMagnet: true
-        };
-    });
+    // Set default paper interactive settings for linking
+    paper.options.interactive = {
+        linkPinning: false,        // Don't allow links to be pinned in empty space
+        vertexAdd: false,          // Don't allow vertices to be added to links
+        vertexRemove: false,       // Don't allow vertices to be removed from links
+        arrowheadMove: true,       // Allow arrowheads to be moved to connect to elements
+        elementMove: true,         // Allow elements to be moved
+        addLinkFromMagnet: true    // CRITICAL: Allow links to be created from magnets
+    };
+
+    // Enable proper snap behavior for links
+    paper.options.snapLinks = {
+        radius: 20  // The distance within which links will snap to magnets
+    };
+
+    // Set up proper connection validation
+    paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
+        // Don't allow connections to the same element
+        if (sourceView === targetView) {
+            return false;
+        }
+
+        // Only allow connections to magnets
+        if (!targetMagnet) {
+            return false;
+        }
+
+        return true;
+    };
 
     // Create connecting ports when element is added
     if (paper.model) {
         paper.model.on('add', function(cell) {
             if (cell && typeof cell.isElement === 'function' && cell.isElement()) {
-                // Add ports for connections
+                // Add ports for connections if they don't exist
                 if (typeof cell.hasPorts !== 'function' || !cell.hasPorts()) {
                     addDefaultPorts(cell);
                 }
@@ -80,7 +102,7 @@ function setupConnectionPoints(paper) {
             attrs: {
                 circle: {
                     r: 6,
-                    magnet: true,  // Can initiate connections
+                    magnet: true,       // CRITICAL: Must be 'true' to allow initiating connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
                     fill: '#fff'
