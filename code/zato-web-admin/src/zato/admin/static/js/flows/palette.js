@@ -1,4 +1,4 @@
-// palette.js - Enhanced palette with both click and drag-drop functionality
+// palette.js - Draggable palette functionality with both click and drag support
 
 function setupDraggablePalette(graph, paper) {
     if (!graph || !paper) {
@@ -7,23 +7,24 @@ function setupDraggablePalette(graph, paper) {
     }
 
     // Make palette items draggable
-    const paletteItems = document.querySelectorAll('.palette-item');
+    var paletteItems = document.querySelectorAll('.palette-item');
 
     if (!paletteItems.length) {
         console.warn("No palette items found to make draggable");
         return;
     }
 
-    // Track drag state
+    // Variables to track dragging state
     let isDragging = false;
-    let dragElement = null;
-    let dragGhost = null;
     let dragStartX = 0;
     let dragStartY = 0;
+    let dragGhost = null;
+    let dragType = null;
 
-    // Create element based on type
+    // Function to create element based on type
     function createElementByType(type) {
         let element;
+
         switch (type) {
             case 'start':
                 element = new joint.shapes.workflow.Start();
@@ -44,35 +45,64 @@ function setupDraggablePalette(graph, paper) {
                 console.warn("Unknown element type:", type);
                 return null;
         }
+
         return element;
     }
 
+    // Add element to center of paper
+    function addElementToCenter() {
+        try {
+            // Get the paper dimensions
+            const paperRect = paper.el.getBoundingClientRect();
+            const paperWidth = paperRect.width || 1000;
+            const paperHeight = paperRect.height || 800;
+
+            // Calculate center position
+            const centerX = paperWidth / 2;
+            const centerY = paperHeight / 2;
+
+            // Get paper coordinates
+            let paperPoint = clientToPaperPoint(
+                paperRect.left + centerX,
+                paperRect.top + centerY
+            );
+
+            return paperPoint;
+        } catch (error) {
+            console.error("Error calculating center position:", error);
+            return { x: 100, y: 100 }; // Fallback position
+        }
+    }
+
     // Convert client coordinates to paper coordinates
-    function clientToPaperCoordinates(clientX, clientY) {
-        const paperRect = paper.el.getBoundingClientRect();
-        const localPoint = {
-            x: clientX - paperRect.left,
-            y: clientY - paperRect.top
-        };
+    function clientToPaperPoint(clientX, clientY) {
+        try {
+            const paperRect = paper.el.getBoundingClientRect();
+            const scale = paper.scale();
+            const translate = paper.translate();
 
-        // Account for paper scale and translation
-        const scale = paper.scale();
-        const translate = paper.translate();
+            // Calculate position in scaled/translated paper coordinate system
+            const localX = clientX - paperRect.left;
+            const localY = clientY - paperRect.top;
 
-        return {
-            x: (localPoint.x / scale.sx) - translate.tx,
-            y: (localPoint.y / scale.sy) - translate.ty
-        };
+            return {
+                x: (localX / scale.sx) - translate.tx,
+                y: (localY / scale.sy) - translate.ty
+            };
+        } catch (error) {
+            console.error("Error converting coordinates:", error);
+            return { x: 0, y: 0 };
+        }
     }
 
     // Create a ghost element for drag visual
-    function createDragGhost(element, x, y) {
+    function createDragGhost(item, x, y) {
         const ghost = document.createElement('div');
         ghost.className = 'drag-ghost';
-        ghost.textContent = element.textContent;
+        ghost.textContent = item.textContent;
         ghost.style.position = 'fixed';
-        ghost.style.left = x + 'px';
-        ghost.style.top = y + 'px';
+        ghost.style.left = (x + 10) + 'px'; // Offset from cursor
+        ghost.style.top = (y + 10) + 'px';
         ghost.style.backgroundColor = '#f5f5f5';
         ghost.style.border = '1px solid #ccc';
         ghost.style.padding = '8px';
@@ -85,12 +115,10 @@ function setupDraggablePalette(graph, paper) {
         return ghost;
     }
 
-    // Add center element at specific position
+    // Add element at specified position
     function addElementAtPosition(element, x, y) {
         try {
-            if (!element) return;
-
-            // Center the element on the cursor
+            // Adjust position to center the element
             const size = element.get('size');
             const position = {
                 x: x - (size.width / 2),
@@ -114,21 +142,11 @@ function setupDraggablePalette(graph, paper) {
         }
     }
 
-    // Clean up drag operations
-    function cleanupDrag() {
-        if (dragGhost && dragGhost.parentNode) {
-            dragGhost.parentNode.removeChild(dragGhost);
-        }
-        isDragging = false;
-        dragElement = null;
-        dragGhost = null;
-    }
-
-    // Handle clicks - adds element at center of paper
+    // Process each palette item
     paletteItems.forEach(function(item) {
-        // Click handler - for the existing behavior
+        // Click handler - add element to center of paper
         item.addEventListener('click', function(event) {
-            // Skip if we're ending a drag operation
+            // Only handle as click if we're not dragging
             if (isDragging) return;
 
             try {
@@ -141,49 +159,27 @@ function setupDraggablePalette(graph, paper) {
                 const element = createElementByType(type);
                 if (!element) return;
 
-                // Get the paper dimensions
-                const paperEl = paper.el;
-                const paperRect = paperEl.getBoundingClientRect();
-                const paperWidth = paperRect.width || 1000;
-                const paperHeight = paperRect.height || 800;
+                // Add to center of paper
+                const center = addElementToCenter();
+                addElementAtPosition(element, center.x, center.y);
 
-                // Calculate center position of the visible paper area
-                const viewportCenterX = paperWidth / 2;
-                const viewportCenterY = paperHeight / 2;
-
-                // Convert to paper coordinates
-                const paperPos = clientToPaperCoordinates(
-                    paperRect.left + viewportCenterX,
-                    paperRect.top + viewportCenterY
-                );
-
-                // Add the element to the graph
-                addElementAtPosition(element, paperPos.x, paperPos.y);
+                console.log('Element added via click at center');
             } catch (error) {
-                console.error("Error adding element from palette:", error);
+                console.error("Error processing click:", error);
             }
         });
 
-        // Mousedown handler - for starting drag operations
+        // Mouse down - start potential drag
         item.addEventListener('mousedown', function(event) {
-            // Prevent text selection during drag
-            event.preventDefault();
-
-            const type = this.getAttribute('data-type');
-            if (!type) return;
-
-            // Store the element type for use in mousemove/mouseup
-            dragElement = type;
+            // Initialize drag variables
             dragStartX = event.clientX;
             dragStartY = event.clientY;
+            dragType = this.getAttribute('data-type');
 
-            // Create the visual ghost element for dragging
-            dragGhost = createDragGhost(this, dragStartX, dragStartY);
+            // Prevent text selection
+            event.preventDefault();
 
-            // Track drag state
-            isDragging = true;
-
-            // Add document-level event listeners
+            // Set up document level handlers for drag operation
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         });
@@ -198,51 +194,81 @@ function setupDraggablePalette(graph, paper) {
             this.style.backgroundColor = '';
             this.style.cursor = '';
         });
+
+        item.addEventListener('mousedown', function() {
+            this.style.backgroundColor = '#d9d9d9';
+        });
+
+        item.addEventListener('mouseup', function() {
+            this.style.backgroundColor = '#e9e9e9';
+        });
     });
 
     // Handle mouse movement during drag
     function handleMouseMove(event) {
-        if (!isDragging || !dragGhost) return;
+        // Check if we've moved enough to consider it a drag
+        const moveThreshold = 5;
+        const dx = Math.abs(event.clientX - dragStartX);
+        const dy = Math.abs(event.clientY - dragStartY);
 
-        // Move the ghost with the cursor
-        dragGhost.style.left = event.clientX + 'px';
-        dragGhost.style.top = event.clientY + 'px';
+        // If we've moved beyond threshold, start dragging
+        if (!isDragging && (dx > moveThreshold || dy > moveThreshold)) {
+            isDragging = true;
+
+            // Find the palette item to create ghost
+            const item = document.querySelector(`.palette-item[data-type="${dragType}"]`);
+            if (item) {
+                dragGhost = createDragGhost(item, event.clientX, event.clientY);
+            }
+        }
+
+        // If dragging, move the ghost
+        if (isDragging && dragGhost) {
+            dragGhost.style.left = (event.clientX + 10) + 'px';
+            dragGhost.style.top = (event.clientY + 10) + 'px';
+        }
     }
 
-    // Handle mouse up to complete drag operation
+    // Handle mouse up to complete drag or click
     function handleMouseUp(event) {
-        if (!isDragging) return;
-
         try {
-            // Check if we're over the paper
-            const paperRect = paper.el.getBoundingClientRect();
-            if (
-                event.clientX >= paperRect.left &&
-                event.clientX <= paperRect.right &&
-                event.clientY >= paperRect.top &&
-                event.clientY <= paperRect.bottom
-            ) {
-                // Create the actual element
-                const element = createElementByType(dragElement);
-                if (element) {
-                    // Get paper coordinates for the drop position
-                    const paperPos = clientToPaperCoordinates(event.clientX, event.clientY);
+            // Only process if we were dragging
+            if (isDragging && dragGhost) {
+                // Check if we're over the paper
+                const paperRect = paper.el.getBoundingClientRect();
+                if (
+                    event.clientX >= paperRect.left &&
+                    event.clientX <= paperRect.right &&
+                    event.clientY >= paperRect.top &&
+                    event.clientY <= paperRect.bottom
+                ) {
+                    // Create the element
+                    const element = createElementByType(dragType);
+                    if (element) {
+                        // Get paper coordinates for drop position
+                        const paperPos = clientToPaperPoint(event.clientX, event.clientY);
 
-                    // Add the element at the drop position
-                    addElementAtPosition(element, paperPos.x, paperPos.y);
+                        // Add element at drop position
+                        addElementAtPosition(element, paperPos.x, paperPos.y);
+                    }
                 }
             }
         } catch (error) {
-            console.error("Error completing drag operation:", error);
+            console.error("Error handling mouse up:", error);
         } finally {
             // Clean up
-            cleanupDrag();
+            if (dragGhost && dragGhost.parentNode) {
+                dragGhost.parentNode.removeChild(dragGhost);
+            }
 
-            // Remove document event listeners
+            dragGhost = null;
+            isDragging = false;
+
+            // Remove event listeners
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         }
     }
 
-    console.log("Enhanced palette setup complete. Items can be clicked or dragged.");
+    console.log("Palette setup complete with both click and drag support");
 }
