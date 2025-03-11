@@ -1,4 +1,4 @@
-// palette.js - Draggable palette functionality
+// palette.js - Draggable palette functionality with Flows Message Broker styling
 
 function setupDraggablePalette(graph, paper) {
     // Make palette items draggable
@@ -28,6 +28,12 @@ function setupDraggablePalette(graph, paper) {
                     break;
                 case 'timer':
                     element = new joint.shapes.workflow.Timer();
+                    break;
+                case 'database': // New - database node
+                    element = new joint.shapes.workflow.Database();
+                    break;
+                case 'message': // New - message node
+                    element = new joint.shapes.workflow.Message();
                     break;
                 case 'link':
                     // Enable link drawing mode
