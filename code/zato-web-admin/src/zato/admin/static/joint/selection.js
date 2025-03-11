@@ -1,4 +1,4 @@
-// selection.js - Element selection functionality based on JointJS best practices
+// selection.js - Element selection functionality with rubber-band selection
 
 class Selection {
     constructor(graph, paper) {
@@ -8,13 +8,18 @@ class Selection {
         this.isPanning = false;
         this.eventProxies = [];
 
+        // Rubber-band selection state
+        this.selectionBox = null;
+        this.selectionStartPosition = null;
+        this.isSelecting = false;
+
         // Add CSS styles for selection highlighting
         const color = "#2196F3";
         const styleElement = document.createElement('style');
         styleElement.textContent = `
             .joint-element .selection-highlight {
                 stroke: ${color};
-                stroke-width: G3px;
+                stroke-width: 3px;
                 stroke-dasharray: 5,5;
             }
             .joint-link .selection-highlight {
@@ -28,17 +33,29 @@ class Selection {
                     stroke-dashoffset: 0;
                 }
             }
+            .selection-box {
+                position: absolute;
+                border: 2px dashed ${color};
+                background-color: rgba(33, 150, 243, 0.1);
+                pointer-events: none;
+                z-index: 1000;
+            }
         `;
         document.head.appendChild(styleElement);
 
         this.setupEventListeners();
-        console.log("Selection manager initialized");
+        console.log("Selection manager initialized with rubber-band selection");
     }
 
     /**
      * Set up the event listeners for selection functionality
      */
     setupEventListeners() {
+        // Group movement tracking variables
+        this.dragStartPositions = {};
+        this.isDragging = false;
+        this.draggedElement = null;
+
         // Selection on element click
         const handleElementClick = (elementView, evt) => {
             console.log("Element clicked:", elementView.model.id);
@@ -47,10 +64,95 @@ class Selection {
             evt.stopPropagation(); // Prevent bubble to paper blank click
         };
 
-        // Clear selection on blank click
-        const handleBlankClick = () => {
+        // Clear selection on blank click (if not part of a rubber-band selection)
+        const handleBlankClick = (evt) => {
+            // If this was the end of a drag operation, don't clear the selection
+            if (this.hasMovedDuringSelection) {
+                console.log("Mouse moved during selection, not clearing");
+                return;
+            }
+
             console.log("Blank area clicked, clearing selection");
             this.clearSelection();
+        };
+
+        // Start rubber-band selection
+        const handleBlankPointerDown = (evt, x, y) => {
+            // Only start selection if not in panning mode
+            if (this.isPanning) return;
+
+            console.log("Starting rubber-band selection at", x, y);
+            this.isSelecting = true;
+            this.hasMovedDuringSelection = false;
+
+            // Get paper position for accurate rectangle positioning
+            const paperRect = this.paper.el.getBoundingClientRect();
+            this.selectionStartPosition = {
+                x: evt.clientX - paperRect.left,
+                y: evt.clientY - paperRect.top
+            };
+
+            // Create selection box element
+            this.createSelectionBox();
+
+            // If not using modifier keys, clear the current selection
+            if (!(evt.ctrlKey || evt.shiftKey)) {
+                this.clearSelection();
+            }
+        };
+
+        // Update rubber-band selection
+        const handleMouseMove = (evt) => {
+            if (!this.isSelecting) return;
+
+            // Get current paper position
+            const paperRect = this.paper.el.getBoundingClientRect();
+            const currentPosition = {
+                x: evt.clientX - paperRect.left,
+                y: evt.clientY - paperRect.top
+            };
+
+            // Check if we've moved enough to count as a drag
+            const moveThreshold = 5;
+            if (!this.hasMovedDuringSelection) {
+                const dx = Math.abs(currentPosition.x - this.selectionStartPosition.x);
+                const dy = Math.abs(currentPosition.y - this.selectionStartPosition.y);
+                if (dx > moveThreshold || dy > moveThreshold) {
+                    this.hasMovedDuringSelection = true;
+                }
+            }
+
+            // Update selection box
+            this.updateSelectionBox(this.selectionStartPosition, currentPosition);
+        };
+
+        // Complete rubber-band selection
+        const handleMouseUp = (evt) => {
+            if (!this.isSelecting) return;
+
+            console.log("Completing rubber-band selection");
+            this.isSelecting = false;
+
+            // If we actually dragged to create a selection box
+            if (this.hasMovedDuringSelection) {
+                // Get paper position
+                const paperRect = this.paper.el.getBoundingClientRect();
+                const endPosition = {
+                    x: evt.clientX - paperRect.left,
+                    y: evt.clientY - paperRect.top
+                };
+
+                // Select elements within the rectangle
+                this.selectElementsInRect(
+                    this.selectionStartPosition,
+                    endPosition,
+                    evt.ctrlKey || evt.shiftKey
+                );
+            }
+
+            // Clean up
+            this.removeSelectionBox();
+            this.selectionStartPosition = null;
         };
 
         // Keyboard shortcuts
@@ -77,19 +179,226 @@ class Selection {
             }
         };
 
+        // Group movement: Handle element drag start
+        const handleElementPointerDown = (elementView, evt) => {
+            if (this.isPanning) return; // Don't track dragging in panning mode
+
+            const element = elementView.model;
+            // Check if the element is in the selection
+            if (this.selectedElements.some(el => el.id === element.id)) {
+                console.log("Starting group drag with element:", element.id);
+                this.isDragging = true;
+                this.draggedElement = element;
+
+                // Store initial positions of all selected elements
+                this.dragStartPositions = {};
+                this.selectedElements.forEach(el => {
+                    this.dragStartPositions[el.id] = el.position();
+                });
+            }
+        };
+
+        // Group movement: Handle element drag move
+        const handleElementPointermove = (elementView, evt, x, y) => {
+            // Only handle if we're dragging a selected element
+            if (!this.isDragging || !this.draggedElement) return;
+
+            // Don't move elements in panning mode
+            if (this.isPanning) return;
+
+            // Get the dragged element's new position
+            const draggedElementId = this.draggedElement.id;
+            const newPosition = this.draggedElement.position();
+            const startPosition = this.dragStartPositions[draggedElementId];
+
+            // Calculate movement delta
+            const dx = newPosition.x - startPosition.x;
+            const dy = newPosition.y - startPosition.y;
+
+            // Move all other selected elements by the same delta
+            this.selectedElements.forEach(el => {
+                if (el.id !== draggedElementId) {
+                    const elStartPos = this.dragStartPositions[el.id];
+                    // Skip if we don't have a starting position (shouldn't happen)
+                    if (!elStartPos) return;
+
+                    // Move the element to its new position
+                    el.position(elStartPos.x + dx, elStartPos.y + dy);
+                }
+            });
+        };
+
+        // Group movement: Handle element drag end
+        const handleElementPointerUp = (elementView, evt) => {
+            if (this.isDragging) {
+                console.log("Ending group drag");
+                this.isDragging = false;
+                this.draggedElement = null;
+                this.dragStartPositions = {};
+            }
+        };
+
         // Register event handlers
         this.paper.on('element:pointerclick', handleElementClick);
         this.paper.on('blank:pointerclick', handleBlankClick);
+        this.paper.on('blank:pointerdown', handleBlankPointerDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
+
+        // Group movement event handlers
+        this.paper.on('element:pointerdown', handleElementPointerDown);
+        this.paper.on('element:pointermove', handleElementPointermove);
+        this.paper.on('element:pointerup', handleElementPointerUp);
 
         // Store proxies for cleanup
         this.eventProxies = [
             { target: this.paper, event: 'element:pointerclick', handler: handleElementClick },
             { target: this.paper, event: 'blank:pointerclick', handler: handleBlankClick },
-            { target: document, event: 'keydown', handler: handleKeyDown }
+            { target: this.paper, event: 'blank:pointerdown', handler: handleBlankPointerDown },
+            { target: document, event: 'mousemove', handler: handleMouseMove },
+            { target: document, event: 'mouseup', handler: handleMouseUp },
+            { target: document, event: 'keydown', handler: handleKeyDown },
+            { target: this.paper, event: 'element:pointerdown', handler: handleElementPointerDown },
+            { target: this.paper, event: 'element:pointermove', handler: handleElementPointermove },
+            { target: this.paper, event: 'element:pointerup', handler: handleElementPointerUp }
         ];
 
         console.log("Event listeners set up");
+    }
+
+    /**
+     * Create a selection box for rubber-band selection
+     */
+    createSelectionBox() {
+        // Remove any existing selection box
+        this.removeSelectionBox();
+
+        // Create a new selection box
+        this.selectionBox = document.createElement('div');
+        this.selectionBox.className = 'selection-box';
+
+        // Add to the main content area
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.appendChild(this.selectionBox);
+        } else {
+            // Fallback to paper's parent
+            this.paper.el.parentNode.appendChild(this.selectionBox);
+        }
+
+        // Initially hidden
+        this.selectionBox.style.display = 'none';
+    }
+
+    /**
+     * Update the selection box dimensions
+     * @param {Object} startPos - Starting position {x, y}
+     * @param {Object} endPos - Current position {x, y}
+     */
+    updateSelectionBox(startPos, endPos) {
+        if (!this.selectionBox) return;
+
+        // Calculate dimensions
+        const left = Math.min(startPos.x, endPos.x);
+        const top = Math.min(startPos.y, endPos.y);
+        const width = Math.abs(endPos.x - startPos.x);
+        const height = Math.abs(endPos.y - startPos.y);
+
+        // Update styles
+        this.selectionBox.style.left = `${left}px`;
+        this.selectionBox.style.top = `${top}px`;
+        this.selectionBox.style.width = `${width}px`;
+        this.selectionBox.style.height = `${height}px`;
+        this.selectionBox.style.display = 'block';
+    }
+
+    /**
+     * Remove the selection box
+     */
+    removeSelectionBox() {
+        if (this.selectionBox && this.selectionBox.parentNode) {
+            this.selectionBox.parentNode.removeChild(this.selectionBox);
+            this.selectionBox = null;
+        }
+    }
+
+    /**
+     * Select elements within a rectangle
+     * @param {Object} startPos - Starting position in client coordinates {x, y}
+     * @param {Object} endPos - Ending position in client coordinates {x, y}
+     * @param {boolean} multiSelect - Whether to add to existing selection
+     */
+    selectElementsInRect(startPos, endPos, multiSelect = false) {
+        console.log("Selecting elements in rectangle", { startPos, endPos, multiSelect });
+
+        // Convert to paper coordinates
+        const paperScale = this.paper.scale();
+        const paperTranslate = this.paper.translate();
+
+        // Convert client coordinates to paper coordinates
+        const p1 = this.clientToLocalPoint(startPos);
+        const p2 = this.clientToLocalPoint(endPos);
+
+        // Define the selection rectangle in paper coordinates
+        const selectionRect = {
+            x: Math.min(p1.x, p2.x),
+            y: Math.min(p1.y, p2.y),
+            width: Math.abs(p2.x - p1.x),
+            height: Math.abs(p2.y - p1.y)
+        };
+
+        console.log("Selection rectangle in paper coordinates", selectionRect);
+
+        // Find elements within the rectangle
+        const elementsInRect = this.graph.getElements().filter(element => {
+            const bbox = element.getBBox();
+
+            // Check if the element's bounding box intersects with the selection rectangle
+            return (
+                bbox.x < selectionRect.x + selectionRect.width &&
+                bbox.x + bbox.width > selectionRect.x &&
+                bbox.y < selectionRect.y + selectionRect.height &&
+                bbox.y + bbox.height > selectionRect.y
+            );
+        });
+
+        console.log("Found elements in rectangle:", elementsInRect.length);
+
+        // If not multiSelect, clear existing selection
+        if (!multiSelect) {
+            this.clearSelection();
+        }
+
+        // Add found elements to selection
+        elementsInRect.forEach(element => {
+            // If multiSelect and already selected, don't add it again
+            if (multiSelect && this.selectedElements.some(e => e.id === element.id)) {
+                return;
+            }
+
+            this.selectedElements.push(element);
+            this.highlightElement(element);
+        });
+
+        console.log("Selection updated, total elements:", this.selectedElements.length);
+    }
+
+    /**
+     * Convert client coordinates to paper local coordinates
+     * @param {Object} clientPoint - Client coordinates {x, y}
+     * @return {Object} Paper local coordinates {x, y}
+     */
+    clientToLocalPoint(clientPoint) {
+        const paperRect = this.paper.el.getBoundingClientRect();
+        const paperScale = this.paper.scale();
+        const paperTranslate = this.paper.translate();
+
+        // Convert client point to local paper point
+        return {
+            x: (clientPoint.x / paperScale.sx) - paperTranslate.tx,
+            y: (clientPoint.y / paperScale.sy) - paperTranslate.ty
+        };
     }
 
     /**
@@ -279,6 +588,7 @@ class Selection {
 
         // Clear selections
         this.clearSelection();
+        this.removeSelectionBox();
         this.eventProxies = [];
 
         console.log("Selection manager destroyed");
