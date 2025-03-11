@@ -80,7 +80,7 @@ function initializeCustomShapes() {
         }, joint.shapes.standard.Rectangle.prototype.defaults)
     });
 
-    // Parallel shape (rectangle with different styling)
+    // Parallel shape (rectangle with different color)
     joint.shapes.workflow.Parallel = joint.shapes.standard.Rectangle.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.Parallel',
@@ -106,7 +106,7 @@ function initializeCustomShapes() {
         }, joint.shapes.standard.Rectangle.prototype.defaults)
     });
 
-    // Fork/Join shape (rectangle with different styling)
+    // ForkJoin shape (rectangle with different color)
     joint.shapes.workflow.ForkJoin = joint.shapes.standard.Rectangle.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.ForkJoin',
