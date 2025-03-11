@@ -1,223 +1,309 @@
-// selection.js - Element selection functionality
+// selection.js - Element selection functionality based on JointJS best practices
 
 class Selection {
     constructor(graph, paper) {
         this.graph = graph;
         this.paper = paper;
-        this.cells = [];
-        this.box = null;
+        this.selectedElements = [];
+        this.isPanning = false;
+        this.eventProxies = [];
+
+        // Add CSS styles for selection highlighting
+        const color = "#2196F3";
+        const styleElement = document.createElement('style');
+        styleElement.textContent = `
+            .joint-element .selection-highlight {
+                stroke: ${color};
+                stroke-width: G3px;
+                stroke-dasharray: 5,5;
+            }
+            .joint-link .selection-highlight {
+                stroke: ${color};
+                stroke-dasharray: 5,5;
+                stroke-dashoffset: 10;
+                animation: dash 0.5s infinite linear;
+            }
+            @keyframes dash {
+                to {
+                    stroke-dashoffset: 0;
+                }
+            }
+        `;
+        document.head.appendChild(styleElement);
 
         this.setupEventListeners();
+        console.log("Selection manager initialized");
     }
 
+    /**
+     * Set up the event listeners for selection functionality
+     */
     setupEventListeners() {
-        // Selection handling
-        let selecting = false;
-        let startX, startY;
+        // Selection on element click
+        const handleElementClick = (elementView, evt) => {
+            console.log("Element clicked:", elementView.model.id);
+            const multiSelect = evt.ctrlKey || evt.shiftKey;
+            this.selectElement(elementView.model, multiSelect);
+            evt.stopPropagation(); // Prevent bubble to paper blank click
+        };
 
-        this.paper.on('blank:pointerdown', (evt, x, y) => {
-            // Only start selection if not in panning mode
-            if (!isPanning) {
-                selecting = true;
-                startX = evt.clientX;
-                startY = evt.clientY;
-                this.createSelectionBox();
-            }
-        });
+        // Clear selection on blank click
+        const handleBlankClick = () => {
+            console.log("Blank area clicked, clearing selection");
+            this.clearSelection();
+        };
 
-        document.addEventListener('mousemove', (evt) => {
-            if (selecting) {
-                this.updateSelectionBox(startX, startY, evt.clientX, evt.clientY);
-            }
-        });
-
-        document.addEventListener('mouseup', (evt) => {
-            if (selecting) {
-                selecting = false;
-                this.selectElements(startX, startY, evt.clientX, evt.clientY);
-                this.removeSelectionBox();
-            }
-        });
-
-        // Handle element selection with click
-        this.paper.on('element:pointerclick', (elementView, evt) => {
-            const element = elementView.model;
-            this.toggle(element, evt.ctrlKey);
-        });
-
-        // Clear selection when clicking on blank area
-        this.paper.on('blank:pointerclick', () => {
-            this.clear();
-        });
-
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', (evt) => {
+        // Keyboard shortcuts
+        const handleKeyDown = (evt) => {
             // Ctrl+A to select all
-            if (evt.ctrlKey && evt.key === 'a') {
+            if ((evt.ctrlKey || evt.metaKey) && evt.key === 'a') {
+                console.log("Select all shortcut");
                 evt.preventDefault();
                 this.selectAll();
             }
 
             // Delete or Backspace to remove selected elements
-            if ((evt.key === 'Delete' || evt.key === 'Backspace') && this.cells.length > 0) {
+            if ((evt.key === 'Delete' || evt.key === 'Backspace') && this.selectedElements.length > 0) {
+                console.log("Delete selection shortcut");
                 evt.preventDefault();
                 this.removeSelected();
             }
-        });
-    }
 
-    // Create rubberband selection box
-    createSelectionBox() {
-        this.box = document.createElement('div');
-        this.box.style.position = 'absolute';
-        this.box.style.border = '1px dashed blue';
-        this.box.style.backgroundColor = 'rgba(0, 0, 255, 0.1)';
-        this.box.style.pointerEvents = 'none';
-        document.querySelector('.main-content').appendChild(this.box);
-    }
-
-    // Update rubberband position and size
-    updateSelectionBox(x1, y1, x2, y2) {
-        if (!this.box) this.createSelectionBox();
-
-        const left = Math.min(x1, x2);
-        const top = Math.min(y1, y2);
-        const width = Math.abs(x2 - x1);
-        const height = Math.abs(y2 - y1);
-
-        this.box.style.left = left + 'px';
-        this.box.style.top = top + 'px';
-        this.box.style.width = width + 'px';
-        this.box.style.height = height + 'px';
-        this.box.style.display = 'block';
-    }
-
-    // Remove the rubberband
-    removeSelectionBox() {
-        if (this.box && this.box.parentNode) {
-            this.box.parentNode.removeChild(this.box);
-            this.box = null;
-        }
-    }
-
-    // Select elements inside the selection box
-    selectElements(x1, y1, x2, y2) {
-        const paperOffset = this.paper.el.getBoundingClientRect();
-        const localX1 = x1 - paperOffset.left;
-        const localY1 = y1 - paperOffset.top;
-        const localX2 = x2 - paperOffset.left;
-        const localY2 = y2 - paperOffset.top;
-
-        // Convert to paper coordinates
-        const scale = this.paper.scale();
-        const p1 = this.paper.clientToLocalPoint({ x: localX1, y: localY1 });
-        const p2 = this.paper.clientToLocalPoint({ x: localX2, y: localY2 });
-
-        // Create selection rectangle
-        const rect = {
-            x: Math.min(p1.x, p2.x),
-            y: Math.min(p1.y, p2.y),
-            width: Math.abs(p2.x - p1.x),
-            height: Math.abs(p2.y - p1.y)
+            // Escape to clear selection
+            if (evt.key === 'Escape') {
+                console.log("Clear selection shortcut");
+                evt.preventDefault();
+                this.clearSelection();
+            }
         };
 
-        // Find elements inside the rectangle
-        const elements = this.graph.getElements().filter(function(el) {
-            const bbox = el.getBBox();
-            return (
-                bbox.x >= rect.x &&
-                bbox.x + bbox.width <= rect.x + rect.width &&
-                bbox.y >= rect.y &&
-                bbox.y + bbox.height <= rect.y + rect.height
-            );
-        });
+        // Register event handlers
+        this.paper.on('element:pointerclick', handleElementClick);
+        this.paper.on('blank:pointerclick', handleBlankClick);
+        document.addEventListener('keydown', handleKeyDown);
 
-        // Select elements
-        this.clear();
-        elements.forEach(this.add.bind(this));
+        // Store proxies for cleanup
+        this.eventProxies = [
+            { target: this.paper, event: 'element:pointerclick', handler: handleElementClick },
+            { target: this.paper, event: 'blank:pointerclick', handler: handleBlankClick },
+            { target: document, event: 'keydown', handler: handleKeyDown }
+        ];
+
+        console.log("Event listeners set up");
     }
 
-    // Add element to selection
-    add(element) {
-        if (!element || this.cells.indexOf(element) > -1) return;
-        this.cells.push(element);
-        this.highlight(element);
-    }
+    /**
+     * Select an element
+     * @param {Object} element - The element to select
+     * @param {boolean} multiSelect - Whether to add to existing selection
+     */
+    selectElement(element, multiSelect = false) {
+        console.log("Selecting element", element.id, "multiSelect:", multiSelect);
 
-    // Remove element from selection
-    remove(element) {
-        const index = this.cells.indexOf(element);
-        if (index === -1) return;
-        this.cells.splice(index, 1);
-        this.unhighlight(element);
-    }
-
-    // Clear all selections
-    clear() {
-        this.cells.forEach(this.unhighlight.bind(this));
-        this.cells = [];
-    }
-
-    // Toggle element selection
-    toggle(element, ctrlKey) {
         if (!element) return;
 
-        if (!ctrlKey) {
-            // If ctrl is not pressed, clear selection and select just this element
-            this.clear();
-            this.add(element);
-        } else {
-            // If ctrl is pressed, toggle the element's selection
-            const index = this.cells.indexOf(element);
-            if (index === -1) {
-                this.add(element);
-            } else {
-                this.remove(element);
+        // Check if element exists in graph
+        if (!this.graph.getElements().find(el => el.id === element.id)) {
+            console.log("Element not found in graph");
+            return;
+        }
+
+        // For single select, clear previous selection
+        if (!multiSelect) {
+            this.clearSelection();
+        }
+
+        // Check if already selected
+        if (this.selectedElements.some(el => el.id === element.id)) {
+            if (multiSelect) {
+                // If multiSelect, toggle the selection off
+                console.log("Element already selected, removing from selection");
+                this.unselectElement(element);
             }
+            return;
+        }
+
+        // Add to selection and highlight
+        this.selectedElements.push(element);
+        this.highlightElement(element);
+        console.log("Element selected, total selection:", this.selectedElements.length);
+    }
+
+    /**
+     * Unselect a specific element
+     * @param {Object} element - The element to unselect
+     */
+    unselectElement(element) {
+        const index = this.selectedElements.findIndex(el => el.id === element.id);
+        if (index !== -1) {
+            console.log("Unselecting element:", element.id);
+            this.unhighlightElement(element);
+            this.selectedElements.splice(index, 1);
+            console.log("Element unselected, remaining:", this.selectedElements.length);
         }
     }
 
-    // Select all elements
+    /**
+     * Clear all selections
+     */
+    clearSelection() {
+        console.log("Clearing all selections, count:", this.selectedElements.length);
+
+        // Make a copy to avoid issues during iteration
+        const elements = [...this.selectedElements];
+
+        // Clear the array first to prevent any recursive issues
+        this.selectedElements = [];
+
+        // Then unhighlight all elements
+        elements.forEach(element => {
+            this.unhighlightElement(element);
+        });
+
+        console.log("All selections cleared");
+    }
+
+    /**
+     * Select all elements in the graph
+     */
     selectAll() {
-        this.clear();
-        this.graph.getElements().forEach(this.add.bind(this));
+        console.log("Selecting all elements");
+        this.clearSelection();
+
+        const elements = this.graph.getElements();
+        console.log("Found elements:", elements.length);
+
+        elements.forEach(element => {
+            this.selectedElements.push(element);
+            this.highlightElement(element);
+        });
+
+        console.log("All elements selected, count:", this.selectedElements.length);
     }
 
-    // Remove selected elements
+    /**
+     * Remove selected elements
+     */
     removeSelected() {
-        if (this.cells.length > 0 && confirm('Are you sure you want to delete the selected elements?')) {
-            const toRemove = [...this.cells]; // Create a copy since removal will modify the array
-            toRemove.forEach(element => element.remove());
-            this.cells = []; // Clear the selection after removal
-        }
-    }
+        if (this.selectedElements.length === 0) return;
 
-    // Highlight selected element
-    highlight(element) {
-        const view = element.findView(this.paper);
-        if (view) {
-            view.highlight(null, {
-                highlighter: {
-                    name: 'stroke',
-                    options: {
-                        padding: 8,
-                        attrs: {
-                            'stroke': '#2196F3',
-                            'stroke-width': 2,
-                            'stroke-dasharray': '5,5'
-                        }
-                    }
-                }
+        console.log("Removing selected elements, count:", this.selectedElements.length);
+
+        if (confirm(`Delete ${this.selectedElements.length} selected element(s)?`)) {
+            const elements = [...this.selectedElements];
+            this.selectedElements = []; // Clear first to avoid callbacks issues
+
+            elements.forEach(element => {
+                console.log("Removing element:", element.id);
+                element.remove();
             });
+
+            console.log("Elements removed");
         }
     }
 
-    // Remove highlight from element
-    unhighlight(element) {
+    /**
+     * Highlight an element using the highlighters API
+     * @param {Object} element - The element to highlight
+     */
+    highlightElement(element) {
+        if (!element || !element.id) return;
+
+        console.log("Highlighting element:", element.id);
         const view = element.findView(this.paper);
-        if (view) view.unhighlight();
+
+        if (!view) {
+            console.log("View not found for element:", element.id);
+            return;
+        }
+
+        // Use the highlighters API instead of view.highlight
+        joint.highlighters.addClass.add(
+            view,
+            element.isElement() ? 'body' : 'line',
+            'selection-highlight',
+            { className: 'selection-highlight' }
+        );
+    }
+
+    /**
+     * Unhighlight an element
+     * @param {Object} element - The element to unhighlight
+     */
+    unhighlightElement(element) {
+        if (!element || !element.id) return;
+
+        console.log("Unhighlighting element:", element.id);
+        const view = element.findView(this.paper);
+
+        if (!view) {
+            console.log("View not found for element:", element.id);
+            return;
+        }
+
+        // Use the highlighters API to remove the highlight
+        joint.highlighters.addClass.remove(
+            view,
+            'selection-highlight'
+        );
+    }
+
+    /**
+     * Set panning mode
+     * @param {boolean} isPanning - Whether panning is active
+     */
+    setPanningMode(isPanning) {
+        console.log("Setting panning mode:", isPanning);
+        this.isPanning = isPanning;
+
+        // In panning mode, we might want to disable selection
+        if (isPanning) {
+            this.clearSelection();
+        }
+    }
+
+    /**
+     * Clean up event listeners
+     */
+    destroy() {
+        console.log("Destroying selection manager");
+
+        // Remove all event listeners
+        this.eventProxies.forEach(proxy => {
+            if (proxy.target.off) {
+                proxy.target.off(proxy.event, proxy.handler);
+            } else {
+                proxy.target.removeEventListener(proxy.event, proxy.handler);
+            }
+        });
+
+        // Clear selections
+        this.clearSelection();
+        this.eventProxies = [];
+
+        console.log("Selection manager destroyed");
     }
 }
 
-// Global variable to track panning state
-var isPanning = false;
+// Function to register selection with panning mode
+function registerSelectionWithPanMode(selection, panButton) {
+    if (!selection || !panButton) {
+        console.log("Cannot register selection with pan mode: missing parameters");
+        return;
+    }
+
+    console.log("Registering selection with pan mode");
+    const originalClickHandler = panButton.onclick;
+
+    panButton.onclick = function(event) {
+        // Call the original handler if it exists
+        if (originalClickHandler) {
+            originalClickHandler.call(this, event);
+        }
+
+        // Update the Selection instance's panning state
+        const isPanning = this.textContent === 'Selection Mode';
+        console.log("Pan button clicked, setting panning mode:", isPanning);
+        selection.setPanningMode(isPanning);
+    };
+}

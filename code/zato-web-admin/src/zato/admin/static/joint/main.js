@@ -60,6 +60,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create Selection instance
     var selection = new Selection(graph, paper);
 
+    // Pan mode
+    var isPanning = false;
+    var panButton = document.getElementById('pan-paper');
+
+    panButton.addEventListener('click', function() {
+        isPanning = !isPanning;
+        if (isPanning) {
+            this.textContent = 'Selection Mode';
+            paper.setInteractivity(false);
+        } else {
+            this.textContent = 'Pan Mode';
+            paper.setInteractivity(true);
+        }
+    });
+
+    // Register the selection instance with the pan button
+    registerSelectionWithPanMode(selection, panButton);
+
     // Zoom controls
     document.getElementById('zoom-in').addEventListener('click', function() {
         var currentScale = paper.scale().sx;
@@ -73,19 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('zoom-to-fit').addEventListener('click', function() {
         paper.scaleContentToFit({ padding: 50 });
-    });
-
-    // Pan mode
-    var isPanning = false;
-    document.getElementById('pan-paper').addEventListener('click', function() {
-        isPanning = !isPanning;
-        if (isPanning) {
-            this.textContent = 'Selection Mode';
-            paper.setInteractivity(false);
-        } else {
-            this.textContent = 'Pan Mode';
-            paper.setInteractivity(true);
-        }
     });
 
     // Initialize panning
@@ -127,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('clear-graph').addEventListener('click', function() {
         if (confirm('Are you sure you want to clear the diagram?')) {
             graph.clear();
+            selection.clear(); // Clear selection as well
         }
     });
 
@@ -149,11 +155,25 @@ document.addEventListener('DOMContentLoaded', function() {
     setupExport(graph);
 
     // Make paper responsive
-    window.addEventListener('resize', function() {
+    const resizeHandler = function() {
         // No need to adjust width as it's 100%
-        paper.setDimensions('100%', document.querySelector('.main-content').offsetHeight - document.querySelector('.toolbar').offsetHeight);
-    });
+        const height = document.querySelector('.main-content').offsetHeight - document.querySelector('.toolbar').offsetHeight;
+        paper.setDimensions('100%', height);
+    };
+
+    window.addEventListener('resize', resizeHandler);
 
     // Initialize paper size
-    paper.setDimensions('100%', document.querySelector('.main-content').offsetHeight - document.querySelector('.toolbar').offsetHeight);
+    resizeHandler();
+
+    // Add event handler for cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        // Clean up selection to prevent memory leaks
+        if (selection && selection.destroy) {
+            selection.destroy();
+        }
+
+        // Remove event listeners
+        window.removeEventListener('resize', resizeHandler);
+    });
 });
