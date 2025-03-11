@@ -304,40 +304,36 @@ function setupConnectionPoints(paper) {
         if (elementType === 'workflow.Start') {
             // Start only has outputs
             element.addPorts([
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+                { group: 'out', id: 'out1', attrs: { text: { text: '' } } }
             ]);
         } else if (elementType === 'workflow.Stop') {
             // Stop only has inputs
             element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } }
+                { group: 'in', id: 'in1', attrs: { text: { text: '' } } }
             ]);
         } else if (elementType === 'workflow.Service') {
             // Service has one input and one output
             element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+                { group: 'in', id: 'in1', attrs: { text: { text: '' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: '' } } }
             ]);
         } else if (elementType === 'workflow.Parallel') {
             // Parallel has one input and multiple outputs
             element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Out 1' } } },
-                { group: 'out', id: 'out2', attrs: { text: { text: 'Out 2' } } },
-                { group: 'out', id: 'out3', attrs: { text: { text: 'Out 3' } } }
+                { group: 'in', id: 'in1', attrs: { text: { text: '' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: '' } } }
             ]);
         } else if (elementType === 'workflow.ForkJoin') {
             // ForkJoin has multiple inputs and one output
             element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In 1' } } },
-                { group: 'in', id: 'in2', attrs: { text: { text: 'In 2' } } },
-                { group: 'in', id: 'in3', attrs: { text: { text: 'In 3' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+                { group: 'in', id: 'in1', attrs: { text: { text: '' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: '' } } }
             ]);
         } else {
             // Default ports for other or legacy element types
             element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+                { group: 'in', id: 'in1', attrs: { text: { text: '' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: '' } } }
             ]);
         }
     }
