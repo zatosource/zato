@@ -86,11 +86,10 @@ class Selection {
             this.isSelecting = true;
             this.hasMovedDuringSelection = false;
 
-            // Get paper position for accurate rectangle positioning
-            const paperRect = this.paper.el.getBoundingClientRect();
+            // Store actual client coordinates
             this.selectionStartPosition = {
-                x: evt.clientX - paperRect.left,
-                y: evt.clientY - paperRect.top
+                x: evt.clientX,
+                y: evt.clientY
             };
 
             // Create selection box element
@@ -106,11 +105,10 @@ class Selection {
         const handleMouseMove = (evt) => {
             if (!this.isSelecting) return;
 
-            // Get current paper position
-            const paperRect = this.paper.el.getBoundingClientRect();
+            // Get current client position
             const currentPosition = {
-                x: evt.clientX - paperRect.left,
-                y: evt.clientY - paperRect.top
+                x: evt.clientX,
+                y: evt.clientY
             };
 
             // Check if we've moved enough to count as a drag
@@ -136,11 +134,10 @@ class Selection {
 
             // If we actually dragged to create a selection box
             if (this.hasMovedDuringSelection) {
-                // Get paper position
-                const paperRect = this.paper.el.getBoundingClientRect();
+                // Get current client position
                 const endPosition = {
-                    x: evt.clientX - paperRect.left,
-                    y: evt.clientY - paperRect.top
+                    x: evt.clientX,
+                    y: evt.clientY
                 };
 
                 // Select elements within the rectangle
@@ -284,38 +281,64 @@ class Selection {
         this.selectionBox = document.createElement('div');
         this.selectionBox.className = 'selection-box';
 
-        // Add to the main content area
+        // Critical: Ensure the box uses absolute positioning
+        this.selectionBox.style.position = 'absolute';
+
+        // Get the paper element and its parent
+        const paperEl = this.paper.el;
+
+        // Find the nearest positioned ancestor (for absolute positioning reference)
+        // This is critical - the box must be positioned relative to the same
+        // container that provides positioning context for the paper element
+        let container = paperEl.parentNode;
+
+        // Check if we can find the main-content div which is the ideal container
         const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.appendChild(this.selectionBox);
+        if (mainContent && paperEl.closest('.main-content') === mainContent) {
+            container = mainContent;
+        }
+
+        // Append to the container
+        if (container) {
+            container.appendChild(this.selectionBox);
         } else {
             // Fallback to paper's parent
-            if (this.paper.el && this.paper.el.parentNode) {
-                this.paper.el.parentNode.appendChild(this.selectionBox);
+            if (paperEl.parentNode) {
+                paperEl.parentNode.appendChild(this.selectionBox);
             }
         }
 
         // Initially hidden
-        if (this.selectionBox) {
-            this.selectionBox.style.display = 'none';
-        }
+        this.selectionBox.style.display = 'none';
     }
 
     /**
      * Update the selection box dimensions
-     * @param {Object} startPos - Starting position {x, y}
-     * @param {Object} endPos - Current position {x, y}
+     * @param {Object} startPos - Starting position in client coordinates {x, y}
+     * @param {Object} endPos - Current position in client coordinates {x, y}
      */
     updateSelectionBox(startPos, endPos) {
         if (!this.selectionBox) return;
 
-        // Calculate dimensions
-        const left = Math.min(startPos.x, endPos.x);
-        const top = Math.min(startPos.y, endPos.y);
-        const width = Math.abs(endPos.x - startPos.x);
-        const height = Math.abs(endPos.y - startPos.y);
+        // Get the paper element position
+        const paperRect = this.paper.el.getBoundingClientRect();
 
-        // Update styles
+        // Get the container element position (the selection box's parent)
+        const containerRect = this.selectionBox.parentNode.getBoundingClientRect();
+
+        // Convert client coordinates to container-relative coordinates
+        const containerStartX = startPos.x - containerRect.left;
+        const containerStartY = startPos.y - containerRect.top;
+        const containerEndX = endPos.x - containerRect.left;
+        const containerEndY = endPos.y - containerRect.top;
+
+        // Calculate dimensions
+        const left = Math.min(containerStartX, containerEndX);
+        const top = Math.min(containerStartY, containerEndY);
+        const width = Math.abs(containerEndX - containerStartX);
+        const height = Math.abs(containerEndY - containerStartY);
+
+        // Update styles with container-relative coordinates
         this.selectionBox.style.left = `${left}px`;
         this.selectionBox.style.top = `${top}px`;
         this.selectionBox.style.width = `${width}px`;
@@ -342,18 +365,21 @@ class Selection {
     selectElementsInRect(startPos, endPos, multiSelect = false) {
         console.log("Selecting elements in rectangle", { startPos, endPos, multiSelect });
 
-        // Convert to paper coordinates
-        const p1 = this.clientToLocalPoint(startPos);
-        const p2 = this.clientToLocalPoint(endPos);
+        // Calculate selection rectangle in paper local coordinates
+        const localP1 = this.clientToLocalPoint(startPos);
+        const localP2 = this.clientToLocalPoint(endPos);
 
-        if (!p1 || !p2) return;
+        if (!localP1 || !localP2) {
+            console.error("Failed to convert client coordinates to local");
+            return;
+        }
 
         // Define the selection rectangle in paper coordinates
         const selectionRect = {
-            x: Math.min(p1.x, p2.x),
-            y: Math.min(p1.y, p2.y),
-            width: Math.abs(p2.x - p1.x),
-            height: Math.abs(p2.y - p1.y)
+            x: Math.min(localP1.x, localP2.x),
+            y: Math.min(localP1.y, localP2.y),
+            width: Math.abs(localP2.x - localP1.x),
+            height: Math.abs(localP2.y - localP1.y)
         };
 
         console.log("Selection rectangle in paper coordinates", selectionRect);
@@ -404,17 +430,24 @@ class Selection {
         try {
             if (!this.paper || !this.paper.el) return null;
 
+            // If JointJS provides this method, use it
+            if (typeof this.paper.clientToLocalPoint === 'function') {
+                return this.paper.clientToLocalPoint(clientPoint);
+            }
+
+            // Manual conversion as fallback
+            const paperRect = this.paper.el.getBoundingClientRect();
             const paperScale = this.paper.scale();
             const paperTranslate = this.paper.translate();
 
-            // Ensure sx and sy are non-zero to avoid division by zero
-            const sx = paperScale.sx || 1;
-            const sy = paperScale.sy || 1;
+            // Convert client coords to paper container coords
+            const offsetX = clientPoint.x - paperRect.left;
+            const offsetY = clientPoint.y - paperRect.top;
 
-            // Convert client point to local paper point
+            // Apply scale and translation to get model coordinates
             return {
-                x: (clientPoint.x / sx) - paperTranslate.tx,
-                y: (clientPoint.y / sy) - paperTranslate.ty
+                x: (offsetX / paperScale.sx) - paperTranslate.tx,
+                y: (offsetY / paperScale.sy) - paperTranslate.ty
             };
         } catch (error) {
             console.error("Error converting coordinates:", error);
