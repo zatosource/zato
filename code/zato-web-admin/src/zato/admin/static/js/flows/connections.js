@@ -212,15 +212,18 @@ function setupConnectionPoints(paper) {
             }
         });
 
-        // Add CSS to ensure port labels stay inside the element
+        // Add CSS styles for port labels
         const style = document.createElement('style');
         style.textContent = `
-            .joint-port .port-label {
-                pointer-events: none;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                max-width: 90%;
+            /* Hide port labels by default */
+            .joint-port text {
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+
+            /* Show port labels on hover */
+            .joint-port:hover text {
+                opacity: 1;
             }
         `;
         document.head.appendChild(style);
