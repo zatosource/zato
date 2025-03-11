@@ -1,4 +1,4 @@
-// connections.js - Connection points and linking functionality
+// connections.js - Connection points and linking functionality with improved validation
 
 function setupConnectionPoints(paper) {
     if (!paper) {
@@ -21,19 +21,123 @@ function setupConnectionPoints(paper) {
         radius: 20  // The distance within which links will snap to magnets
     };
 
-    // Set up proper connection validation
+    // Set up connection validation
     paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
-        // Don't allow connections to the same element
-        if (sourceView === targetView) {
-            return false;
-        }
+        try {
+            // Don't allow connections to the same element
+            if (sourceView.model.id === targetView.model.id) {
+                console.log("Connection rejected: Cannot connect to the same element");
+                return false;
+            }
 
-        // Only allow connections to magnets
-        if (!targetMagnet) {
-            return false;
-        }
+            // Only allow connections to magnets
+            if (!targetMagnet || !sourceMagnet) {
+                console.log("Connection rejected: Both source and target must have magnets");
+                return false;
+            }
 
-        return true;
+            // Get port groups to determine if they're inputs or outputs
+            // First try the port-group attribute
+            let sourcePortGroup = sourceMagnet.getAttribute('port-group');
+            let targetPortGroup = targetMagnet.getAttribute('port-group');
+
+            // If port-group attribute doesn't exist, try to infer from the DOM structure
+            if (!sourcePortGroup) {
+                const sourcePortEl = sourceMagnet.closest('.joint-port');
+                if (sourcePortEl) {
+                    const portId = sourcePortEl.getAttribute('port');
+                    if (portId) {
+                        const port = sourceView.model.getPort(portId);
+                        if (port) {
+                            sourcePortGroup = port.group;
+                        }
+                    }
+                }
+            }
+
+            if (!targetPortGroup) {
+                const targetPortEl = targetMagnet.closest('.joint-port');
+                if (targetPortEl) {
+                    const portId = targetPortEl.getAttribute('port');
+                    if (portId) {
+                        const port = targetView.model.getPort(portId);
+                        if (port) {
+                            targetPortGroup = port.group;
+                        }
+                    }
+                }
+            }
+
+            // If we still don't have port groups, fall back to checking magnet position
+            // (right side = out, left side = in)
+            if (!sourcePortGroup) {
+                const elementBBox = sourceView.model.getBBox();
+                const magnetPosition = sourceView.getConnectionPoint(sourceMagnet, elementBBox);
+                sourcePortGroup = (magnetPosition.x > elementBBox.x + elementBBox.width/2) ? 'out' : 'in';
+            }
+
+            if (!targetPortGroup) {
+                const elementBBox = targetView.model.getBBox();
+                const magnetPosition = targetView.getConnectionPoint(targetMagnet, elementBBox);
+                targetPortGroup = (magnetPosition.x < elementBBox.x + elementBBox.width/2) ? 'in' : 'out';
+            }
+
+            // Check if this is an output port to input port connection
+            if (sourcePortGroup === 'out' && targetPortGroup === 'in') {
+                console.log("Connection allowed: out -> in");
+                return true;
+            }
+
+            // Reject in -> in, out -> out, or in -> out connections
+            console.log(`Connection rejected: ${sourcePortGroup} -> ${targetPortGroup}`);
+            return false;
+        } catch (error) {
+            console.error("Error in validateConnection:", error);
+            return false; // Reject connection on error
+        }
+    };
+
+    // Validate link reconnections too
+    paper.options.validateMagnet = function(cellView, magnet) {
+        try {
+            // Only allow starting connections from output ports
+            // First try the port-group attribute
+            let portGroup = magnet.getAttribute('port-group');
+
+            // If the attribute doesn't exist, try to infer from element structure
+            if (!portGroup) {
+                const portEl = magnet.closest('.joint-port');
+                if (portEl) {
+                    const portId = portEl.getAttribute('port');
+                    if (portId) {
+                        const port = cellView.model.getPort(portId);
+                        if (port) {
+                            portGroup = port.group;
+                        }
+                    }
+                }
+            }
+
+            // If we still don't have port group, fall back to position
+            if (!portGroup) {
+                const elementBBox = cellView.model.getBBox();
+                const magnetPosition = cellView.getConnectionPoint(magnet, elementBBox);
+
+                // Right side = out, left side = in
+                portGroup = (magnetPosition.x > elementBBox.x + elementBBox.width/2) ? 'out' : 'in';
+            }
+
+            if (portGroup === 'out') {
+                console.log("Starting connection from output port allowed");
+                return true;
+            }
+
+            console.log("Cannot start connection from input port");
+            return false;
+        } catch (error) {
+            console.error("Error in validateMagnet:", error);
+            return false; // Reject on error
+        }
     };
 
     // Create connecting ports when element is added
@@ -71,7 +175,8 @@ function setupConnectionPoints(paper) {
                     magnet: 'passive',  // Can receive connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
-                    fill: '#fff'
+                    fill: '#fff',
+                    'port-group': 'in'  // Mark as input port for validation
                 },
                 text: {
                     fontSize: 10,
@@ -105,7 +210,8 @@ function setupConnectionPoints(paper) {
                     magnet: true,       // CRITICAL: Must be 'true' to allow initiating connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
-                    fill: '#fff'
+                    fill: '#fff',
+                    'port-group': 'out'  // Mark as output port for validation
                 },
                 text: {
                     fontSize: 10,
@@ -164,6 +270,74 @@ function setupConnectionPoints(paper) {
                 { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
                 { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
             ]);
+        }
+    }
+
+    // Provide better visual feedback for invalid connections
+    paper.on('link:connect', function(linkView) {
+        updateLinkValidityVisual(linkView);
+    });
+
+    // Update when link is changed
+    paper.model.on('change:source change:target', function(link) {
+        if (link.isLink()) {
+            const linkView = link.findView(paper);
+            if (linkView) {
+                updateLinkValidityVisual(linkView);
+            }
+        }
+    });
+
+    // Update link visual based on connection validity
+    function updateLinkValidityVisual(linkView) {
+        try {
+            const link = linkView.model;
+
+            // Get source and target elements
+            const sourceElement = link.getSourceElement();
+            const targetElement = link.getTargetElement();
+
+            if (!sourceElement || !targetElement) return;
+
+            // Get source and target port IDs from link attributes
+            const sourcePortId = link.get('source').port;
+            const targetPortId = link.get('target').port;
+
+            if (!sourcePortId || !targetPortId) return;
+
+            // Get port groups from the elements
+            const sourcePort = sourceElement.getPort(sourcePortId);
+            const targetPort = targetElement.getPort(targetPortId);
+
+            if (!sourcePort || !targetPort) return;
+
+            const sourcePortGroup = sourcePort.group;
+            const targetPortGroup = targetPort.group;
+
+            // Determine if connection is valid (out -> in)
+            const isValid = (sourcePortGroup === 'out' && targetPortGroup === 'in');
+
+            // Update link visual based on validity
+            if (isValid) {
+                link.attr({
+                    line: {
+                        stroke: '#333333',
+                        strokeWidth: 2,
+                        'stroke-dasharray': ''
+                    }
+                });
+            } else {
+                // Invalid connection - show as dashed red
+                link.attr({
+                    line: {
+                        stroke: '#FF0000',
+                        strokeWidth: 2,
+                        'stroke-dasharray': '5,5'
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Error updating link validity visual:", error);
         }
     }
 }
