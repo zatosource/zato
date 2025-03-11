@@ -211,6 +211,19 @@ function setupConnectionPoints(paper) {
                 }
             }
         });
+
+        // Add CSS to ensure port labels stay inside the element
+        const style = document.createElement('style');
+        style.textContent = `
+            .joint-port .port-label {
+                pointer-events: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 90%;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     // Add default ports to the element
@@ -218,13 +231,14 @@ function setupConnectionPoints(paper) {
         // Skip if the element already has ports
         if (element.prop('ports/items')) return;
 
-        // Define port groups
+        // Define port groups with ports on border but labels inside
         element.prop('ports/groups/in', {
             position: function(ports, elBBox) {
-                // Position inputs evenly along the left side
+                // Position inputs on the left border
                 return ports.map(function(port, index, ports) {
                     var step = elBBox.height / (ports.length + 1);
                     return {
+                        // Position on the left border (x=0)
                         x: 0,
                         y: step * (index + 1)
                     };
@@ -241,25 +255,21 @@ function setupConnectionPoints(paper) {
                 },
                 text: {
                     fontSize: 10,
-                    fill: '#333'
-                }
-            },
-            label: {
-                position: {
-                    name: 'left',
-                    args: {
-                        y: 0
-                    }
+                    fill: '#333',
+                    textAnchor: 'start',  // Left-align the text
+                    textVerticalAnchor: 'middle',  // Center vertically
+                    dx: 15  // Position the text 15px from the port (inside)
                 }
             }
         });
 
         element.prop('ports/groups/out', {
             position: function(ports, elBBox) {
-                // Position outputs evenly along the right side
+                // Position outputs on the right border
                 return ports.map(function(port, index, ports) {
                     var step = elBBox.height / (ports.length + 1);
                     return {
+                        // Position on the right border (x=width)
                         x: elBBox.width,
                         y: step * (index + 1)
                     };
@@ -276,15 +286,10 @@ function setupConnectionPoints(paper) {
                 },
                 text: {
                     fontSize: 10,
-                    fill: '#333'
-                }
-            },
-            label: {
-                position: {
-                    name: 'right',
-                    args: {
-                        y: 0
-                    }
+                    fill: '#333',
+                    textAnchor: 'end',  // Right-align the text
+                    textVerticalAnchor: 'middle',  // Center vertically
+                    dx: -15  // Position the text 15px from the port toward inside
                 }
             }
         });
