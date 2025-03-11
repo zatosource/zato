@@ -37,13 +37,13 @@ function initializeCustomShapes() {
             attrs: {
                 body: {
                     refD: 'M 20,0 L 60,0 L 80,20 L 80,60 L 60,80 L 20,80 L 0,60 L 0,20 Z', // Octagon shape
-                    fill: '#FFE2E2',
-                    stroke: '#DA1E28',
+                    fill: '#ECEAF4',
+                    stroke: '#79709C',
                     strokeWidth: 2
                 },
                 label: {
                     text: 'Stop',
-                    fill: '#750E13',
+                    fill: '#43337C',
                     fontFamily: 'Arial',
                     fontSize: 12,
                     fontWeight: 'bold',
