@@ -37,11 +37,10 @@ function setupConnectionPoints(paper) {
             }
 
             // Get port groups to determine if they're inputs or outputs
-            // First try the port-group attribute
             let sourcePortGroup = sourceMagnet.getAttribute('port-group');
             let targetPortGroup = targetMagnet.getAttribute('port-group');
 
-            // If port-group attribute doesn't exist, try to infer from the DOM structure
+            // If attributes not found, try to get from the port element
             if (!sourcePortGroup) {
                 const sourcePortEl = sourceMagnet.closest('.joint-port');
                 if (sourcePortEl) {
@@ -68,43 +67,28 @@ function setupConnectionPoints(paper) {
                 }
             }
 
-            // If we still don't have port groups, fall back to checking magnet position
-            // (right side = out, left side = in)
-            if (!sourcePortGroup) {
-                const elementBBox = sourceView.model.getBBox();
-                const magnetPosition = sourceView.getConnectionPoint(sourceMagnet, elementBBox);
-                sourcePortGroup = (magnetPosition.x > elementBBox.x + elementBBox.width/2) ? 'out' : 'in';
-            }
-
-            if (!targetPortGroup) {
-                const elementBBox = targetView.model.getBBox();
-                const magnetPosition = targetView.getConnectionPoint(targetMagnet, elementBBox);
-                targetPortGroup = (magnetPosition.x < elementBBox.x + elementBBox.width/2) ? 'in' : 'out';
-            }
-
             // Check if this is an output port to input port connection
             if (sourcePortGroup === 'out' && targetPortGroup === 'in') {
                 console.log("Connection allowed: out -> in");
                 return true;
             }
 
-            // Reject in -> in, out -> out, or in -> out connections
+            // Reject all other connection types
             console.log(`Connection rejected: ${sourcePortGroup} -> ${targetPortGroup}`);
             return false;
         } catch (error) {
             console.error("Error in validateConnection:", error);
-            return false; // Reject connection on error
+            return false; // Reject on error
         }
     };
 
-    // Validate link reconnections too
+    // Validate magnet to only allow starting connections from output ports
     paper.options.validateMagnet = function(cellView, magnet) {
         try {
-            // Only allow starting connections from output ports
-            // First try the port-group attribute
+            // Check port group to determine if it's an output port
             let portGroup = magnet.getAttribute('port-group');
 
-            // If the attribute doesn't exist, try to infer from element structure
+            // If attribute not found, try to get from the port element
             if (!portGroup) {
                 const portEl = magnet.closest('.joint-port');
                 if (portEl) {
@@ -118,27 +102,42 @@ function setupConnectionPoints(paper) {
                 }
             }
 
-            // If we still don't have port group, fall back to position
-            if (!portGroup) {
-                const elementBBox = cellView.model.getBBox();
-                const magnetPosition = cellView.getConnectionPoint(magnet, elementBBox);
-
-                // Right side = out, left side = in
-                portGroup = (magnetPosition.x > elementBBox.x + elementBBox.width/2) ? 'out' : 'in';
-            }
-
+            // Only allow connections from output ports
             if (portGroup === 'out') {
-                console.log("Starting connection from output port allowed");
                 return true;
             }
 
-            console.log("Cannot start connection from input port");
             return false;
         } catch (error) {
             console.error("Error in validateMagnet:", error);
             return false; // Reject on error
         }
     };
+
+    // Handle dangling links (incomplete connections)
+    paper.on('blank:pointerup', function() {
+        removeDanglingLinks();
+    });
+
+    paper.on('cell:pointerup', function() {
+        setTimeout(removeDanglingLinks, 100);
+    });
+
+    function removeDanglingLinks() {
+        const links = paper.model.getLinks();
+        links.forEach(function(link) {
+            const source = link.get('source');
+            const target = link.get('target');
+
+            const sourceOk = source && source.id && source.port;
+            const targetOk = target && target.id && target.port;
+
+            if (!sourceOk || !targetOk) {
+                link.remove();
+                console.log("Removed dangling link");
+            }
+        });
+    }
 
     // Create connecting ports when element is added
     if (paper.model) {
@@ -176,7 +175,7 @@ function setupConnectionPoints(paper) {
                     stroke: '#31d0c6',
                     strokeWidth: 2,
                     fill: '#fff',
-                    'port-group': 'in'  // Mark as input port for validation
+                    'port-group': 'in'  // Mark as input port
                 },
                 text: {
                     fontSize: 10,
@@ -207,11 +206,11 @@ function setupConnectionPoints(paper) {
             attrs: {
                 circle: {
                     r: 6,
-                    magnet: true,       // CRITICAL: Must be 'true' to allow initiating connections
+                    magnet: true,       // Can initiate connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
                     fill: '#fff',
-                    'port-group': 'out'  // Mark as output port for validation
+                    'port-group': 'out'  // Mark as output port
                 },
                 text: {
                     fontSize: 10,
@@ -270,74 +269,6 @@ function setupConnectionPoints(paper) {
                 { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
                 { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
             ]);
-        }
-    }
-
-    // Provide better visual feedback for invalid connections
-    paper.on('link:connect', function(linkView) {
-        updateLinkValidityVisual(linkView);
-    });
-
-    // Update when link is changed
-    paper.model.on('change:source change:target', function(link) {
-        if (link.isLink()) {
-            const linkView = link.findView(paper);
-            if (linkView) {
-                updateLinkValidityVisual(linkView);
-            }
-        }
-    });
-
-    // Update link visual based on connection validity
-    function updateLinkValidityVisual(linkView) {
-        try {
-            const link = linkView.model;
-
-            // Get source and target elements
-            const sourceElement = link.getSourceElement();
-            const targetElement = link.getTargetElement();
-
-            if (!sourceElement || !targetElement) return;
-
-            // Get source and target port IDs from link attributes
-            const sourcePortId = link.get('source').port;
-            const targetPortId = link.get('target').port;
-
-            if (!sourcePortId || !targetPortId) return;
-
-            // Get port groups from the elements
-            const sourcePort = sourceElement.getPort(sourcePortId);
-            const targetPort = targetElement.getPort(targetPortId);
-
-            if (!sourcePort || !targetPort) return;
-
-            const sourcePortGroup = sourcePort.group;
-            const targetPortGroup = targetPort.group;
-
-            // Determine if connection is valid (out -> in)
-            const isValid = (sourcePortGroup === 'out' && targetPortGroup === 'in');
-
-            // Update link visual based on validity
-            if (isValid) {
-                link.attr({
-                    line: {
-                        stroke: '#333333',
-                        strokeWidth: 2,
-                        'stroke-dasharray': ''
-                    }
-                });
-            } else {
-                // Invalid connection - show as dashed red
-                link.attr({
-                    line: {
-                        stroke: '#FF0000',
-                        strokeWidth: 2,
-                        'stroke-dasharray': '5,5'
-                    }
-                });
-            }
-        } catch (error) {
-            console.error("Error updating link validity visual:", error);
         }
     }
 }
