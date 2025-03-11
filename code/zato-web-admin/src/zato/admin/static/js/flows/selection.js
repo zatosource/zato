@@ -42,6 +42,7 @@ class Selection {
             }
         `;
         document.head.appendChild(styleElement);
+        this.styleElement = styleElement; // Store reference for cleanup
 
         this.setupEventListeners();
         console.log("Selection manager initialized with rubber-band selection");
@@ -193,7 +194,10 @@ class Selection {
                 // Store initial positions of all selected elements
                 this.dragStartPositions = {};
                 this.selectedElements.forEach(el => {
-                    this.dragStartPositions[el.id] = el.position();
+                    const position = el.position();
+                    if (position) {
+                        this.dragStartPositions[el.id] = { ...position }; // Clone to avoid reference issues
+                    }
                 });
             }
         };
@@ -211,6 +215,8 @@ class Selection {
             const newPosition = this.draggedElement.position();
             const startPosition = this.dragStartPositions[draggedElementId];
 
+            if (!startPosition || !newPosition) return;
+
             // Calculate movement delta
             const dx = newPosition.x - startPosition.x;
             const dy = newPosition.y - startPosition.y;
@@ -219,7 +225,7 @@ class Selection {
             this.selectedElements.forEach(el => {
                 if (el.id !== draggedElementId) {
                     const elStartPos = this.dragStartPositions[el.id];
-                    // Skip if we don't have a starting position (shouldn't happen)
+                    // Skip if we don't have a starting position
                     if (!elStartPos) return;
 
                     // Move the element to its new position
@@ -284,11 +290,15 @@ class Selection {
             mainContent.appendChild(this.selectionBox);
         } else {
             // Fallback to paper's parent
-            this.paper.el.parentNode.appendChild(this.selectionBox);
+            if (this.paper.el && this.paper.el.parentNode) {
+                this.paper.el.parentNode.appendChild(this.selectionBox);
+            }
         }
 
         // Initially hidden
-        this.selectionBox.style.display = 'none';
+        if (this.selectionBox) {
+            this.selectionBox.style.display = 'none';
+        }
     }
 
     /**
@@ -333,12 +343,10 @@ class Selection {
         console.log("Selecting elements in rectangle", { startPos, endPos, multiSelect });
 
         // Convert to paper coordinates
-        const paperScale = this.paper.scale();
-        const paperTranslate = this.paper.translate();
-
-        // Convert client coordinates to paper coordinates
         const p1 = this.clientToLocalPoint(startPos);
         const p2 = this.clientToLocalPoint(endPos);
+
+        if (!p1 || !p2) return;
 
         // Define the selection rectangle in paper coordinates
         const selectionRect = {
@@ -352,7 +360,10 @@ class Selection {
 
         // Find elements within the rectangle
         const elementsInRect = this.graph.getElements().filter(element => {
+            if (!element) return false;
+
             const bbox = element.getBBox();
+            if (!bbox) return false;
 
             // Check if the element's bounding box intersects with the selection rectangle
             return (
@@ -387,18 +398,28 @@ class Selection {
     /**
      * Convert client coordinates to paper local coordinates
      * @param {Object} clientPoint - Client coordinates {x, y}
-     * @return {Object} Paper local coordinates {x, y}
+     * @return {Object|null} Paper local coordinates {x, y} or null if error
      */
     clientToLocalPoint(clientPoint) {
-        const paperRect = this.paper.el.getBoundingClientRect();
-        const paperScale = this.paper.scale();
-        const paperTranslate = this.paper.translate();
+        try {
+            if (!this.paper || !this.paper.el) return null;
 
-        // Convert client point to local paper point
-        return {
-            x: (clientPoint.x / paperScale.sx) - paperTranslate.tx,
-            y: (clientPoint.y / paperScale.sy) - paperTranslate.ty
-        };
+            const paperScale = this.paper.scale();
+            const paperTranslate = this.paper.translate();
+
+            // Ensure sx and sy are non-zero to avoid division by zero
+            const sx = paperScale.sx || 1;
+            const sy = paperScale.sy || 1;
+
+            // Convert client point to local paper point
+            return {
+                x: (clientPoint.x / sx) - paperTranslate.tx,
+                y: (clientPoint.y / sy) - paperTranslate.ty
+            };
+        } catch (error) {
+            console.error("Error converting coordinates:", error);
+            return null;
+        }
     }
 
     /**
@@ -466,10 +487,19 @@ class Selection {
 
         // Then unhighlight all elements
         elements.forEach(element => {
-            this.unhighlightElement(element);
+            if (element) {
+                this.unhighlightElement(element);
+            }
         });
 
         console.log("All selections cleared");
+    }
+
+    /**
+     * Alias for clearSelection for API compatibility
+     */
+    clear() {
+        this.clearSelection();
     }
 
     /**
@@ -483,8 +513,10 @@ class Selection {
         console.log("Found elements:", elements.length);
 
         elements.forEach(element => {
-            this.selectedElements.push(element);
-            this.highlightElement(element);
+            if (element) {
+                this.selectedElements.push(element);
+                this.highlightElement(element);
+            }
         });
 
         console.log("All elements selected, count:", this.selectedElements.length);
@@ -503,8 +535,10 @@ class Selection {
             this.selectedElements = []; // Clear first to avoid callbacks issues
 
             elements.forEach(element => {
-                console.log("Removing element:", element.id);
-                element.remove();
+                if (element) {
+                    console.log("Removing element:", element.id);
+                    element.remove();
+                }
             });
 
             console.log("Elements removed");
@@ -579,16 +613,28 @@ class Selection {
 
         // Remove all event listeners
         this.eventProxies.forEach(proxy => {
-            if (proxy.target.off) {
-                proxy.target.off(proxy.event, proxy.handler);
-            } else {
-                proxy.target.removeEventListener(proxy.event, proxy.handler);
+            try {
+                if (proxy.target && proxy.event && proxy.handler) {
+                    if (proxy.target.off) {
+                        proxy.target.off(proxy.event, proxy.handler);
+                    } else if (proxy.target.removeEventListener) {
+                        proxy.target.removeEventListener(proxy.event, proxy.handler);
+                    }
+                }
+            } catch (e) {
+                console.error("Error removing event listener:", e);
             }
         });
 
         // Clear selections
         this.clearSelection();
         this.removeSelectionBox();
+
+        // Remove style element if it exists
+        if (this.styleElement && this.styleElement.parentNode) {
+            this.styleElement.parentNode.removeChild(this.styleElement);
+        }
+
         this.eventProxies = [];
 
         console.log("Selection manager destroyed");
