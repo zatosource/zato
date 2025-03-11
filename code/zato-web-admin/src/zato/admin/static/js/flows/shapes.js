@@ -8,10 +8,10 @@ function initializeCustomShapes() {
     joint.shapes.workflow.Start = joint.shapes.standard.Path.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.Start',
-            size: { width: 60, height: 60 },
+            size: { width: 80, height: 80 },  // Increased size to accommodate internal labels
             attrs: {
                 body: {
-                    refD: 'M 15,0 L 45,0 L 60,15 L 60,45 L 45,60 L 15,60 L 0,45 L 0,15 Z', // Octagon shape
+                    refD: 'M 20,0 L 60,0 L 80,20 L 80,60 L 60,80 L 20,80 L 0,60 L 0,20 Z', // Octagon shape
                     fill: '#DBEAFF',
                     stroke: '#0062FF',
                     strokeWidth: 2
@@ -33,10 +33,10 @@ function initializeCustomShapes() {
     joint.shapes.workflow.Stop = joint.shapes.standard.Path.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.Stop',
-            size: { width: 60, height: 60 },
+            size: { width: 80, height: 80 },  // Increased size to accommodate internal labels
             attrs: {
                 body: {
-                    refD: 'M 15,0 L 45,0 L 60,15 L 60,45 L 45,60 L 15,60 L 0,45 L 0,15 Z', // Octagon shape
+                    refD: 'M 20,0 L 60,0 L 80,20 L 80,60 L 60,80 L 20,80 L 0,60 L 0,20 Z', // Octagon shape
                     fill: '#FFE2E2',
                     stroke: '#DA1E28',
                     strokeWidth: 2
@@ -58,7 +58,7 @@ function initializeCustomShapes() {
     joint.shapes.workflow.Service = joint.shapes.standard.Rectangle.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.Service',
-            size: { width: 120, height: 50 },
+            size: { width: 140, height: 60 },  // Increased width to accommodate internal labels
             attrs: {
                 body: {
                     fill: '#E9F3FE',
@@ -84,7 +84,7 @@ function initializeCustomShapes() {
     joint.shapes.workflow.Parallel = joint.shapes.standard.Rectangle.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.Parallel',
-            size: { width: 120, height: 50 },
+            size: { width: 140, height: 80 },  // Increased dimensions for internal labels
             attrs: {
                 body: {
                     fill: '#FFF7E6',
@@ -110,7 +110,7 @@ function initializeCustomShapes() {
     joint.shapes.workflow.ForkJoin = joint.shapes.standard.Rectangle.extend({
         defaults: joint.util.deepSupplement({
             type: 'workflow.ForkJoin',
-            size: { width: 120, height: 50 },
+            size: { width: 140, height: 80 },  // Increased dimensions for internal labels
             attrs: {
                 body: {
                     fill: '#F0F7DA',
