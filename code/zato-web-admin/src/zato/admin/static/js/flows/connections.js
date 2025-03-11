@@ -6,6 +6,9 @@ function setupConnectionPoints(paper) {
         return;
     }
 
+    // Track connections that need to be flipped
+    let pendingFlip = null;
+
     // Set default paper interactive settings for linking
     paper.options.interactive = {
         linkPinning: false,        // Don't allow links to be pinned in empty space
@@ -67,9 +70,25 @@ function setupConnectionPoints(paper) {
                 }
             }
 
-            // Check if this is an output port to input port connection
+            // Case 1: Normal direction - output to input
             if (sourcePortGroup === 'out' && targetPortGroup === 'in') {
                 console.log("Connection allowed: out -> in");
+                pendingFlip = null; // No need to flip
+                return true;
+            }
+
+            // Case 2: Reverse direction - input to output (will be flipped)
+            if (sourcePortGroup === 'in' && targetPortGroup === 'out') {
+                console.log("Connection allowed (will be flipped): in -> out");
+
+                // Mark this connection for flipping
+                pendingFlip = {
+                    sourceId: sourceView.model.id,
+                    sourcePort: sourceMagnet.getAttribute('port'),
+                    targetId: targetView.model.id,
+                    targetPort: targetMagnet.getAttribute('port')
+                };
+
                 return true;
             }
 
@@ -82,10 +101,10 @@ function setupConnectionPoints(paper) {
         }
     };
 
-    // Validate magnet to only allow starting connections from output ports
+    // Validate magnet to allow starting connections from both input and output ports
     paper.options.validateMagnet = function(cellView, magnet) {
         try {
-            // Check port group to determine if it's an output port
+            // Check port group to determine if it's an input or output port
             let portGroup = magnet.getAttribute('port-group');
 
             // If attribute not found, try to get from the port element
@@ -102,8 +121,8 @@ function setupConnectionPoints(paper) {
                 }
             }
 
-            // Only allow connections from output ports
-            if (portGroup === 'out') {
+            // Allow connections from both input and output ports
+            if (portGroup === 'out' || portGroup === 'in') {
                 return true;
             }
 
@@ -114,9 +133,52 @@ function setupConnectionPoints(paper) {
         }
     };
 
+    // Add handler to flip connections immediately after they're connected
+    paper.on('link:connect', function(linkView) {
+        if (!pendingFlip) return;
+
+        const link = linkView.model;
+        const source = link.get('source');
+        const target = link.get('target');
+
+        // Check if this is the link we need to flip
+        if (source.id === pendingFlip.sourceId &&
+            target.id === pendingFlip.targetId) {
+
+            console.log("Flipping connection direction...");
+
+            try {
+                // Create a new link with reversed endpoints
+                const newLink = link.clone();
+                if (!newLink) {
+                    console.error("Failed to clone link for flipping");
+                    return;
+                }
+
+                // Set the source and target to be flipped
+                newLink.set('source', { id: pendingFlip.targetId, port: pendingFlip.targetPort });
+                newLink.set('target', { id: pendingFlip.sourceId, port: pendingFlip.sourcePort });
+
+                // Add the new link to the graph
+                paper.model.addCell(newLink);
+
+                // Remove the original link
+                link.remove();
+
+                console.log("Connection successfully flipped");
+            } catch (error) {
+                console.error("Error during connection flip:", error);
+            } finally {
+                // Reset the pending flip data
+                pendingFlip = null;
+            }
+        }
+    });
+
     // Handle dangling links (incomplete connections)
     paper.on('blank:pointerup', function() {
         removeDanglingLinks();
+        pendingFlip = null; // Reset on blank click
     });
 
     paper.on('cell:pointerup', function() {
@@ -171,7 +233,7 @@ function setupConnectionPoints(paper) {
             attrs: {
                 circle: {
                     r: 6,
-                    magnet: 'passive',  // Can receive connections
+                    magnet: true,  // Allow input ports to initiate connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
                     fill: '#fff',
@@ -206,7 +268,7 @@ function setupConnectionPoints(paper) {
             attrs: {
                 circle: {
                     r: 6,
-                    magnet: true,       // Can initiate connections
+                    magnet: true,  // Can initiate connections
                     stroke: '#31d0c6',
                     strokeWidth: 2,
                     fill: '#fff',
