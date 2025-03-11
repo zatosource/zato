@@ -41,21 +41,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             },
+            // Set initial interactive settings - these may be enhanced by setupConnectionPoints
             interactive: {
                 linkMove: true,
                 elementMove: true,
-                arrowheadMove: true
+                arrowheadMove: true,
+                addLinkFromMagnet: true,
+                linkPinning: false
             }
         });
 
         // Enhance the paper's interactive settings for better snapping behavior
         paper.options.snapLinks = {
             radius: 20  // The distance within which a link end will snap to a magnet
-        };
-
-        paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
-            // You can add custom validation logic here if needed
-            return targetMagnet != null; // Only allow connections to magnets/ports
         };
 
         // Create Selection instance
@@ -72,10 +70,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 isPanning = !isPanning;
                 if (isPanning) {
                     this.textContent = 'Selection Mode';
-                    paper.setInteractivity(false);
+
+                    // Update selection mode
+                    if (selection && typeof selection.setPanningMode === 'function') {
+                        selection.setPanningMode(true);
+                    }
+
+                    // IMPORTANT: Don't completely disable interactivity
+                    // Just selectively disable element movement while keeping link functionality
+                    paper.options.interactive = {
+                        elementMove: false,
+                        linkMove: true,
+                        arrowheadMove: true,
+                        addLinkFromMagnet: true,
+                        linkPinning: false
+                    };
                 } else {
                     this.textContent = 'Pan Mode';
-                    paper.setInteractivity(true);
+
+                    // Update selection mode
+                    if (selection && typeof selection.setPanningMode === 'function') {
+                        selection.setPanningMode(false);
+                    }
+
+                    // Restore full interactivity
+                    paper.options.interactive = {
+                        elementMove: true,
+                        linkMove: true,
+                        arrowheadMove: true,
+                        addLinkFromMagnet: true,
+                        linkPinning: false
+                    };
                 }
             });
 
