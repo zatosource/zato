@@ -1,6 +1,11 @@
 // connections.js - Connection points and linking functionality
 
 function setupConnectionPoints(paper) {
+    if (!paper) {
+        console.error("Paper object is not provided to setupConnectionPoints");
+        return;
+    }
+
     // Enable link creation from elements with ports
     paper.on('element:pointerdown', function(elementView, evt) {
         paper.options.interactive = {
@@ -10,14 +15,16 @@ function setupConnectionPoints(paper) {
     });
 
     // Create connecting ports when element is added
-    paper.model.on('add', function(cell) {
-        if (cell.isElement()) {
-            // Add ports for connections
-            if (!cell.hasPorts()) {
-                addDefaultPorts(cell);
+    if (paper.model) {
+        paper.model.on('add', function(cell) {
+            if (cell && typeof cell.isElement === 'function' && cell.isElement()) {
+                // Add ports for connections
+                if (typeof cell.hasPorts !== 'function' || !cell.hasPorts()) {
+                    addDefaultPorts(cell);
+                }
             }
-        }
-    });
+        });
+    }
 
     // Add default ports to the element
     function addDefaultPorts(element) {
@@ -93,36 +100,47 @@ function setupConnectionPoints(paper) {
             }
         });
 
+        // Get element type
+        var elementType = element.get('type');
+
         // Add the ports based on element type
-        if (element.get('type') === 'workflow.Decision') {
-            // Decision has 3 inputs and 3 outputs
+        if (elementType === 'workflow.Start') {
+            // Start only has outputs
+            element.addPorts([
+                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+            ]);
+        } else if (elementType === 'workflow.Stop') {
+            // Stop only has inputs
+            element.addPorts([
+                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } }
+            ]);
+        } else if (elementType === 'workflow.Service') {
+            // Service has one input and one output
+            element.addPorts([
+                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
+            ]);
+        } else if (elementType === 'workflow.Parallel') {
+            // Parallel has one input and multiple outputs
+            element.addPorts([
+                { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
+                { group: 'out', id: 'out1', attrs: { text: { text: 'Out 1' } } },
+                { group: 'out', id: 'out2', attrs: { text: { text: 'Out 2' } } },
+                { group: 'out', id: 'out3', attrs: { text: { text: 'Out 3' } } }
+            ]);
+        } else if (elementType === 'workflow.ForkJoin') {
+            // ForkJoin has multiple inputs and one output
             element.addPorts([
                 { group: 'in', id: 'in1', attrs: { text: { text: 'In 1' } } },
                 { group: 'in', id: 'in2', attrs: { text: { text: 'In 2' } } },
                 { group: 'in', id: 'in3', attrs: { text: { text: 'In 3' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'Yes' } } },
-                { group: 'out', id: 'out2', attrs: { text: { text: 'No' } } },
-                { group: 'out', id: 'out3', attrs: { text: { text: 'Maybe' } } }
-            ]);
-        } else if (element.get('type') === 'workflow.Start') {
-            // Start only has outputs
-            element.addPorts([
-                { group: 'out', id: 'out1'},
-            ]);
-        } else if (element.get('type') === 'workflow.End') {
-            // End only has inputs
-            element.addPorts([
-                { group: 'in', id: 'in1', attrs: { text: { text: 'In 1' } } },
-                { group: 'in', id: 'in2', attrs: { text: { text: 'In 2' } } },
-                { group: 'in', id: 'in3', attrs: { text: { text: 'In 3' } } }
+                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
             ]);
         } else {
-            // Standard elements have 3 inputs and 3 outputs
+            // Default ports for other or legacy element types
             element.addPorts([
                 { group: 'in', id: 'in1', attrs: { text: { text: 'In' } } },
-                { group: 'out', id: 'out1', attrs: { text: { text: 'OK' } } },
-                { group: 'out', id: 'out2', attrs: { text: { text: 'Except' } } },
-                { group: 'out', id: 'out3', attrs: { text: { text: 'Finally' } } }
+                { group: 'out', id: 'out1', attrs: { text: { text: 'Out' } } }
             ]);
         }
     }
