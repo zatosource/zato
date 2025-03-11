@@ -1,4 +1,4 @@
-// palette.js - Draggable palette functionality
+// palette.js - Simplified and robust draggable palette functionality
 
 function setupDraggablePalette(graph, paper) {
     if (!graph || !paper) {
@@ -7,28 +7,27 @@ function setupDraggablePalette(graph, paper) {
     }
 
     // Make palette items draggable
-    var paletteItems = document.querySelectorAll('.palette-item');
+    const paletteItems = document.querySelectorAll('.palette-item');
 
     if (!paletteItems.length) {
         console.warn("No palette items found to make draggable");
         return;
     }
 
+    // Main click handler for each palette item
     paletteItems.forEach(function(item) {
-        // Main mousedown handler for element creation
-        item.addEventListener('mousedown', function(event) {
+        item.addEventListener('click', function(event) {
             try {
-                // Use the item's data-type attribute to determine element type
-                var type = this.getAttribute('data-type');
+                // Get the element type from data-type attribute
+                const type = this.getAttribute('data-type');
 
                 if (!type) {
                     console.warn("No element type found for palette item");
                     return;
                 }
 
-                var element;
-
-                // Create a new element based on the type
+                // Create element based on type
+                let element;
                 switch (type) {
                     case 'start':
                         element = new joint.shapes.workflow.Start();
@@ -46,24 +45,49 @@ function setupDraggablePalette(graph, paper) {
                         element = new joint.shapes.workflow.ForkJoin();
                         break;
                     default:
-                        return; // If no matching type, exit the function
+                        console.warn("Unknown element type:", type);
+                        return;
                 }
 
-                if (!element) return;
+                if (!element) {
+                    console.warn("Failed to create element of type:", type);
+                    return;
+                }
 
-                // Calculate a safe position within the paper
-                var paperEl = paper.el;
-                var paperRect = paperEl.getBoundingClientRect();
+                // Get the paper dimensions
+                const paperEl = paper.el;
+                const paperRect = paperEl.getBoundingClientRect();
+                const paperWidth = paperRect.width || 1000;
+                const paperHeight = paperRect.height || 800;
 
-                // Make sure we have valid dimensions
-                var paperWidth = paperRect.width || 1000;
-                var paperHeight = paperRect.height || 800;
+                // Calculate a sensible position - in the center of the visible paper
+                // Get the current scroll position and paper translation
+                const scrollLeft = paperEl.scrollLeft || 0;
+                const scrollTop = paperEl.scrollTop || 0;
+                const translate = paper.translate();
+                const scale = paper.scale();
 
-                // Calculate a position within the visible area of the paper
-                var position = {
-                    x: Math.max(100, Math.min(paperWidth - 150, paperWidth / 2)),
-                    y: Math.max(100, Math.min(paperHeight - 150, paperHeight / 2))
+                // Calculate a position in the center of the viewport
+                const viewportCenterX = paperWidth / 2;
+                const viewportCenterY = paperHeight / 2;
+
+                // Adjust for paper's transformation
+                const position = {
+                    x: (viewportCenterX / scale.sx) - translate.tx,
+                    y: (viewportCenterY / scale.sy) - translate.ty
                 };
+
+                // Center the element at the position
+                const size = element.get('size');
+                position.x -= size.width / 2;
+                position.y -= size.height / 2;
+
+                // Make sure position is valid
+                if (isNaN(position.x) || isNaN(position.y)) {
+                    console.warn("Invalid position calculated, using fallback");
+                    position.x = 100;
+                    position.y = 100;
+                }
 
                 // Position the element and add to graph
                 element.position(position.x, position.y);
@@ -72,13 +96,14 @@ function setupDraggablePalette(graph, paper) {
                 console.log('Element added at position:', position);
             } catch (error) {
                 console.error("Error adding element from palette:", error);
+                alert("Error adding element. See console for details.");
             }
         });
 
-        // Visual feedback on hover (without affecting the actual elements)
+        // Visual feedback for better UX
         item.addEventListener('mouseover', function() {
             this.style.backgroundColor = '#e9e9e9';
-            this.style.cursor = 'grab';
+            this.style.cursor = 'pointer';
         });
 
         item.addEventListener('mouseout', function() {
@@ -94,4 +119,6 @@ function setupDraggablePalette(graph, paper) {
             this.style.backgroundColor = '#e9e9e9';
         });
     });
+
+    console.log("Palette setup complete. Items should be clickable.");
 }
