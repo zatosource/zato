@@ -145,8 +145,16 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/lodash.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/backbone.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/joint.min.js"></script>
-    <!-- Application JavaScript -->
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/app.js"></script>
+
+    <!-- Application JavaScript - Split into modular files -->
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/shapes.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/selection.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/connections.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/palette.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/properties.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/validation.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/export.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/joint/main.js"></script>
 </head>
 <body>
     <div class="container">
