@@ -21,7 +21,10 @@
 
     <!-- Application JavaScript - Split into modular files -->
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/shapes.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/selection.js"></script>
+    <!-- Replace single selection.js with the three modular files -->
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/selection_core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/selection_rubber_band.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/selection_group_operations.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/connections.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/palette.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/flows/properties.js"></script>
