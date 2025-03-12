@@ -56,8 +56,22 @@ document.addEventListener('DOMContentLoaded', function() {
             radius: 20  // The distance within which a link end will snap to a magnet
         };
 
-        // Create Selection instance
+        // Create Selection instance and initialize modular components
         var selection = new Selection(graph, paper);
+
+        // Initialize rubber-band selection functionality
+        if (typeof initRubberBandSelection === 'function') {
+            initRubberBandSelection(selection);
+        } else {
+            console.warn('initRubberBandSelection function not available');
+        }
+
+        // Initialize group operations functionality
+        if (typeof initGroupOperations === 'function') {
+            initGroupOperations(selection);
+        } else {
+            console.warn('initGroupOperations function not available');
+        }
 
         // Pan mode
         var isPanning = false;
@@ -273,9 +287,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event handler for cleanup on page unload
         window.addEventListener('beforeunload', function() {
-            // Clean up selection to prevent memory leaks
-            if (selection && selection.destroy) {
-                selection.destroy();
+            // Clean up all selection components
+            if (selection) {
+                // Core cleanup
+                if (selection.destroy) {
+                    selection.destroy();
+                }
+
+                // Module-specific cleanup
+                if (typeof cleanupRubberBandSelection === 'function') {
+                    cleanupRubberBandSelection(selection);
+                }
+
+                if (typeof cleanupGroupOperations === 'function') {
+                    cleanupGroupOperations(selection);
+                }
             }
 
             // Remove event listeners
