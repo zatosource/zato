@@ -293,25 +293,32 @@ document.addEventListener('DOMContentLoaded', function() {
 // Define SVG filters for shadow effects
 // main.js - Replace setupShadowFilters with CSS approach
 function setupShadowFilters(paper) {
-    // Add CSS styles for shadows
+    // Add CSS styles for shadows using more specific selectors
     const style = document.createElement('style');
-    style.textContent = `
-        /* Add box shadow to workflow elements */
-        .joint-element .joint-cell[data-type^="workflow"] {
-            filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.2));
-        }
-
-        /* Add shadow to specific element types */
-        [data-type="workflow.Start"] .joint-cell,
-        [data-type="workflow.Stop"] .joint-cell,
-        [data-type="workflow.Service"] .joint-cell,
-        [data-type="workflow.Parallel"] .joint-cell,
-        [data-type="workflow.ForkJoin"] .joint-cell {
-            filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.2));
-        }
-    `;
+    style.textContent = ``;
     document.head.appendChild(style);
 
-    console.log("CSS-based shadows applied");
+    console.log("Enhanced CSS-based shadows applied");
+
+    // Also add a fallback method to apply shadows directly to elements via attributes
+    paper.model.on('add', function(cell) {
+        if (cell.isElement() && cell.get('type') && cell.get('type').startsWith('workflow')) {
+            // Apply a class that we can target with CSS
+            const view = cell.findView(paper);
+            if (view && view.el) {
+                view.el.classList.add('workflow-element-shadow');
+            }
+        }
+    });
+
+    // Add another style for the class-based approach
+    const extraStyle = document.createElement('style');
+    extraStyle.textContent = `
+        .workflow-element-shadow {
+            filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.35));
+        }
+    `;
+    document.head.appendChild(extraStyle);
+
     return true;
 }
