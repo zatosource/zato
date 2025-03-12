@@ -1,4 +1,4 @@
-// connections.js - Connection points and linking functionality with improved validation
+// connections.js - Minimalistic version that focuses only on port setup
 
 function setupConnectionPoints(paper, graph) {
     if (!paper || !graph) {
@@ -6,46 +6,18 @@ function setupConnectionPoints(paper, graph) {
         return;
     }
 
-    // Track connections that need to be flipped
-    let pendingFlip = null;
-
-    // Set default paper interactive settings for linking
-    paper.options.interactive = {
-        linkPinning: false,        // Don't allow links to be pinned in empty space
-        vertexAdd: false,          // Don't allow vertices to be added to links
-        vertexRemove: false,       // Don't allow vertices to be removed from links
-        arrowheadMove: true,       // Allow arrowheads to be moved to connect to elements
-        elementMove: true,         // Allow elements to be moved
-        addLinkFromMagnet: true    // CRITICAL: Allow links to be created from magnets
-    };
-
-    // Enable proper snap behavior for links
-    paper.options.snapLinks = {
-        radius: 20  // The distance within which links will snap to magnets
-    };
-
-    // Add CSS styles for visual feedback - MINIMAL CHANGES
-    const css = document.createElement('style');
-    css.textContent = `
-        /* Hide port labels by default */
-        .joint-port text {
-            display: none;
-        }
-    `;
-    document.head.appendChild(css);
+    console.log("Setting up minimal connection points...");
 
     // Set up connection validation
     paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
         try {
             // Don't allow connections to the same element
             if (sourceView.model.id === targetView.model.id) {
-                console.log("Connection rejected: Cannot connect to the same element");
                 return false;
             }
 
             // Only allow connections to magnets
             if (!targetMagnet || !sourceMagnet) {
-                console.log("Connection rejected: Both source and target must have magnets");
                 return false;
             }
 
@@ -80,53 +52,11 @@ function setupConnectionPoints(paper, graph) {
                 }
             }
 
-            // Case 1: Normal direction - output to input
+            // Only allow connections from output to input ports
             if (sourcePortGroup === 'out' && targetPortGroup === 'in') {
-                // Check if this would create a duplicate connection
-                const links = graph.getLinks();
-                const isDuplicate = links.some(link => {
-                    // Skip the link being currently moved (if any)
-                    if (paper.options._linkBeingReconnected &&
-                        link.id === paper.options._linkBeingReconnected) {
-                        return false;
-                    }
-
-                    const src = link.get('source');
-                    const tgt = link.get('target');
-
-                    // Check if this exact connection already exists
-                    return src && tgt &&
-                           src.id === sourceView.model.id && src.port === sourceMagnet.getAttribute('port') &&
-                           tgt.id === targetView.model.id && tgt.port === targetMagnet.getAttribute('port');
-                });
-
-                if (isDuplicate) {
-                    console.log("Connection rejected: Duplicate connection");
-                    return false;
-                }
-
-                console.log("Connection allowed: out -> in");
-                pendingFlip = null; // No need to flip
                 return true;
             }
 
-            // Case 2: Reverse direction - input to output (will be flipped)
-            if (sourcePortGroup === 'in' && targetPortGroup === 'out') {
-                console.log("Connection allowed (will be flipped): in -> out");
-
-                // Mark this connection for flipping
-                pendingFlip = {
-                    sourceId: sourceView.model.id,
-                    sourcePort: sourceMagnet.getAttribute('port'),
-                    targetId: targetView.model.id,
-                    targetPort: targetMagnet.getAttribute('port')
-                };
-
-                return true;
-            }
-
-            // Reject all other connection types
-            console.log(`Connection rejected: ${sourcePortGroup} -> ${targetPortGroup}`);
             return false;
         } catch (error) {
             console.error("Error in validateConnection:", error);
@@ -166,90 +96,9 @@ function setupConnectionPoints(paper, graph) {
         }
     };
 
-    // Track which link is being reconnected
-    paper.on('link:pointerdown', function(linkView, evt, x, y) {
-        // Only consider it a reconnection attempt if near an arrowhead
-        const isNearArrowhead = evt.target.classList.contains('marker-arrowhead');
-
-        if (isNearArrowhead) {
-            paper.options._linkBeingReconnected = linkView.model.id;
-
-            // Add visual feedback that link is being reconnected
-            linkView.model.attr({
-                line: {
-                    strokeWidth: 3,
-                    stroke: '#2196F3',
-                    strokeDasharray: '5,5'
-                }
-            });
-        }
-    });
-
-    // Clear tracking when pointer is released
-    paper.on('link:pointerup cell:pointerup blank:pointerup', function() {
-        // Find the link being reconnected (if any)
-        if (paper.options._linkBeingReconnected) {
-            const link = graph.getCell(paper.options._linkBeingReconnected);
-            if (link) {
-                // Reset link appearance
-                link.attr({
-                    line: {
-                        strokeWidth: 2,
-                        stroke: '#333333',
-                        strokeDasharray: ''
-                    }
-                });
-            }
-        }
-        paper.options._linkBeingReconnected = null;
-    });
-
-    // Add handler to flip connections immediately after they're connected
-    paper.on('link:connect', function(linkView) {
-        if (!pendingFlip) return;
-
-        const link = linkView.model;
-        const source = link.get('source');
-        const target = link.get('target');
-
-        // Check if this is the link we need to flip
-        if (source.id === pendingFlip.sourceId &&
-            target.id === pendingFlip.targetId) {
-
-            console.log("Flipping connection direction...");
-
-            try {
-                // Create a new link with reversed endpoints
-                const newLink = link.clone();
-                if (!newLink) {
-                    console.error("Failed to clone link for flipping");
-                    return;
-                }
-
-                // Set the source and target to be flipped
-                newLink.set('source', { id: pendingFlip.targetId, port: pendingFlip.targetPort });
-                newLink.set('target', { id: pendingFlip.sourceId, port: pendingFlip.sourcePort });
-
-                // Add the new link to the graph
-                paper.model.addCell(newLink);
-
-                // Remove the original link
-                link.remove();
-
-                console.log("Connection successfully flipped");
-            } catch (error) {
-                console.error("Error during connection flip:", error);
-            } finally {
-                // Reset the pending flip data
-                pendingFlip = null;
-            }
-        }
-    });
-
     // Handle dangling links (incomplete connections)
     paper.on('blank:pointerup', function() {
         removeDanglingLinks();
-        pendingFlip = null; // Reset on blank click
     });
 
     paper.on('cell:pointerup', function() {
@@ -393,5 +242,5 @@ function setupConnectionPoints(paper, graph) {
         }
     }
 
-    console.log("Connection points set up with reconnection capability");
+    console.log("Minimal connection points setup complete");
 }
