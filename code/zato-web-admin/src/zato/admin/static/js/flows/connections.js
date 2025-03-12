@@ -1,8 +1,8 @@
 // connections.js - Connection points and linking functionality with improved validation
 
-function setupConnectionPoints(paper) {
-    if (!paper) {
-        console.error("Paper object is not provided to setupConnectionPoints");
+function setupConnectionPoints(paper, graph) {
+    if (!paper || !graph) {
+        console.error("Paper or graph object not provided to setupConnectionPoints");
         return;
     }
 
@@ -23,6 +23,16 @@ function setupConnectionPoints(paper) {
     paper.options.snapLinks = {
         radius: 20  // The distance within which links will snap to magnets
     };
+
+    // Add CSS styles for visual feedback - MINIMAL CHANGES
+    const css = document.createElement('style');
+    css.textContent = `
+        /* Hide port labels by default */
+        .joint-port text {
+            display: none;
+        }
+    `;
+    document.head.appendChild(css);
 
     // Set up connection validation
     paper.options.validateConnection = function(sourceView, sourceMagnet, targetView, targetMagnet) {
@@ -72,6 +82,29 @@ function setupConnectionPoints(paper) {
 
             // Case 1: Normal direction - output to input
             if (sourcePortGroup === 'out' && targetPortGroup === 'in') {
+                // Check if this would create a duplicate connection
+                const links = graph.getLinks();
+                const isDuplicate = links.some(link => {
+                    // Skip the link being currently moved (if any)
+                    if (paper.options._linkBeingReconnected &&
+                        link.id === paper.options._linkBeingReconnected) {
+                        return false;
+                    }
+
+                    const src = link.get('source');
+                    const tgt = link.get('target');
+
+                    // Check if this exact connection already exists
+                    return src && tgt &&
+                           src.id === sourceView.model.id && src.port === sourceMagnet.getAttribute('port') &&
+                           tgt.id === targetView.model.id && tgt.port === targetMagnet.getAttribute('port');
+                });
+
+                if (isDuplicate) {
+                    console.log("Connection rejected: Duplicate connection");
+                    return false;
+                }
+
                 console.log("Connection allowed: out -> in");
                 pendingFlip = null; // No need to flip
                 return true;
@@ -132,6 +165,44 @@ function setupConnectionPoints(paper) {
             return false; // Reject on error
         }
     };
+
+    // Track which link is being reconnected
+    paper.on('link:pointerdown', function(linkView, evt, x, y) {
+        // Only consider it a reconnection attempt if near an arrowhead
+        const isNearArrowhead = evt.target.classList.contains('marker-arrowhead');
+
+        if (isNearArrowhead) {
+            paper.options._linkBeingReconnected = linkView.model.id;
+
+            // Add visual feedback that link is being reconnected
+            linkView.model.attr({
+                line: {
+                    strokeWidth: 3,
+                    stroke: '#2196F3',
+                    strokeDasharray: '5,5'
+                }
+            });
+        }
+    });
+
+    // Clear tracking when pointer is released
+    paper.on('link:pointerup cell:pointerup blank:pointerup', function() {
+        // Find the link being reconnected (if any)
+        if (paper.options._linkBeingReconnected) {
+            const link = graph.getCell(paper.options._linkBeingReconnected);
+            if (link) {
+                // Reset link appearance
+                link.attr({
+                    line: {
+                        strokeWidth: 2,
+                        stroke: '#333333',
+                        strokeDasharray: ''
+                    }
+                });
+            }
+        }
+        paper.options._linkBeingReconnected = null;
+    });
 
     // Add handler to flip connections immediately after they're connected
     paper.on('link:connect', function(linkView) {
@@ -211,22 +282,6 @@ function setupConnectionPoints(paper) {
                 }
             }
         });
-
-        // Add CSS styles for port labels
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Hide port labels by default */
-            .joint-port text {
-                opacity: 0;
-                transition: opacity 0.2s;
-            }
-
-            /* Show port labels on hover */
-            .joint-port:hover text {
-                opacity: 1;
-            }
-        `;
-        document.head.appendChild(style);
     }
 
     // Add default ports to the element
@@ -337,4 +392,6 @@ function setupConnectionPoints(paper) {
             ]);
         }
     }
+
+    console.log("Connection points set up with reconnection capability");
 }
