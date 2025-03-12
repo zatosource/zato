@@ -1,4 +1,4 @@
-// main.js - Main application initialization and setup
+// main.js - Main application initialization and setup with shadow filter
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
@@ -51,27 +51,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Define SVG filters for shadow effects
+        setupShadowFilters(paper);
+
         // Enhance the paper's interactive settings for better snapping behavior
         paper.options.snapLinks = {
             radius: 20  // The distance within which a link end will snap to a magnet
         };
 
-        // Create Selection instance and initialize modular components
+        // Create Selection instance
         var selection = new Selection(graph, paper);
-
-        // Initialize rubber-band selection functionality
-        if (typeof initRubberBandSelection === 'function') {
-            initRubberBandSelection(selection);
-        } else {
-            console.warn('initRubberBandSelection function not available');
-        }
-
-        // Initialize group operations functionality
-        if (typeof initGroupOperations === 'function') {
-            initGroupOperations(selection);
-        } else {
-            console.warn('initGroupOperations function not available');
-        }
 
         // Pan mode
         var isPanning = false;
@@ -287,21 +276,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event handler for cleanup on page unload
         window.addEventListener('beforeunload', function() {
-            // Clean up all selection components
-            if (selection) {
-                // Core cleanup
-                if (selection.destroy) {
-                    selection.destroy();
-                }
-
-                // Module-specific cleanup
-                if (typeof cleanupRubberBandSelection === 'function') {
-                    cleanupRubberBandSelection(selection);
-                }
-
-                if (typeof cleanupGroupOperations === 'function') {
-                    cleanupGroupOperations(selection);
-                }
+            // Clean up selection to prevent memory leaks
+            if (selection && selection.destroy) {
+                selection.destroy();
             }
 
             // Remove event listeners
@@ -312,3 +289,22 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Failed to initialize workflow editor: ' + error.message);
     }
 });
+
+// Define SVG filters for shadow effects
+function setupShadowFilters(paper) {
+    // Add CSS-based shadow styles instead of SVG filters
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+        .joint-element .joint-cell path,
+        .joint-element .joint-cell rect,
+        .joint-element .joint-cell circle,
+        .joint-element .joint-cell ellipse,
+        .joint-element .joint-cell polygon {
+            filter: drop-shadow(3px 3px 3px rgba(0,0,0,0.3));
+            transition: filter 0.3s;
+        }
+    `;
+    document.head.appendChild(styleElement);
+
+    console.log("CSS-based shadows applied");
+    }
