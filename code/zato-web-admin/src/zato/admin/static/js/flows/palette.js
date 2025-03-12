@@ -22,37 +22,32 @@ function setupDraggablePalette(graph, paper) {
     let dragType = null;
 
     // Function to create element based on type
-    function createElementByType(type) {
-        let element;
+function createElementByType(type) {
+    let element;
 
-        switch (type) {
-            case 'start':
-                element = new joint.shapes.workflow.Start();
-                break;
-            case 'stop':
-                element = new joint.shapes.workflow.Stop();
-                break;
-            case 'service':
-                element = new joint.shapes.workflow.Service();
-                break;
-            case 'parallel':
-                element = new joint.shapes.workflow.Parallel();
-                break;
-            case 'forkjoin':
-                element = new joint.shapes.workflow.ForkJoin();
-                break;
-            default:
-                console.warn("Unknown element type:", type);
-                return null;
-        }
-
-    // Remove filter reference to avoid errors - it will be applied by CSS instead
-    if (element) {
-        element.attr('body/filter', '');
+    switch (type) {
+        case 'start':
+            element = new joint.shapes.workflow.Start();
+            break;
+        case 'stop':
+            element = new joint.shapes.workflow.Stop();
+            break;
+        case 'service':
+            element = new joint.shapes.workflow.Service();
+            break;
+        case 'parallel':
+            element = new joint.shapes.workflow.Parallel();
+            break;
+        case 'forkjoin':
+            element = new joint.shapes.workflow.ForkJoin();
+            break;
+        default:
+            console.warn("Unknown element type:", type);
+            return null;
     }
 
-        return element;
-    }
+    return element;
+}
 
     // Add element to center of paper
     function addElementToCenter() {
@@ -121,32 +116,39 @@ function setupDraggablePalette(graph, paper) {
     }
 
     // Add element at specified position
-    function addElementAtPosition(element, x, y) {
-        try {
-            // Adjust position to center the element
-            const size = element.get('size');
-            const position = {
-                x: x - (size.width / 2),
-                y: y - (size.height / 2)
-            };
+// palette.js - Updated addElementAtPosition function
+function addElementAtPosition(element, x, y) {
+    try {
+        // Adjust position to center the element
+        const size = element.get('size');
+        const position = {
+            x: x - (size.width / 2),
+            y: y - (size.height / 2)
+        };
 
-            // Make sure position is valid
-            if (isNaN(position.x) || isNaN(position.y)) {
-                console.warn("Invalid position calculated, using fallback");
-                position.x = 100;
-                position.y = 100;
-            }
-
-            // Position the element and add to graph
-            element.position(position.x, position.y);
-            graph.addCell(element);
-
-            console.log('Element added at position:', position);
-        } catch (error) {
-            console.error("Error adding element at position:", error);
+        // Make sure position is valid
+        if (isNaN(position.x) || isNaN(position.y)) {
+            console.warn("Invalid position calculated, using fallback");
+            position.x = 100;
+            position.y = 100;
         }
-    }
 
+        // Position the element and add to graph
+        element.position(position.x, position.y);
+        graph.addCell(element);
+
+        // Apply shadow filter if it exists
+        setTimeout(() => {
+            if (document.getElementById('element-shadow')) {
+                element.attr('body/filter', { name: 'element-shadow' });
+            }
+        }, 50); // Small delay to ensure filter is ready
+
+        console.log('Element added at position:', position);
+    } catch (error) {
+        console.error("Error adding element at position:", error);
+    }
+}
     // Process each palette item
     paletteItems.forEach(function(item) {
         // Click handler - add element to center of paper
