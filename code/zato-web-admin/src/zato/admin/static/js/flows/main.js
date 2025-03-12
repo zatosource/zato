@@ -1,4 +1,4 @@
-// main.js - Main application initialization and setup with shadow filter
+// main.js - Updated with palette setup call
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             },
-            // Set initial interactive settings - these may be enhanced by setupConnectionPoints
+            // Initial interactive settings - will be enhanced by setupConnectionPoints
             interactive: {
                 linkMove: true,
                 elementMove: true,
@@ -115,97 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Zoom controls
-        var zoomInButton = document.getElementById('zoom-in');
-        var zoomOutButton = document.getElementById('zoom-out');
-        var zoomToFitButton = document.getElementById('zoom-to-fit');
-
-        if (zoomInButton) {
-            zoomInButton.addEventListener('click', function() {
-                var currentScale = paper.scale().sx;
-                paper.scale(currentScale * 1.2);
-            });
-        }
-
-        if (zoomOutButton) {
-            zoomOutButton.addEventListener('click', function() {
-                var currentScale = paper.scale().sx;
-                paper.scale(currentScale * 0.8);
-            });
-        }
-
-        if (zoomToFitButton) {
-            zoomToFitButton.addEventListener('click', function() {
-                paper.scaleContentToFit({ padding: 50 });
-            });
-        }
-
-        // Initialize panning
-        paper.on('blank:pointerdown', function(evt, x, y) {
-            if (isPanning) {
-                var scale = paper.scale();
-                var originalPoint = { x: x * scale.sx, y: y * scale.sy };
-
-                document.onmousemove = function(e) {
-                    var dx = (e.clientX - originalPoint.x) / scale.sx;
-                    var dy = (e.clientY - originalPoint.y) / scale.sy;
-                    paper.translate(paper.translate().tx + dx, paper.translate().ty + dy);
-                };
-
-                document.onmouseup = function() {
-                    document.onmousemove = null;
-                    document.onmouseup = null;
-                };
-            }
-        });
-
-        // Save and load functionality
-        var saveButton = document.getElementById('save-graph');
-        var loadButton = document.getElementById('load-graph');
-        var clearButton = document.getElementById('clear-graph');
-
-        if (saveButton) {
-            saveButton.addEventListener('click', function() {
-                try {
-                    var jsonString = JSON.stringify(graph.toJSON());
-                    localStorage.setItem('workflow', jsonString);
-                    alert('Workflow diagram saved!');
-                } catch (error) {
-                    console.error('Error saving workflow:', error);
-                    alert('Failed to save workflow: ' + error.message);
-                }
-            });
-        }
-
-        if (loadButton) {
-            loadButton.addEventListener('click', function() {
-                try {
-                    var savedGraph = localStorage.getItem('workflow');
-                    if (savedGraph) {
-                        var parsedGraph = JSON.parse(savedGraph);
-                        graph.fromJSON(parsedGraph);
-                        alert('Workflow diagram loaded!');
-                    } else {
-                        alert('No saved workflow found!');
-                    }
-                } catch (error) {
-                    console.error('Error loading workflow:', error);
-                    alert('Failed to load workflow: ' + error.message);
-                }
-            });
-        }
-
-        if (clearButton) {
-            clearButton.addEventListener('click', function() {
-                if (confirm('Are you sure you want to clear the diagram?')) {
-                    graph.clear();
-                    if (selection && typeof selection.clear === 'function') {
-                        selection.clear(); // Clear selection as well
-                    }
-                }
-            });
-        }
-
         // Initialize custom shapes
         if (typeof initializeCustomShapes === 'function') {
             initializeCustomShapes();
@@ -213,11 +122,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('initializeCustomShapes function not available');
         }
 
-        // Make items draggable from palette
+        // Make items draggable from palette - ADD THIS LINE
         if (typeof setupDraggablePalette === 'function') {
             setupDraggablePalette(graph, paper);
         } else {
             console.warn('setupDraggablePalette function not available');
+        }
+
+        // Setup connection points for easier linking
+        if (typeof setupConnectionPoints === 'function') {
+            setupConnectionPoints(paper, graph);
+        } else {
+            console.warn('setupConnectionPoints function not available');
         }
 
         // Setup properties panel
@@ -225,13 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setupPropertiesPanel(graph, paper);
         } else {
             console.warn('setupPropertiesPanel function not available');
-        }
-
-        // Setup connection points for easier linking
-        if (typeof setupConnectionPoints === 'function') {
-            setupConnectionPoints(paper);
-        } else {
-            console.warn('setupConnectionPoints function not available');
         }
 
         // Add validation for workflow
@@ -291,34 +200,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Define SVG filters for shadow effects
-// main.js - Replace setupShadowFilters with CSS approach
 function setupShadowFilters(paper) {
     // Add CSS styles for shadows using more specific selectors
     const style = document.createElement('style');
-    style.textContent = ``;
-    document.head.appendChild(style);
-
-    console.log("Enhanced CSS-based shadows applied");
-
-    // Also add a fallback method to apply shadows directly to elements via attributes
-    paper.model.on('add', function(cell) {
-        if (cell.isElement() && cell.get('type') && cell.get('type').startsWith('workflow')) {
-            // Apply a class that we can target with CSS
-            const view = cell.findView(paper);
-            if (view && view.el) {
-                view.el.classList.add('workflow-element-shadow');
-            }
-        }
-    });
-
-    // Add another style for the class-based approach
-    const extraStyle = document.createElement('style');
-    extraStyle.textContent = `
-        .workflow-element-shadow {
+    style.textContent = `
+        .joint-element .joint-cell {
             filter: drop-shadow(2px 3px 4px rgba(0, 0, 0, 0.35));
         }
     `;
-    document.head.appendChild(extraStyle);
+    document.head.appendChild(style);
 
+    console.log("CSS-based shadows applied");
     return true;
 }
