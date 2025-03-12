@@ -291,20 +291,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Define SVG filters for shadow effects
+// main.js - Replace setupShadowFilters with CSS approach
 function setupShadowFilters(paper) {
-    // Add CSS-based shadow styles instead of SVG filters
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
-        .joint-element .joint-cell path,
-        .joint-element .joint-cell rect,
-        .joint-element .joint-cell circle,
-        .joint-element .joint-cell ellipse,
-        .joint-element .joint-cell polygon {
-            filter: drop-shadow(3px 3px 3px rgba(0,0,0,0.3));
-            transition: filter 0.3s;
+    // Add CSS styles for shadows
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Add box shadow to workflow elements */
+        .joint-element .joint-cell[data-type^="workflow"] {
+            filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Add shadow to specific element types */
+        [data-type="workflow.Start"] .joint-cell,
+        [data-type="workflow.Stop"] .joint-cell,
+        [data-type="workflow.Service"] .joint-cell,
+        [data-type="workflow.Parallel"] .joint-cell,
+        [data-type="workflow.ForkJoin"] .joint-cell {
+            filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.2));
         }
     `;
-    document.head.appendChild(styleElement);
+    document.head.appendChild(style);
 
     console.log("CSS-based shadows applied");
-    }
+    return true;
+}
