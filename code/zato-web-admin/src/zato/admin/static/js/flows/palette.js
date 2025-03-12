@@ -46,6 +46,11 @@ function setupDraggablePalette(graph, paper) {
                 return null;
         }
 
+    // Remove filter reference to avoid errors - it will be applied by CSS instead
+    if (element) {
+        element.attr('body/filter', '');
+    }
+
         return element;
     }
 
