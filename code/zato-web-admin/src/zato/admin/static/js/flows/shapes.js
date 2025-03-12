@@ -1,8 +1,18 @@
-// shapes.js - Custom shape definitions for workflow elements
+// shapes.js - Custom shape definitions for workflow elements with shadow effects
 
 function initializeCustomShapes() {
     // Custom shapes for workflow elements
     joint.shapes.workflow = {};
+
+    // Define SVG filter for shadows
+    const filterId = 'element-shadow';
+
+    // Check if the filter exists before using it
+    function getFilterReference() {
+        // If filter doesn't exist yet, return empty string to avoid errors
+        const filterExists = document.getElementById(filterId) !== null;
+        return filterExists ? { name: filterId } : '';
+    }
 
     // Start shape (octagonal)
     joint.shapes.workflow.Start = joint.shapes.standard.Path.extend({
@@ -14,7 +24,8 @@ function initializeCustomShapes() {
                     refD: 'M 20,0 L 60,0 L 80,20 L 80,60 L 60,80 L 20,80 L 0,60 L 0,20 Z', // Octagon shape
                     fill: '#DBEAFF',
                     stroke: '#0062FF',
-                    strokeWidth: 2
+                    strokeWidth: 2,
+                    filter: getFilterReference()
                 },
                 label: {
                     text: 'Start',
@@ -39,7 +50,8 @@ function initializeCustomShapes() {
                     refD: 'M 20,0 L 60,0 L 80,20 L 80,60 L 60,80 L 20,80 L 0,60 L 0,20 Z', // Octagon shape
                     fill: '#ECEAF4',
                     stroke: '#79709C',
-                    strokeWidth: 2
+                    strokeWidth: 2,
+                    filter: getFilterReference()
                 },
                 label: {
                     text: 'Stop',
@@ -65,7 +77,8 @@ function initializeCustomShapes() {
                     stroke: '#0F5F99',
                     strokeWidth: 2,
                     rx: 4,
-                    ry: 4
+                    ry: 4,
+                    filter: getFilterReference()
                 },
                 label: {
                     text: 'Service',
@@ -91,7 +104,8 @@ function initializeCustomShapes() {
                     stroke: '#C87533',
                     strokeWidth: 2,
                     rx: 4,
-                    ry: 4
+                    ry: 4,
+                    filter: getFilterReference()
                 },
                 label: {
                     text: 'Parallel',
@@ -117,7 +131,8 @@ function initializeCustomShapes() {
                     stroke: '#4F6700',
                     strokeWidth: 2,
                     rx: 4,
-                    ry: 4
+                    ry: 4,
+                    filter: getFilterReference()
                 },
                 label: {
                     text: 'Fork/Join',

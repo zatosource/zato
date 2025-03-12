@@ -1,4 +1,4 @@
-// properties.js - Properties panel for editing elements
+// properties.js - Properties panel for editing elements with shadow controls
 
 function setupPropertiesPanel(graph, paper) {
     var propertiesContent = document.getElementById('properties-content');
@@ -180,6 +180,9 @@ function setupPropertiesPanel(graph, paper) {
         });
         propertiesContent.appendChild(heightInput);
 
+        // Shadow Controls
+        addShadowControls(element);
+
         // Add element-specific properties based on the type
         if (elementType === 'workflow.Service') {
             addServiceProperties(element);
@@ -220,6 +223,51 @@ function setupPropertiesPanel(graph, paper) {
                 errorContainer.style.display = 'block';
             }
         });
+    }
+
+    // Add shadow controls to the properties panel
+    function addShadowControls(element) {
+        // Create a section for shadow properties
+        var shadowHeader = document.createElement('h4');
+        shadowHeader.innerText = 'Shadow';
+        shadowHeader.style.marginTop = '15px';
+        shadowHeader.style.marginBottom = '5px';
+        shadowHeader.style.borderBottom = '1px solid #ddd';
+        propertiesContent.appendChild(shadowHeader);
+
+        // Shadow toggle
+        var shadowToggleContainer = document.createElement('div');
+        shadowToggleContainer.style.display = 'flex';
+        shadowToggleContainer.style.alignItems = 'center';
+        shadowToggleContainer.style.marginBottom = '10px';
+        propertiesContent.appendChild(shadowToggleContainer);
+
+        var shadowToggleLabel = document.createElement('label');
+        shadowToggleLabel.innerText = 'Enable Shadow:';
+        shadowToggleLabel.style.marginRight = '10px';
+        shadowToggleContainer.appendChild(shadowToggleLabel);
+
+        var shadowToggle = document.createElement('input');
+        shadowToggle.type = 'checkbox';
+
+        // Check if the element currently has a shadow filter
+        var hasFilter = element.attr('body/filter') &&
+                       (element.attr('body/filter').name === 'element-shadow' ||
+                        element.attr('body/filter') === 'url(#element-shadow)');
+
+        shadowToggle.checked = hasFilter;
+
+        shadowToggle.addEventListener('change', function() {
+            if (this.checked) {
+                // Apply shadow filter
+                element.attr('body/filter', { name: 'element-shadow' });
+            } else {
+                // Remove shadow filter
+                element.attr('body/filter', '');
+            }
+        });
+
+        shadowToggleContainer.appendChild(shadowToggle);
     }
 
     function addServiceProperties(element) {
