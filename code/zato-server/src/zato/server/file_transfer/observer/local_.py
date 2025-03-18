@@ -42,7 +42,8 @@ class LocalObserver(BaseObserver):
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super().__init__(*args, **kwargs)
 
-        if self.manager.is_notify_preferred(self.channel_config):
+        # Always disregard inotify
+        if False and self.manager.is_notify_preferred(self.channel_config):
             self.set_local_inotify_observer()
         else:
             self.set_local_snapshot_observer()
