@@ -172,13 +172,19 @@ class CheckConfig(ManageCommand):
                     # This is fine, there is no process of that PID,
                     # which means that this PID does not belong to our component
                     # (because it doesn't belong to any process), so we may just delete this pidfile safely ..
-                    os.remove(pidfile)
+                    try:
+                        os.remove(pidfile)
+                    except Exception:
+                        pass
 
                     # .. but, if the component is load-balancer, we also need to delete its agent's pidfile.
                     # The assumption is that if the load-balancer is not running then so isn't its agent.
                     if log_file_marker == 'lb-agent':
                         lb_agent_pidfile = abspath(join(self.component_dir, 'zato-lb-agent.pid'))
-                        os.remove(lb_agent_pidfile)
+                        try:
+                            os.remove(lb_agent_pidfile)
+                        except Exception:
+                            pass
 
                 else:
                     #
@@ -208,13 +214,19 @@ class CheckConfig(ManageCommand):
                         raise Exception('Cannot proceed, found pidfile `{}`'.format(pidfile))
 
                     # This must be an unrelated process, so we can delete pidfile ..
-                    os.remove(pidfile)
+                    try:
+                        os.remove(pidfile)
+                    except Exception:
+                        pass
 
                     # .. again, if the component is load-balancer, we also need to delete its agent's pidfile.
                     # The assumption is that if the load-balancer is not running then so isn't its agent.
                     if log_file_marker == 'lb-agent':
                         lb_agent_pidfile = abspath(join(self.component_dir, 'zato-lb-agent.pid'))
-                        os.remove(lb_agent_pidfile)
+                        try:
+                            os.remove(lb_agent_pidfile)
+                        except Exception:
+                            pass
 
         if self.show_output:
             self.logger.info('No such pidfile `%s`, OK', pidfile)
