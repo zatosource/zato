@@ -120,8 +120,9 @@ class BaseObserver:
 
     def _start(self, observer_start_args:'any_') -> 'None':
 
-        snapshot_maker = source_type_to_snapshot_maker_class[self.source_type]
-        snapshot_maker = cast_('BaseRemoteSnapshotMaker', snapshot_maker)
+        snapshot_maker_class = source_type_to_snapshot_maker_class[self.source_type]
+        snapshot_maker_class = cast_('BaseRemoteSnapshotMaker', snapshot_maker_class)
+        snapshot_maker = snapshot_maker_class() # type: ignore
         snapshot_maker.connect()
 
         for path in self.path_list:
