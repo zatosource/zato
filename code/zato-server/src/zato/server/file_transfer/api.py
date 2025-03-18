@@ -201,7 +201,7 @@ class FileTransferAPI:
         observer_path_list = [] # type: anylist
 
         # .. have we preferred to use inotify for this channel ..
-        prefer_inotify = self.is_notify_preferred(config)
+        prefer_inotify = False and self.is_notify_preferred(config)
 
         # .. stop its main loop ..
         for observer in self.observer_list:
@@ -510,7 +510,7 @@ class FileTransferAPI:
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
                 # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
-                if self.is_notify_preferred(observer.channel_config):
+                if False and self.is_notify_preferred(observer.channel_config):
                     observer.start(self.observer_start_args)
 
                 # .. whereas snapshot observers are started here.
