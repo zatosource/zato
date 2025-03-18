@@ -35,7 +35,9 @@ def populate_environment_from_file(env_path:'str', *, to_delete:'strlistnone'=No
 
             # Optionally, we need to use print too because logging may not be configured yet ..
             if use_print:
-                print(msg % env_path)
+                # Ignore the default path
+                if env_path != '/opt/hot-deploy/enmasse/env.ini':
+                    print(msg % env_path)
 
             # .. but use logging nevertheless.
             logger.info(msg, env_path)
