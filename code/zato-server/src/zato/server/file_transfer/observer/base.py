@@ -122,7 +122,7 @@ class BaseObserver:
 
         snapshot_maker_class = source_type_to_snapshot_maker_class[self.source_type]
         snapshot_maker_class = cast_('BaseRemoteSnapshotMaker', snapshot_maker_class)
-        import traceback, inspect, sys; print(f"TRACEBACK: {''.join(traceback.format_stack()[:-1])}\nLOCAL VARIABLES: {dict([(k,v) for k,v in inspect.currentframe().f_locals.items() if not k.startswith('__')])}")
+        import traceback, inspect, sys; print(f"TRACEBACK:\n{''.join(traceback.format_stack())}\nLOCAL VARIABLES: {dict([(k,v) for k,v in inspect.currentframe().f_locals.items() if not k.startswith('__')])}"); sys.stdout.flush()
         snapshot_maker = snapshot_maker_class() # type: ignore
         snapshot_maker.connect()
 
