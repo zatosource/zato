@@ -465,6 +465,7 @@ class EnvironmentManager:
             'cython==3.1.0a1',
             'pyOpenSSL==23.0.0',
             'zato-ext-bunch==1.2',
+            'rule-engine==4.5.3',
         ]
 
         # This needs to be installed here rather than via requirements.txt
