@@ -120,19 +120,8 @@ class BaseObserver:
 
     def _start(self, observer_start_args:'any_') -> 'None':
 
-        snapshot_maker_class = source_type_to_snapshot_maker_class[self.source_type]
-        snapshot_maker_class = cast_('BaseRemoteSnapshotMaker', snapshot_maker_class)
-
-        try:
-            snapshot_maker = snapshot_maker_class() # type: ignore
-        except Exception as e:
-            import traceback, sys, inspect
-            print(f"ERROR: {repr(e)}")
-            print(f"TRACEBACK:\n{traceback.format_exc()}")
-            print(f"LOCAL VARIABLES: {dict([(k,v) for k,v in inspect.currentframe().f_locals.items() if not k.startswith('__')])}")
-            sys.stdout.flush()
-            raise  # Re-raise to let normal error handling continue
-
+        snapshot_maker = source_type_to_snapshot_maker_class[self.source_type]
+        snapshot_maker = cast_('BaseRemoteSnapshotMaker', snapshot_maker)
         snapshot_maker.connect()
 
         for path in self.path_list:
