@@ -36,8 +36,9 @@ ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 
 class GroupsManager:
 
-    def __init__(self, server:'ParallelServer') -> 'None':
+    def __init__(self, server:'ParallelServer', session:'any_'=None) -> 'None':
         self.server = server
+        self.session = session or self.server.odb.session
         self.cluster_id = self.server.cluster_id
 
 # ################################################################################################################################
@@ -45,7 +46,7 @@ class GroupsManager:
     def create_group(self, group_type:'str', group_name:'str') -> 'str':
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -70,7 +71,7 @@ class GroupsManager:
     def edit_group(self, group_id:'int', group_type:'str', group_name:'str') -> 'None':
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -89,7 +90,7 @@ class GroupsManager:
     def delete_group(self, group_id:'int') -> 'None':
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -113,7 +114,7 @@ class GroupsManager:
         out:'anylist' = []
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -137,7 +138,7 @@ class GroupsManager:
         out:'list_[Member]' = []
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -190,7 +191,7 @@ class GroupsManager:
             out[group_id] = 0
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             q = select([
                 ModelGenericObjectTable.c.parent_object_id,
@@ -230,7 +231,7 @@ class GroupsManager:
             })
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
@@ -254,7 +255,7 @@ class GroupsManager:
     def remove_members_from_group(self, group_id:'str', member_id_list:'strlist') -> 'None':
 
         # Work in a new SQL transaction ..
-        with closing(self.server.odb.session()) as session:
+        with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
