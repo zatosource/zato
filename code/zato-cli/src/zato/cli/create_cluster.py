@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# type: ignore
 
 # stdlib
 from copy import deepcopy
@@ -152,6 +154,9 @@ class Create(ZatoCommand):
             # SSO
             self.add_sso_endpoints(session, cluster)
 
+            # Rule Engine Security Group
+            self.add_rule_engine_security_group(session, cluster)
+
             # Run ODB post-processing tasks
             odb_post_process.run()
 
@@ -210,8 +215,7 @@ class Create(ZatoCommand):
 
         for url_path in (APISPEC.GENERIC_INVOKE_PATH,):
             channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http',
-                None, url_path, None, '', None, None,
-                merge_url_params_req=True, service=service, security=pubapi_sec,
+                None, url_path, None, '', None, None, merge_url_params_req=True, service=service, security=pubapi_sec,
                 cluster=cluster)
             session.add(channel)
 
@@ -972,5 +976,85 @@ class Create(ZatoCommand):
 
             session.add(service)
             session.add(channel)
+
+# ################################################################################################################################
+
+    def add_rule_engine_security_group(self, session, cluster):
+        """ Creates a security group for the rule engine and assigns the zato.ping service to test it.
+        """
+
+        # Zato imports
+        from zato.common.api import DATA_FORMAT, Groups
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service, APIKeySecurity
+        from zato.common.odb.model import GenericObject
+
+        # Find the existing zato.ping service
+        ping_service = session.query(Service).filter(
+            Service.name == 'zato.ping',
+            Service.cluster_id == cluster.id
+        ).first()
+
+        if not ping_service:
+            self.logger.warning('Could not find zato.ping service, skipping rule engine security group creation')
+            return
+
+        # Create a Basic Auth security definition for rule engine
+        basic_auth = HTTPBasicAuth(
+            None, 'rule-engine.basic-auth', True,
+            'rule-engine.user', 'Rule Engine Basic Auth', self.generate_password(), cluster)
+        session.add(basic_auth)
+
+        # Create an API Key security definition for rule engine
+        api_key = APIKeySecurity(
+            None, 'rule-engine.api-key', True, 'Rule Engine API Key',
+            self.generate_password(), cluster)
+        session.add(api_key)
+
+        # Create a security group for the rule engine
+        rule_engine_group = GenericObject(
+            cluster=cluster,
+            name='rule-engine',
+            subtype=Groups.TYPE.API_CLIENTS,
+            is_internal=False,
+            is_active=True,
+            cache_expiry=0,
+            size=0,
+            opaque1='Rule Engine Security Group'
+        )
+        session.add(rule_engine_group)
+
+        # Add the security definitions to the group
+        rule_engine_basic_auth_link = GenericObject(
+            cluster=cluster,
+            name='rule-engine.basic-auth',
+            subtype=Groups.MEMBERSHIP_TYPE.API_CLIENTS_SECURITY,
+            parent_id=rule_engine_group.id,
+            is_internal=False,
+            is_active=True,
+            cache_expiry=0,
+            size=0,
+            opaque1='rule-engine.basic-auth'
+        )
+        session.add(rule_engine_basic_auth_link)
+
+        rule_engine_api_key_link = GenericObject(
+            cluster=cluster,
+            name='rule-engine.api-key',
+            subtype=Groups.MEMBERSHIP_TYPE.API_CLIENTS_SECURITY,
+            parent_id=rule_engine_group.id,
+            is_internal=False,
+            is_active=True,
+            cache_expiry=0,
+            size=0,
+            opaque1='rule-engine.api-key'
+        )
+        session.add(rule_engine_api_key_link)
+
+        # Create a REST channel for the rule engine
+        rule_engine_channel = HTTPSOAP(
+            None, 'rule-engine.rest', True, True, 'channel',
+            'plain_http', None, '/api/rules{action}', None, '', None, DATA_FORMAT.JSON,
+            service=ping_service, cluster=cluster)
+        session.add(rule_engine_channel)
 
 # ################################################################################################################################
