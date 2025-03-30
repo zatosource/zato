@@ -972,7 +972,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if asbool(log_details):
 
                 # .. now, we need to have the correct file available ..
-                path = ['~', 'env', 'details', 'all-zato-env-details.json']
+                path = ['~', 'env', 'details', 'all-zato-env-details.txt']
                 path = os.path.join(*path)
                 path = os.path.expanduser(path)
 
