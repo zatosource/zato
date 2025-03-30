@@ -992,6 +992,7 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT, Groups, SEC_DEF_TYPE
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
         from zato.server.groups.base import GroupsManager
+        from json import dumps
 
         # Create a Basic Auth security definition for rule engine
         basic_auth_id = get_random_integer()
@@ -1021,11 +1022,18 @@ class Create(ZatoCommand):
         # Add the security definitions to the group
         groups_manager.add_members_to_group(group_id, member_id_list)
 
+        # Create the security_groups_ctx structure in opaque1
+        opaque1_data = {
+            'security_groups': [group_id],
+        }
+
         # Create a REST channel for the rule engine
         rule_engine_channel = HTTPSOAP(
             None, 'Rule engine API', True, True, 'channel',
             'plain_http', None, '/api/rules{action}', None, '', None, DATA_FORMAT.JSON,
             service=ping_service, cluster=cluster)
+        rule_engine_channel.opaque1 = dumps(opaque1_data) # type: ignore
+
         session.add(rule_engine_channel)
 
 
