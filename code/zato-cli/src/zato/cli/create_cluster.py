@@ -161,7 +161,7 @@ class Create(ZatoCommand):
             self.add_sso_endpoints(session, cluster)
 
             # Rule Engine Security Group
-            self.add_rule_engine_security_group(session, cluster, ping_service)
+            self.add_rule_engine_configuration(session, cluster, ping_service)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -986,11 +986,9 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_rule_engine_security_group(self, session, cluster, ping_service):
-        """ Creates a security group for the rule engine and assigns the zato.ping service to test it.
-        """
+    def add_rule_engine_configuration(self, session, cluster, ping_service):
 
-        # Zato imports
+        # Zato
         from zato.common.api import DATA_FORMAT, Groups, SEC_DEF_TYPE
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
         from zato.server.groups.base import GroupsManager
@@ -1002,16 +1000,6 @@ class Create(ZatoCommand):
             basic_auth_id, 'Rule engine default user', True, 'rules', 'Rule engine', basic_auth_password, cluster)
         session.add(basic_auth)
 
-        # Create a REST channel for the rule engine
-        rule_engine_channel = HTTPSOAP(
-            None, 'Rule engine API', True, True, 'channel',
-            'plain_http', None, '/api/rules{action}', None, '', None, DATA_FORMAT.JSON,
-            service=ping_service, cluster=cluster)
-        session.add(rule_engine_channel)
-
-        # Flush the session to get IDs
-        session.flush()
-
         class FakeServer:
             cluster_id = 1
 
@@ -1022,7 +1010,8 @@ class Create(ZatoCommand):
         groups_manager = GroupsManager(FakeServer, fake_server_session)
 
         # Create a security group for the rule engine
-        group_id = groups_manager.create_group(Groups.Type.API_Clients, 'Rule engine API users')
+        group_name = 'Rule engine API users'
+        group_id = groups_manager.create_group(Groups.Type.API_Clients, group_name)
 
         # Format member IDs for the group
         member_id_list = [
@@ -1031,5 +1020,13 @@ class Create(ZatoCommand):
 
         # Add the security definitions to the group
         groups_manager.add_members_to_group(group_id, member_id_list)
+
+        # Create a REST channel for the rule engine
+        rule_engine_channel = HTTPSOAP(
+            None, 'Rule engine API', True, True, 'channel',
+            'plain_http', None, '/api/rules{action}', None, '', None, DATA_FORMAT.JSON,
+            service=ping_service, cluster=cluster)
+        session.add(rule_engine_channel)
+
 
 # ################################################################################################################################
