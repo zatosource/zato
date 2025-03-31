@@ -244,5 +244,41 @@ def precompute_common_expressions(common_expressions:'list[str]', data:'anydict'
     logger = getLogger(__name__)
     logger.info(f'Precomputing {len(common_expressions)} common expressions')
 
+def _extract_field_names(expression:'ExpressionBase') -> 'set[str]':
+    """ Extract all field names accessed by an expression.
+    """
+    field_names = set()
+    
+    # If this is a field reference, add it
+    if hasattr(expression, 'attribute') and hasattr(expression, 'thing'):
+        if expression.thing == 'self' and isinstance(expression.attribute, str):
+            field_names.add(expression.attribute)
+    
+    # If this has left and right components, process them recursively
+    if hasattr(expression, 'left'):
+        field_names.update(_extract_field_names(expression.left))
+    
+    if hasattr(expression, 'right'):
+        field_names.update(_extract_field_names(expression.right))
+    
+    return field_names
+
+def build_field_index(rules:'dict_[str, Rule]') -> 'dict_[str, set[str]]':
+    """ Build an index of rules by the fields they access.
+    """
+    field_to_rules = {}
+    
+    for rule_name, rule in rules.items():
+        # Extract all fields accessed by this rule
+        fields = _extract_field_names(rule.when_impl.statement.expression)
+        
+        # Add this rule to the index for each field it accesses
+        for field in fields:
+            if field not in field_to_rules:
+                field_to_rules[field] = set()
+            field_to_rules[field].add(rule_name)
+    
+    return field_to_rules
+
 # ################################################################################################################################
 # ################################################################################################################################
