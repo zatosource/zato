@@ -262,60 +262,75 @@ def main() -> 'None':
     
     # Define the configurations for the files to generate
     configs = [
+        # 10 rules files with 10 conditions
+        (10, 10, 1, 'perf_010_rules_010_conditions_001_common.zrules'),
+        (10, 10, 3, 'perf_010_rules_010_conditions_003_common.zrules'),
+        (10, 10, 5, 'perf_010_rules_010_conditions_005_common.zrules'),
+        (10, 10, 7, 'perf_010_rules_010_conditions_007_common.zrules'),
+        (10, 10, 9, 'perf_010_rules_010_conditions_009_common.zrules'),
+        
+        # 10 rules files with 5 conditions
+        (10, 5, 1, 'perf_010_rules_005_conditions_001_common.zrules'),
+        (10, 5, 3, 'perf_010_rules_005_conditions_003_common.zrules'),
+        
         # 30 rules files with 10 conditions
-        (30, 10, 1, 'perf_30_rules_10_conditions_1_common.zrules'),
-        (30, 10, 3, 'perf_30_rules_10_conditions_3_common.zrules'),
-        (30, 10, 5, 'perf_30_rules_10_conditions_5_common.zrules'),
-        (30, 10, 7, 'perf_30_rules_10_conditions_7_common.zrules'),
-        (30, 10, 9, 'perf_30_rules_10_conditions_9_common.zrules'),
-        
-        # 60 rules files with 10 conditions
-        (60, 10, 1, 'perf_60_rules_10_conditions_1_common.zrules'),
-        (60, 10, 3, 'perf_60_rules_10_conditions_3_common.zrules'),
-        (60, 10, 5, 'perf_60_rules_10_conditions_5_common.zrules'),
-        (60, 10, 7, 'perf_60_rules_10_conditions_7_common.zrules'),
-        (60, 10, 9, 'perf_60_rules_10_conditions_9_common.zrules'),
-        
-        # 100 rules files with 10 conditions
-        (100, 10, 1, 'perf_100_rules_10_conditions_1_common.zrules'),
-        (100, 10, 3, 'perf_100_rules_10_conditions_3_common.zrules'),
-        (100, 10, 5, 'perf_100_rules_10_conditions_5_common.zrules'),
-        (100, 10, 7, 'perf_100_rules_10_conditions_7_common.zrules'),
-        (100, 10, 9, 'perf_100_rules_10_conditions_9_common.zrules'),
-        
-        # 500 rules files with 10 conditions
-        (500, 10, 1, 'perf_500_rules_10_conditions_1_common.zrules'),
-        (500, 10, 3, 'perf_500_rules_10_conditions_3_common.zrules'),
-        (500, 10, 5, 'perf_500_rules_10_conditions_5_common.zrules'),
-        (500, 10, 7, 'perf_500_rules_10_conditions_7_common.zrules'),
-        (500, 10, 9, 'perf_500_rules_10_conditions_9_common.zrules'),
+        (30, 10, 1, 'perf_030_rules_010_conditions_001_common.zrules'),
+        (30, 10, 3, 'perf_030_rules_010_conditions_003_common.zrules'),
+        (30, 10, 5, 'perf_030_rules_010_conditions_005_common.zrules'),
+        (30, 10, 7, 'perf_030_rules_010_conditions_007_common.zrules'),
+        (30, 10, 9, 'perf_030_rules_010_conditions_009_common.zrules'),
         
         # 30 rules files with 5 conditions
-        (30, 5, 1, 'perf_30_rules_5_conditions_1_common.zrules'),
-        (30, 5, 3, 'perf_30_rules_5_conditions_3_common.zrules'),
+        (30, 5, 1, 'perf_030_rules_005_conditions_001_common.zrules'),
+        (30, 5, 3, 'perf_030_rules_005_conditions_003_common.zrules'),
+        
+        # 60 rules files with 10 conditions
+        (60, 10, 1, 'perf_060_rules_010_conditions_001_common.zrules'),
+        (60, 10, 3, 'perf_060_rules_010_conditions_003_common.zrules'),
+        (60, 10, 5, 'perf_060_rules_010_conditions_005_common.zrules'),
+        (60, 10, 7, 'perf_060_rules_010_conditions_007_common.zrules'),
+        (60, 10, 9, 'perf_060_rules_010_conditions_009_common.zrules'),
         
         # 60 rules files with 5 conditions
-        (60, 5, 1, 'perf_60_rules_5_conditions_1_common.zrules'),
-        (60, 5, 3, 'perf_60_rules_5_conditions_3_common.zrules'),
-        (60, 5, 5, 'perf_60_rules_5_conditions_5_common.zrules'),
+        (60, 5, 1, 'perf_060_rules_005_conditions_001_common.zrules'),
+        (60, 5, 3, 'perf_060_rules_005_conditions_003_common.zrules'),
+        (60, 5, 5, 'perf_060_rules_005_conditions_005_common.zrules'),
+        
+        # 100 rules files with 10 conditions
+        (100, 10, 1, 'perf_100_rules_010_conditions_001_common.zrules'),
+        (100, 10, 3, 'perf_100_rules_010_conditions_003_common.zrules'),
+        (100, 10, 5, 'perf_100_rules_010_conditions_005_common.zrules'),
+        (100, 10, 7, 'perf_100_rules_010_conditions_007_common.zrules'),
+        (100, 10, 9, 'perf_100_rules_010_conditions_009_common.zrules'),
         
         # 100 rules files with 5 conditions
-        (100, 5, 1, 'perf_100_rules_5_conditions_1_common.zrules'),
-        (100, 5, 3, 'perf_100_rules_5_conditions_3_common.zrules'),
-        (100, 5, 5, 'perf_100_rules_5_conditions_5_common.zrules'),
+        (100, 5, 1, 'perf_100_rules_005_conditions_001_common.zrules'),
+        (100, 5, 3, 'perf_100_rules_005_conditions_003_common.zrules'),
+        (100, 5, 5, 'perf_100_rules_005_conditions_005_common.zrules'),
+        
+        # 500 rules files with 10 conditions
+        (500, 10, 1, 'perf_500_rules_010_conditions_001_common.zrules'),
+        (500, 10, 3, 'perf_500_rules_010_conditions_003_common.zrules'),
+        (500, 10, 5, 'perf_500_rules_010_conditions_005_common.zrules'),
+        (500, 10, 7, 'perf_500_rules_010_conditions_007_common.zrules'),
+        (500, 10, 9, 'perf_500_rules_010_conditions_009_common.zrules'),
         
         # 500 rules files with 5 conditions
-        (500, 5, 1, 'perf_500_rules_5_conditions_1_common.zrules'),
-        (500, 5, 3, 'perf_500_rules_5_conditions_3_common.zrules'),
-        (500, 5, 5, 'perf_500_rules_5_conditions_5_common.zrules'),
+        (500, 5, 1, 'perf_500_rules_005_conditions_001_common.zrules'),
+        (500, 5, 3, 'perf_500_rules_005_conditions_003_common.zrules'),
+        (500, 5, 5, 'perf_500_rules_005_conditions_005_common.zrules'),
     ]
     
     # Get the current directory
     current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     
+    # Create the perf directory if it doesn't exist
+    perf_dir = current_dir / 'perf'
+    perf_dir.mkdir(exist_ok=True)
+    
     # Generate each file
     for num_rules, total_conditions, common_conditions_count, filename in configs:
-        output_path = current_dir / filename
+        output_path = perf_dir / filename
         generate_rule_file(num_rules, total_conditions, common_conditions_count, output_path)
 
 if __name__ == '__main__':
