@@ -17,8 +17,8 @@ rules-tests:
 	cd $(CURDIR) && python -m pytest test/zato/common/rules -v -W ignore::DeprecationWarning
 
 rules-perf-tests:
-	echo "Running rule engine performance tests in zato-common"
-	cd $(CURDIR) && PYTHONPATH=$(CURDIR)/.. python test/zato/common/rules/test_perf_10_rules.py
+	@echo "Running rule engine performance tests in zato-common"
+	cd $(CURDIR) && PYTHONPATH=$(CURDIR)/.. python test/zato/common/rules/test_perf.py
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)
