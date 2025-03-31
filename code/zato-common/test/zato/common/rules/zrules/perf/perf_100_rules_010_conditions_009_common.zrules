@@ -18,7 +18,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    support_tickets_open < 5                            # Condition 010
+    support_tickets_open < 5                            # Condition 101
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -43,7 +43,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    usage_decline_months >= high_risk_threshold                            # Condition 010
+    usage_decline_months >= high_risk_threshold                            # Condition 102
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -68,7 +68,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    upgrade_eligibility_score > 7                            # Condition 010
+    upgrade_eligibility_score > 7                            # Condition 103
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -93,7 +93,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    peak_usage_percentage > capacity_threshold                            # Condition 010
+    peak_usage_percentage > capacity_threshold                            # Condition 104
 then
 credit_percentage = 15
     apology_communication = true
@@ -118,7 +118,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    outage_duration_minutes > min_outage_minutes                            # Condition 010
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -143,7 +143,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    services_subscribed < 3                            # Condition 010
+    services_subscribed < 3                            # Condition 106
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -169,7 +169,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    equipment_age_months > 24                            # Condition 010
+    equipment_age_months > 24                            # Condition 107
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -194,7 +194,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    current_platform in legacy_platforms                            # Condition 010
+    current_platform in legacy_platforms                            # Condition 108
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -219,7 +219,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    contract_end_days < 90                            # Condition 010
+    contract_end_days < 90                            # Condition 109
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -245,7 +245,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_industry in iot_compatible_industries                            # Condition 010
+    customer_industry in iot_compatible_industries                            # Condition 110
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -271,7 +271,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    billing_complaints > 0                            # Condition 010
+    billing_complaints > 0                            # Condition 111
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -296,7 +296,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    churn_prediction_score > 0.7                            # Condition 010
+    churn_prediction_score > 0.7                            # Condition 112
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -321,7 +321,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    bandwidth_utilization > 80                            # Condition 010
+    bandwidth_utilization > 80                            # Condition 113
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -346,7 +346,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    credit_score > 700                            # Condition 010
+    credit_score > 700                            # Condition 114
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -371,7 +371,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    business_customers_affected > 50                            # Condition 010
+    business_customers_affected > 50                            # Condition 115
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -396,7 +396,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    network_segment_congestion == true                            # Condition 010
+    network_segment_congestion == true                            # Condition 116
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -422,7 +422,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    projected_growth_rate > 5                            # Condition 010
+    projected_growth_rate > 5                            # Condition 117
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -447,7 +447,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    business_impact_level > 2                            # Condition 010
+    business_impact_level > 2                            # Condition 118
 then
 compliance_review = 'required'
     documentation_update = true
@@ -472,7 +472,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    fault_responsibility == 'provider'                            # Condition 010
+    fault_responsibility == 'provider'                            # Condition 119
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -498,7 +498,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    sla_breach == true                            # Condition 010
+    sla_breach == true                            # Condition 120
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -524,7 +524,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    cross_sell_propensity > 0.6                            # Condition 010
+    cross_sell_propensity > 0.6                            # Condition 121
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -549,7 +549,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    last_upsell_attempt_days > 90                            # Condition 010
+    last_upsell_attempt_days > 90                            # Condition 122
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -574,7 +574,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_usage_complementary == true                            # Condition 010
+    service_usage_complementary == true                            # Condition 123
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -599,7 +599,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    hardware_compatibility_new_features == false                            # Condition 010
+    hardware_compatibility_new_features == false                            # Condition 124
 then
 credit_percentage = 15
     apology_communication = true
@@ -624,7 +624,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_calls_equipment > 1                            # Condition 010
+    service_calls_equipment > 1                            # Condition 125
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -649,7 +649,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    has_custom_integrations == false                            # Condition 010
+    has_custom_integrations == false                            # Condition 126
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -675,7 +675,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    migration_complexity_score < 7                            # Condition 010
+    migration_complexity_score < 7                            # Condition 127
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -700,7 +700,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    competitive_pressure_score > 3                            # Condition 010
+    competitive_pressure_score > 3                            # Condition 128
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -725,7 +725,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_lifetime_value > 50000                            # Condition 010
+    customer_lifetime_value > 50000                            # Condition 129
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -751,7 +751,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    data_service_subscribed == true                            # Condition 010
+    data_service_subscribed == true                            # Condition 130
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -777,7 +777,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    digital_transformation_score > 6                            # Condition 010
+    digital_transformation_score > 6                            # Condition 131
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -802,7 +802,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    monthly_data_usage > 500                            # Condition 010
+    monthly_data_usage > 500                            # Condition 132
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -827,7 +827,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    technology_adoption_score > 7                            # Condition 010
+    technology_adoption_score > 7                            # Condition 133
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -852,7 +852,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    priority_support_eligible == true                            # Condition 010
+    priority_support_eligible == true                            # Condition 134
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -877,7 +877,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    critical_business_process == true                            # Condition 010
+    critical_business_process == true                            # Condition 135
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -902,7 +902,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    dedicated_support_eligible == true                            # Condition 010
+    dedicated_support_eligible == true                            # Condition 136
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -928,7 +928,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    satisfaction_score < 7                            # Condition 010
+    satisfaction_score < 7                            # Condition 137
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -953,7 +953,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    retention_score < 6                            # Condition 010
+    retention_score < 6                            # Condition 138
 then
 compliance_review = 'required'
     documentation_update = true
@@ -978,7 +978,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    competitor_mentions_support > 0                            # Condition 010
+    competitor_mentions_support > 0                            # Condition 139
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -1004,7 +1004,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    payment_method == 'auto'                            # Condition 010
+    payment_method == 'auto'                            # Condition 140
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -1030,7 +1030,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    growth_trajectory_positive == true                            # Condition 010
+    growth_trajectory_positive == true                            # Condition 141
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -1055,7 +1055,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    payment_history_months > 12                            # Condition 010
+    payment_history_months > 12                            # Condition 142
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -1080,7 +1080,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_complaints_capacity > 10                            # Condition 010
+    customer_complaints_capacity > 10                            # Condition 143
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -1105,7 +1105,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    last_upgrade_months > 12                            # Condition 010
+    last_upgrade_months > 12                            # Condition 144
 then
 credit_percentage = 15
     apology_communication = true
@@ -1130,7 +1130,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_reported_issue == true                            # Condition 010
+    customer_reported_issue == true                            # Condition 145
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -1155,7 +1155,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    multiple_services_affected == true                            # Condition 010
+    multiple_services_affected == true                            # Condition 146
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -1181,7 +1181,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_affected == 'critical'                            # Condition 010
+    service_affected == 'critical'                            # Condition 147
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -1206,7 +1206,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_growth_phase == 'expansion'                            # Condition 010
+    customer_growth_phase == 'expansion'                            # Condition 148
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -1231,7 +1231,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    contract_remaining_months > 12                            # Condition 010
+    contract_remaining_months > 12                            # Condition 149
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -1257,7 +1257,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    current_equipment_model_discontinued == true                            # Condition 010
+    current_equipment_model_discontinued == true                            # Condition 150
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -1283,7 +1283,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    monthly_spend > 2000                            # Condition 010
+    monthly_spend > 2000                            # Condition 151
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -1308,7 +1308,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    upgrade_program_eligible == true                            # Condition 010
+    upgrade_program_eligible == true                            # Condition 152
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -1333,7 +1333,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    platform_support_end_months < 12                            # Condition 010
+    platform_support_end_months < 12                            # Condition 153
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -1358,7 +1358,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_compatibility_new_platform == true                            # Condition 010
+    service_compatibility_new_platform == true                            # Condition 154
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -1383,7 +1383,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    technology_refresh_budget_approved == true                            # Condition 010
+    technology_refresh_budget_approved == true                            # Condition 155
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -1408,7 +1408,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    market_share_strategic_account == true                            # Condition 010
+    market_share_strategic_account == true                            # Condition 156
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -1434,7 +1434,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    price_sensitivity_score > 7                            # Condition 010
+    price_sensitivity_score > 7                            # Condition 157
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -1459,7 +1459,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    renewal_propensity_score < 0.7                            # Condition 010
+    renewal_propensity_score < 0.7                            # Condition 158
 then
 compliance_review = 'required'
     documentation_update = true
@@ -1484,7 +1484,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    subscription_type in premium_subscription_types                            # Condition 010
+    subscription_type in premium_subscription_types                            # Condition 159
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -1510,7 +1510,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    competitor_iot_mentions > 0                            # Condition 010
+    competitor_iot_mentions > 0                            # Condition 160
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -1536,7 +1536,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    support_tickets_open < 5                            # Condition 010
+    support_tickets_open < 5                            # Condition 101
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -1561,7 +1561,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    usage_decline_months >= high_risk_threshold                            # Condition 010
+    usage_decline_months >= high_risk_threshold                            # Condition 102
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -1586,7 +1586,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    upgrade_eligibility_score > 7                            # Condition 010
+    upgrade_eligibility_score > 7                            # Condition 103
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -1611,7 +1611,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    peak_usage_percentage > capacity_threshold                            # Condition 010
+    peak_usage_percentage > capacity_threshold                            # Condition 104
 then
 credit_percentage = 15
     apology_communication = true
@@ -1636,7 +1636,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    outage_duration_minutes > min_outage_minutes                            # Condition 010
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -1661,7 +1661,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    services_subscribed < 3                            # Condition 010
+    services_subscribed < 3                            # Condition 106
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -1687,7 +1687,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    equipment_age_months > 24                            # Condition 010
+    equipment_age_months > 24                            # Condition 107
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -1712,7 +1712,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    current_platform in legacy_platforms                            # Condition 010
+    current_platform in legacy_platforms                            # Condition 108
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -1737,7 +1737,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    contract_end_days < 90                            # Condition 010
+    contract_end_days < 90                            # Condition 109
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -1763,7 +1763,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_industry in iot_compatible_industries                            # Condition 010
+    customer_industry in iot_compatible_industries                            # Condition 110
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -1789,7 +1789,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    billing_complaints > 0                            # Condition 010
+    billing_complaints > 0                            # Condition 111
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -1814,7 +1814,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    churn_prediction_score > 0.7                            # Condition 010
+    churn_prediction_score > 0.7                            # Condition 112
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -1839,7 +1839,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    bandwidth_utilization > 80                            # Condition 010
+    bandwidth_utilization > 80                            # Condition 113
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -1864,7 +1864,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    credit_score > 700                            # Condition 010
+    credit_score > 700                            # Condition 114
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -1889,7 +1889,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    business_customers_affected > 50                            # Condition 010
+    business_customers_affected > 50                            # Condition 115
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -1914,7 +1914,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    network_segment_congestion == true                            # Condition 010
+    network_segment_congestion == true                            # Condition 116
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -1940,7 +1940,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    projected_growth_rate > 5                            # Condition 010
+    projected_growth_rate > 5                            # Condition 117
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -1965,7 +1965,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    business_impact_level > 2                            # Condition 010
+    business_impact_level > 2                            # Condition 118
 then
 compliance_review = 'required'
     documentation_update = true
@@ -1990,7 +1990,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    fault_responsibility == 'provider'                            # Condition 010
+    fault_responsibility == 'provider'                            # Condition 119
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -2016,7 +2016,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    sla_breach == true                            # Condition 010
+    sla_breach == true                            # Condition 120
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -2042,7 +2042,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    cross_sell_propensity > 0.6                            # Condition 010
+    cross_sell_propensity > 0.6                            # Condition 121
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -2067,7 +2067,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    last_upsell_attempt_days > 90                            # Condition 010
+    last_upsell_attempt_days > 90                            # Condition 122
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -2092,7 +2092,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_usage_complementary == true                            # Condition 010
+    service_usage_complementary == true                            # Condition 123
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -2117,7 +2117,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    hardware_compatibility_new_features == false                            # Condition 010
+    hardware_compatibility_new_features == false                            # Condition 124
 then
 credit_percentage = 15
     apology_communication = true
@@ -2142,7 +2142,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    service_calls_equipment > 1                            # Condition 010
+    service_calls_equipment > 1                            # Condition 125
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -2167,7 +2167,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    has_custom_integrations == false                            # Condition 010
+    has_custom_integrations == false                            # Condition 126
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -2193,7 +2193,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    migration_complexity_score < 7                            # Condition 010
+    migration_complexity_score < 7                            # Condition 127
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -2218,7 +2218,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    competitive_pressure_score > 3                            # Condition 010
+    competitive_pressure_score > 3                            # Condition 128
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -2243,7 +2243,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    customer_lifetime_value > 50000                            # Condition 010
+    customer_lifetime_value > 50000                            # Condition 129
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -2269,7 +2269,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    data_service_subscribed == true                            # Condition 010
+    data_service_subscribed == true                            # Condition 130
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -2295,7 +2295,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    digital_transformation_score > 6                            # Condition 010
+    digital_transformation_score > 6                            # Condition 131
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -2320,7 +2320,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    monthly_data_usage > 500                            # Condition 010
+    monthly_data_usage > 500                            # Condition 132
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -2345,7 +2345,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    technology_adoption_score > 7                            # Condition 010
+    technology_adoption_score > 7                            # Condition 133
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -2370,7 +2370,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    priority_support_eligible == true                            # Condition 010
+    priority_support_eligible == true                            # Condition 134
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -2395,7 +2395,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    critical_business_process == true                            # Condition 010
+    critical_business_process == true                            # Condition 135
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -2420,7 +2420,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    dedicated_support_eligible == true                            # Condition 010
+    dedicated_support_eligible == true                            # Condition 136
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -2446,7 +2446,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    satisfaction_score < 7                            # Condition 010
+    satisfaction_score < 7                            # Condition 137
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -2471,7 +2471,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    retention_score < 6                            # Condition 010
+    retention_score < 6                            # Condition 138
 then
 compliance_review = 'required'
     documentation_update = true
@@ -2496,7 +2496,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    competitor_mentions_support > 0                            # Condition 010
+    competitor_mentions_support > 0                            # Condition 139
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -2522,7 +2522,7 @@ when
     service_level == 'premium' and                      # Condition 007
     subscription_months > min_subscription_months and                      # Condition 008
     usage_percentage > 75 and                      # Condition 009
-    payment_method == 'auto'                            # Condition 010
+    payment_method == 'auto'                            # Condition 140
 then
 support_priority = 'high'
     response_time_hours = 2

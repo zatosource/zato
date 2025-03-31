@@ -226,11 +226,20 @@ def generate_rule_file(num_rules:'int', total_conditions:'int', common_condition
         # Format the conditions with proper comments
         conditions_text = ''
         for i, cond in enumerate(all_conditions):
+            # Determine the actual condition number based on the condition's position in the original lists
+            if i < common_conditions_count:
+                # For common conditions, use the original index + 1 (1-based indexing)
+                condition_num = i + 1
+            else:
+                # For unique conditions, use the original index + 101 (to start at 101)
+                unique_idx = unique_start_idx + (i - common_conditions_count)
+                condition_num = unique_idx + 101
+            
             if i == len(all_conditions) - 1:
                 # Last condition should not have 'and'
-                conditions_text += f'    {cond}                            # Condition {i+1:03d}'
+                conditions_text += f'    {cond}                            # Condition {condition_num:03d}'
             else:
-                conditions_text += f'    {cond} and                      # Condition {i+1:03d}\n'
+                conditions_text += f'    {cond} and                      # Condition {condition_num:03d}\n'
         
         # Select description, purpose, defaults, and actions
         description = RULE_DESCRIPTIONS[rule_num % len(RULE_DESCRIPTIONS)]
