@@ -11,7 +11,7 @@ from logging import getLogger
 from pathlib import Path
 
 # Zato
-from zato.common.rules.cache import CachedRule
+from zato.common.rules.cache import CachedRule, build_field_index
 from zato.common.rules.evaluation import RuleEvaluator
 from zato.common.rules.loader import RuleLoader
 from zato.common.rules.models import Container, MatchResult, Rule
@@ -20,7 +20,7 @@ from zato.common.rules.models import Container, MatchResult, Rule
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dict_, strdict, strlist
+    from zato.common.typing_ import any_, dict_, set_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +41,7 @@ class RulesManager:
         self.evaluator = RuleEvaluator()
         self.loader = RuleLoader()
         self._rules_by_complexity = []  # Rules sorted by complexity
+        self._field_to_rules = {}  # Index of rules by field access
 
     def __getitem__(self, name:'str') -> 'Rule | Container':
         return getattr(self, name)
@@ -83,30 +84,80 @@ class RulesManager:
         for rule_name, cached_rule in self.cached_rules.items():
             complexity = self._calculate_rule_complexity(cached_rule.rule)
             rule_complexity.append((rule_name, complexity))
-        
+
         # Sort by complexity (ascending)
         def get_complexity(item):
             """ Get complexity from a (rule_name, complexity) tuple.
             """
             return item[1]
-        
+
         self._rules_by_complexity = sorted(rule_complexity, key=get_complexity)
         logger.info(f'Sorted {len(self._rules_by_complexity)} rules by complexity')
+
+    def _build_field_index(self) -> 'None':
+        """ Build an index of rules by the fields they access.
+        """
+        self._field_to_rules = build_field_index(self._all_rules)
+        logger.info(f'Built field index with {len(self._field_to_rules)} fields')
+
+    def _filter_rules_by_fields(self, rules:'list[str]', data:'strdict') -> 'list[str]':
+        """ Filter rules to only include those that access fields present in the data.
+        """
+        if not self._field_to_rules:  # If field index is empty, return all rules
+            return rules
+
+        # Get the fields present in the data
+        data_fields = set(data.keys())
+
+        # Find rules that only access fields present in the data
+        candidate_rules = set()
+
+        # For each field in the data, add all rules that access it
+        for field in data_fields:
+            if field in self._field_to_rules:
+                candidate_rules.update(self._field_to_rules[field])
+
+        # Intersect with the requested rules
+        rules_set = set(rules)
+        filtered_rules = list(candidate_rules.intersection(rules_set))
+
+        # If no rules match the field criteria, fall back to all requested rules
+        # This handles cases where rules might not access any fields directly
+        if not filtered_rules:
+            return rules
+
+        # Log how many rules we're skipping
+        skipped = len(rules) - len(filtered_rules)
+        if skipped > 0:
+            logger.debug(f'Field indexing skipped {skipped} rules out of {len(rules)}')
+
+        return filtered_rules
 
     def match(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
         """ Match data against rules with condition caching.
         """
-        # If we have rules sorted by complexity, use them for more efficient matching
-        if self._rules_by_complexity and isinstance(rules, list):
-            # Filter the sorted rules to only include those in the input list
-            rule_set = set(rules)
-            sorted_rules = [rule_name for rule_name, _ in self._rules_by_complexity if rule_name in rule_set]
-            
+        # Convert single rule to list
+        rule_names = [rules] if isinstance(rules, str) else rules
+
+        # Filter rules by fields they access
+        filtered_rules = self._filter_rules_by_fields(rule_names, data)
+
+        # If we have rules sorted by complexity, use the sort order
+        if self._rules_by_complexity and len(filtered_rules) > 1:
+            # Create a mapping of rule name to complexity rank
+            complexity_rank = {name: idx for idx, (name, _) in enumerate(self._rules_by_complexity)}
+
+            # Sort the filtered rules by complexity
+            def get_complexity_rank(rule_name):
+                return complexity_rank.get(rule_name, float('inf'))
+
+            sorted_rules = sorted(filtered_rules, key=get_complexity_rank)
+
             # Use the sorted rules for matching
             return self.evaluator.match(data, sorted_rules, self.cached_rules)
-        
-        # Otherwise, use the original rules
-        return self.evaluator.match(data, rules, self.cached_rules)
+
+        # Otherwise, use the filtered rules as is
+        return self.evaluator.match(data, filtered_rules, self.cached_rules)
 
     def get_performance_stats(self) -> 'dict_[str, any_]':
         """ Get performance statistics.
@@ -121,46 +172,55 @@ class RulesManager:
     def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'strlist':
         """ Load rules from parsed data.
         """
-        result = self.loader.load_parsed_rules(parsed, container_name, 
-                                             self._all_rules, self._containers, 
-                                             self.cached_rules)
-        
+        result = self.loader.load_parsed_rules(
+            parsed, container_name, self._all_rules, self._containers, self.cached_rules
+        )
+
         # Update common expressions for optimization
         self.evaluator.update_common_expressions(self._all_rules)
-        
+
         # Sort rules by complexity for more efficient evaluation
         self._sort_rules_by_complexity()
-        
+
+        # Build field index for more efficient rule filtering
+        self._build_field_index()
+
         return result
 
     def load_rules_from_file(self, file_path:'str | Path') -> 'strlist':
         """ Load rules from a file.
         """
-        result = self.loader.load_rules_from_file(file_path, 
-                                               self._all_rules, self._containers, 
-                                               self.cached_rules)
-        
+        result = self.loader.load_rules_from_file(
+            file_path, self._all_rules, self._containers, self.cached_rules
+        )
+
         # Update common expressions for optimization
         self.evaluator.update_common_expressions(self._all_rules)
-        
+
         # Sort rules by complexity for more efficient evaluation
         self._sort_rules_by_complexity()
-        
+
+        # Build field index for more efficient rule filtering
+        self._build_field_index()
+
         return result
 
     def load_rules_from_directory(self, root_dir:'str | Path') -> 'strlist':
         """ Load rules from a directory.
         """
-        result = self.loader.load_rules_from_directory(root_dir, 
-                                                    self._all_rules, self._containers, 
-                                                    self.cached_rules)
-        
+        result = self.loader.load_rules_from_directory(
+            root_dir, self._all_rules, self._containers, self.cached_rules
+        )
+
         # Update common expressions for optimization
         self.evaluator.update_common_expressions(self._all_rules)
-        
+
         # Sort rules by complexity for more efficient evaluation
         self._sort_rules_by_complexity()
-        
+
+        # Build field index for more efficient rule filtering
+        self._build_field_index()
+
         return result
 
 # ################################################################################################################################
