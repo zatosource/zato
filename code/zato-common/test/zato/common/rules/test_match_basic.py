@@ -154,14 +154,14 @@ class TestMatchBasic(unittest.TestCase):
         rule_name = simple_rules[0]
 
         # Parse the rule name to extract container and rule short name
-        # Rule names are typically in format '_rule_container_rulename'
-        parts = rule_name.split('_')
-        if len(parts) < 4:  # Need at least ['', 'rule', 'container', 'rulename']
+        # Rule names are now in format 'container.rulename'
+        parts = rule_name.split('.')
+        if len(parts) != 2:
             self.skipTest(f'Rule name {rule_name} does not have expected format')
 
         # Extract container name and rule short name
-        container_name = '_'.join(parts[0:3])  # Include the '_rule_' prefix
-        rule_short_name = parts[3]  # The last part is the rule name
+        container_name = parts[0]
+        rule_short_name = parts[1]
 
         logger.info(f'Testing container access for rule: {rule_name}')
         logger.info(f'Container: {container_name}, Rule short name: {rule_short_name}')
