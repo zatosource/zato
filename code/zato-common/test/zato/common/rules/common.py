@@ -17,6 +17,12 @@ from zato.common.rules.api import RulesManager
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -26,7 +32,7 @@ class RuleTestHelper:
     """ Helper class for rule testing that handles rule file renaming and provides common functionality.
     """
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         # Get the current directory where the test files are located
         self.current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
@@ -49,7 +55,7 @@ class RuleTestHelper:
             self.rule_conditions[rule_name] = rule.when
             logger.info(f'Rule {rule_name} conditions: {rule.when}')
 
-    def find_rules_with_condition(self, condition_text):
+    def find_rules_with_condition(self, condition_text:'str') -> 'strlist':
         """ Find rules that contain the specified text in their condition.
             Returns a list of rule names.
         """
@@ -59,7 +65,7 @@ class RuleTestHelper:
                 matching_rules.append(rule_name)
         return matching_rules
 
-    def find_rules_with_all_conditions(self, condition_texts):
+    def find_rules_with_all_conditions(self, condition_texts:'strlist') -> 'strlist':
         """ Find rules that contain all the specified texts in their condition.
             Returns a list of rule names.
         """
@@ -74,7 +80,7 @@ class RuleTestHelper:
                 matching_rules.append(rule_name)
         return matching_rules
 
-    def find_rules_without_conditions(self, condition_texts):
+    def find_rules_without_conditions(self, condition_texts:'strlist') -> 'strlist':
         """ Find rules that don't contain any of the specified texts in their condition.
             Returns a list of rule names.
         """
@@ -89,7 +95,7 @@ class RuleTestHelper:
                 matching_rules.append(rule_name)
         return matching_rules
 
-    def find_rules_with_condition_and_without_others(self, include_text, exclude_texts):
+    def find_rules_with_condition_and_without_others(self, include_text:'str', exclude_texts:'strlist') -> 'strlist':
         """ Find rules that contain the include_text but none of the exclude_texts.
             Returns a list of rule names.
         """
@@ -105,7 +111,7 @@ class RuleTestHelper:
                     matching_rules.append(rule_name)
         return matching_rules
 
-    def find_rules_with_parentheses(self):
+    def find_rules_with_parentheses(self) -> 'strlist':
         """ Find rules that contain parentheses in their condition.
             Returns a list of rule names.
         """
@@ -115,7 +121,7 @@ class RuleTestHelper:
                 matching_rules.append(rule_name)
         return matching_rules
 
-    def find_simple_equality_rules(self):
+    def find_simple_equality_rules(self) -> 'strlist':
         """ Find rules with simple equality conditions (x == y).
             Returns a list of rule names.
         """
@@ -125,7 +131,7 @@ class RuleTestHelper:
                 matching_rules.append(rule_name)
         return matching_rules
 
-    def find_rule_by_pattern(self, pattern):
+    def find_rule_by_pattern(self, pattern:'str') -> 'str':
         """ Find a rule that matches a specific pattern in its condition.
             Returns the first matching rule name or None.
         """
@@ -134,12 +140,12 @@ class RuleTestHelper:
                 return rule_name
         return None
 
-    def get_rule_condition(self, rule_name):
+    def get_rule_condition(self, rule_name:'str') -> 'str':
         """ Get the condition for a specific rule.
         """
         return self.rule_conditions.get(rule_name)
 
-    def match_rule(self, rule_name, data):
+    def match_rule(self, rule_name:'str', data:'anydict') -> 'any_':
         """ Match data against a specific rule.
         """
         return self.rules_manager[rule_name].match(data)
