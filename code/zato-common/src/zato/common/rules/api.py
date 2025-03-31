@@ -217,7 +217,7 @@ class RulesManager:
             try:
                 rule.when_impl = RuleImpl(rule.when)
             except Exception as e:
-                logger.warn(f'Rule loading error -> {full_name} -> {rule.when} -> {e}')
+                logger.warning(f'Rule loading error -> {full_name} -> {rule.when} -> {e}')
                 continue
 
             rule.then = rule_data['then']

@@ -14,7 +14,7 @@ run-tests:
 
 rules-tests:
 	echo "Running rule engine tests in zato-common"
-	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/common/rules -s
+	cd $(CURDIR) && python -m pytest test/zato/common/rules -v -W ignore::DeprecationWarning
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)

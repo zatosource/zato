@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import re
 import unittest
 from logging import getLogger
 from pathlib import Path
