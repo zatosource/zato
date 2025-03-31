@@ -265,7 +265,7 @@ class RulesManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_rules_from_directory(self, root_dir:'str') -> 'strlist':
+    def load_rules_from_directory(self, root_dir:'str | Path') -> 'strlist':
 
         # Our response to produce
         out = []

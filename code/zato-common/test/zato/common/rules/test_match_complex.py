@@ -17,6 +17,12 @@ from common import RuleTestHelper
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -26,11 +32,11 @@ class TestMatchComplex(unittest.TestCase):
     """ Tests complex rule matching functionality with compound conditions.
     """
 
-    def setUp(self):
+    def setUp(self) -> 'None':
         # Initialize the rule test helper
         self.helper = RuleTestHelper()
 
-    def test_compound_and_conditions(self):
+    def test_compound_and_conditions(self) -> 'None':
         """ Test rules with multiple AND conditions.
         """
         # Find rules with AND conditions but no OR conditions
@@ -94,7 +100,7 @@ class TestMatchComplex(unittest.TestCase):
             # We would need to analyze the rule and create appropriate test data
             logger.info(f'Skipping specific tests for {rule_name} - would need custom test data')
 
-    def test_compound_or_conditions(self):
+    def test_compound_or_conditions(self) -> 'None':
         """ Test rules with multiple OR conditions.
         """
         # Find rules with OR conditions but no AND conditions
@@ -137,7 +143,7 @@ class TestMatchComplex(unittest.TestCase):
             # We would need to analyze the rule and create appropriate test data
             logger.info(f'Skipping specific tests for {rule_name} - would need custom test data')
 
-    def test_mixed_and_or_conditions(self):
+    def test_mixed_and_or_conditions(self) -> 'None':
         """ Test rules with mixed AND and OR conditions.
         """
         # Find rules with both AND and OR conditions
@@ -213,7 +219,7 @@ class TestMatchComplex(unittest.TestCase):
             # We would need to analyze the rule and create appropriate test data
             logger.info(f'Skipping specific tests for {rule_name} - would need custom test data')
 
-    def test_parenthesized_conditions(self):
+    def test_parenthesized_conditions(self) -> 'None':
         """ Test rules with parenthesized conditions to verify operator precedence.
         """
         # Find rules with parentheses in conditions
