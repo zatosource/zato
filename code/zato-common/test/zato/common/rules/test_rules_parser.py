@@ -30,7 +30,6 @@ class TestRulesParser(unittest.TestCase):
     def test_parser(self):
         """ Tests loading and parsing all .zrules files in the rules directory.
         """
-
         # Get the current directory where the test files are located
         current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
