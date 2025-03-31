@@ -1,4 +1,3 @@
-
 .PHONY: test
 
 Zato_Python_Dir=$(CURDIR)/../bin
@@ -11,6 +10,11 @@ run-tests:
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/common/marshall_/test_attach.py -s
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/common/marshall_/test_validation.py -s
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/common/marshall_/test_json_to_dataclass.py -s
+	$(MAKE) rules-tests
+
+rules-tests:
+	echo "Running rule engine tests in zato-common"
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/common/rules -s
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)
