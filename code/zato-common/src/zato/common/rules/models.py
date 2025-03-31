@@ -63,38 +63,39 @@ class Rule(Model):
 
     def match(self, data:'anydict') -> 'MatchResult':
 
-        # Local variables
-        needs_defaults = False
-
-        # Check if we need to add some of the default values ..
+        # Only process defaults if we have them defined
         if self.defaults:
-            for key in self.defaults:
-                if key not in data:
-                    needs_defaults = True
-                    break
 
-        # .. populate the data with any missing elements ..
-        if needs_defaults:
+            # Create a modified data dict only if needed
+            modified_data = None
 
-            # .. make a deep copy so as not to change the input ..
-            data = deepcopy(data)
-
-            # .. now, add all the missing keys ..
+            # Check for missing fields that have defaults
             for key, value in self.defaults.items():
                 if key not in data:
-                    data[key] = value
 
-        # .. evaluate our rule ..
-        has_matched = self.when_impl.matches(data)
+                    # Lazy initialization of the modified data
+                    if modified_data is None:
+                        modified_data = deepcopy(data)
 
-        # .. build a result object ..
+                    # Add the default value
+                    modified_data[key] = value
+
+            # Use the modified data if we created it
+            match_data = modified_data if modified_data is not None else data
+
+        else:
+            # No defaults, use original data
+            match_data = data
+
+        # Evaluate our rule with the appropriate data
+        has_matched = self.when_impl.matches(match_data)
+
+        # Build a result object
         match_result = MatchResult(has_matched)
+        if has_matched:
+            match_result.then = self.then
+            match_result.full_name = self.full_name
 
-        # .. populate all the attributes ..
-        match_result.then = self.then
-        match_result.full_name = self.full_name
-
-        # .. finally, return the result to the caller.
         return match_result
 
 # ################################################################################################################################
