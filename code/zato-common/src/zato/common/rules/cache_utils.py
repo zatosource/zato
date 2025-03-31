@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import hashlib
+from json import dumps
 from time import time
 
 # ################################################################################################################################
@@ -89,9 +91,12 @@ class CacheKey:
     def for_rule(rule_name:'str', data:'strdict') -> 'str':
         """ Generate a cache key for a rule and data combination.
         """
-        # This is a simplified approach - in a real implementation,
-        # we might want to use a more sophisticated hashing mechanism
-        return f'{rule_name}:{hash(frozenset(data.items()))}'
+        # Sort keys to ensure consistent ordering
+        serialized = dumps(data, sort_keys=True, default=str)
+
+        # Use SHA-1 for better security and distribution
+        data_hash = hashlib.sha1(serialized.encode('utf-8')).hexdigest()
+        return f'{rule_name}:{data_hash}'
 
 # ################################################################################################################################
 # ################################################################################################################################
