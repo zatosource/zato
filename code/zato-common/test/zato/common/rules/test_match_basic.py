@@ -221,25 +221,13 @@ class TestMatchBasic(unittest.TestCase):
 
         # Create data that matches rule1 but not rule2
         data = {field1_name: expected1_value}
+        
+        # Add a value for field2 that doesn't match rule2
         if field2_name != field1_name:
-            # If the fields are different, we can just omit field2
-            pass
-        else:
-            # If the fields are the same, we need to use a value that doesn't match rule2
             if isinstance(expected2_value, int):
-                if expected1_value != expected2_value:
-                    # We're good, the value matches rule1 but not rule2
-                    pass
-                else:
-                    # We need a different test approach
-                    self.skipTest('Rules have identical conditions, need different test approach')
+                data[field2_name] = expected2_value + 1  # Use a different value
             else:
-                if expected1_value != expected2_value:
-                    # We're good, the value matches rule1 but not rule2
-                    pass
-                else:
-                    # We need a different test approach
-                    self.skipTest('Rules have identical conditions, need different test approach')
+                data[field2_name] = expected2_value + '_different'  # Use a different string
 
         logger.info(f'Test data: {data}')
 
@@ -248,8 +236,7 @@ class TestMatchBasic(unittest.TestCase):
         result2 = self.helper.match_rule(rule_names[1], data)
 
         self.assertTrue(result1, f'Rule {rule_names[0]} should have matched')
-        if field2_name != field1_name or (field2_name == field1_name and expected1_value != expected2_value):
-            self.assertFalse(result2, f'Rule {rule_names[1]} should not have matched')
+        self.assertFalse(result2, f'Rule {rule_names[1]} should not have matched')
 
     def test_service_activation_rule(self) -> 'None':
         """ Test a rule that would be used to activate a service.
