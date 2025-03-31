@@ -34,11 +34,19 @@ class TestRulesParser(unittest.TestCase):
         # Get the current directory where the test files are located
         current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
-        # Find all .zrules files in the current directory
-        zrules_files = list(current_dir.glob('*.zrules'))
+        # Check for zrules subdirectory
+        zrules_dir = current_dir / 'zrules'
+        if zrules_dir.exists() and zrules_dir.is_dir():
+            # Find all .zrules files in the zrules subdirectory
+            zrules_files = list(zrules_dir.glob('*.zrules'))
+            logger.info(f'Looking for .zrules files in the zrules subdirectory: {zrules_dir}')
+        else:
+            # Find all .zrules files in the current directory (fallback)
+            zrules_files = list(current_dir.glob('*.zrules'))
+            logger.info(f'Looking for .zrules files in the current directory: {current_dir}')
 
         # Ensure we found some rule files
-        self.assertTrue(zrules_files, 'No .zrules files found in the test directory')
+        self.assertTrue(zrules_files, 'No .zrules files found in the test directory or zrules subdirectory')
 
         # Create a rules manager
         rules_manager = RulesManager()
