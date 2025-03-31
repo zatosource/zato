@@ -18,6 +18,7 @@ from zato.common.rules.rule_cache import CachedRule
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, dict_, float_, int_, strdict, strlist
 
 # ################################################################################################################################
@@ -101,7 +102,7 @@ class RulesManager(BaseRulesManager):
         self._update_stats(condition_cache, None, start_time)
         return None
 
-    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule'=None, start_time:'float_'=0) -> 'None':
+    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float_'=0) -> 'None':
         """ Update performance statistics.
         """
         self.performance_stats['total_evaluations'] += 1
