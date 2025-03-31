@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import time
+import sys
 from datetime import datetime
 from pathlib import Path
 from statistics import mean, median, stdev
@@ -16,6 +17,19 @@ from statistics import mean, median, stdev
 # Zato
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
+
+# Add colorama for terminal colors
+try:
+    from colorama import Fore, Style, init
+    init(autoreset=True)
+    HAS_COLORAMA = True
+except ImportError:
+    HAS_COLORAMA = False
+    # Define dummy color constants if colorama is not available
+    class DummyColors:
+        def __getattr__(self, name):
+            return ''
+    Fore = Style = DummyColors()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +127,9 @@ class RulePerformanceTester:
         self.rules_dir = Path(rules_dir) if rules_dir else Path(os.path.dirname(os.path.abspath(__file__)))
         self.pattern = pattern
         self.results = []
+        self.rule_groups = {}  # Group results by rule count
+        self.group_times = {}  # Track time spent on each group
+        self.total_start_time = time.time()
         
         # Find the perf directory
         self.perf_dir = self.rules_dir / 'zrules' / 'perf'
@@ -121,11 +138,11 @@ class RulePerformanceTester:
             if not self.perf_dir.exists():
                 raise ValueError(f"Performance test directory not found at {self.perf_dir}")
         
-        print(f"Using performance test directory: {self.perf_dir}")
+        print(f"{Fore.CYAN}Using performance test directory: {self.perf_dir}{Style.RESET_ALL}")
         
-        # Find all matching rule files
-        self.rule_files = self._find_rule_files()
-        print(f"Found {len(self.rule_files)} rule files matching pattern {self.pattern or '*'}")
+        # Find all matching rule files and sort them alphabetically
+        self.rule_files = sorted(self._find_rule_files())
+        print(f"{Fore.GREEN}Found {len(self.rule_files)} rule files matching pattern {self.pattern or '*'}{Style.RESET_ALL}")
         
         # Generate test data
         self.test_data = self._generate_test_data()
@@ -259,8 +276,9 @@ class RulePerformanceTester:
         # Determine expected matching conditions based on number of conditions per rule
         expected_matching_conditions = self.expected_matches.get(num_conditions, 1)
         
-        print(f"Testing {file_name} with {num_rules} rules, {num_conditions} conditions, {num_common} common conditions")
-        print(f"Expected matching conditions: {expected_matching_conditions}")
+        # Use in-place printing for progress
+        sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} with {num_rules} rules, {num_conditions} conditions, {num_common} common conditions{' ' * 20}{Style.RESET_ALL}")
+        sys.stdout.flush()
         
         # Create a new rules manager for this test
         rules_manager = RulesManager()
@@ -268,15 +286,16 @@ class RulePerformanceTester:
         # Load the rules from the file
         try:
             rules_manager.load_rules_from_file(file_path)
-            print(f"Loaded {len(rules_manager._all_rules)} rules from {file_name}")
+            sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Loaded {len(rules_manager._all_rules)} rules{' ' * 40}{Style.RESET_ALL}")
+            sys.stdout.flush()
         except Exception as e:
-            print(f"Error loading rules from {file_name}: {e}")
+            print(f"\r{Fore.RED}Error loading rules from {file_name}: {e}{Style.RESET_ALL}")
             return None
         
         # Get all rule names for this file
         rule_names = list(rules_manager._all_rules.keys())
         if not rule_names:
-            print(f"No rules found in {file_name}, skipping")
+            print(f"\r{Fore.RED}No rules found in {file_name}, skipping{Style.RESET_ALL}")
             return None
         
         # Run the test multiple times to get reliable results
@@ -284,7 +303,9 @@ class RulePerformanceTester:
         match_results = []
         
         for i in range(iterations):
-            print(f"Running iteration {i+1}/{iterations}...")
+            # Update progress in-place
+            sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Running iteration {i+1}/{iterations}{' ' * 40}{Style.RESET_ALL}")
+            sys.stdout.flush()
             
             # Measure the time it takes to match all rules multiple times
             start_time = time.time()
@@ -300,8 +321,6 @@ class RulePerformanceTester:
             end_time = time.time()
             match_time = ((end_time - start_time) * 1000) / runs_per_iteration  # Average time per run in ms
             match_times.append(match_time)
-            
-            print(f"Iteration {i+1} completed in {match_time:.4f}ms per run")
         
         # Calculate statistics
         avg_time = mean(match_times)
@@ -309,6 +328,9 @@ class RulePerformanceTester:
         min_time = min(match_times)
         max_time = max(match_times)
         std_dev = stdev(match_times) if len(match_times) > 1 else 0
+        
+        # Calculate total execution time for the whole file (per run)
+        total_time = avg_time * num_rules
         
         # Store the results
         result = {
@@ -322,27 +344,154 @@ class RulePerformanceTester:
             'max_time': max_time,
             'std_dev': std_dev,
             'matched_rules': len(set(match_results)),
-            'matching_conditions': expected_matching_conditions
+            'matching_conditions': expected_matching_conditions,
+            'total_time': total_time  # Total time for all rules in the file
         }
         
-        print(f"Results for {file_name}: avg={avg_time:.4f}ms, median={median_time:.4f}ms, matched={len(set(match_results))}, matching conditions={expected_matching_conditions}")
+        # Group results by rule count
+        if num_rules not in self.rule_groups:
+            self.rule_groups[num_rules] = []
+            self.group_times[num_rules] = {'start': time.time(), 'end': None}
+        self.rule_groups[num_rules].append(result)
+        
+        # Print completion message with proper spacing
+        matched_str = f"matched={len(set(match_results))}"
+        print(f"\r{Fore.GREEN}Completed {file_name}: {Fore.CYAN}avg={avg_time:.4f}ms, total={total_time:.4f}ms, {Fore.MAGENTA}{matched_str}{' ' * 40}{Style.RESET_ALL}")
+        
         return result
     
     def run_tests(self, iterations=3, runs_per_iteration=1000):
         """ Run performance tests for all matching rule files. """
+        # Group files by rule count for ordered processing
+        rule_files_by_count = {}
         for file_path in self.rule_files:
-            result = self.test_file(file_path, iterations, runs_per_iteration)
-            if result:
-                self.results.append(result)
+            rule_count = int(file_path.stem.split('_')[1])
+            if rule_count not in rule_files_by_count:
+                rule_files_by_count[rule_count] = []
+            rule_files_by_count[rule_count].append(file_path)
+        
+        # Process each group in order
+        for rule_count in sorted(rule_files_by_count.keys()):
+            print(f"\n{Fore.CYAN}Starting tests for {rule_count} rules group...{Style.RESET_ALL}")
+            group_start_time = time.time()
+            
+            # Process all files in this group
+            for file_path in sorted(rule_files_by_count[rule_count]):
+                result = self.test_file(file_path, iterations, runs_per_iteration)
+                if result:
+                    self.results.append(result)
+            
+            # Record group end time
+            group_end_time = time.time()
+            self.group_times[rule_count] = {
+                'start': group_start_time,
+                'end': group_end_time,
+                'duration': group_end_time - group_start_time
+            }
+            
+            # Display group results after each group is complete
+            self._display_group_results(rule_count)
+    
+    def _display_group_results(self, rule_count):
+        """ Display results for a specific rule count group. """
+        if rule_count not in self.rule_groups or not self.rule_groups[rule_count]:
+            return
+            
+        print(f"\n{Fore.CYAN}{'=' * 30} Performance Results for {rule_count} Rules {'=' * 30}{Style.RESET_ALL}")
+        
+        # Sort results by common conditions
+        sorted_results = sorted(self.rule_groups[rule_count], key=lambda x: (x['num_conditions'], x['num_common']))
+        
+        # Create a table for this group
+        table_data = []
+        for result in sorted_results:
+            table_data.append([
+                result['file_name'],
+                result['num_conditions'],
+                result['num_common'],
+                result['matching_conditions'],
+                f"{result['avg_time']:.4f}",
+                f"{result['total_time']:.4f}",
+                f"{result['matched_rules']}"
+            ])
+        
+        # Define the table headers
+        headers = [
+            'File Name',
+            'Conditions',
+            'Common',
+            'Matching',
+            'Avg (ms)',
+            'Total (ms)',
+            'Matched'
+        ]
+        
+        # Display the table
+        print(ASCIITable.make_table(table_data, headers))
+        
+        # Create side-by-side bar charts for average and total time
+        avg_chart_data = [(f"{rule_count:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time']) 
+                         for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
+        
+        total_chart_data = [(f"{rule_count:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time']) 
+                           for result in sorted(sorted_results, key=lambda x: x['total_time'])]
+        
+        # Find the maximum label length for alignment
+        max_label_length = max(len(label) for label, _ in avg_chart_data)
+        
+        # Calculate scaling factors for the bars
+        max_avg_value = max(value for _, value in avg_chart_data)
+        max_total_value = max(value for _, value in total_chart_data)
+        avg_scale = 30 / max_avg_value if max_avg_value > 0 else 0
+        total_scale = 30 / max_total_value if max_total_value > 0 else 0
+        
+        # Define fixed column widths
+        avg_column_width = 80  # Width for the average time column
+        
+        # Print headers for the charts
+        print(f"\n{Fore.CYAN}Average Time per Rule (ms){' ' * (avg_column_width - 25)}{Fore.CYAN}Total File Execution Time (ms){Style.RESET_ALL}")
+        print(f"{'-' * avg_column_width}{'-' * 50}")
+        
+        # Print the bars side by side with fixed column widths
+        for (avg_label, avg_value), (total_label, total_value) in zip(
+            sorted(avg_chart_data, key=lambda x: x[1]),
+            sorted(total_chart_data, key=lambda x: x[1])
+        ):
+            # Create the bars
+            avg_bar_length = int(avg_value * avg_scale)
+            total_bar_length = int(total_value * total_scale)
+            
+            avg_bar = '█' * avg_bar_length
+            total_bar = '█' * total_bar_length
+            
+            # Format the values with consistent spacing
+            avg_value_str = f"{avg_value:8.4f}"
+            total_value_str = f"{total_value:8.4f}"
+            
+            # Print the average time bar with fixed width
+            avg_part = f"{avg_label:{max_label_length}} | {avg_bar} {avg_value_str}"
+            # Pad to fixed width
+            avg_part = f"{avg_part:{avg_column_width}}"
+            
+            # Print the total time bar
+            total_part = f"{total_label:{max_label_length}} | {total_bar} {total_value_str}"
+            
+            # Print both parts
+            print(f"{avg_part}{total_part}")
+        
+        # Display group timing information
+        if rule_count in self.group_times and self.group_times[rule_count].get('duration'):
+            duration = self.group_times[rule_count]['duration']
+            print(f"\n{Fore.YELLOW}Group completed in: {Fore.CYAN}{duration:.2f} seconds{Style.RESET_ALL}")
     
     def display_results(self):
         """ Display the performance test results in an ASCII table. """
         if not self.results:
-            print("No results to display. Run tests first.")
+            print(f"{Fore.RED}No results to display. Run tests first.{Style.RESET_ALL}")
             return
         
-        # Sort results by file name
-        sorted_results = sorted(self.results, key=lambda x: x['file_name'])
+        # Sort results by rule count, then conditions, then common conditions
+        sorted_results = sorted(self.results, key=lambda x: (x['num_rules'], x['num_conditions'], x['num_common']))
         
         # Create a table
         table_data = []
@@ -354,6 +503,7 @@ class RulePerformanceTester:
                 result['num_common'],
                 result['matching_conditions'],
                 f"{result['avg_time']:.4f}",
+                f"{result['total_time']:.4f}",
                 f"{result['median_time']:.4f}",
                 f"{result['min_time']:.4f}",
                 f"{result['max_time']:.4f}",
@@ -367,8 +517,9 @@ class RulePerformanceTester:
             'Rules',
             'Conditions',
             'Common',
-            'Matching Params',
+            'Matching',
             'Avg (ms)',
+            'Total (ms)',
             'Median (ms)',
             'Min (ms)',
             'Max (ms)',
@@ -376,29 +527,60 @@ class RulePerformanceTester:
             'Matched'
         ]
         
-        # Display the table
-        print('\nPerformance Test Results (sorted by file name):')
+        # Display the combined table
+        print(f"\n{Fore.CYAN}{'=' * 30} Combined Performance Results {'=' * 30}{Style.RESET_ALL}")
         print(ASCIITable.make_table(table_data, headers))
-        print('\nNote: StdDev (Standard Deviation) measures the variability in timing results.')
-        print('      Lower values indicate more consistent/reproducible performance.')
-        print('      "Matching Params" shows how many input parameters were set to match conditions.')
         
-        # Create a bar chart with more readable labels and consistent formatting
-        print('\nPerformance Comparison Chart (milliseconds):')
-        chart_data = [(f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} conditions, {result['num_common']:003d} common, {result['matching_conditions']:003d} matching", result['avg_time']) 
-                     for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
-        print(BarChart.render(
-            chart_data, 
-            title='Average Rule Matching Time (milliseconds)',
-            xlabel='Rule Configuration',
-            ylabel='Time in milliseconds',
-            width=80,
-            height=15
-        ))
+        # Create side-by-side bar charts for average and total time
+        avg_chart_data = [(f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time']) 
+                         for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
         
-        # Add information about reproducibility
-        print('\nTest Reproducibility:')
-        print('- Match results are deterministic and should be consistent across runs')
-        print('- Timing results may vary slightly based on system load')
-        print('- Standard deviation (StdDev) values indicate timing consistency')
-        print('- "Matching Params" indicates how many input parameters were configured to match conditions')
+        total_chart_data = [(f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time']) 
+                           for result in sorted(sorted_results, key=lambda x: x['total_time'])]
+        
+        # Find the maximum label length for alignment
+        max_label_length = max(len(label) for label, _ in avg_chart_data)
+        
+        # Calculate scaling factors for the bars
+        max_avg_value = max(value for _, value in avg_chart_data)
+        max_total_value = max(value for _, value in total_chart_data)
+        avg_scale = 30 / max_avg_value if max_avg_value > 0 else 0
+        total_scale = 30 / max_total_value if max_total_value > 0 else 0
+        
+        # Define fixed column widths
+        avg_column_width = 80  # Width for the average time column
+        
+        # Print headers for the charts
+        print(f"\n{Fore.CYAN}Average Time per Rule (ms){' ' * (avg_column_width - 25)}{Fore.CYAN}Total File Execution Time (ms){Style.RESET_ALL}")
+        print(f"{'-' * avg_column_width}{'-' * 50}")
+        
+        # Print the bars side by side with fixed column widths
+        for (avg_label, avg_value), (total_label, total_value) in zip(
+            sorted(avg_chart_data, key=lambda x: x[1]),
+            sorted(total_chart_data, key=lambda x: x[1])
+        ):
+            # Create the bars
+            avg_bar_length = int(avg_value * avg_scale)
+            total_bar_length = int(total_value * total_scale)
+            
+            avg_bar = '█' * avg_bar_length
+            total_bar = '█' * total_bar_length
+            
+            # Format the values with consistent spacing
+            avg_value_str = f"{avg_value:8.4f}"
+            total_value_str = f"{total_value:8.4f}"
+            
+            # Print the average time bar with fixed width
+            avg_part = f"{avg_label:{max_label_length}} | {avg_bar} {avg_value_str}"
+            # Pad to fixed width
+            avg_part = f"{avg_part:{avg_column_width}}"
+            
+            # Print the total time bar
+            total_part = f"{total_label:{max_label_length}} | {total_bar} {total_value_str}"
+            
+            # Print both parts
+            print(f"{avg_part}{total_part}")
+        
+        # Add total time information
+        total_time = time.time() - self.total_start_time
+        print(f"\n{Fore.YELLOW}Total test time: {Fore.CYAN}{total_time:.2f} seconds{Style.RESET_ALL}")
