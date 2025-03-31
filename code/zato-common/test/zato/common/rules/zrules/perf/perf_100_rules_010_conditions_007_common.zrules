@@ -16,9 +16,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    support_tickets_open < 5 and                      # Condition 008
-    usage_decline_months >= high_risk_threshold and                      # Condition 009
-    upgrade_eligibility_score > 7                            # Condition 010
+    support_tickets_open < 5 and                      # Condition 101
+    usage_decline_months >= high_risk_threshold and                      # Condition 102
+    upgrade_eligibility_score > 7                            # Condition 103
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -41,9 +41,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    peak_usage_percentage > capacity_threshold and                      # Condition 008
-    outage_duration_minutes > min_outage_minutes and                      # Condition 009
-    services_subscribed < 3                            # Condition 010
+    peak_usage_percentage > capacity_threshold and                      # Condition 104
+    outage_duration_minutes > min_outage_minutes and                      # Condition 105
+    services_subscribed < 3                            # Condition 106
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -66,9 +66,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    equipment_age_months > 24 and                      # Condition 008
-    current_platform in legacy_platforms and                      # Condition 009
-    contract_end_days < 90                            # Condition 010
+    equipment_age_months > 24 and                      # Condition 107
+    current_platform in legacy_platforms and                      # Condition 108
+    contract_end_days < 90                            # Condition 109
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -91,9 +91,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_industry in iot_compatible_industries and                      # Condition 008
-    billing_complaints > 0 and                      # Condition 009
-    churn_prediction_score > 0.7                            # Condition 010
+    customer_industry in iot_compatible_industries and                      # Condition 110
+    billing_complaints > 0 and                      # Condition 111
+    churn_prediction_score > 0.7                            # Condition 112
 then
 credit_percentage = 15
     apology_communication = true
@@ -116,9 +116,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    bandwidth_utilization > 80 and                      # Condition 008
-    credit_score > 700 and                      # Condition 009
-    business_customers_affected > 50                            # Condition 010
+    bandwidth_utilization > 80 and                      # Condition 113
+    credit_score > 700 and                      # Condition 114
+    business_customers_affected > 50                            # Condition 115
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -141,9 +141,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    network_segment_congestion == true and                      # Condition 008
-    projected_growth_rate > 5 and                      # Condition 009
-    business_impact_level > 2                            # Condition 010
+    network_segment_congestion == true and                      # Condition 116
+    projected_growth_rate > 5 and                      # Condition 117
+    business_impact_level > 2                            # Condition 118
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -167,9 +167,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    fault_responsibility == 'provider' and                      # Condition 008
-    sla_breach == true and                      # Condition 009
-    cross_sell_propensity > 0.6                            # Condition 010
+    fault_responsibility == 'provider' and                      # Condition 119
+    sla_breach == true and                      # Condition 120
+    cross_sell_propensity > 0.6                            # Condition 121
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -192,9 +192,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    last_upsell_attempt_days > 90 and                      # Condition 008
-    service_usage_complementary == true and                      # Condition 009
-    hardware_compatibility_new_features == false                            # Condition 010
+    last_upsell_attempt_days > 90 and                      # Condition 122
+    service_usage_complementary == true and                      # Condition 123
+    hardware_compatibility_new_features == false                            # Condition 124
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -217,9 +217,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_calls_equipment > 1 and                      # Condition 008
-    has_custom_integrations == false and                      # Condition 009
-    migration_complexity_score < 7                            # Condition 010
+    service_calls_equipment > 1 and                      # Condition 125
+    has_custom_integrations == false and                      # Condition 126
+    migration_complexity_score < 7                            # Condition 127
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -243,9 +243,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    competitive_pressure_score > 3 and                      # Condition 008
-    customer_lifetime_value > 50000 and                      # Condition 009
-    data_service_subscribed == true                            # Condition 010
+    competitive_pressure_score > 3 and                      # Condition 128
+    customer_lifetime_value > 50000 and                      # Condition 129
+    data_service_subscribed == true                            # Condition 130
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -269,9 +269,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    digital_transformation_score > 6 and                      # Condition 008
-    monthly_data_usage > 500 and                      # Condition 009
-    technology_adoption_score > 7                            # Condition 010
+    digital_transformation_score > 6 and                      # Condition 131
+    monthly_data_usage > 500 and                      # Condition 132
+    technology_adoption_score > 7                            # Condition 133
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -294,9 +294,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    priority_support_eligible == true and                      # Condition 008
-    critical_business_process == true and                      # Condition 009
-    dedicated_support_eligible == true                            # Condition 010
+    priority_support_eligible == true and                      # Condition 134
+    critical_business_process == true and                      # Condition 135
+    dedicated_support_eligible == true                            # Condition 136
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -319,9 +319,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    satisfaction_score < 7 and                      # Condition 008
-    retention_score < 6 and                      # Condition 009
-    competitor_mentions_support > 0                            # Condition 010
+    satisfaction_score < 7 and                      # Condition 137
+    retention_score < 6 and                      # Condition 138
+    competitor_mentions_support > 0                            # Condition 139
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -344,9 +344,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    payment_method == 'auto' and                      # Condition 008
-    growth_trajectory_positive == true and                      # Condition 009
-    payment_history_months > 12                            # Condition 010
+    payment_method == 'auto' and                      # Condition 140
+    growth_trajectory_positive == true and                      # Condition 141
+    payment_history_months > 12                            # Condition 142
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -369,9 +369,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_complaints_capacity > 10 and                      # Condition 008
-    last_upgrade_months > 12 and                      # Condition 009
-    customer_reported_issue == true                            # Condition 010
+    customer_complaints_capacity > 10 and                      # Condition 143
+    last_upgrade_months > 12 and                      # Condition 144
+    customer_reported_issue == true                            # Condition 145
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -394,9 +394,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    multiple_services_affected == true and                      # Condition 008
-    service_affected == 'critical' and                      # Condition 009
-    customer_growth_phase == 'expansion'                            # Condition 010
+    multiple_services_affected == true and                      # Condition 146
+    service_affected == 'critical' and                      # Condition 147
+    customer_growth_phase == 'expansion'                            # Condition 148
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -420,9 +420,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    contract_remaining_months > 12 and                      # Condition 008
-    current_equipment_model_discontinued == true and                      # Condition 009
-    monthly_spend > 2000                            # Condition 010
+    contract_remaining_months > 12 and                      # Condition 149
+    current_equipment_model_discontinued == true and                      # Condition 150
+    monthly_spend > 2000                            # Condition 151
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -445,9 +445,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    upgrade_program_eligible == true and                      # Condition 008
-    platform_support_end_months < 12 and                      # Condition 009
-    service_compatibility_new_platform == true                            # Condition 010
+    upgrade_program_eligible == true and                      # Condition 152
+    platform_support_end_months < 12 and                      # Condition 153
+    service_compatibility_new_platform == true                            # Condition 154
 then
 compliance_review = 'required'
     documentation_update = true
@@ -470,9 +470,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    technology_refresh_budget_approved == true and                      # Condition 008
-    market_share_strategic_account == true and                      # Condition 009
-    price_sensitivity_score > 7                            # Condition 010
+    technology_refresh_budget_approved == true and                      # Condition 155
+    market_share_strategic_account == true and                      # Condition 156
+    price_sensitivity_score > 7                            # Condition 157
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -496,9 +496,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    renewal_propensity_score < 0.7 and                      # Condition 008
-    subscription_type in premium_subscription_types and                      # Condition 009
-    competitor_iot_mentions > 0                            # Condition 010
+    renewal_propensity_score < 0.7 and                      # Condition 158
+    subscription_type in premium_subscription_types and                      # Condition 159
+    competitor_iot_mentions > 0                            # Condition 160
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -522,9 +522,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    upgrade_eligibility_score > 7 and                      # Condition 008
-    peak_usage_percentage > capacity_threshold and                      # Condition 009
-    outage_duration_minutes > min_outage_minutes                            # Condition 010
+    upgrade_eligibility_score > 7 and                      # Condition 103
+    peak_usage_percentage > capacity_threshold and                      # Condition 104
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -547,9 +547,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    services_subscribed < 3 and                      # Condition 008
-    equipment_age_months > 24 and                      # Condition 009
-    current_platform in legacy_platforms                            # Condition 010
+    services_subscribed < 3 and                      # Condition 106
+    equipment_age_months > 24 and                      # Condition 107
+    current_platform in legacy_platforms                            # Condition 108
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -572,9 +572,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    contract_end_days < 90 and                      # Condition 008
-    customer_industry in iot_compatible_industries and                      # Condition 009
-    billing_complaints > 0                            # Condition 010
+    contract_end_days < 90 and                      # Condition 109
+    customer_industry in iot_compatible_industries and                      # Condition 110
+    billing_complaints > 0                            # Condition 111
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -597,9 +597,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    churn_prediction_score > 0.7 and                      # Condition 008
-    bandwidth_utilization > 80 and                      # Condition 009
-    credit_score > 700                            # Condition 010
+    churn_prediction_score > 0.7 and                      # Condition 112
+    bandwidth_utilization > 80 and                      # Condition 113
+    credit_score > 700                            # Condition 114
 then
 credit_percentage = 15
     apology_communication = true
@@ -622,9 +622,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    business_customers_affected > 50 and                      # Condition 008
-    network_segment_congestion == true and                      # Condition 009
-    projected_growth_rate > 5                            # Condition 010
+    business_customers_affected > 50 and                      # Condition 115
+    network_segment_congestion == true and                      # Condition 116
+    projected_growth_rate > 5                            # Condition 117
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -647,9 +647,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    business_impact_level > 2 and                      # Condition 008
-    fault_responsibility == 'provider' and                      # Condition 009
-    sla_breach == true                            # Condition 010
+    business_impact_level > 2 and                      # Condition 118
+    fault_responsibility == 'provider' and                      # Condition 119
+    sla_breach == true                            # Condition 120
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -673,9 +673,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    cross_sell_propensity > 0.6 and                      # Condition 008
-    last_upsell_attempt_days > 90 and                      # Condition 009
-    service_usage_complementary == true                            # Condition 010
+    cross_sell_propensity > 0.6 and                      # Condition 121
+    last_upsell_attempt_days > 90 and                      # Condition 122
+    service_usage_complementary == true                            # Condition 123
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -698,9 +698,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    hardware_compatibility_new_features == false and                      # Condition 008
-    service_calls_equipment > 1 and                      # Condition 009
-    has_custom_integrations == false                            # Condition 010
+    hardware_compatibility_new_features == false and                      # Condition 124
+    service_calls_equipment > 1 and                      # Condition 125
+    has_custom_integrations == false                            # Condition 126
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -723,9 +723,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    migration_complexity_score < 7 and                      # Condition 008
-    competitive_pressure_score > 3 and                      # Condition 009
-    customer_lifetime_value > 50000                            # Condition 010
+    migration_complexity_score < 7 and                      # Condition 127
+    competitive_pressure_score > 3 and                      # Condition 128
+    customer_lifetime_value > 50000                            # Condition 129
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -749,9 +749,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    data_service_subscribed == true and                      # Condition 008
-    digital_transformation_score > 6 and                      # Condition 009
-    monthly_data_usage > 500                            # Condition 010
+    data_service_subscribed == true and                      # Condition 130
+    digital_transformation_score > 6 and                      # Condition 131
+    monthly_data_usage > 500                            # Condition 132
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -775,9 +775,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    technology_adoption_score > 7 and                      # Condition 008
-    priority_support_eligible == true and                      # Condition 009
-    critical_business_process == true                            # Condition 010
+    technology_adoption_score > 7 and                      # Condition 133
+    priority_support_eligible == true and                      # Condition 134
+    critical_business_process == true                            # Condition 135
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -800,9 +800,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    dedicated_support_eligible == true and                      # Condition 008
-    satisfaction_score < 7 and                      # Condition 009
-    retention_score < 6                            # Condition 010
+    dedicated_support_eligible == true and                      # Condition 136
+    satisfaction_score < 7 and                      # Condition 137
+    retention_score < 6                            # Condition 138
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -825,9 +825,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    competitor_mentions_support > 0 and                      # Condition 008
-    payment_method == 'auto' and                      # Condition 009
-    growth_trajectory_positive == true                            # Condition 010
+    competitor_mentions_support > 0 and                      # Condition 139
+    payment_method == 'auto' and                      # Condition 140
+    growth_trajectory_positive == true                            # Condition 141
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -850,9 +850,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    payment_history_months > 12 and                      # Condition 008
-    customer_complaints_capacity > 10 and                      # Condition 009
-    last_upgrade_months > 12                            # Condition 010
+    payment_history_months > 12 and                      # Condition 142
+    customer_complaints_capacity > 10 and                      # Condition 143
+    last_upgrade_months > 12                            # Condition 144
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -875,9 +875,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_reported_issue == true and                      # Condition 008
-    multiple_services_affected == true and                      # Condition 009
-    service_affected == 'critical'                            # Condition 010
+    customer_reported_issue == true and                      # Condition 145
+    multiple_services_affected == true and                      # Condition 146
+    service_affected == 'critical'                            # Condition 147
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -900,9 +900,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_growth_phase == 'expansion' and                      # Condition 008
-    contract_remaining_months > 12 and                      # Condition 009
-    current_equipment_model_discontinued == true                            # Condition 010
+    customer_growth_phase == 'expansion' and                      # Condition 148
+    contract_remaining_months > 12 and                      # Condition 149
+    current_equipment_model_discontinued == true                            # Condition 150
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -926,9 +926,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    monthly_spend > 2000 and                      # Condition 008
-    upgrade_program_eligible == true and                      # Condition 009
-    platform_support_end_months < 12                            # Condition 010
+    monthly_spend > 2000 and                      # Condition 151
+    upgrade_program_eligible == true and                      # Condition 152
+    platform_support_end_months < 12                            # Condition 153
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -951,9 +951,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_compatibility_new_platform == true and                      # Condition 008
-    technology_refresh_budget_approved == true and                      # Condition 009
-    market_share_strategic_account == true                            # Condition 010
+    service_compatibility_new_platform == true and                      # Condition 154
+    technology_refresh_budget_approved == true and                      # Condition 155
+    market_share_strategic_account == true                            # Condition 156
 then
 compliance_review = 'required'
     documentation_update = true
@@ -976,9 +976,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    price_sensitivity_score > 7 and                      # Condition 008
-    renewal_propensity_score < 0.7 and                      # Condition 009
-    subscription_type in premium_subscription_types                            # Condition 010
+    price_sensitivity_score > 7 and                      # Condition 157
+    renewal_propensity_score < 0.7 and                      # Condition 158
+    subscription_type in premium_subscription_types                            # Condition 159
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -1002,9 +1002,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    usage_decline_months >= high_risk_threshold and                      # Condition 008
-    upgrade_eligibility_score > 7 and                      # Condition 009
-    peak_usage_percentage > capacity_threshold                            # Condition 010
+    usage_decline_months >= high_risk_threshold and                      # Condition 102
+    upgrade_eligibility_score > 7 and                      # Condition 103
+    peak_usage_percentage > capacity_threshold                            # Condition 104
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -1028,9 +1028,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    outage_duration_minutes > min_outage_minutes and                      # Condition 008
-    services_subscribed < 3 and                      # Condition 009
-    equipment_age_months > 24                            # Condition 010
+    outage_duration_minutes > min_outage_minutes and                      # Condition 105
+    services_subscribed < 3 and                      # Condition 106
+    equipment_age_months > 24                            # Condition 107
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -1053,9 +1053,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    current_platform in legacy_platforms and                      # Condition 008
-    contract_end_days < 90 and                      # Condition 009
-    customer_industry in iot_compatible_industries                            # Condition 010
+    current_platform in legacy_platforms and                      # Condition 108
+    contract_end_days < 90 and                      # Condition 109
+    customer_industry in iot_compatible_industries                            # Condition 110
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -1078,9 +1078,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    billing_complaints > 0 and                      # Condition 008
-    churn_prediction_score > 0.7 and                      # Condition 009
-    bandwidth_utilization > 80                            # Condition 010
+    billing_complaints > 0 and                      # Condition 111
+    churn_prediction_score > 0.7 and                      # Condition 112
+    bandwidth_utilization > 80                            # Condition 113
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -1103,9 +1103,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    credit_score > 700 and                      # Condition 008
-    business_customers_affected > 50 and                      # Condition 009
-    network_segment_congestion == true                            # Condition 010
+    credit_score > 700 and                      # Condition 114
+    business_customers_affected > 50 and                      # Condition 115
+    network_segment_congestion == true                            # Condition 116
 then
 credit_percentage = 15
     apology_communication = true
@@ -1128,9 +1128,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    projected_growth_rate > 5 and                      # Condition 008
-    business_impact_level > 2 and                      # Condition 009
-    fault_responsibility == 'provider'                            # Condition 010
+    projected_growth_rate > 5 and                      # Condition 117
+    business_impact_level > 2 and                      # Condition 118
+    fault_responsibility == 'provider'                            # Condition 119
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -1153,9 +1153,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    sla_breach == true and                      # Condition 008
-    cross_sell_propensity > 0.6 and                      # Condition 009
-    last_upsell_attempt_days > 90                            # Condition 010
+    sla_breach == true and                      # Condition 120
+    cross_sell_propensity > 0.6 and                      # Condition 121
+    last_upsell_attempt_days > 90                            # Condition 122
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -1179,9 +1179,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_usage_complementary == true and                      # Condition 008
-    hardware_compatibility_new_features == false and                      # Condition 009
-    service_calls_equipment > 1                            # Condition 010
+    service_usage_complementary == true and                      # Condition 123
+    hardware_compatibility_new_features == false and                      # Condition 124
+    service_calls_equipment > 1                            # Condition 125
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -1204,9 +1204,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    has_custom_integrations == false and                      # Condition 008
-    migration_complexity_score < 7 and                      # Condition 009
-    competitive_pressure_score > 3                            # Condition 010
+    has_custom_integrations == false and                      # Condition 126
+    migration_complexity_score < 7 and                      # Condition 127
+    competitive_pressure_score > 3                            # Condition 128
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -1229,9 +1229,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_lifetime_value > 50000 and                      # Condition 008
-    data_service_subscribed == true and                      # Condition 009
-    digital_transformation_score > 6                            # Condition 010
+    customer_lifetime_value > 50000 and                      # Condition 129
+    data_service_subscribed == true and                      # Condition 130
+    digital_transformation_score > 6                            # Condition 131
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -1255,9 +1255,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    monthly_data_usage > 500 and                      # Condition 008
-    technology_adoption_score > 7 and                      # Condition 009
-    priority_support_eligible == true                            # Condition 010
+    monthly_data_usage > 500 and                      # Condition 132
+    technology_adoption_score > 7 and                      # Condition 133
+    priority_support_eligible == true                            # Condition 134
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -1281,9 +1281,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    critical_business_process == true and                      # Condition 008
-    dedicated_support_eligible == true and                      # Condition 009
-    satisfaction_score < 7                            # Condition 010
+    critical_business_process == true and                      # Condition 135
+    dedicated_support_eligible == true and                      # Condition 136
+    satisfaction_score < 7                            # Condition 137
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -1306,9 +1306,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    retention_score < 6 and                      # Condition 008
-    competitor_mentions_support > 0 and                      # Condition 009
-    payment_method == 'auto'                            # Condition 010
+    retention_score < 6 and                      # Condition 138
+    competitor_mentions_support > 0 and                      # Condition 139
+    payment_method == 'auto'                            # Condition 140
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -1331,9 +1331,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    growth_trajectory_positive == true and                      # Condition 008
-    payment_history_months > 12 and                      # Condition 009
-    customer_complaints_capacity > 10                            # Condition 010
+    growth_trajectory_positive == true and                      # Condition 141
+    payment_history_months > 12 and                      # Condition 142
+    customer_complaints_capacity > 10                            # Condition 143
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -1356,9 +1356,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    last_upgrade_months > 12 and                      # Condition 008
-    customer_reported_issue == true and                      # Condition 009
-    multiple_services_affected == true                            # Condition 010
+    last_upgrade_months > 12 and                      # Condition 144
+    customer_reported_issue == true and                      # Condition 145
+    multiple_services_affected == true                            # Condition 146
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -1381,9 +1381,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_affected == 'critical' and                      # Condition 008
-    customer_growth_phase == 'expansion' and                      # Condition 009
-    contract_remaining_months > 12                            # Condition 010
+    service_affected == 'critical' and                      # Condition 147
+    customer_growth_phase == 'expansion' and                      # Condition 148
+    contract_remaining_months > 12                            # Condition 149
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -1406,9 +1406,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    current_equipment_model_discontinued == true and                      # Condition 008
-    monthly_spend > 2000 and                      # Condition 009
-    upgrade_program_eligible == true                            # Condition 010
+    current_equipment_model_discontinued == true and                      # Condition 150
+    monthly_spend > 2000 and                      # Condition 151
+    upgrade_program_eligible == true                            # Condition 152
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -1432,9 +1432,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    platform_support_end_months < 12 and                      # Condition 008
-    service_compatibility_new_platform == true and                      # Condition 009
-    technology_refresh_budget_approved == true                            # Condition 010
+    platform_support_end_months < 12 and                      # Condition 153
+    service_compatibility_new_platform == true and                      # Condition 154
+    technology_refresh_budget_approved == true                            # Condition 155
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -1457,9 +1457,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    market_share_strategic_account == true and                      # Condition 008
-    price_sensitivity_score > 7 and                      # Condition 009
-    renewal_propensity_score < 0.7                            # Condition 010
+    market_share_strategic_account == true and                      # Condition 156
+    price_sensitivity_score > 7 and                      # Condition 157
+    renewal_propensity_score < 0.7                            # Condition 158
 then
 compliance_review = 'required'
     documentation_update = true
@@ -1482,9 +1482,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    support_tickets_open < 5 and                      # Condition 008
-    usage_decline_months >= high_risk_threshold and                      # Condition 009
-    upgrade_eligibility_score > 7                            # Condition 010
+    support_tickets_open < 5 and                      # Condition 101
+    usage_decline_months >= high_risk_threshold and                      # Condition 102
+    upgrade_eligibility_score > 7                            # Condition 103
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -1508,9 +1508,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    peak_usage_percentage > capacity_threshold and                      # Condition 008
-    outage_duration_minutes > min_outage_minutes and                      # Condition 009
-    services_subscribed < 3                            # Condition 010
+    peak_usage_percentage > capacity_threshold and                      # Condition 104
+    outage_duration_minutes > min_outage_minutes and                      # Condition 105
+    services_subscribed < 3                            # Condition 106
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -1534,9 +1534,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    equipment_age_months > 24 and                      # Condition 008
-    current_platform in legacy_platforms and                      # Condition 009
-    contract_end_days < 90                            # Condition 010
+    equipment_age_months > 24 and                      # Condition 107
+    current_platform in legacy_platforms and                      # Condition 108
+    contract_end_days < 90                            # Condition 109
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -1559,9 +1559,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_industry in iot_compatible_industries and                      # Condition 008
-    billing_complaints > 0 and                      # Condition 009
-    churn_prediction_score > 0.7                            # Condition 010
+    customer_industry in iot_compatible_industries and                      # Condition 110
+    billing_complaints > 0 and                      # Condition 111
+    churn_prediction_score > 0.7                            # Condition 112
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -1584,9 +1584,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    bandwidth_utilization > 80 and                      # Condition 008
-    credit_score > 700 and                      # Condition 009
-    business_customers_affected > 50                            # Condition 010
+    bandwidth_utilization > 80 and                      # Condition 113
+    credit_score > 700 and                      # Condition 114
+    business_customers_affected > 50                            # Condition 115
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -1609,9 +1609,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    network_segment_congestion == true and                      # Condition 008
-    projected_growth_rate > 5 and                      # Condition 009
-    business_impact_level > 2                            # Condition 010
+    network_segment_congestion == true and                      # Condition 116
+    projected_growth_rate > 5 and                      # Condition 117
+    business_impact_level > 2                            # Condition 118
 then
 credit_percentage = 15
     apology_communication = true
@@ -1634,9 +1634,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    fault_responsibility == 'provider' and                      # Condition 008
-    sla_breach == true and                      # Condition 009
-    cross_sell_propensity > 0.6                            # Condition 010
+    fault_responsibility == 'provider' and                      # Condition 119
+    sla_breach == true and                      # Condition 120
+    cross_sell_propensity > 0.6                            # Condition 121
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -1659,9 +1659,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    last_upsell_attempt_days > 90 and                      # Condition 008
-    service_usage_complementary == true and                      # Condition 009
-    hardware_compatibility_new_features == false                            # Condition 010
+    last_upsell_attempt_days > 90 and                      # Condition 122
+    service_usage_complementary == true and                      # Condition 123
+    hardware_compatibility_new_features == false                            # Condition 124
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -1685,9 +1685,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_calls_equipment > 1 and                      # Condition 008
-    has_custom_integrations == false and                      # Condition 009
-    migration_complexity_score < 7                            # Condition 010
+    service_calls_equipment > 1 and                      # Condition 125
+    has_custom_integrations == false and                      # Condition 126
+    migration_complexity_score < 7                            # Condition 127
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -1710,9 +1710,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    competitive_pressure_score > 3 and                      # Condition 008
-    customer_lifetime_value > 50000 and                      # Condition 009
-    data_service_subscribed == true                            # Condition 010
+    competitive_pressure_score > 3 and                      # Condition 128
+    customer_lifetime_value > 50000 and                      # Condition 129
+    data_service_subscribed == true                            # Condition 130
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -1735,9 +1735,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    digital_transformation_score > 6 and                      # Condition 008
-    monthly_data_usage > 500 and                      # Condition 009
-    technology_adoption_score > 7                            # Condition 010
+    digital_transformation_score > 6 and                      # Condition 131
+    monthly_data_usage > 500 and                      # Condition 132
+    technology_adoption_score > 7                            # Condition 133
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -1761,9 +1761,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    priority_support_eligible == true and                      # Condition 008
-    critical_business_process == true and                      # Condition 009
-    dedicated_support_eligible == true                            # Condition 010
+    priority_support_eligible == true and                      # Condition 134
+    critical_business_process == true and                      # Condition 135
+    dedicated_support_eligible == true                            # Condition 136
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -1787,9 +1787,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    satisfaction_score < 7 and                      # Condition 008
-    retention_score < 6 and                      # Condition 009
-    competitor_mentions_support > 0                            # Condition 010
+    satisfaction_score < 7 and                      # Condition 137
+    retention_score < 6 and                      # Condition 138
+    competitor_mentions_support > 0                            # Condition 139
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -1812,9 +1812,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    payment_method == 'auto' and                      # Condition 008
-    growth_trajectory_positive == true and                      # Condition 009
-    payment_history_months > 12                            # Condition 010
+    payment_method == 'auto' and                      # Condition 140
+    growth_trajectory_positive == true and                      # Condition 141
+    payment_history_months > 12                            # Condition 142
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -1837,9 +1837,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_complaints_capacity > 10 and                      # Condition 008
-    last_upgrade_months > 12 and                      # Condition 009
-    customer_reported_issue == true                            # Condition 010
+    customer_complaints_capacity > 10 and                      # Condition 143
+    last_upgrade_months > 12 and                      # Condition 144
+    customer_reported_issue == true                            # Condition 145
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -1862,9 +1862,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    multiple_services_affected == true and                      # Condition 008
-    service_affected == 'critical' and                      # Condition 009
-    customer_growth_phase == 'expansion'                            # Condition 010
+    multiple_services_affected == true and                      # Condition 146
+    service_affected == 'critical' and                      # Condition 147
+    customer_growth_phase == 'expansion'                            # Condition 148
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -1887,9 +1887,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    contract_remaining_months > 12 and                      # Condition 008
-    current_equipment_model_discontinued == true and                      # Condition 009
-    monthly_spend > 2000                            # Condition 010
+    contract_remaining_months > 12 and                      # Condition 149
+    current_equipment_model_discontinued == true and                      # Condition 150
+    monthly_spend > 2000                            # Condition 151
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -1912,9 +1912,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    upgrade_program_eligible == true and                      # Condition 008
-    platform_support_end_months < 12 and                      # Condition 009
-    service_compatibility_new_platform == true                            # Condition 010
+    upgrade_program_eligible == true and                      # Condition 152
+    platform_support_end_months < 12 and                      # Condition 153
+    service_compatibility_new_platform == true                            # Condition 154
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -1938,9 +1938,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    technology_refresh_budget_approved == true and                      # Condition 008
-    market_share_strategic_account == true and                      # Condition 009
-    price_sensitivity_score > 7                            # Condition 010
+    technology_refresh_budget_approved == true and                      # Condition 155
+    market_share_strategic_account == true and                      # Condition 156
+    price_sensitivity_score > 7                            # Condition 157
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -1963,9 +1963,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    renewal_propensity_score < 0.7 and                      # Condition 008
-    subscription_type in premium_subscription_types and                      # Condition 009
-    competitor_iot_mentions > 0                            # Condition 010
+    renewal_propensity_score < 0.7 and                      # Condition 158
+    subscription_type in premium_subscription_types and                      # Condition 159
+    competitor_iot_mentions > 0                            # Condition 160
 then
 compliance_review = 'required'
     documentation_update = true
@@ -1988,9 +1988,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    upgrade_eligibility_score > 7 and                      # Condition 008
-    peak_usage_percentage > capacity_threshold and                      # Condition 009
-    outage_duration_minutes > min_outage_minutes                            # Condition 010
+    upgrade_eligibility_score > 7 and                      # Condition 103
+    peak_usage_percentage > capacity_threshold and                      # Condition 104
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -2014,9 +2014,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    services_subscribed < 3 and                      # Condition 008
-    equipment_age_months > 24 and                      # Condition 009
-    current_platform in legacy_platforms                            # Condition 010
+    services_subscribed < 3 and                      # Condition 106
+    equipment_age_months > 24 and                      # Condition 107
+    current_platform in legacy_platforms                            # Condition 108
 then
 support_priority = 'high'
     response_time_hours = 2
@@ -2040,9 +2040,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    contract_end_days < 90 and                      # Condition 008
-    customer_industry in iot_compatible_industries and                      # Condition 009
-    billing_complaints > 0                            # Condition 010
+    contract_end_days < 90 and                      # Condition 109
+    customer_industry in iot_compatible_industries and                      # Condition 110
+    billing_complaints > 0                            # Condition 111
 then
 churn_risk = 'high'
     retention_action = 'executive_outreach'
@@ -2065,9 +2065,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    churn_prediction_score > 0.7 and                      # Condition 008
-    bandwidth_utilization > 80 and                      # Condition 009
-    credit_score > 700                            # Condition 010
+    churn_prediction_score > 0.7 and                      # Condition 112
+    bandwidth_utilization > 80 and                      # Condition 113
+    credit_score > 700                            # Condition 114
 then
 upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
@@ -2090,9 +2090,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    business_customers_affected > 50 and                      # Condition 008
-    network_segment_congestion == true and                      # Condition 009
-    projected_growth_rate > 5                            # Condition 010
+    business_customers_affected > 50 and                      # Condition 115
+    network_segment_congestion == true and                      # Condition 116
+    projected_growth_rate > 5                            # Condition 117
 then
 capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
@@ -2115,9 +2115,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    business_impact_level > 2 and                      # Condition 008
-    fault_responsibility == 'provider' and                      # Condition 009
-    sla_breach == true                            # Condition 010
+    business_impact_level > 2 and                      # Condition 118
+    fault_responsibility == 'provider' and                      # Condition 119
+    sla_breach == true                            # Condition 120
 then
 credit_percentage = 15
     apology_communication = true
@@ -2140,9 +2140,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    cross_sell_propensity > 0.6 and                      # Condition 008
-    last_upsell_attempt_days > 90 and                      # Condition 009
-    service_usage_complementary == true                            # Condition 010
+    cross_sell_propensity > 0.6 and                      # Condition 121
+    last_upsell_attempt_days > 90 and                      # Condition 122
+    service_usage_complementary == true                            # Condition 123
 then
 bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
@@ -2165,9 +2165,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    hardware_compatibility_new_features == false and                      # Condition 008
-    service_calls_equipment > 1 and                      # Condition 009
-    has_custom_integrations == false                            # Condition 010
+    hardware_compatibility_new_features == false and                      # Condition 124
+    service_calls_equipment > 1 and                      # Condition 125
+    has_custom_integrations == false                            # Condition 126
 then
 equipment_upgrade_offer = true
     upgrade_fee_discount = 50
@@ -2191,9 +2191,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    migration_complexity_score < 7 and                      # Condition 008
-    competitive_pressure_score > 3 and                      # Condition 009
-    customer_lifetime_value > 50000                            # Condition 010
+    migration_complexity_score < 7 and                      # Condition 127
+    competitive_pressure_score > 3 and                      # Condition 128
+    customer_lifetime_value > 50000                            # Condition 129
 then
 migration_priority = 'high'
     incentive_offer = 'free_installation'
@@ -2216,9 +2216,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    data_service_subscribed == true and                      # Condition 008
-    digital_transformation_score > 6 and                      # Condition 009
-    monthly_data_usage > 500                            # Condition 010
+    data_service_subscribed == true and                      # Condition 130
+    digital_transformation_score > 6 and                      # Condition 131
+    monthly_data_usage > 500                            # Condition 132
 then
 renewal_discount_percentage = 8
     extended_payment_terms = true
@@ -2241,9 +2241,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    technology_adoption_score > 7 and                      # Condition 008
-    priority_support_eligible == true and                      # Condition 009
-    critical_business_process == true                            # Condition 010
+    technology_adoption_score > 7 and                      # Condition 133
+    priority_support_eligible == true and                      # Condition 134
+    critical_business_process == true                            # Condition 135
 then
 iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
@@ -2267,9 +2267,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    dedicated_support_eligible == true and                      # Condition 008
-    satisfaction_score < 7 and                      # Condition 009
-    retention_score < 6                            # Condition 010
+    dedicated_support_eligible == true and                      # Condition 136
+    satisfaction_score < 7 and                      # Condition 137
+    retention_score < 6                            # Condition 138
 then
 customer_outreach = 'proactive'
     satisfaction_survey = true
@@ -2293,9 +2293,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    competitor_mentions_support > 0 and                      # Condition 008
-    payment_method == 'auto' and                      # Condition 009
-    growth_trajectory_positive == true                            # Condition 010
+    competitor_mentions_support > 0 and                      # Condition 139
+    payment_method == 'auto' and                      # Condition 140
+    growth_trajectory_positive == true                            # Condition 141
 then
 competitive_response = 'price_match'
     sales_team_notification = true
@@ -2318,9 +2318,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    payment_history_months > 12 and                      # Condition 008
-    customer_complaints_capacity > 10 and                      # Condition 009
-    last_upgrade_months > 12                            # Condition 010
+    payment_history_months > 12 and                      # Condition 142
+    customer_complaints_capacity > 10 and                      # Condition 143
+    last_upgrade_months > 12                            # Condition 144
 then
 cross_sell_package = 'complementary_services'
     marketing_campaign = 'targeted'
@@ -2343,9 +2343,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_reported_issue == true and                      # Condition 008
-    multiple_services_affected == true and                      # Condition 009
-    service_affected == 'critical'                            # Condition 010
+    customer_reported_issue == true and                      # Condition 145
+    multiple_services_affected == true and                      # Condition 146
+    service_affected == 'critical'                            # Condition 147
 then
 support_escalation = true
     specialist_assignment = 'immediate'
@@ -2368,9 +2368,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    customer_growth_phase == 'expansion' and                      # Condition 008
-    contract_remaining_months > 12 and                      # Condition 009
-    current_equipment_model_discontinued == true                            # Condition 010
+    customer_growth_phase == 'expansion' and                      # Condition 148
+    contract_remaining_months > 12 and                      # Condition 149
+    current_equipment_model_discontinued == true                            # Condition 150
 then
 campaign_inclusion = true
     personalized_messaging = true
@@ -2393,9 +2393,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    monthly_spend > 2000 and                      # Condition 008
-    upgrade_program_eligible == true and                      # Condition 009
-    platform_support_end_months < 12                            # Condition 010
+    monthly_spend > 2000 and                      # Condition 151
+    upgrade_program_eligible == true and                      # Condition 152
+    platform_support_end_months < 12                            # Condition 153
 then
 network_analysis = 'detailed'
     capacity_increase_recommendation = true
@@ -2418,9 +2418,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    service_compatibility_new_platform == true and                      # Condition 008
-    technology_refresh_budget_approved == true and                      # Condition 009
-    market_share_strategic_account == true                            # Condition 010
+    service_compatibility_new_platform == true and                      # Condition 154
+    technology_refresh_budget_approved == true and                      # Condition 155
+    market_share_strategic_account == true                            # Condition 156
 then
 beta_program_invitation = true
     feedback_priority = 'high'
@@ -2444,9 +2444,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    price_sensitivity_score > 7 and                      # Condition 008
-    renewal_propensity_score < 0.7 and                      # Condition 009
-    subscription_type in premium_subscription_types                            # Condition 010
+    price_sensitivity_score > 7 and                      # Condition 157
+    renewal_propensity_score < 0.7 and                      # Condition 158
+    subscription_type in premium_subscription_types                            # Condition 159
 then
 plan_optimization_recommendation = 'cost_saving'
     usage_analysis = true
@@ -2469,9 +2469,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    usage_decline_months >= high_risk_threshold and                      # Condition 008
-    upgrade_eligibility_score > 7 and                      # Condition 009
-    peak_usage_percentage > capacity_threshold                            # Condition 010
+    usage_decline_months >= high_risk_threshold and                      # Condition 102
+    upgrade_eligibility_score > 7 and                      # Condition 103
+    peak_usage_percentage > capacity_threshold                            # Condition 104
 then
 compliance_review = 'required'
     documentation_update = true
@@ -2494,9 +2494,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    outage_duration_minutes > min_outage_minutes and                      # Condition 008
-    services_subscribed < 3 and                      # Condition 009
-    equipment_age_months > 24                            # Condition 010
+    outage_duration_minutes > min_outage_minutes and                      # Condition 105
+    services_subscribed < 3 and                      # Condition 106
+    equipment_age_months > 24                            # Condition 107
 then
 fraud_alert = true
     account_review = 'immediate'
@@ -2520,9 +2520,9 @@ when
     monthly_spend > 500 and                      # Condition 005
     region in high_priority_regions and                      # Condition 006
     service_level == 'premium' and                      # Condition 007
-    current_platform in legacy_platforms and                      # Condition 008
-    contract_end_days < 90 and                      # Condition 009
-    customer_industry in iot_compatible_industries                            # Condition 010
+    current_platform in legacy_platforms and                      # Condition 108
+    contract_end_days < 90 and                      # Condition 109
+    customer_industry in iot_compatible_industries                            # Condition 110
 then
 support_priority = 'high'
     response_time_hours = 2
