@@ -584,3 +584,131 @@ class RulePerformanceTester:
         # Add total time information
         total_time = time.time() - self.total_start_time
         print(f"\n{Fore.YELLOW}Total test time: {Fore.CYAN}{total_time:.2f} seconds{Style.RESET_ALL}")
+        
+        # Generate a plain English explanation and save to a file in the temp directory
+        self._save_plain_text_summary(sorted_results, total_time)
+    
+    def _save_plain_text_summary(self, sorted_results, total_time):
+        """ Generate a plain English explanation of the test results and save to a file. """
+        # Import tempfile here to avoid global import
+        import tempfile
+        
+        # Get the fastest and slowest configurations
+        by_avg_time = sorted(sorted_results, key=lambda x: x['avg_time'])
+        fastest = by_avg_time[0]
+        slowest = by_avg_time[-1]
+        
+        # Get the average time across all tests
+        all_avg_times = [result['avg_time'] for result in sorted_results]
+        overall_avg = mean(all_avg_times) if all_avg_times else 0
+        
+        # Group results by rule count
+        rule_groups = {}
+        for result in sorted_results:
+            rule_count = result['num_rules']
+            if rule_count not in rule_groups:
+                rule_groups[rule_count] = []
+            rule_groups[rule_count].append(result)
+        
+        # Generate the explanation
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        explanation = f"""# Zato Rule Engine Performance Test Results
+
+Test Date: {now}
+
+## Summary
+
+The performance tests were run on {len(sorted_results)} different rule configurations, 
+varying the number of rules, conditions per rule, and common conditions across rules.
+
+Total test execution time: {total_time:.2f} seconds
+
+## Key Findings
+
+### Fastest Configuration
+- File: {fastest['file_name']}
+- Rules: {fastest['num_rules']}
+- Conditions per rule: {fastest['num_conditions']}
+- Common conditions: {fastest['num_common']}
+- Average time per rule: {fastest['avg_time']:.4f} ms
+- Total execution time: {fastest['total_time']:.4f} ms
+
+### Slowest Configuration
+- File: {slowest['file_name']}
+- Rules: {slowest['num_rules']}
+- Conditions per rule: {slowest['num_conditions']}
+- Common conditions: {slowest['num_common']}
+- Average time per rule: {slowest['avg_time']:.4f} ms
+- Total execution time: {slowest['total_time']:.4f} ms
+
+### Overall Performance
+- Average time across all configurations: {overall_avg:.4f} ms
+- Performance difference between fastest and slowest: {slowest['avg_time'] / fastest['avg_time']:.2f}x
+
+## Analysis by Rule Count
+"""
+        
+        # Add analysis for each rule count group
+        for rule_count in sorted(rule_groups.keys()):
+            group = rule_groups[rule_count]
+            group_avg_times = [result['avg_time'] for result in group]
+            group_avg = mean(group_avg_times) if group_avg_times else 0
+            
+            # Sort by average time
+            sorted_group = sorted(group, key=lambda x: x['avg_time'])
+            fastest_in_group = sorted_group[0]
+            slowest_in_group = sorted_group[-1]
+            
+            explanation += f"\n### {rule_count} Rules\n"
+            explanation += f"- Average time: {group_avg:.4f} ms\n"
+            explanation += f"- Fastest configuration: {fastest_in_group['num_conditions']} conditions, "
+            explanation += f"{fastest_in_group['num_common']} common, {fastest_in_group['avg_time']:.4f} ms\n"
+            explanation += f"- Slowest configuration: {slowest_in_group['num_conditions']} conditions, "
+            explanation += f"{slowest_in_group['num_common']} common, {slowest_in_group['avg_time']:.4f} ms\n"
+        
+        # Add conclusions
+        explanation += "\n## Conclusions\n\n"
+        
+        # Analyze impact of rule count
+        if len(rule_groups) > 1:
+            avg_by_rule_count = {}
+            for rule_count, group in rule_groups.items():
+                avg_by_rule_count[rule_count] = mean([r['avg_time'] for r in group])
+            
+            min_rule_count = min(avg_by_rule_count.keys())
+            max_rule_count = max(avg_by_rule_count.keys())
+            
+            scaling_factor = avg_by_rule_count[max_rule_count] / avg_by_rule_count[min_rule_count]
+            rule_ratio = max_rule_count / min_rule_count
+            
+            explanation += f"1. Scaling from {min_rule_count} to {max_rule_count} rules (a {rule_ratio:.1f}x increase) "
+            explanation += f"resulted in a {scaling_factor:.2f}x increase in average processing time.\n"
+        
+        # Analyze impact of condition count
+        all_condition_counts = set(result['num_conditions'] for result in sorted_results)
+        if len(all_condition_counts) > 1:
+            explanation += f"\n2. The number of conditions per rule has a significant impact on performance. "
+            explanation += f"Rules with more conditions generally take longer to process.\n"
+        
+        # Analyze impact of common conditions
+        all_common_counts = set(result['num_common'] for result in sorted_results)
+        if len(all_common_counts) > 1:
+            explanation += f"\n3. Increasing the number of common conditions tends to improve performance, "
+            explanation += f"as common conditions can be evaluated once for multiple rules.\n"
+        
+        # Add recommendations
+        explanation += "\n## Recommendations\n\n"
+        explanation += "1. For optimal performance, consider organizing rules to maximize common conditions.\n"
+        explanation += "2. When possible, place the most frequently failing conditions early in the rule definition to allow for early termination.\n"
+        explanation += "3. For large rule sets, consider breaking them into smaller, more focused groups if appropriate for your use case.\n"
+        
+        # Save the explanation to a file in the temp directory
+        temp_dir = tempfile.gettempdir()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_path = os.path.join(temp_dir, f"zato_rule_perf_results_{timestamp}.txt")
+        
+        with open(file_path, 'w') as f:
+            f.write(explanation)
+        
+        print(f"\n{Fore.GREEN}Plain English explanation saved to: {Fore.CYAN}{file_path}{Style.RESET_ALL}")
