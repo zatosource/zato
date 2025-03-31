@@ -12,9 +12,11 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 from threading import RLock
+from time import time
 
 # rule-engine
 from rule_engine import Rule as RuleImpl
+from rule_engine.ast import ExpressionBase, LogicExpression
 
 # Zato
 from zato.common.marshal_.api import Model
@@ -24,7 +26,7 @@ from zato.common.rules.parser import parse_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
+    from zato.common.typing_ import any_, anydict, bool_, dict_, float_, int_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,15 +144,121 @@ class Container(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RulesManager:
+class CachedRule:
+    """ A wrapper around Zato's Rule class that adds condition caching.
+    """
 
-    _all_rules: 'dict_[str, Rule]'
-    _containers: 'dict_[str, Container]'
+    def __init__(self, rule:'Rule') -> 'None':
+        self.rule = rule
+        self.name = rule.full_name
+        self.cache_hits = 0
+        self.cache_misses = 0
+
+    def match(self, data:'anydict', condition_cache:'dict_[str, any_]'=None) -> 'MatchResult':
+        """ Match data against the rule using condition caching.
+        """
+        # Reset statistics for this evaluation
+        self.cache_hits = 0
+        self.cache_misses = 0
+
+        # Apply default values if needed
+        if self.rule.defaults:
+            needs_defaults = False
+            for key in self.rule.defaults:
+                if key not in data:
+                    needs_defaults = True
+                    break
+
+            if needs_defaults:
+                data = deepcopy(data)
+                for key, value in self.rule.defaults.items():
+                    if key not in data:
+                        data[key] = value
+
+        # Evaluate with caching
+        if condition_cache is not None:
+            result = self._evaluate_with_cache(self.rule.when_impl.statement.expression, data, condition_cache)
+        else:
+            result = self.rule.when_impl.matches(data)
+
+        # Build a match result object
+        match_result = MatchResult(result)
+        if result:
+            match_result.then = self.rule.then
+            match_result.full_name = self.rule.full_name
+
+        return match_result
+
+    def _evaluate_with_cache(self, expression:'ExpressionBase', data:'anydict', cache:'dict_[str, any_]') -> 'bool_':
+        """ Evaluate an expression with caching.
+        """
+        # Generate a cache key based on the expression
+        cache_key = str(expression)
+
+        # Check if result is already in cache
+        if cache_key in cache:
+            self.cache_hits += 1
+            return cache[cache_key]
+
+        self.cache_misses += 1
+
+        # For LogicExpression, handle specially to maintain short-circuit evaluation
+        if isinstance(expression, LogicExpression):
+            if expression.type == 'and':
+                # For AND, evaluate left side first
+                left_result = self._evaluate_with_cache(expression.left, data, cache)
+                if not left_result:
+                    # Short-circuit: left is False, so AND is False
+                    cache[cache_key] = False
+                    return False
+
+                # Left is True, evaluate right side
+                right_result = self._evaluate_with_cache(expression.right, data, cache)
+                result = bool(right_result)
+                cache[cache_key] = result
+                return result
+
+            elif expression.type == 'or':
+                # For OR, evaluate left side first
+                left_result = self._evaluate_with_cache(expression.left, data, cache)
+                if left_result:
+                    # Short-circuit: left is True, so OR is True
+                    cache[cache_key] = True
+                    return True
+
+                # Left is False, evaluate right side
+                right_result = self._evaluate_with_cache(expression.right, data, cache)
+                result = bool(right_result)
+                cache[cache_key] = result
+                return result
+
+        # For other expressions, evaluate directly
+        try:
+            result = expression.evaluate(data)
+            cache[cache_key] = result
+            return bool(result)
+        except Exception as e:
+            logger.warning(f'Error evaluating expression {cache_key}: {e}')
+            return False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RulesManager:
+    """ Rules manager with condition caching.
+    """
 
     def __init__(self) -> 'None':
         self._all_rules = {}
         self._containers = {}
         self._lock = RLock()
+        self.cached_rules = {}  # type: dict_[str, CachedRule]
+        self.performance_stats = {
+            'total_evaluations': 0,
+            'cache_hits': 0,
+            'cache_misses': 0,
+            'total_time': 0.0
+        }  # type: dict_[str, int_ | float_]
 
     def __getitem__(self, name:'str') -> 'Rule | Container':
         return getattr(self, name)
@@ -174,18 +282,75 @@ class RulesManager:
             raise AttributeError(f'No such rule, container or attribute -> {name}')
 
     def match(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
+        """ Match data against rules with condition caching.
+        """
+        # Create a cache for this matching cycle
+        condition_cache = {}  # type: dict_[str, any_]
 
-        # Go through our input ..
-        for _rule_name in rules:
+        # Track performance
+        start_time = time()
 
-            # .. get the actual rule ..
-            rule = self[_rule_name]
+        # Determine which rules to check
+        rule_names = [rules] if isinstance(rules, str) else rules
 
-            # .. if we have a match ..
-            if result := rule.match(data):
+        # Check each rule
+        for rule_name in rule_names:
+            cached_rule = self.cached_rules.get(rule_name)
+            if cached_rule:
+                result = cached_rule.match(data, condition_cache)
+                if result:
+                    # Update performance stats
+                    self._update_stats(condition_cache, cached_rule, start_time)
+                    return result
+            else:
+                # Fall back to original rule if cached version not available
+                rule = self[rule_name]
+                if result := rule.match(data):
+                    return result
 
-                # .. return it to our caller.
-                return result
+        # No match found
+        self._update_stats(condition_cache, None, start_time)
+        return None
+
+    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float_'=0) -> 'None':
+        """ Update performance statistics.
+        """
+        self.performance_stats['total_evaluations'] += 1
+
+        if cached_rule:
+            self.performance_stats['cache_hits'] += cached_rule.cache_hits
+            self.performance_stats['cache_misses'] += cached_rule.cache_misses
+
+        self.performance_stats['total_time'] += time() - start_time
+
+    def get_performance_stats(self) -> 'dict_[str, int_ | float_]':
+        """ Get performance statistics.
+        """
+        stats = self.performance_stats.copy()
+
+        # Calculate derived metrics
+        total_conditions = stats['cache_hits'] + stats['cache_misses']
+        if total_conditions > 0:
+            stats['cache_hit_ratio'] = stats['cache_hits'] / total_conditions
+        else:
+            stats['cache_hit_ratio'] = 0.0
+
+        if stats['total_evaluations'] > 0:
+            stats['avg_evaluation_time'] = stats['total_time'] / stats['total_evaluations']
+        else:
+            stats['avg_evaluation_time'] = 0.0
+
+        return stats
+
+    def reset_performance_stats(self) -> 'None':
+        """ Reset performance statistics.
+        """
+        self.performance_stats = {
+            'total_evaluations': 0,
+            'cache_hits': 0,
+            'cache_misses': 0,
+            'total_time': 0.0
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,6 +399,9 @@ class RulesManager:
             # .. add it to the container as well ..
             container.add_rule(rule)
 
+            # Create a cached version of the rule
+            self.cached_rules[rule.full_name] = CachedRule(rule)
+
             # .. append it for later use ..
             out.append(rule.full_name)
 
@@ -281,86 +449,6 @@ class RulesManager:
 
         # .. and return the list of what was loaded to our caller.
         return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def handle(self): # type: ignore
-
-    input = 'abc = 123'
-    rules = ['hr_ABC_BANK_001', 'hr_TELCO_002', 'hr_Payments_003']
-
-    # 1) Accept the first matching rule from a specific container (by attr)
-    result = self.rules.hr.match(input)
-
-    # 2) Accept the first matching rule from a specific container (by dict)
-    result = self.rules['hr'].match(input)
-
-    # 3) Accept the first matching rule, no matter which container they're from
-    result = self.rules.match(input, rules=rules)
-
-    # 4) Match a named rule from the demo container (by attr)
-    result = self.rules.demo.Payments_003.match(input)
-
-    # 5) Match a named rule from the demo container (by dict)
-    result = self.rules.demo['Payments_003'].match(input)
-
-    # 6) Accept a named rule by its name (by attr)
-    result = self.rules.demo_4.match(input)
-
-    # 7) Accept a named rule by its name (by dict)
-    result = self.rules['demo_4'].match(input)
-
-    print(111, result)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == "__main__":
-
-    # stdlib
-    import sys
-
-    root_dir = sys.argv[1]
-
-    rules = RulesManager()
-    _ = rules.load_rules_from_directory(root_dir)
-
-    # print(111, rules._all_rules)
-
-    data = {'abc': 123}
-
-    # 1) Accept the first matching rule from a specific container (by attr)
-    # result2 = rules.demo.match(data)
-    # print(222, result2)
-
-    # 2) Accept the first matching rule from a specific container (by dict)
-    # result = rules['demo'].match(data)
-    # print(222, result2)
-
-    # 3) Accept the first matching rule, no matter which container they're from
-
-    '''
-    _rules = ['demo_rule_3b', 'demo_rule_3']
-    result3 = rules.match(data, rules=_rules)
-    print(333, result3)
-
-    # 4) Match a named rule from the demo container (by attr)
-    result4 = rules.demo.rule_3.match(data)
-    print(444, result4)
-
-    # 5) Match a named rule from the demo container (by dict)
-    result5 = rules.demo['rule_3'].match(data) # type: ignore
-    print(555, result5)
-
-    # 6) Accept a named rule by its name (by attr)
-    result6 = rules.demo_rule_3.match(data)
-    print(666, result6)
-    '''
-
-    # 7) Accept a named rule by its name (by attr)
-    result7 = rules['demo_rule_3'].match(data)
-    print(777, result7)
 
 # ################################################################################################################################
 # ################################################################################################################################
