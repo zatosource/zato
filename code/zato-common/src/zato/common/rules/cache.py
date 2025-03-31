@@ -81,12 +81,22 @@ class CachedRule:
         """
         # For LogicExpression, use a more efficient key format
         if isinstance(expression, LogicExpression):
-            left_key = str(expression.left)[:50]  # Limit length for efficiency
-            right_key = str(expression.right)[:50]  # Limit length for efficiency
-            return f'{expression.type}:{left_key}:{right_key}'
+            # Get type-specific information
+            expr_type = expression.type
+            
+            # Generate left and right parts of the key
+            left_str = str(expression.left)[:50]  # Limit length for efficiency
+            right_str = str(expression.right)[:50]  # Limit length for efficiency
+            
+            # Create a hash-based key
+            left_hash = str(hash(left_str))
+            right_hash = str(hash(right_str))
+            
+            return f'{expr_type}:{left_hash}:{right_hash}'
 
-        # For other expressions, use the string representation
-        return str(expression)
+        # For other expressions, use a hash of the string representation
+        expr_str = str(expression)
+        return f'{type(expression).__name__}:{hash(expr_str)}'
 
     def _evaluate_with_cache(self, expression:'ExpressionBase', data:'anydict', cache:'dict_[str, any_]') -> 'bool_':
         """ Evaluate an expression with caching.
@@ -100,6 +110,32 @@ class CachedRule:
             return cache[cache_key]
 
         self.cache_misses += 1
+        
+        # Fast path for common expression types
+        if hasattr(expression, 'type'):
+            # Fast path for equality checks
+            if expression.type == 'eq':
+                try:
+                    left_value = expression.left.evaluate(data)
+                    right_value = expression.right.evaluate(data)
+                    result = left_value == right_value
+                    cache[cache_key] = result
+                    return result
+                except Exception as e:
+                    logger.warning(f'Error evaluating equality expression: {e}')
+                    return False
+            
+            # Fast path for inequality checks
+            elif expression.type == 'ne':
+                try:
+                    left_value = expression.left.evaluate(data)
+                    right_value = expression.right.evaluate(data)
+                    result = left_value != right_value
+                    cache[cache_key] = result
+                    return result
+                except Exception as e:
+                    logger.warning(f'Error evaluating inequality expression: {e}')
+                    return False
 
         # Fast path for non-logical expressions
         if not isinstance(expression, LogicExpression):
@@ -170,7 +206,12 @@ def identify_common_expressions(rules:'dict_[str, Rule]') -> 'list[str]':
     result = []
     
     # Sort expressions by frequency (most common first)
-    sorted_expressions = sorted(expression_count.items(), key=lambda x: x[1], reverse=True)
+    def get_count(item):
+        """ Get the count from an item tuple.
+        """
+        return item[1]
+    
+    sorted_expressions = sorted(expression_count.items(), key=get_count, reverse=True)
     
     # Add expressions that appear in multiple rules to the result
     for expr, count in sorted_expressions:
@@ -191,12 +232,17 @@ def _extract_expressions(expression:'ExpressionBase') -> 'list[ExpressionBase]':
 
     return result
 
-def precompute_common_expressions(common_expressions:'list[str]', data:'anydict',  cache:'dict_[str, any_]') -> 'None':
+def precompute_common_expressions(common_expressions:'list[str]', data:'anydict', cache:'dict_[str, any_]') -> 'None':
     """ Precompute results for common expressions.
     """
-    # This is a placeholder - in a real implementation, we would need to
-    # convert the expression strings back to expression objects
-    pass
+    # This is a placeholder implementation
+    # In a real implementation, we would need to convert the expression strings
+    # back to expression objects and evaluate them
+    
+    # For now, we'll just log that this function was called
+    from logging import getLogger
+    logger = getLogger(__name__)
+    logger.info(f'Precomputing {len(common_expressions)} common expressions')
 
 # ################################################################################################################################
 # ################################################################################################################################
