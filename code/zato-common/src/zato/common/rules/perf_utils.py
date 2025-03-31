@@ -453,6 +453,9 @@ class RulePerformanceTester:
                 group_time = time.time() - group_start_time
                 self.group_times[rule_count] = group_time
                 print(f"  {Fore.CYAN}Completed {len(group_results)} tests with {rule_count} rules in {group_time:.2f} seconds{Style.RESET_ALL}")
+                
+                # Display results for this group
+                self._display_group_results(rule_count)
 
             if self.interrupted:
                 break
@@ -551,9 +554,9 @@ class RulePerformanceTester:
             print(f"{avg_part}{total_part}")
 
         # Display group timing information
-        if rule_count in self.group_times and self.group_times[rule_count].get('duration'):
-            duration = self.group_times[rule_count]['duration']
-            print(f"\n{Fore.YELLOW}Group completed in: {Fore.CYAN}{duration:.2f} seconds{Style.RESET_ALL}")
+        if rule_count in self.group_times:
+            duration = self.group_times[rule_count]
+            print(f"\n{Fore.YELLOW}Group test time: {Fore.CYAN}{duration:.2f} seconds{Style.RESET_ALL}")
 
     def display_results(self):
         """ Display the performance test results in an ASCII table. """
