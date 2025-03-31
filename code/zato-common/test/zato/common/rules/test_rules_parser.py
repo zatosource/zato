@@ -13,6 +13,7 @@ import re
 import unittest
 from logging import getLogger
 from pathlib import Path
+from typing import Any, Dict, List
 
 # Zato
 from zato.common.rules.api import RulesManager
@@ -38,12 +39,18 @@ class TestRulesParser(unittest.TestCase):
         zrules_dir = current_dir / 'zrules'
         if zrules_dir.exists() and zrules_dir.is_dir():
             # Find all .zrules files in the zrules subdirectory
-            zrules_files = list(zrules_dir.glob('*.zrules'))
+            all_zrules_files = list(zrules_dir.glob('*.zrules'))
+            # Filter out performance test files
+            zrules_files = [f for f in all_zrules_files if not f.name.startswith('perf_')]
             logger.info(f'Looking for .zrules files in the zrules subdirectory: {zrules_dir}')
+            logger.info(f'Found {len(all_zrules_files)} total files, using {len(zrules_files)} non-performance files')
         else:
             # Find all .zrules files in the current directory (fallback)
-            zrules_files = list(current_dir.glob('*.zrules'))
+            all_zrules_files = list(current_dir.glob('*.zrules'))
+            # Filter out performance test files
+            zrules_files = [f for f in all_zrules_files if not f.name.startswith('perf_')]
             logger.info(f'Looking for .zrules files in the current directory: {current_dir}')
+            logger.info(f'Found {len(all_zrules_files)} total files, using {len(zrules_files)} non-performance files')
 
         # Ensure we found some rule files
         self.assertTrue(zrules_files, 'No .zrules files found in the test directory or zrules subdirectory')
@@ -52,7 +59,7 @@ class TestRulesParser(unittest.TestCase):
         rules_manager = RulesManager()
 
         # Load all the rules files
-        loaded_rules = []
+        loaded_rules: List[str] = []
 
         for zrules_file in zrules_files:
             # Get the container name from the file name (without .zrules extension)
@@ -61,13 +68,13 @@ class TestRulesParser(unittest.TestCase):
             logger.info(f'Processing file: {zrules_file}, container: {container_name}')
 
             # Parse the file
-            parsed_rules = parse_file(zrules_file, container_name)
+            parsed_rules: List[Dict[str, Any]] = parse_file(zrules_file, container_name)
 
             # Check that we got some rules
             self.assertTrue(parsed_rules, f'No rules parsed from {zrules_file}')
 
             # Load the parsed rules into the rules manager
-            rule_names = rules_manager.load_parsed_rules(parsed_rules, container_name)
+            rule_names: List[str] = rules_manager.load_parsed_rules(parsed_rules, container_name)
 
             # Check that we loaded some rules
             self.assertTrue(rule_names, f'No rules loaded from {zrules_file}')

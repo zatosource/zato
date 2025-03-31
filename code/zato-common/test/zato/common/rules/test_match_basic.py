@@ -221,7 +221,7 @@ class TestMatchBasic(unittest.TestCase):
 
         # Create data that matches rule1 but not rule2
         data = {field1_name: expected1_value}
-        
+
         # Add a value for field2 that doesn't match rule2
         if field2_name != field1_name:
             if isinstance(expected2_value, int):

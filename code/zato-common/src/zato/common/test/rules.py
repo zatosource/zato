@@ -32,13 +32,16 @@ class RuleTestHelper:
     """ Helper class for rule testing that handles rule file renaming and provides common functionality.
     """
 
-    def __init__(self, rules_dir=None) -> 'None':
+    def __init__(self, rules_dir=None, include_perf_files=False) -> 'None':
         # Get the directory where the test files are located
         if rules_dir:
             self.current_dir = rules_dir
         else:
             # Default to the current directory where this helper is located
             self.current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+
+        # Flag to determine if performance test files should be included
+        self.include_perf_files = include_perf_files
 
         # Create a rules manager
         self.rules_manager = RulesManager()
@@ -48,12 +51,15 @@ class RuleTestHelper:
         if zrules_dir.exists() and zrules_dir.is_dir():
             load_dir = zrules_dir
             logger.info(f'Loading rules from zrules subdirectory: {load_dir}')
+            
+            # Load rule files based on the include_perf_files flag
+            self._load_rules(load_dir)
         else:
             load_dir = self.current_dir
             logger.info(f'Loading rules from current directory: {load_dir}')
-
-        # Load all the rules files
-        _ = self.rules_manager.load_rules_from_directory(load_dir)
+            
+            # Load rule files based on the include_perf_files flag
+            self._load_rules(load_dir)
 
         # Ensure we have loaded the test rules
         if not self.rules_manager._all_rules:
@@ -67,6 +73,24 @@ class RuleTestHelper:
         for rule_name, rule in self.rules_manager._all_rules.items():
             self.rule_conditions[rule_name] = rule.when
             logger.info(f'Rule {rule_name} conditions: {rule.when}')
+            
+    def _load_rules(self, directory:'Path') -> 'None':
+        """Load rule files from the directory, optionally including performance test files."""
+        # Find all .zrules files in the directory
+        all_files = list(directory.glob('*.zrules'))
+        
+        if self.include_perf_files:
+            # Include all files
+            files_to_load = all_files
+            logger.info(f'Loading all {len(files_to_load)} rule files (including performance test files)')
+        else:
+            # Filter out performance test files
+            files_to_load = [f for f in all_files if not f.name.startswith('perf_')]
+            logger.info(f'Found {len(all_files)} total rule files, loading {len(files_to_load)} non-performance files')
+        
+        # Load each file individually
+        for rule_file in files_to_load:
+            self.rules_manager.load_rules_from_file(rule_file)
 
     def find_rules_with_condition(self, condition_text:'str') -> 'strlist':
         """ Find rules that contain the specified text in their condition.
