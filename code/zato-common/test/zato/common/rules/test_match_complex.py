@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 import unittest
 from logging import getLogger
+from pathlib import Path
 
 # Zato
 from zato.common.test.rules import RuleTestHelper
@@ -25,14 +27,17 @@ logger = getLogger(__name__)
 class TestMatchComplex(unittest.TestCase):
     """ Tests complex rule matching functionality with compound conditions.
     """
-
     def setUp(self) -> 'None':
-        # Initialize the rule test helper
-        self.helper = RuleTestHelper()
+
+        # Initialize the rule test helper with the path to the rules directory
+        rules_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        self.helper = RuleTestHelper(rules_dir)
+
 
     def test_compound_and_conditions(self) -> 'None':
         """ Test rules with multiple AND conditions.
         """
+
         # Find rules with AND conditions but no OR conditions
         and_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -52,14 +57,17 @@ class TestMatchComplex(unittest.TestCase):
 
         # For a rule with account_balance_average condition
         if 'account_balance_average' in rule_condition:
+
             # Test with all conditions matching
             data = {
                 'account_balance_average': 600000,
                 'customer_segment': 'private_banking',
                 'relationship_tenure_years': 3
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with all conditions true')
+
 
             # Test with first condition failing
             data = {
@@ -67,8 +75,10 @@ class TestMatchComplex(unittest.TestCase):
                 'customer_segment': 'private_banking',
                 'relationship_tenure_years': 3
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertFalse(result, f'Rule {rule_name} should not have matched with first condition false')
+
 
             # Test with second condition failing
             data = {
@@ -76,8 +86,10 @@ class TestMatchComplex(unittest.TestCase):
                 'customer_segment': 'retail',  # Not matching
                 'relationship_tenure_years': 3
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertFalse(result, f'Rule {rule_name} should not have matched with second condition false')
+
 
             # Test with third condition failing
             data = {
@@ -85,6 +97,7 @@ class TestMatchComplex(unittest.TestCase):
                 'customer_segment': 'private_banking',
                 'relationship_tenure_years': 1  # Below threshold
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertFalse(result, f'Rule {rule_name} should not have matched with third condition false')
 
@@ -97,6 +110,7 @@ class TestMatchComplex(unittest.TestCase):
     def test_compound_or_conditions(self) -> 'None':
         """ Test rules with multiple OR conditions.
         """
+
         # Find rules with OR conditions but no AND conditions
         or_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -116,15 +130,18 @@ class TestMatchComplex(unittest.TestCase):
 
         # For a rule with abc condition (abc == 123 or abc == 456)
         if 'abc == 123' in rule_condition:
+
             # Test with first condition matching
             data = {'abc': 123}
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with first condition true')
 
+
             # Test with second condition matching
             data = {'abc': 456}
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with second condition true')
+
 
             # Test with both conditions failing
             data = {'abc': 789}
@@ -140,6 +157,7 @@ class TestMatchComplex(unittest.TestCase):
     def test_mixed_and_or_conditions(self) -> 'None':
         """ Test rules with mixed AND and OR conditions.
         """
+
         # Find rules with both AND and OR conditions
         mixed_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -159,6 +177,7 @@ class TestMatchComplex(unittest.TestCase):
 
         # For a rule with transaction_type condition
         if 'transaction_type' in rule_condition:
+
             # Test with all conditions matching
             data = {
                 'transaction_type': 'purchase',
@@ -172,8 +191,10 @@ class TestMatchComplex(unittest.TestCase):
                 'hello': 123,
                 'default': {'transaction_amount': 500}  # For comparison
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with all conditions true')
+
 
             # Test with OR condition using the alternative (time_hour instead of category)
             data = {
@@ -188,8 +209,10 @@ class TestMatchComplex(unittest.TestCase):
                 'hello': 123,
                 'default': {'transaction_amount': 500}
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with alternative OR condition')
+
 
             # Test with both OR conditions failing
             data = {
@@ -204,6 +227,7 @@ class TestMatchComplex(unittest.TestCase):
                 'hello': 123,
                 'default': {'transaction_amount': 500}
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertFalse(result, f'Rule {rule_name} should not have matched with OR condition failing')
 
@@ -216,6 +240,7 @@ class TestMatchComplex(unittest.TestCase):
     def test_parenthesized_conditions(self) -> 'None':
         """ Test rules with parenthesized conditions to verify operator precedence.
         """
+
         # Find rules with parentheses in conditions
         parenthesized_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -235,6 +260,7 @@ class TestMatchComplex(unittest.TestCase):
 
         # For a rule with transaction_category condition
         if 'transaction_category' in rule_condition:
+
             # Test with the parenthesized condition true (first option)
             data = {
                 'transaction_type': 'purchase',
@@ -248,8 +274,10 @@ class TestMatchComplex(unittest.TestCase):
                 'hello': 123,
                 'default': {'transaction_amount': 500}
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with parenthesized condition true (first option)')
+
 
             # Test with the parenthesized condition true (second option)
             data = {
@@ -264,6 +292,7 @@ class TestMatchComplex(unittest.TestCase):
                 'hello': 123,
                 'default': {'transaction_amount': 500}
             }
+
             result = self.helper.match_rule(rule_name, data)
             self.assertTrue(result, f'Rule {rule_name} should have matched with parenthesized condition true (second option)')
 

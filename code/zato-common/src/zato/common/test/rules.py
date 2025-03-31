@@ -32,9 +32,13 @@ class RuleTestHelper:
     """ Helper class for rule testing that handles rule file renaming and provides common functionality.
     """
 
-    def __init__(self) -> 'None':
-        # Get the current directory where the test files are located
-        self.current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    def __init__(self, rules_dir=None) -> 'None':
+        # Get the directory where the test files are located
+        if rules_dir:
+            self.current_dir = rules_dir
+        else:
+            # Default to the current directory where this helper is located
+            self.current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
         # Create a rules manager
         self.rules_manager = RulesManager()
