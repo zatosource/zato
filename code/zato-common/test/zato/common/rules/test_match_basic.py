@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 import unittest
 from logging import getLogger
+from pathlib import Path
 
 # Zato
 from zato.common.test.rules import RuleTestHelper
@@ -25,14 +27,16 @@ logger = getLogger(__name__)
 class TestMatchBasic(unittest.TestCase):
     """ Tests basic rule matching functionality.
     """
-
     def setUp(self) -> 'None':
-        # Initialize the rule test helper
-        self.helper = RuleTestHelper()
+
+        # Initialize the rule test helper with the path to the rules directory
+        rules_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        self.helper = RuleTestHelper(rules_dir)
 
     def test_simple_equality_match(self) -> 'None':
         """ Test simple equality matching (abc == 123).
         """
+
         # Find rules with simple equality conditions
         equality_rules = self.helper.find_simple_equality_rules()
 
@@ -88,6 +92,7 @@ class TestMatchBasic(unittest.TestCase):
     def test_complex_condition_match(self) -> 'None':
         """ Test more complex conditions like greater than, less than, etc.
         """
+
         # Find rules with complex conditions (>, <, >=, <=)
         complex_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -107,6 +112,7 @@ class TestMatchBasic(unittest.TestCase):
 
         # For a rule with account_balance_average > 500000
         if 'account_balance_average' in rule_condition and '>' in rule_condition:
+
             # Test with a value above the threshold
             data = {'account_balance_average': 600000}
             result = self.helper.match_rule(rule_name, data)
@@ -119,6 +125,7 @@ class TestMatchBasic(unittest.TestCase):
 
         # For a rule with transaction_amount < 1000
         elif 'transaction_amount' in rule_condition and '<' in rule_condition:
+
             # Test with a value below the threshold
             data = {'transaction_amount': 500}
             result = self.helper.match_rule(rule_name, data)
@@ -136,6 +143,7 @@ class TestMatchBasic(unittest.TestCase):
     def test_rule_access_methods(self) -> 'None':
         """ Test different ways to access rules (direct access, container access).
         """
+
         # Find a rule with a simple condition for testing
         simple_rules = self.helper.find_simple_equality_rules()
 
@@ -168,6 +176,7 @@ class TestMatchBasic(unittest.TestCase):
     def test_rule_list_match(self) -> 'None':
         """ Test matching against a list of rules.
         """
+
         # Find rules with simple equality conditions
         equality_rules = self.helper.find_simple_equality_rules()
 
@@ -245,6 +254,7 @@ class TestMatchBasic(unittest.TestCase):
     def test_service_activation_rule(self) -> 'None':
         """ Test a rule that would be used to activate a service.
         """
+
         # Find rules with 'premium' in the condition
         premium_rules = self.helper.find_rules_with_condition('premium')
 
@@ -265,6 +275,7 @@ class TestMatchBasic(unittest.TestCase):
 
         # For a rule with customer_segment == 'premium'
         if 'customer_segment' in rule_condition and 'premium' in rule_condition:
+
             # Test with a premium customer
             data = {'customer_segment': 'premium'}
             result = self.helper.match_rule(rule_name, data)
@@ -277,6 +288,7 @@ class TestMatchBasic(unittest.TestCase):
 
         # For a rule with account_tier == 'gold'
         elif 'account_tier' in rule_condition and 'gold' in rule_condition:
+
             # Test with a gold tier account
             data = {'account_tier': 'gold'}
             result = self.helper.match_rule(rule_name, data)
