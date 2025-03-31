@@ -26,7 +26,7 @@ when
     transaction_amount > default.transaction_amount and
     (transaction_category == 'fixed' or transaction_time_hour == 5) and
     title.as_upper == "QBC" and
-    doc_id =~ r"AAABBB\s\S+" and
+    doc_id =~ r"AAABBB\\s\\S+" and
     abc == d'2025-01-01T00:00:00' and
     hello == 123 # This is a comment too and
 then
