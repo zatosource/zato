@@ -82,9 +82,9 @@ class BarChart:
         # Create the bars
         for i, (label, value) in enumerate(data):
             bar_height = int(value * scale)
-            bar = '\u2588' * bar_height
+            bar = '█' * bar_height
             # Format the value with consistent spacing for 3 digits
-            value_str = f"{value:6.4f}"
+            value_str = f"{value:8.4f}"
             chart.append(f"{label:{max_label_length}} | {bar} {value_str}")
         
         # Add axes labels
@@ -367,9 +367,9 @@ class RulePerformanceTester:
         print('\nNote: StdDev (Standard Deviation) measures the variability in timing results.')
         print('      Lower values indicate more consistent/reproducible performance.')
         
-        # Create a bar chart with more readable labels
+        # Create a bar chart with more readable labels and consistent formatting
         print('\nPerformance Comparison Chart (milliseconds):')
-        chart_data = [(f"{result['num_conditions']} conditions, {result['num_common']} common", result['avg_time']) 
+        chart_data = [(f"{result['num_conditions']:003d} conditions, {result['num_common']:003d} common", result['avg_time']) 
                      for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
         print(BarChart.render(
             chart_data, 
