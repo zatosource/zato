@@ -43,8 +43,17 @@ class RuleTestHelper:
         # Create a rules manager
         self.rules_manager = RulesManager()
 
+        # Check if there's a zrules subdirectory
+        zrules_dir = self.current_dir / 'zrules'
+        if zrules_dir.exists() and zrules_dir.is_dir():
+            load_dir = zrules_dir
+            logger.info(f'Loading rules from zrules subdirectory: {load_dir}')
+        else:
+            load_dir = self.current_dir
+            logger.info(f'Loading rules from current directory: {load_dir}')
+
         # Load all the rules files
-        _ = self.rules_manager.load_rules_from_directory(self.current_dir)
+        _ = self.rules_manager.load_rules_from_directory(load_dir)
 
         # Ensure we have loaded the test rules
         if not self.rules_manager._all_rules:
