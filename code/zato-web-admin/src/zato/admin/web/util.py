@@ -128,9 +128,9 @@ def static_serve(request, path, document_root=None, show_indexes=False):
     if fullpath.is_dir():
         if show_indexes:
             return directory_index(path, fullpath)
-        raise Http404(_("Directory indexes are not allowed here."))
+        raise Http404('Directory indexes are not allowed here.')
     if not fullpath.exists():
-        raise Http404(_("“%(path)s” does not exist") % {"path": fullpath})
+        raise Http404(f'Path {fullpath} does not exist')
     # Respect the If-Modified-Since header.
     statobj = fullpath.stat()
     if not was_modified_since(
