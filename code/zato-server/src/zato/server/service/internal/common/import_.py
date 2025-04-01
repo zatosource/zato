@@ -158,14 +158,14 @@ class ImportObjects(Service):
 
             if topics_info.to_add:
                 topics_insert = self.create_objects(PubSubTopicTable, topics_info.to_add)
-                session.execute(topics_insert)
+                _ = session.execute(topics_insert)
 
             if topics_info.to_update:
                 self.update_objects(session, PubSubTopic, topics_info.to_update)
 
             if endpoints_info.to_add:
                 endpoints_insert = self.create_objects(PubSubEndpointTable, endpoints_info.to_add)
-                session.execute(endpoints_insert)
+                _ = session.execute(endpoints_insert)
 
             if endpoints_info.to_update:
                 self.update_objects(session, PubSubEndpoint, endpoints_info.to_update)
@@ -181,9 +181,13 @@ class ImportObjects(Service):
             input_subscriptions = self._resolve_input_subscriptions(input_subscriptions, existing)
             subscriptions_info = self._find_subscriptions(input_subscriptions, existing_subscriptions)
 
+            # Now we can enrich subscriptions too
+            self._enrich_subscriptions(subscriptions_info.to_add)
+            self._enrich_subscriptions(subscriptions_info.to_update)
+
             if subscriptions_info.to_add:
                 subscriptions_insert = self.create_objects(PubSubSubscriptionTable, subscriptions_info.to_add)
-                session.execute(subscriptions_insert)
+                _ = session.execute(subscriptions_insert)
 
             if subscriptions_info.to_update:
                 self.update_objects(session, PubSubSubscription, subscriptions_info.to_update)
@@ -364,7 +368,7 @@ class ImportObjects(Service):
 
         # First, insert rows in the base table ..
         sec_base_insert = insert(SecurityBase).values(sec_base_values)
-        session.execute(sec_base_insert)
+        _ = session.execute(sec_base_insert)
         session.commit()
 
         # .. now, get all of their IDs ..
@@ -382,7 +386,7 @@ class ImportObjects(Service):
                     to_add_basic_auth.append(to_add_item)
                     break
 
-        session.execute(HTTPBasicAuthInsert().values(to_add_basic_auth))
+        _ = session.execute(HTTPBasicAuthInsert().values(to_add_basic_auth))
         session.commit()
 
 # ################################################################################################################################
@@ -426,6 +430,13 @@ class ImportObjects(Service):
             opaque1['hook_service_name'] = item.pop('hook_service_name', None)
 
             item[Generic_Attr_Name] = dumps(opaque1)
+
+# ################################################################################################################################
+
+    def _enrich_subscriptions(self, subscriptions:'dictlist') -> 'None':
+
+        for item in subscriptions:
+            item['server_id'] = 1 # We always use the same server
 
 # ################################################################################################################################
 
