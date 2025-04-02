@@ -1,0 +1,207 @@
+# ################################################################################################################################
+
+rule
+    01_BSS_PremiumTier_Assignment
+docs
+    Assigns customers to the Premium billing tier if they meet specific usage and loyalty criteria.
+    Premium customers receive priority support, enhanced data packages, and exclusive promotions.
+    This rule evaluates monthly data usage, subscription length, and premium service enrollment.
+defaults
+    premium_data_threshold = 100
+    loyalty_months_threshold = 24
+when
+    monthly_data_usage > premium_data_threshold and
+    subscription_months > loyalty_months_threshold and
+    premium_services_enrolled == True
+then
+    billing_tier = "Premium"
+    support_priority = "High"
+    eligible_for_promotions = ["exclusive_events", "device_upgrades", "international_packages"]
+
+# ################################################################################################################################
+
+rule
+    02_BSS_Service_Activation
+docs
+    Determines if a customer is eligible for new service activation based on location and account status.
+    Checks if customer address is within service coverage area and has required infrastructure.
+    Verifies customer has no outstanding balances and meets regulatory requirements.
+when
+    address_serviceable == True and
+    infrastructure_available == True and
+    outstanding_balance < 50 and
+    service_restrictions_count == 0 and
+    credit_score >= 600
+then
+    service_activation_eligible = True
+    activation_fee_waived = subscription_months > 12
+    installation_type = "standard"
+
+# ################################################################################################################################
+
+rule
+    03_FX_HighValue_TradeApproval
+docs
+    Evaluates high-value foreign exchange trade requests to determine if additional approval is needed.
+    Considers trade amount, currency volatility, client history, and current market conditions.
+    Helps manage risk exposure while facilitating legitimate trading activity.
+defaults
+    high_value_threshold = 1000000
+    volatility_threshold = 0.05
+when
+    trade_amount > high_value_threshold and
+    (currency_volatility > volatility_threshold or
+    client_trading_history_months < 6 or
+    market_condition == "volatile")
+then
+    requires_additional_approval = True
+    approval_level = "senior_trader"
+    documentation_required = ["trade_rationale", "risk_assessment", "client_verification"]
+    notification_recipients = ["risk_management", "compliance", "trading_desk_head"]
+
+# ################################################################################################################################
+
+rule
+    04_Manufacturing_QualityControl_Rejection
+docs
+    Determines if manufactured items should be rejected based on quality control measurements.
+    Evaluates dimensional tolerances, surface defects, material properties, and test results.
+    Ensures only products meeting quality standards proceed to packaging and shipping.
+defaults
+    rejection_reason_dimensional = "dimensional_error"
+    rejection_reason_surface = "surface_quality"
+    rejection_reason_material = "material_properties"
+    alert_level_high = "high"
+    alert_level_normal = "normal"
+when
+    (dimensional_deviation > tolerance_threshold and material_strength >= minimum_strength_requirement) or
+    (surface_defect_count > 3 and surface_defect_count < 7) or
+    material_strength < minimum_strength_requirement or
+    (test_result == "fail" and retest_result == "fail")
+then
+    product_status = "rejected"
+    rejection_reason = rejection_reason_dimensional
+    rework_eligible = True
+    quality_alert_level = alert_level_normal
+    inspection_frequency = "increased"
+
+# ################################################################################################################################
+
+rule
+    05_Environmental_WildlifeMonitoring_Biodiversity
+docs
+    Analyzes wildlife monitoring data to assess ecosystem health and biodiversity trends.
+    Evaluates species counts, migration patterns, and habitat conditions from field sensors.
+    Determines conservation priorities and habitat management recommendations.
+when
+    species_diversity_index > previous_year_index and
+    endangered_species_sightings > 0 and
+    habitat_condition_score > 65 and
+    invasive_species_percentage < 10
+then
+    ecosystem_status = "improving"
+    conservation_priority = "maintain"
+    monitoring_frequency = "quarterly"
+    management_actions = ["continue_restoration", "educational_outreach", "citizen_science_program"]
+    success_indicators = ["increased_nesting", "expanded_range", "population_growth"]
+
+# ################################################################################################################################
+
+rule
+    06_Government_BenefitEligibility
+docs
+    Determines eligibility for citizen benefit programs offered by government agencies.
+    Evaluates age, income, residency status, and previous benefit history.
+    Calculates benefit levels and identifies additional programs for which seniors may qualify.
+when
+    applicant_age >= 65 and
+    annual_income <= 35000 and
+    years_of_residency >= 5
+then
+    eligible_programs = ["senior_tax_relief", "utility_assistance", "transportation_subsidy"]
+    benefit_level = annual_income < 20000 ? "maximum" : "standard"
+    priority_processing = applicant_age >= 75
+    notification_method = preferred_contact_method
+
+# ################################################################################################################################
+
+rule
+    07_Government_PermitApproval_Residential
+docs
+    Evaluates residential building permit applications against municipal regulations.
+    Checks zoning compliance, environmental factors, and structural requirements.
+    Determines if permits can be approved automatically or require additional review.
+defaults
+    historical_review_year = 1950
+when
+    zoning_code == "residential" and
+    proposed_height_feet <= 35 and
+    proposed_setback_feet >= 15 and
+    environmental_concerns == False and
+    (construction_year > historical_review_year or historical_district == False)
+then
+    permit_status = "approved"
+    inspection_required = True
+    fee_amount = base_fee + (square_footage * 0.1)
+    permit_valid_days = 180
+
+# ################################################################################################################################
+
+rule
+    08_Emergency_HighPriority_Response
+docs
+    Assigns high priority status to emergency incidents based on severity and impact.
+    Evaluates population affected, critical infrastructure involvement, and resource availability.
+    Determines appropriate response units and notification protocols.
+when
+    incident_severity >= 8 or
+    population_affected >= 100 or
+    critical_infrastructure_involved in ["power_plant", "water_treatment", "government"]
+then
+    priority_level = "high"
+    response_units = ["fire", "hazmat"]
+    notification_level = "emergency_broadcast"
+    command_center_activation = True
+
+# ################################################################################################################################
+
+rule
+    09_Airport_GateAssignment_WidebodyAircraft
+docs
+    Assigns appropriate gates to widebody aircraft based on operational requirements.
+    Considers aircraft type, passenger volume, and terminal capabilities.
+    Optimizes gate usage while ensuring passenger convenience and operational efficiency.
+defaults
+    widebody_types = ["B777", "B787", "A330", "A350", "A380", "B747"]
+when
+    aircraft_type in widebody_types and
+    gate_width_meters >= 45 and
+    jetbridge_length_meters >= 12 and
+    gate_currently_available == True
+then
+    assigned_gate = nearest_available_gate
+    priority_boarding = True
+    ground_services_level = "premium"
+    arrival_preparation_minutes = 45
+
+# ################################################################################################################################
+
+rule
+    10_Airport_BaggageHandling_PriorityRouting
+docs
+    Determines which baggage items require priority handling through the airports sorting system.
+    Evaluates connecting flight times, passenger status, and special item designations.
+    Ensures time-sensitive baggage receives expedited processing to prevent missed connections.
+when
+    connecting_flight_minutes < 90 or
+    passenger_status in ["diplomatic", "unaccompanied_minor"] or
+    baggage_tag_priority == "rush" or
+    special_handling_code in ["FRAGILE", "DIPLOMATIC"]
+then
+    routing_priority = "expedited"
+    handling_instructions = "priority_lane"
+    tracking_frequency = "continuous"
+    staff_notification = True
+    estimated_processing_minutes = standard_processing_time * 0.6
+
+# ################################################################################################################################

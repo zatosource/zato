@@ -1,0 +1,53 @@
+# ################################################################################################################################
+
+rule
+    01_Simple_Equality_Test_1
+docs
+    Simple rule with equality condition for testing.
+    This rule is used to test basic equality matching.
+when
+    abc == 123
+then
+    result = "matched_abc_123"
+    action = "process"
+
+# ################################################################################################################################
+
+rule
+    02_Simple_Equality_Test_2
+docs
+    Another simple rule with equality condition for testing.
+    This rule is used to test rule list matching.
+when
+    xyz == 456
+then
+    result = "matched_xyz_456"
+    action = "notify"
+
+# ################################################################################################################################
+
+rule
+    03_Simple_Equality_Test_3
+docs
+    Third simple rule with equality condition for testing.
+    This rule is used to test container access methods.
+when
+    customer_segment == "premium"
+then
+    service_level = "high"
+    priority = 1
+
+# ################################################################################################################################
+
+rule
+    04_Simple_Equality_Test_4
+docs
+    Fourth simple rule with equality condition for testing.
+    This rule is used to test service activation scenarios.
+when
+    account_tier == "gold"
+then
+    fee_waiver = True
+    special_offers = ["premium_service", "extended_support"]
+
+# ################################################################################################################################
