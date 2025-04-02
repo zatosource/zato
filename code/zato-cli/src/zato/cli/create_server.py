@@ -431,9 +431,6 @@ docs
     it can be multiline
 defaults
     max = {'a':'b'}
-invoke
-    result1 = abc.service1(request1)
-    result2 = abc.service2(request2)
 when
     abc == 123 or
     abc == 456
