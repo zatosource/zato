@@ -1,0 +1,2531 @@
+# ################################################################################################################################
+rule
+    TELCO_BSS_001
+docs
+    Identifies customers at risk of churn based on usage patterns and billing history.
+    Used for proactive retention campaigns in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    support_tickets_open < 5                            # Condition 101
+then
+churn_risk = 'high'
+    retention_action = 'executive_outreach'
+    offer_discount = 15
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_002
+docs
+    Determines eligibility for service upgrade offers based on usage patterns and account status.
+    Used for targeted upselling in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    usage_decline_months >= high_risk_threshold                            # Condition 102
+then
+upgrade_offer = 'bandwidth_increase'
+    discount_percentage = 10
+    offer_duration_months = 6
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_003
+docs
+    Identifies network capacity planning needs based on regional usage patterns.
+    Used for infrastructure investment planning in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    upgrade_eligibility_score > 7                            # Condition 103
+then
+capacity_planning_priority = 'high'
+    budget_allocation_percentage = 15
+    implementation_timeline_months = 3
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_004
+docs
+    Determines billing adjustments for service outages based on SLA terms and outage impact.
+    Used for automated credit processing in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    peak_usage_percentage > capacity_threshold                            # Condition 104
+then
+credit_percentage = 15
+    apology_communication = true
+    follow_up_survey = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_005
+docs
+    Identifies opportunities for service bundling based on customer usage patterns.
+    Used for cross-selling campaigns in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
+then
+bundle_offer = 'voice_data_cloud'
+    discount_percentage = 12
+    promotion_duration_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_006
+docs
+    Determines eligibility for early equipment upgrade based on account history and usage.
+    Used for hardware refresh programs in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    services_subscribed < 3                            # Condition 106
+then
+equipment_upgrade_offer = true
+    upgrade_fee_discount = 50
+    contract_extension_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_007
+docs
+    Identifies customers for migration to new service platforms based on technology compatibility.
+    Used for technology transition planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    equipment_age_months > 24                            # Condition 107
+then
+migration_priority = 'high'
+    incentive_offer = 'free_installation'
+    dedicated_migration_support = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_008
+docs
+    Determines pricing adjustments for contract renewals based on customer value and market conditions.
+    Used for retention and revenue management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    current_platform in legacy_platforms                            # Condition 108
+then
+renewal_discount_percentage = 8
+    extended_payment_terms = true
+    value_added_services_free = 2
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_009
+docs
+    Identifies opportunities for IoT service expansion based on customer industry and usage patterns.
+    Used for targeted IoT solution selling in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    contract_end_days < 90                            # Condition 109
+then
+iot_solution_offer = 'industry_specific'
+    pilot_program_eligible = true
+    consultation_scheduling = 'priority'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_010
+docs
+    Evaluates customer satisfaction metrics to trigger proactive outreach.
+    Used for customer experience improvement in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_industry in iot_compatible_industries                            # Condition 110
+then
+customer_outreach = 'proactive'
+    satisfaction_survey = true
+    special_offer = 'loyalty_discount'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_011
+docs
+    Determines eligibility for special pricing based on competitive landscape.
+    Used for competitive response management in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    billing_complaints > 0                            # Condition 111
+then
+competitive_response = 'price_match'
+    sales_team_notification = true
+    executive_briefing = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_012
+docs
+    Identifies cross-selling opportunities based on current service utilization.
+    Used for revenue optimization in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    churn_prediction_score > 0.7                            # Condition 112
+then
+cross_sell_package = 'complementary_services'
+    marketing_campaign = 'targeted'
+    discount_offer = 10
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_013
+docs
+    Evaluates technical support escalation needs based on issue complexity.
+    Used for support resource allocation in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    bandwidth_utilization > 80                            # Condition 113
+then
+support_escalation = true
+    specialist_assignment = 'immediate'
+    case_priority = 'high'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_014
+docs
+    Determines promotional campaign targeting based on customer segments.
+    Used for marketing campaign targeting in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    credit_score > 700                            # Condition 114
+then
+campaign_inclusion = true
+    personalized_messaging = true
+    offer_type = 'segment_specific'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_015
+docs
+    Identifies potential network bottlenecks based on usage trends.
+    Used for capacity planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    business_customers_affected > 50                            # Condition 115
+then
+network_analysis = 'detailed'
+    capacity_increase_recommendation = true
+    monitoring_frequency = 'daily'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_016
+docs
+    Determines eligibility for beta program participation based on customer profile.
+    Used for product development feedback in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    network_segment_congestion == true                            # Condition 116
+then
+beta_program_invitation = true
+    feedback_priority = 'high'
+    early_access_features = ['feature_a', 'feature_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_017
+docs
+    Identifies opportunities for service plan optimization.
+    Used for customer cost optimization in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    projected_growth_rate > 5                            # Condition 117
+then
+plan_optimization_recommendation = 'cost_saving'
+    usage_analysis = true
+    alternative_plans = ['plan_a', 'plan_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_018
+docs
+    Evaluates security compliance requirements based on customer industry.
+    Used for regulatory compliance management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    business_impact_level > 2                            # Condition 118
+then
+compliance_review = 'required'
+    documentation_update = true
+    regulatory_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_019
+docs
+    Determines data usage pattern anomalies for fraud detection.
+    Used for fraud prevention in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    fault_responsibility == 'provider'                            # Condition 119
+then
+fraud_alert = true
+    account_review = 'immediate'
+    security_team_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_020
+docs
+    Determines if a customer is eligible for premium support based on subscription type and history.
+    Used for prioritizing customer support tickets in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    sla_breach == true                            # Condition 120
+then
+support_priority = 'high'
+    response_time_hours = 2
+    dedicated_agent = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_021
+docs
+    Identifies customers at risk of churn based on usage patterns and billing history.
+    Used for proactive retention campaigns in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    cross_sell_propensity > 0.6                            # Condition 121
+then
+churn_risk = 'high'
+    retention_action = 'executive_outreach'
+    offer_discount = 15
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_022
+docs
+    Determines eligibility for service upgrade offers based on usage patterns and account status.
+    Used for targeted upselling in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    last_upsell_attempt_days > 90                            # Condition 122
+then
+upgrade_offer = 'bandwidth_increase'
+    discount_percentage = 10
+    offer_duration_months = 6
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_023
+docs
+    Identifies network capacity planning needs based on regional usage patterns.
+    Used for infrastructure investment planning in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_usage_complementary == true                            # Condition 123
+then
+capacity_planning_priority = 'high'
+    budget_allocation_percentage = 15
+    implementation_timeline_months = 3
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_024
+docs
+    Determines billing adjustments for service outages based on SLA terms and outage impact.
+    Used for automated credit processing in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    hardware_compatibility_new_features == false                            # Condition 124
+then
+credit_percentage = 15
+    apology_communication = true
+    follow_up_survey = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_025
+docs
+    Identifies opportunities for service bundling based on customer usage patterns.
+    Used for cross-selling campaigns in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_calls_equipment > 1                            # Condition 125
+then
+bundle_offer = 'voice_data_cloud'
+    discount_percentage = 12
+    promotion_duration_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_026
+docs
+    Determines eligibility for early equipment upgrade based on account history and usage.
+    Used for hardware refresh programs in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    has_custom_integrations == false                            # Condition 126
+then
+equipment_upgrade_offer = true
+    upgrade_fee_discount = 50
+    contract_extension_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_027
+docs
+    Identifies customers for migration to new service platforms based on technology compatibility.
+    Used for technology transition planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    migration_complexity_score < 7                            # Condition 127
+then
+migration_priority = 'high'
+    incentive_offer = 'free_installation'
+    dedicated_migration_support = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_028
+docs
+    Determines pricing adjustments for contract renewals based on customer value and market conditions.
+    Used for retention and revenue management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    competitive_pressure_score > 3                            # Condition 128
+then
+renewal_discount_percentage = 8
+    extended_payment_terms = true
+    value_added_services_free = 2
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_029
+docs
+    Identifies opportunities for IoT service expansion based on customer industry and usage patterns.
+    Used for targeted IoT solution selling in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_lifetime_value > 50000                            # Condition 129
+then
+iot_solution_offer = 'industry_specific'
+    pilot_program_eligible = true
+    consultation_scheduling = 'priority'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_030
+docs
+    Evaluates customer satisfaction metrics to trigger proactive outreach.
+    Used for customer experience improvement in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    data_service_subscribed == true                            # Condition 130
+then
+customer_outreach = 'proactive'
+    satisfaction_survey = true
+    special_offer = 'loyalty_discount'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_031
+docs
+    Determines eligibility for special pricing based on competitive landscape.
+    Used for competitive response management in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    digital_transformation_score > 6                            # Condition 131
+then
+competitive_response = 'price_match'
+    sales_team_notification = true
+    executive_briefing = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_032
+docs
+    Identifies cross-selling opportunities based on current service utilization.
+    Used for revenue optimization in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    monthly_data_usage > 500                            # Condition 132
+then
+cross_sell_package = 'complementary_services'
+    marketing_campaign = 'targeted'
+    discount_offer = 10
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_033
+docs
+    Evaluates technical support escalation needs based on issue complexity.
+    Used for support resource allocation in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    technology_adoption_score > 7                            # Condition 133
+then
+support_escalation = true
+    specialist_assignment = 'immediate'
+    case_priority = 'high'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_034
+docs
+    Determines promotional campaign targeting based on customer segments.
+    Used for marketing campaign targeting in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    priority_support_eligible == true                            # Condition 134
+then
+campaign_inclusion = true
+    personalized_messaging = true
+    offer_type = 'segment_specific'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_035
+docs
+    Identifies potential network bottlenecks based on usage trends.
+    Used for capacity planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    critical_business_process == true                            # Condition 135
+then
+network_analysis = 'detailed'
+    capacity_increase_recommendation = true
+    monitoring_frequency = 'daily'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_036
+docs
+    Determines eligibility for beta program participation based on customer profile.
+    Used for product development feedback in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    dedicated_support_eligible == true                            # Condition 136
+then
+beta_program_invitation = true
+    feedback_priority = 'high'
+    early_access_features = ['feature_a', 'feature_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_037
+docs
+    Identifies opportunities for service plan optimization.
+    Used for customer cost optimization in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    satisfaction_score < 7                            # Condition 137
+then
+plan_optimization_recommendation = 'cost_saving'
+    usage_analysis = true
+    alternative_plans = ['plan_a', 'plan_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_038
+docs
+    Evaluates security compliance requirements based on customer industry.
+    Used for regulatory compliance management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    retention_score < 6                            # Condition 138
+then
+compliance_review = 'required'
+    documentation_update = true
+    regulatory_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_039
+docs
+    Determines data usage pattern anomalies for fraud detection.
+    Used for fraud prevention in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    competitor_mentions_support > 0                            # Condition 139
+then
+fraud_alert = true
+    account_review = 'immediate'
+    security_team_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_040
+docs
+    Determines if a customer is eligible for premium support based on subscription type and history.
+    Used for prioritizing customer support tickets in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    payment_method == 'auto'                            # Condition 140
+then
+support_priority = 'high'
+    response_time_hours = 2
+    dedicated_agent = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_041
+docs
+    Identifies customers at risk of churn based on usage patterns and billing history.
+    Used for proactive retention campaigns in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    growth_trajectory_positive == true                            # Condition 141
+then
+churn_risk = 'high'
+    retention_action = 'executive_outreach'
+    offer_discount = 15
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_042
+docs
+    Determines eligibility for service upgrade offers based on usage patterns and account status.
+    Used for targeted upselling in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    payment_history_months > 12                            # Condition 142
+then
+upgrade_offer = 'bandwidth_increase'
+    discount_percentage = 10
+    offer_duration_months = 6
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_043
+docs
+    Identifies network capacity planning needs based on regional usage patterns.
+    Used for infrastructure investment planning in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_complaints_capacity > 10                            # Condition 143
+then
+capacity_planning_priority = 'high'
+    budget_allocation_percentage = 15
+    implementation_timeline_months = 3
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_044
+docs
+    Determines billing adjustments for service outages based on SLA terms and outage impact.
+    Used for automated credit processing in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    last_upgrade_months > 12                            # Condition 144
+then
+credit_percentage = 15
+    apology_communication = true
+    follow_up_survey = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_045
+docs
+    Identifies opportunities for service bundling based on customer usage patterns.
+    Used for cross-selling campaigns in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_reported_issue == true                            # Condition 145
+then
+bundle_offer = 'voice_data_cloud'
+    discount_percentage = 12
+    promotion_duration_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_046
+docs
+    Determines eligibility for early equipment upgrade based on account history and usage.
+    Used for hardware refresh programs in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    multiple_services_affected == true                            # Condition 146
+then
+equipment_upgrade_offer = true
+    upgrade_fee_discount = 50
+    contract_extension_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_047
+docs
+    Identifies customers for migration to new service platforms based on technology compatibility.
+    Used for technology transition planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_affected == 'critical'                            # Condition 147
+then
+migration_priority = 'high'
+    incentive_offer = 'free_installation'
+    dedicated_migration_support = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_048
+docs
+    Determines pricing adjustments for contract renewals based on customer value and market conditions.
+    Used for retention and revenue management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_growth_phase == 'expansion'                            # Condition 148
+then
+renewal_discount_percentage = 8
+    extended_payment_terms = true
+    value_added_services_free = 2
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_049
+docs
+    Identifies opportunities for IoT service expansion based on customer industry and usage patterns.
+    Used for targeted IoT solution selling in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    contract_remaining_months > 12                            # Condition 149
+then
+iot_solution_offer = 'industry_specific'
+    pilot_program_eligible = true
+    consultation_scheduling = 'priority'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_050
+docs
+    Evaluates customer satisfaction metrics to trigger proactive outreach.
+    Used for customer experience improvement in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    current_equipment_model_discontinued == true                            # Condition 150
+then
+customer_outreach = 'proactive'
+    satisfaction_survey = true
+    special_offer = 'loyalty_discount'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_051
+docs
+    Determines eligibility for special pricing based on competitive landscape.
+    Used for competitive response management in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    monthly_spend > 2000                            # Condition 151
+then
+competitive_response = 'price_match'
+    sales_team_notification = true
+    executive_briefing = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_052
+docs
+    Identifies cross-selling opportunities based on current service utilization.
+    Used for revenue optimization in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    upgrade_program_eligible == true                            # Condition 152
+then
+cross_sell_package = 'complementary_services'
+    marketing_campaign = 'targeted'
+    discount_offer = 10
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_053
+docs
+    Evaluates technical support escalation needs based on issue complexity.
+    Used for support resource allocation in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    platform_support_end_months < 12                            # Condition 153
+then
+support_escalation = true
+    specialist_assignment = 'immediate'
+    case_priority = 'high'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_054
+docs
+    Determines promotional campaign targeting based on customer segments.
+    Used for marketing campaign targeting in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_compatibility_new_platform == true                            # Condition 154
+then
+campaign_inclusion = true
+    personalized_messaging = true
+    offer_type = 'segment_specific'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_055
+docs
+    Identifies potential network bottlenecks based on usage trends.
+    Used for capacity planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    technology_refresh_budget_approved == true                            # Condition 155
+then
+network_analysis = 'detailed'
+    capacity_increase_recommendation = true
+    monitoring_frequency = 'daily'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_056
+docs
+    Determines eligibility for beta program participation based on customer profile.
+    Used for product development feedback in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    market_share_strategic_account == true                            # Condition 156
+then
+beta_program_invitation = true
+    feedback_priority = 'high'
+    early_access_features = ['feature_a', 'feature_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_057
+docs
+    Identifies opportunities for service plan optimization.
+    Used for customer cost optimization in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    price_sensitivity_score > 7                            # Condition 157
+then
+plan_optimization_recommendation = 'cost_saving'
+    usage_analysis = true
+    alternative_plans = ['plan_a', 'plan_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_058
+docs
+    Evaluates security compliance requirements based on customer industry.
+    Used for regulatory compliance management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    renewal_propensity_score < 0.7                            # Condition 158
+then
+compliance_review = 'required'
+    documentation_update = true
+    regulatory_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_059
+docs
+    Determines data usage pattern anomalies for fraud detection.
+    Used for fraud prevention in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    subscription_type in premium_subscription_types                            # Condition 159
+then
+fraud_alert = true
+    account_review = 'immediate'
+    security_team_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_060
+docs
+    Determines if a customer is eligible for premium support based on subscription type and history.
+    Used for prioritizing customer support tickets in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    competitor_iot_mentions > 0                            # Condition 160
+then
+support_priority = 'high'
+    response_time_hours = 2
+    dedicated_agent = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_061
+docs
+    Identifies customers at risk of churn based on usage patterns and billing history.
+    Used for proactive retention campaigns in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    support_tickets_open < 5                            # Condition 101
+then
+churn_risk = 'high'
+    retention_action = 'executive_outreach'
+    offer_discount = 15
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_062
+docs
+    Determines eligibility for service upgrade offers based on usage patterns and account status.
+    Used for targeted upselling in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    usage_decline_months >= high_risk_threshold                            # Condition 102
+then
+upgrade_offer = 'bandwidth_increase'
+    discount_percentage = 10
+    offer_duration_months = 6
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_063
+docs
+    Identifies network capacity planning needs based on regional usage patterns.
+    Used for infrastructure investment planning in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    upgrade_eligibility_score > 7                            # Condition 103
+then
+capacity_planning_priority = 'high'
+    budget_allocation_percentage = 15
+    implementation_timeline_months = 3
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_064
+docs
+    Determines billing adjustments for service outages based on SLA terms and outage impact.
+    Used for automated credit processing in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    peak_usage_percentage > capacity_threshold                            # Condition 104
+then
+credit_percentage = 15
+    apology_communication = true
+    follow_up_survey = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_065
+docs
+    Identifies opportunities for service bundling based on customer usage patterns.
+    Used for cross-selling campaigns in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    outage_duration_minutes > min_outage_minutes                            # Condition 105
+then
+bundle_offer = 'voice_data_cloud'
+    discount_percentage = 12
+    promotion_duration_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_066
+docs
+    Determines eligibility for early equipment upgrade based on account history and usage.
+    Used for hardware refresh programs in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    services_subscribed < 3                            # Condition 106
+then
+equipment_upgrade_offer = true
+    upgrade_fee_discount = 50
+    contract_extension_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_067
+docs
+    Identifies customers for migration to new service platforms based on technology compatibility.
+    Used for technology transition planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    equipment_age_months > 24                            # Condition 107
+then
+migration_priority = 'high'
+    incentive_offer = 'free_installation'
+    dedicated_migration_support = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_068
+docs
+    Determines pricing adjustments for contract renewals based on customer value and market conditions.
+    Used for retention and revenue management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    current_platform in legacy_platforms                            # Condition 108
+then
+renewal_discount_percentage = 8
+    extended_payment_terms = true
+    value_added_services_free = 2
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_069
+docs
+    Identifies opportunities for IoT service expansion based on customer industry and usage patterns.
+    Used for targeted IoT solution selling in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    contract_end_days < 90                            # Condition 109
+then
+iot_solution_offer = 'industry_specific'
+    pilot_program_eligible = true
+    consultation_scheduling = 'priority'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_070
+docs
+    Evaluates customer satisfaction metrics to trigger proactive outreach.
+    Used for customer experience improvement in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_industry in iot_compatible_industries                            # Condition 110
+then
+customer_outreach = 'proactive'
+    satisfaction_survey = true
+    special_offer = 'loyalty_discount'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_071
+docs
+    Determines eligibility for special pricing based on competitive landscape.
+    Used for competitive response management in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    billing_complaints > 0                            # Condition 111
+then
+competitive_response = 'price_match'
+    sales_team_notification = true
+    executive_briefing = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_072
+docs
+    Identifies cross-selling opportunities based on current service utilization.
+    Used for revenue optimization in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    churn_prediction_score > 0.7                            # Condition 112
+then
+cross_sell_package = 'complementary_services'
+    marketing_campaign = 'targeted'
+    discount_offer = 10
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_073
+docs
+    Evaluates technical support escalation needs based on issue complexity.
+    Used for support resource allocation in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    bandwidth_utilization > 80                            # Condition 113
+then
+support_escalation = true
+    specialist_assignment = 'immediate'
+    case_priority = 'high'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_074
+docs
+    Determines promotional campaign targeting based on customer segments.
+    Used for marketing campaign targeting in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    credit_score > 700                            # Condition 114
+then
+campaign_inclusion = true
+    personalized_messaging = true
+    offer_type = 'segment_specific'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_075
+docs
+    Identifies potential network bottlenecks based on usage trends.
+    Used for capacity planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    business_customers_affected > 50                            # Condition 115
+then
+network_analysis = 'detailed'
+    capacity_increase_recommendation = true
+    monitoring_frequency = 'daily'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_076
+docs
+    Determines eligibility for beta program participation based on customer profile.
+    Used for product development feedback in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    network_segment_congestion == true                            # Condition 116
+then
+beta_program_invitation = true
+    feedback_priority = 'high'
+    early_access_features = ['feature_a', 'feature_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_077
+docs
+    Identifies opportunities for service plan optimization.
+    Used for customer cost optimization in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    projected_growth_rate > 5                            # Condition 117
+then
+plan_optimization_recommendation = 'cost_saving'
+    usage_analysis = true
+    alternative_plans = ['plan_a', 'plan_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_078
+docs
+    Evaluates security compliance requirements based on customer industry.
+    Used for regulatory compliance management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    business_impact_level > 2                            # Condition 118
+then
+compliance_review = 'required'
+    documentation_update = true
+    regulatory_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_079
+docs
+    Determines data usage pattern anomalies for fraud detection.
+    Used for fraud prevention in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    fault_responsibility == 'provider'                            # Condition 119
+then
+fraud_alert = true
+    account_review = 'immediate'
+    security_team_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_080
+docs
+    Determines if a customer is eligible for premium support based on subscription type and history.
+    Used for prioritizing customer support tickets in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    sla_breach == true                            # Condition 120
+then
+support_priority = 'high'
+    response_time_hours = 2
+    dedicated_agent = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_081
+docs
+    Identifies customers at risk of churn based on usage patterns and billing history.
+    Used for proactive retention campaigns in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    cross_sell_propensity > 0.6                            # Condition 121
+then
+churn_risk = 'high'
+    retention_action = 'executive_outreach'
+    offer_discount = 15
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_082
+docs
+    Determines eligibility for service upgrade offers based on usage patterns and account status.
+    Used for targeted upselling in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    last_upsell_attempt_days > 90                            # Condition 122
+then
+upgrade_offer = 'bandwidth_increase'
+    discount_percentage = 10
+    offer_duration_months = 6
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_083
+docs
+    Identifies network capacity planning needs based on regional usage patterns.
+    Used for infrastructure investment planning in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_usage_complementary == true                            # Condition 123
+then
+capacity_planning_priority = 'high'
+    budget_allocation_percentage = 15
+    implementation_timeline_months = 3
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_084
+docs
+    Determines billing adjustments for service outages based on SLA terms and outage impact.
+    Used for automated credit processing in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    hardware_compatibility_new_features == false                            # Condition 124
+then
+credit_percentage = 15
+    apology_communication = true
+    follow_up_survey = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_085
+docs
+    Identifies opportunities for service bundling based on customer usage patterns.
+    Used for cross-selling campaigns in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    service_calls_equipment > 1                            # Condition 125
+then
+bundle_offer = 'voice_data_cloud'
+    discount_percentage = 12
+    promotion_duration_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_086
+docs
+    Determines eligibility for early equipment upgrade based on account history and usage.
+    Used for hardware refresh programs in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    has_custom_integrations == false                            # Condition 126
+then
+equipment_upgrade_offer = true
+    upgrade_fee_discount = 50
+    contract_extension_months = 12
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_087
+docs
+    Identifies customers for migration to new service platforms based on technology compatibility.
+    Used for technology transition planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    migration_complexity_score < 7                            # Condition 127
+then
+migration_priority = 'high'
+    incentive_offer = 'free_installation'
+    dedicated_migration_support = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_088
+docs
+    Determines pricing adjustments for contract renewals based on customer value and market conditions.
+    Used for retention and revenue management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    competitive_pressure_score > 3                            # Condition 128
+then
+renewal_discount_percentage = 8
+    extended_payment_terms = true
+    value_added_services_free = 2
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_089
+docs
+    Identifies opportunities for IoT service expansion based on customer industry and usage patterns.
+    Used for targeted IoT solution selling in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    customer_lifetime_value > 50000                            # Condition 129
+then
+iot_solution_offer = 'industry_specific'
+    pilot_program_eligible = true
+    consultation_scheduling = 'priority'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_090
+docs
+    Evaluates customer satisfaction metrics to trigger proactive outreach.
+    Used for customer experience improvement in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    data_service_subscribed == true                            # Condition 130
+then
+customer_outreach = 'proactive'
+    satisfaction_survey = true
+    special_offer = 'loyalty_discount'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_091
+docs
+    Determines eligibility for special pricing based on competitive landscape.
+    Used for competitive response management in the BSS system.
+defaults
+    high_risk_threshold = 3
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    digital_transformation_score > 6                            # Condition 131
+then
+competitive_response = 'price_match'
+    sales_team_notification = true
+    executive_briefing = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_092
+docs
+    Identifies cross-selling opportunities based on current service utilization.
+    Used for revenue optimization in the BSS system.
+defaults
+    capacity_threshold = 75
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    monthly_data_usage > 500                            # Condition 132
+then
+cross_sell_package = 'complementary_services'
+    marketing_campaign = 'targeted'
+    discount_offer = 10
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_093
+docs
+    Evaluates technical support escalation needs based on issue complexity.
+    Used for support resource allocation in the BSS system.
+defaults
+    min_outage_minutes = 30
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    technology_adoption_score > 7                            # Condition 133
+then
+support_escalation = true
+    specialist_assignment = 'immediate'
+    case_priority = 'high'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_094
+docs
+    Determines promotional campaign targeting based on customer segments.
+    Used for marketing campaign targeting in the BSS system.
+defaults
+    min_subscription_months = 6
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    priority_support_eligible == true                            # Condition 134
+then
+campaign_inclusion = true
+    personalized_messaging = true
+    offer_type = 'segment_specific'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_095
+docs
+    Identifies potential network bottlenecks based on usage trends.
+    Used for capacity planning in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    critical_business_process == true                            # Condition 135
+then
+network_analysis = 'detailed'
+    capacity_increase_recommendation = true
+    monitoring_frequency = 'daily'
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_096
+docs
+    Determines eligibility for beta program participation based on customer profile.
+    Used for product development feedback in the BSS system.
+defaults
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    dedicated_support_eligible == true                            # Condition 136
+then
+beta_program_invitation = true
+    feedback_priority = 'high'
+    early_access_features = ['feature_a', 'feature_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_097
+docs
+    Identifies opportunities for service plan optimization.
+    Used for customer cost optimization in the BSS system.
+defaults
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+    min_subscription_months = 6
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    satisfaction_score < 7                            # Condition 137
+then
+plan_optimization_recommendation = 'cost_saving'
+    usage_analysis = true
+    alternative_plans = ['plan_a', 'plan_b']
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_098
+docs
+    Evaluates security compliance requirements based on customer industry.
+    Used for regulatory compliance management in the BSS system.
+defaults
+    iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    retention_score < 6                            # Condition 138
+then
+compliance_review = 'required'
+    documentation_update = true
+    regulatory_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_099
+docs
+    Determines data usage pattern anomalies for fraud detection.
+    Used for fraud prevention in the BSS system.
+defaults
+    support_tiers = ['standard', 'premium', 'platinum']
+    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    competitor_mentions_support > 0                            # Condition 139
+then
+fraud_alert = true
+    account_review = 'immediate'
+    security_team_notification = true
+
+# ################################################################################################################################
+rule
+    TELCO_BSS_100
+docs
+    Determines if a customer is eligible for premium support based on subscription type and history.
+    Used for prioritizing customer support tickets in the BSS system.
+defaults
+    min_subscription_months = 6
+    premium_subscription_types = ['platinum', 'gold', 'enterprise']
+    high_priority_regions = ['EMEA', 'APAC', 'NA']
+when
+    account_status == 'active' and                      # Condition 001
+    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
+    customer_type == 'business' and                      # Condition 003
+    is_contract_signed == true and                      # Condition 004
+    monthly_spend > 500 and                      # Condition 005
+    region in high_priority_regions and                      # Condition 006
+    service_level == 'premium' and                      # Condition 007
+    subscription_months > min_subscription_months and                      # Condition 008
+    usage_percentage > 75 and                      # Condition 009
+    payment_method == 'auto'                            # Condition 140
+then
+support_priority = 'high'
+    response_time_hours = 2
+    dedicated_agent = true
+
+# ################################################################################################################################

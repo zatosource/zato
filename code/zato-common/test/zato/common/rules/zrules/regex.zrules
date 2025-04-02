@@ -1,0 +1,58 @@
+# ################################################################################################################################
+
+rule
+    01_Regex_Basic_Test
+docs
+    Tests basic regex matching with the =~ operator.
+    This rule is used to test the regex matching functionality.
+when
+    doc_id =~ "AAABBB\s\S+" and
+    transaction_type == "purchase"
+then
+    result = "matched_basic_regex"
+    action = "process"
+
+# ################################################################################################################################
+
+rule
+    02_Regex_Digit_Test
+docs
+    Tests regex matching for digit patterns.
+    This rule is used to test matching credit card number patterns.
+when
+    account_number =~ "\d{4}-\d{4}-\d{4}-\d{4}" and
+    transaction_type == "purchase"
+then
+    result = "matched_digit_regex"
+    action = "validate"
+
+# ################################################################################################################################
+
+rule
+    03_Regex_Email_Test
+docs
+    Tests regex matching for email patterns.
+    This rule is used to test matching email address patterns.
+when
+    email =~ "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" and
+    notification_enabled == true
+then
+    result = "matched_email_regex"
+    action = "notify"
+
+# ################################################################################################################################
+
+rule
+    04_Regex_Combined_Test
+docs
+    Tests regex matching combined with other conditions.
+    This rule is used to test complex conditions with regex.
+when
+    doc_id =~ "AAABBB\s\S+" and
+    transaction_type == "purchase" and
+    transaction_amount > 500
+then
+    result = "matched_combined_regex"
+    action = "review"
+
+# ################################################################################################################################

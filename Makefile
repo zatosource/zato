@@ -96,6 +96,12 @@ web-admin-tests:
 scheduler-tests:
 	cd $(CURDIR)/code/zato-scheduler && make run-tests
 
+rules-tests:
+	cd $(CURDIR)/code/zato-common && make rules-tests
+
+rules-perf-tests:
+	cd $(CURDIR)/code/zato-common && make rules-perf-tests
+
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx -y playwright install
