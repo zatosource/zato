@@ -173,7 +173,7 @@ class SessionWrapper:
 
         # Invoke the connector if it's Oracle DB ..
         if self.is_oracle_db:
-            data = {'sql': query, 'connName': self.config['name']}
+            data = {'sql': query, 'params': params or {}, 'connName': self.config['name']}
             data = dumps(data)
             result = requests.post('http://localhost:8081/api/v1/query', data)
             result = result.json()
