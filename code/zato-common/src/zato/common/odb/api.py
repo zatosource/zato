@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,9 +12,16 @@ from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from io import StringIO
+from json import dumps
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
+
+# Bunch
+from bunch import Bunch, bunchify
+
+# Requests
+import requests
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -24,9 +31,6 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.type_api import TypeEngine
-
-# Bunch
-from bunch import Bunch, bunchify
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
@@ -52,7 +56,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import anyset, callable_, commondict
+    from zato.common.typing_ import any_, anyset, callable_, commondict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -129,11 +133,11 @@ class SessionWrapper:
     """
     _Session: 'SASession'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
-        self.config = None    # type: dict
-        self.is_sqlite = None # type: bool
+        self.config = {}    # type: dict
+        self.is_sqlite = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
@@ -144,6 +148,12 @@ class SessionWrapper:
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
+
+        self.is_oracle_db = config['engine'] == 'oracle'
+
+        # No sessions under Oracle so we can return immediately
+        if self.is_oracle_db:
+            return
 
         is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
@@ -158,6 +168,25 @@ class SessionWrapper:
 
         self.session_initialized = True
         self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
+
+    def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
+
+        # Invoke the connector if it's Oracle DB ..
+        if self.is_oracle_db:
+            data = {'sql': query, 'connName': self.config['name']}
+            data = dumps(data)
+            result = requests.post('http://localhost:8081/api/v1/query', data)
+            result = result.json()
+            result = result['rows']
+            return result
+
+        # .. or run the query directly with other databases.
+        else:
+            with closing(self.session()) as session:
+                result = session.execute(query, params)
+                column_names = result.keys()
+                result = [dict(zip(column_names, row)) for row in result]
+                return result
 
     def session(self) -> 'SASession':
         return self._Session()
