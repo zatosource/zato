@@ -56,7 +56,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import anyset, callable_, commondict
+    from zato.common.typing_ import any_, anyset, callable_, commondict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -169,13 +169,24 @@ class SessionWrapper:
         self.session_initialized = True
         self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
 
-    def execute(self, query:'str') -> 'strdict':
+    def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
-        data = {'sql': query, 'connName': self.config['name']}
-        data = dumps(data)
-        response = requests.post('http://localhost:8081/api/v1/query', data)
-        response = response.json()
-        return response
+        # Invoke the connector if it's Oracle DB ..
+        if self.is_oracle_db:
+            data = {'sql': query, 'connName': self.config['name']}
+            data = dumps(data)
+            result = requests.post('http://localhost:8081/api/v1/query', data)
+            result = result.json()
+            result = result['rows']
+            return result
+
+        # .. or run the query directly with other databases.
+        else:
+            with closing(self.session()) as session:
+                result = session.execute(query, params)
+                column_names = result.keys()
+                result = [dict(zip(column_names, row)) for row in result]
+                return result
 
     def session(self) -> 'SASession':
         return self._Session()
