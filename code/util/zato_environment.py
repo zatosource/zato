@@ -44,7 +44,7 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 if '3.8' in py_version:
     setuptools_version = '57.4.0'
 else:
-    setuptools_version = '75.6.0'
+    setuptools_version = '80.3.1'
 
 pip_deps_windows     = f'setuptools=={setuptools_version} wheel'
 pip_deps_non_windows = f'setuptools=={setuptools_version} wheel pip'
