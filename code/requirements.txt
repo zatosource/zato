@@ -19,7 +19,7 @@ debugpy
 decorator==5.1.0
 dill==0.2.5
 distro==1.5.0
-Django==4.2.20
+Django==4.2.21
 django-csp==3.8
 docformatter==0.8
 dropbox==10.10.0
