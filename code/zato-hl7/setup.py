@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from setuptools import find_packages, setup
 from setuptools import setup, find_packages
 
-version = '3.2'
+version = '3.3'
 
-setup(
+_ = setup(
       name = 'zato-hl7',
       version = version,
 
