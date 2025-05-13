@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,9 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # flake8: noqa
 from platform import system as platform_system
 from setuptools import Extension, find_packages, setup
-from Cython.Build import cythonize
+from Cython.Build import cythonize # type: ignore
 
-version = '3.2'
+version = '3.3'
 
 is_windows = 'windows' in platform_system().lower()
 
@@ -35,7 +35,7 @@ if is_windows:
 else:
     include_dirs = []
 
-setup(
+_ = setup(
       name = 'zato-cy',
       version = version,
 
