@@ -409,24 +409,6 @@ class PostInstall:
         self.python_dir_full = self.get_python_dir_full()
         self.orig_build_dir  = self.get_orig_build_dir()
 
-        """
-        print()
-        print(111, self.base_dir)
-        print()
-
-        print()
-        print(222, self.python_dir)
-        print()
-
-        print()
-        print(333, self.python_dir_full)
-        print()
-
-        print()
-        print(444, self.orig_build_dir)
-        print()
-        """
-
         # .. if these are the same, it means that we do not have anything to do.
         if self.base_dir == self.orig_build_dir:
             logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
