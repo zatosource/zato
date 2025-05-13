@@ -19,7 +19,7 @@ debugpy
 decorator==5.1.0
 dill==0.2.5
 distro==1.5.0
-Django==4.2.20
+Django==4.2.21
 django-csp==3.8
 docformatter==0.8
 dropbox==10.10.0
@@ -73,7 +73,6 @@ odoo-client-lib==1.2.2
 openpyxl==3.0.5
 orjson==3.9.15
 oslo.config==9.0.0
-panorama==0.5.0
 parse-type==0.6.4
 parse==1.20.2
 passlib==1.7.1

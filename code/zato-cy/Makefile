@@ -1,4 +1,3 @@
-
 .PHONY: build
 MAKEFLAGS += --silent
 
@@ -8,7 +7,7 @@ Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-cy
 
 build:
-	$(Zato_Python_Dir)/py $(CURDIR)/setup.py develop
+	$(Zato_Python_Dir)/py -m pip install --config-settings editable_mode=compat -e .
 
 clean:
 	rm -rf $(CURDIR)/build
