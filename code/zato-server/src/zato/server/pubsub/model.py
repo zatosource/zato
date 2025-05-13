@@ -6,8 +6,6 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pylint: disable=unused-import, redefined-builtin, unused-variable
-
 # stdlib
 import logging
 from dataclasses import dataclass, field as dc_field
