@@ -1,0 +1,28 @@
+[build-system]
+requires = [
+    "setuptools==80.3.1",
+    "Cython==3.1.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zato-cy"
+version = "3.3"
+authors = [
+    { name = "Zato Source s.r.o.", email = "info@zato.io" },
+]
+description = "Zato Cython Components"
+readme = "README.md"
+license = { text = "AGPLv3" }
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://zato.io"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
