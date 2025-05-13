@@ -573,7 +573,7 @@ class CleanupManager:
         ) -> 'topic_ctx_list':
 
         # A dictionary mapping all the topics that have any messages to be deleted
-        topics_to_clean_up = [] # type: topic_ctx_list
+        topics_to_clean_up:'topic_ctx_list' = []
 
         # A dictionary mapping topic names to messages that need to be deleted from them
         messages_to_delete = {} # type: strlistdict
