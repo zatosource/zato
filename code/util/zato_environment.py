@@ -464,12 +464,12 @@ class EnvironmentManager:
         packages = [
             'cython==3.1.0',
             'pyOpenSSL==25.0.0',
-            'zato-ext-bunch==1.2',
+            'zato-ext-bunch==1.3',
         ]
 
         # This needs to be installed here rather than via requirements.txt
         if not is_windows:
-            packages.append('posix-ipc==1.0.0')
+            packages.append('posix-ipc==1.2.0')
 
         for package in packages:
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,17 +10,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-version = '3.2'
+version = '3.3'
 
 long_description = description = 'Python API client for Zato - ESB, APIs, AI and Cloud Integrations in Python (https://zato.io)'
 
-def parse_requirements(requirements):
+def parse_requirements(requirements): # type: ignore
     ignored = ['#', 'setuptools', '-e']
 
     with open(requirements) as f:
         return [line.split('==')[0] for line in f if line.strip() and not any(line.startswith(prefix) for prefix in ignored)]
 
-setup(
+_ = setup(
       name = 'zato-client',
       version = version,
 

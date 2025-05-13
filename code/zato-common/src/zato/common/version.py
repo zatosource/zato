@@ -62,7 +62,7 @@ def get_version():
     from zato.common.py23_.past.builtins import execfile
 
     # Default version if not set below
-    version = '3.2'
+    version = '3.3'
 
     try:
 
