@@ -600,9 +600,7 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             try:
 
-                server = session.query(Server).\
-                       filter(Server.token == self.token).\
-                       one() # type: ignore
+                server = session.query(Server).filter(Server.token == self.token).one() # type: ignore
                 self.server = _Server(server, server.cluster)
                 self.server_id = server.id
                 self.cluster = server.cluster
@@ -621,8 +619,9 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
 
-            query = session.query(Server).\
-                filter(Server.cluster_id == self.cluster_id)
+            query = session.query( # type: ignore
+                        Server).\
+                        filter(Server.cluster_id == self.cluster_id)
 
             if up_status:
                 query = query.filter(Server.up_status == up_status) # type: ignore
@@ -636,12 +635,11 @@ class ODBManager(SessionWrapper):
 
     def get_default_internal_pubsub_endpoint(self):
         with closing(self.session()) as session:
-            return session.query(PubSubEndpoint).\
-                filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
-                filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id # type: ignore
-                ).\
-                filter(PubSubEndpoint.cluster_id==self.cluster_id).\
-                one()
+            return session.query(  # type: ignore
+                PubSubEndpoint).\
+                    filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                    filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                    filter(PubSubEndpoint.cluster_id==self.cluster_id).one()
 
 # ################################################################################################################################
 
@@ -676,7 +674,8 @@ class ODBManager(SessionWrapper):
         and what host it's running on.
         """
         with closing(self.session()) as session:
-            server = session.query(Server).\
+            server = session.query(Server # type: ignore
+                ).\
                 filter(Server.token==token).\
                 first() # type: ignore
 
@@ -769,7 +768,8 @@ class ODBManager(SessionWrapper):
 
                         # Will raise KeyError if the DB gets somehow misconfigured.
                         db_class = sec_type_db_class[item.sec_type]
-                        sec_def_item = session.query(db_class).\
+                        sec_def_item = session.query(db_class # type: ignore
+                                ).\
                                 filter(db_class.id==item.security_id).\
                                 one() # type: ignore
                         sec_def = bunchify(sec_def_item.asdict())
@@ -821,7 +821,7 @@ class ODBManager(SessionWrapper):
         and is used during server startup to decide if any new services should be added from what is found in the filesystem.
         """
         with closing(self.session()) as session:
-            return session.query(
+            return session.query( # type: ignore
                 Service.id,
                 Service.impl_name,
                 Service.is_active,
@@ -914,7 +914,8 @@ class ODBManager(SessionWrapper):
         """ Returns whether the given service is active or not.
         """
         with closing(self.session()) as session:
-            return session.query(Service.is_active).\
+            return session.query(Service.is_active # type: ignore
+                ).\
                 filter(Service.id==service_id).\
                 one()[0] # type: ignore
 
@@ -938,7 +939,8 @@ class ODBManager(SessionWrapper):
             session.add(dp)
 
             # .. for each of the servers in this cluster set the initial status ..
-            servers = session.query(Cluster).\
+            servers = session.query(Cluster # type: ignore
+                   ).\
                    filter(Cluster.id == self.server.cluster_id).\
                    one().servers # type: ignore
 
