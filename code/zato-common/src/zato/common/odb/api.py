@@ -53,7 +53,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import any_, anyset, callable_, commondict, strdict, strdictnone
+    from zato.common.typing_ import any_, anylistnone, anyset, callable_, commondict, strdict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -135,6 +135,7 @@ class SessionWrapper:
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
+        self.is_oracle_db = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
@@ -159,6 +160,7 @@ class SessionWrapper:
 
         self.session_initialized = True
         self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
+        self.is_oracle_db = self.pool.engine and self.pool.engine.name.startswith('oracle')
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
@@ -166,6 +168,29 @@ class SessionWrapper:
             result = session.execute(query, params)
             column_names = result.keys() # type: ignore
             result = [dict(zip(column_names, row)) for row in result] # type: ignore
+            return result
+
+    def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
+
+        if not self.is_oracle_db:
+            raise NotImplementedError('This method works with Oracle DB only.')
+
+        params = params or []
+
+        with closing(self.session()) as session:
+
+            conn = session.connection().connection
+            cursor = conn.cursor()
+
+            _params = [elem.bind(cursor) for elem in params]
+            cursor.callproc(proc_name, _params)
+
+            result = []
+            for idx, item in enumerate(_params):
+                input_item = params[idx]
+                if input_item.is_out:
+                    result.append(item.getvalue())
+
             return result
 
     def session(self) -> 'SASession':
