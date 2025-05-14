@@ -129,7 +129,7 @@ ping_queries = {
 engine_display_name = {
     'db2': 'DB2',
     'mssql': 'MS SQL',
-    'zato+mssql1': 'MS SQL (Direct)',
+    'zato+mssql1': 'MS SQL',
     'mysql+pymysql': 'MySQL',
     'oracle': 'Oracle',
     'postgresql': 'PostgreSQL',

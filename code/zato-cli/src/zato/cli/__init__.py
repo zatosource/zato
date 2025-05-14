@@ -129,7 +129,7 @@ display_name=Oracle
 ping_query=SELECT 1 FROM dual
 
 [{}]
-display_name="MS SQL (Direct)"
+display_name="MS SQL"
 ping_query=SELECT 1
 
 # ######### ################################# ######### #

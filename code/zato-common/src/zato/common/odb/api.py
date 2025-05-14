@@ -8,20 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from io import StringIO
-from json import dumps
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 
 # Bunch
 from bunch import Bunch, bunchify
-
-# Requests
-import requests
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -56,7 +53,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import any_, anyset, callable_, commondict, strdictnone
+    from zato.common.typing_ import any_, anyset, callable_, commondict, strdict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -149,12 +146,6 @@ class SessionWrapper:
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
-        self.is_oracle_db = config['engine'] == 'oracle'
-
-        # No sessions under Oracle so we can return immediately
-        if self.is_oracle_db:
-            return
-
         is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
         if is_ms_sql_direct:
@@ -171,22 +162,11 @@ class SessionWrapper:
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
-        # Invoke the connector if it's Oracle DB ..
-        if self.is_oracle_db:
-            data = {'sql': query, 'params': params or {}, 'connName': self.config['name']}
-            data = dumps(data)
-            result = requests.post('http://localhost:8081/api/v1/query', data)
-            result = result.json()
-            result = result['rows']
+        with closing(self.session()) as session:
+            result = session.execute(query, params)
+            column_names = result.keys() # type: ignore
+            result = [dict(zip(column_names, row)) for row in result] # type: ignore
             return result
-
-        # .. or run the query directly with other databases.
-        else:
-            with closing(self.session()) as session:
-                result = session.execute(query, params)
-                column_names = result.keys() # type: ignore
-                result = [dict(zip(column_names, row)) for row in result] # type: ignore
-                return result
 
     def session(self) -> 'SASession':
         return self._Session() # type: ignore
@@ -225,8 +205,7 @@ class WritableTupleQuery(Query):
 class SQLConnectionPool:
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
-    def __init__(self, name, config, config_no_sensitive, should_init=True):
-        # type: (str, dict, dict) -> None
+    def __init__(self, name:'str', config:'strdict', config_no_sensitive:'strdict', should_init:'bool'=True):
         self.name = name
         self.config = config
         self.config_no_sensitive = config_no_sensitive
@@ -235,12 +214,20 @@ class SQLConnectionPool:
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
         self.engine = None
-        self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
+        self.engine_name:'str' = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
+
+        self._is_oracle_db = self.engine_name.startswith('oracle')
 
         if should_init: # type: ignore
             self.init()
 
     def init(self):
+
+        # Check if Oracle DB connections are enabled
+        if self._is_oracle_db:
+            if not (key := os.environ.get('Zato_License_Key')): # type: ignore
+                self.logger.warning('Zato license key not found. Oracle DB connections will not be available.')
+                return
 
         _extra = {
             'pool_pre_ping': True, # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
@@ -254,6 +241,10 @@ class SQLConnectionPool:
         elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()} # type: ignore
 
+        # Oracle DB-only
+        elif self.engine_name.startswith('oracle'):
+            self.engine_name = 'oracle+oracledb'
+
         extra = self.config.get('extra') # Optional, hence .get
         _extra.update(parse_extra_into_dict(extra)) # type: ignore
 
@@ -264,6 +255,9 @@ class SQLConnectionPool:
                 _extra['poolclass'] = NullPool # type: ignore
 
         engine_url = get_engine_url(self.config)
+
+        if engine_url.startswith('oracle://'):
+            engine_url = engine_url.replace('oracle://', 'oracle+oracledb://')
 
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
@@ -293,21 +287,38 @@ class SQLConnectionPool:
 
 # ################################################################################################################################
 
-    def _is_sa_engine(self, engine_url):
-        # type: (str) # type: ignore
+    def _is_oracle_engine(self, engine_url:'str') -> 'bool':
+        return engine_url.startswith('oracle')
+
+# ################################################################################################################################
+
+    def _is_sa_engine(self, engine_url:'str') -> 'bool':
         return 'zato+mssql1' not in engine_url
 
 # ################################################################################################################################
 
-    def _is_unittest_engine(self, engine_url):
-        # type: (str) # type: ignore
+    def _is_unittest_engine(self, engine_url:'str') -> 'bool':
         return 'zato+unittest' in engine_url
 
 # ################################################################################################################################
 
     def _create_unittest_engine(self, engine_url, config):
-        # type: (str, dict) # type: ignore
         return UnittestEngine(engine_url, config)
+
+# ################################################################################################################################
+
+    def _create_oracle_engine(self, engine_url, config):
+
+        return create_engine(
+            'oracle://:@',
+            connect_args={
+                'user': 'system',
+                'password': 'new_password',
+                'host': 'localhost',
+                'port': '1521',
+                'service_name': 'FREEPDB1',
+            }
+        )
 
 # ################################################################################################################################
 
@@ -315,6 +326,9 @@ class SQLConnectionPool:
 
         if self._is_unittest_engine(engine_url):
             return self._create_unittest_engine(engine_url, config)
+
+        elif self._is_oracle_engine(engine_url):
+            return self._create_oracle_engine(engine_url, config)
 
         elif self._is_sa_engine(engine_url):
             return create_engine(engine_url, **extra)
@@ -517,10 +531,13 @@ class PoolStore:
             # Do not check if the connection is active when changing the password,
             # sometimes it is desirable to change it even if it is Inactive.
             item = self.get(name, enforce_is_active=False)
-            item.pool.engine.dispose()
-            config = deepcopy(self.wrappers[name].pool.config)
-            config['password'] = password
-            self[name] = config
+            if item.pool.engine:
+                item.pool.engine.dispose()
+                config = deepcopy(self.wrappers[name].pool.config)
+                config['password'] = password
+                self[name] = config
+            else:
+                self.logger.warning('No engine found for %s (change password)', name)
 
 # ################################################################################################################################
 
