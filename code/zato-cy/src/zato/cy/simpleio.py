@@ -32,6 +32,9 @@ from dateutil.parser import parse as dt_parse
 # lxml
 from lxml.etree import _Element as EtreeElementClass, SubElement, XPath
 
+# SQLAlchemy
+from sqlalchemy.engine.row import Row as SQLAlchemyRow
+
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
@@ -2033,6 +2036,9 @@ class CySimpleIO:
 
             elif isinstance(_input_data_dict, SQLRow):
                 input_data_dict = _input_data_dict.get_value()
+
+            elif isinstance(_input_data_dict, SQLAlchemyRow):
+                input_data_dict = _input_data_dict._asdict()
 
             for is_required, current_elems in all_elems: # type: bool, dict
                 for current_elem_name, current_elem in current_elems.items():
