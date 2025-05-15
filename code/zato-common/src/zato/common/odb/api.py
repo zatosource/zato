@@ -173,7 +173,7 @@ class SessionWrapper:
     def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
 
         if not self.is_oracle_db:
-            raise NotImplementedError('This method works with Oracle DB only.')
+            raise Exception('This method works with Oracle DB only.')
 
         params = params or []
 
