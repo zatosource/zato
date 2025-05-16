@@ -1742,6 +1742,7 @@ class BusinessCentralAdapter(Service):
             text = text.replace(pattern, value)
 
         return text
+
 # ################################################################################################################################
 
     def _replace_placeholders_by_file(self, text:'str', placeholder:'str') -> 'str':
