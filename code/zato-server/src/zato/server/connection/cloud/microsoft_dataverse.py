@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import http.client as http_client
 import logging
-from http.client import CREATED, NO_CONTENT, OK
+import os
 
 # MSAL
 import msal
@@ -48,31 +49,28 @@ class DataverseClient:
         self.org_url = org_url
         self.api_version = api_version
         self.token = None
-        self.base_url = f'https://{self.org_url}.api.crm.dynamics.com/api/data/{self.api_version}'
+        self.base_url = f'{self.org_url}/api/data/{self.api_version}'
 
 # ################################################################################################################################
 
     def get_access_token(self) -> 'strnone':
         """ Obtains an OAuth access token for Dataverse API.
         """
-        # Create an MSAL app ..
         app = msal.ConfidentialClientApplication(
             client_id=self.client_id,
             client_credential=self.client_secret,
             authority=f'https://login.microsoftonline.com/{self.tenant_id}'
         )
 
-        # .. build our scopes ..
-        scopes = [f'https://{self.org_url}.api.crm.dynamics.com/.default']
+        scopes = [f'{self.org_url}/.default']
 
-        # .. call the API to get our token.
         result = app.acquire_token_for_client(scopes=scopes)
 
         if 'access_token' in result:  # type: ignore
             self.token = result['access_token']  # type: ignore
             return self.token
         else:
-            raise Exception('Error obtaining Dataverse token -> {result}')
+            raise Exception(f'Error obtaining Dataverse token: {result}')
 
 # ################################################################################################################################
 
@@ -80,7 +78,7 @@ class DataverseClient:
         """ Returns headers required for Dataverse API requests.
         """
         if not self.token:
-            raise ValueError('No access token available. Call get_access_token first.')
+            self.token = self.get_access_token()
 
         return {
             'Authorization': f'Bearer {self.token}',
@@ -106,15 +104,15 @@ class DataverseClient:
 
         # Define success codes based on the request method
         if method == 'post':
-            success_codes = {OK, CREATED, NO_CONTENT}
+            success_codes = {http_client.OK, http_client.CREATED, http_client.NO_CONTENT}
         else:
-            success_codes = {OK, NO_CONTENT}
+            success_codes = {http_client.OK, http_client.NO_CONTENT}
 
         # Check if the request was successful
         success = response.status_code in success_codes
 
         if not success:
-            raise Exception('Error calling Dataverse -> {response.status_code} -> {repr(response.text)}')
+            raise Exception(f'Dataverse error: {response.status_code} -> {repr(response.text)}')
 
         # Return appropriate response based on content
         if response.content:
@@ -147,6 +145,29 @@ class DataverseClient:
         """ Performs a DELETE request to the Dataverse API.
         """
         return self._make_request('delete', path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    tenant_id = os.environ.get('Zato_Dataverse_Tenant_ID')
+    client_id = os.environ.get('Zato_Dataverse_Client_ID')
+    client_secret = os.environ.get('Zato_Dataverse_Client_Secret')
+    org_url = os.environ.get('Zato_Dataverse_Org_URL')
+
+    # Create the client
+    client = DataverseClient(
+        tenant_id=tenant_id, # type: ignore
+        client_id=client_id, # type: ignore
+        client_secret=client_secret, # type: ignore
+        org_url=org_url      # type: ignore
+    )
+
+    # Get accounts
+    response = client.get('accounts')
+
+    print('Dataverse response is', response)
 
 # ################################################################################################################################
 # ################################################################################################################################
