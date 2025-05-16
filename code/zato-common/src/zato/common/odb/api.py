@@ -170,6 +170,25 @@ class SessionWrapper:
             result = [dict(zip(column_names, row)) for row in result] # type: ignore
             return result
 
+    def one(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        result = self.execute(*args, **kwargs)
+
+        if not result:
+            needs_one = kwargs.get('zato_needs_one') or False
+            if needs_one:
+                raise Exception('Query returned no rows')
+            else:
+                return None # Explicitly return None
+        else:
+            len_result = len(result)
+            if len_result > 1:
+                raise Exception(f'Query returned multiple rows (len={len_result})')
+            else:
+                return result[0]
+
+    def one_or_none(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.one(*args, zato_needs_one=True, **kwargs)
+
     def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
 
         if not self.is_oracle_db:
