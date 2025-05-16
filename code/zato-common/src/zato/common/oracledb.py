@@ -127,7 +127,7 @@ class ClobOut(_OutBase):
             self.var.setvalue(0, self.value)
         return self.var
 
-class CursorOut(_OutBase):
+class RowsOut(_OutBase):
     def bind(self, cursor):
         self.var = cursor.var(oracledb_impl.CURSOR)
         return self.var
