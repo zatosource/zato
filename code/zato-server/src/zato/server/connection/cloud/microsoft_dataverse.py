@@ -151,21 +151,89 @@ class DataverseClient:
 
 def example_get_accounts(client:'DataverseClient') -> 'None':
 
-    # Call Dataverse ..
-    response = client.get('accounts')
+    # What path to invoke ..
+    path = 'accounts'
+
+    # .. call Dataverse ..
+    response = client.get(path)
 
     # .. and log response.
-    print('Dataverse accounts:', response)
+    print('Dataverse response (get accounts):', response)
 
 # ################################################################################################################################
 
 def example_get_account_by_id(client:'DataverseClient', account_id:'str') -> 'None':
 
-    # Call Dataverse ..
-    response = client.get(...)
+    # What path to invoke ..
+    path = f'accounts({account_id})'
+
+    # .. call Dataverse ..
+    response = client.get(path)
 
     # .. and log response.
-    print('Dataverse account:', response)
+    print('Dataverse response (get account by ID):', response)
+
+# ################################################################################################################################
+
+def example_get_account_by_name(client:'DataverseClient', account_name:'str') -> 'None':
+
+    # What path to invoke ..
+    path = f"accounts?$filter=name eq '{account_name}'"
+
+    # .. call Dataverse ..
+    response = client.get(path)
+
+    # .. and log response.
+    print('Dataverse response (get account by name):', response)
+
+# ################################################################################################################################
+
+def example_create_account(client:'DataverseClient') -> 'None':
+
+    # What path to invoke ..
+    path = 'accounts'
+
+    # .. prepare new account data ..
+    account_data = {
+        'name': 'New Test Account',
+        'telephone1': '+1-555-123-4567',
+        'emailaddress1': 'hello@example.com',
+        'address1_city': 'Prague',
+        'address1_country': 'Czech Republic',
+    }
+
+    # .. call Dataverse ..
+    response = client.post(path, account_data)
+
+    # .. and log response.
+    print('Dataverse response (create account):', response)
+
+# ################################################################################################################################
+
+def example_update_account(client:'DataverseClient', account_id:'str') -> 'None':
+
+    # Prepare update data ..
+    update_data = {
+        'name': 'Updated Account Name',
+        'telephone1': '+1-555-987-6543',
+        'emailaddress1': 'hello2@example.com',
+    }
+
+    # .. call Dataverse ..
+    response = client.patch(f'accounts({account_id})', update_data)
+
+    # .. and log response.
+    print('Dataverse response (update account):', response)
+
+# ################################################################################################################################
+
+def example_delete_account(client:'DataverseClient', account_id:'str') -> 'None':
+
+    # Call Dataverse ..
+    response = client.delete(f'accounts({account_id})')
+
+    # .. and log response.
+    print('Dataverse response (delete account):', response)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +245,9 @@ if __name__ == '__main__':
     client_secret = os.environ.get('Zato_Dataverse_Client_Secret')
     org_url = os.environ.get('Zato_Dataverse_Org_URL')
 
+    account_id = os.environ.get('Zato_Dataverse_Account_ID')
+    account_name = os.environ.get('Zato_Dataverse_Account_Name')
+
     # Create the client
     client = DataverseClient(
         tenant_id=tenant_id, # type: ignore
@@ -186,7 +257,10 @@ if __name__ == '__main__':
     )
 
     # Run examples
-    example_get_accounts(client)
+    # example_get_accounts(client)
+    # example_get_account_by_name(client, account_name)
+    # example_create_account(client)
+    example_update_account(client, account_id) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
