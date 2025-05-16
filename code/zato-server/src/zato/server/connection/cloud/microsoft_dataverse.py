@@ -260,7 +260,7 @@ if __name__ == '__main__':
     # example_get_accounts(client)
     # example_get_account_by_name(client, account_name)
     # example_create_account(client)
-    example_update_account(client, account_id) # type: ignore
+    # example_update_account(client, account_id) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
