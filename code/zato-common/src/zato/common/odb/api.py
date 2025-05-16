@@ -8,20 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from io import StringIO
-from json import dumps
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 
 # Bunch
 from bunch import Bunch, bunchify
-
-# Requests
-import requests
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -56,7 +53,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import any_, anyset, callable_, commondict, strdictnone
+    from zato.common.typing_ import any_, anylistnone, anyset, callable_, commondict, strdict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -138,58 +135,85 @@ class SessionWrapper:
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
+        self.is_oracle_db = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
-        spawn_greenlet(self._init_session, *args, **kwargs)
+        _ = spawn_greenlet(self._init_session, *args, **kwargs)
 
     def _init_session(self, name, config, pool, use_scoped_session=True):
-        # type: (str, dict, SQLConnectionPool, bool)
+        # type: (str, dict, SQLConnectionPool, bool)  # type: ignore
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
-        self.is_oracle_db = config['engine'] == 'oracle'
-
-        # No sessions under Oracle so we can return immediately
-        if self.is_oracle_db:
-            return
-
         is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
         if is_ms_sql_direct:
-            self._Session = SimpleSession(self.pool.engine)
+            self._Session = SimpleSession(self.pool.engine) # type: ignore
         else:
             if use_scoped_session:
                 self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
             else:
                 self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
-            self._session = self._Session()
+            self._session = self._Session() # type: ignore
 
         self.session_initialized = True
         self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
+        self.is_oracle_db = self.pool.engine and self.pool.engine.name.startswith('oracle')
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
-        # Invoke the connector if it's Oracle DB ..
-        if self.is_oracle_db:
-            data = {'sql': query, 'params': params or {}, 'connName': self.config['name']}
-            data = dumps(data)
-            result = requests.post('http://localhost:8081/api/v1/query', data)
-            result = result.json()
-            result = result['rows']
+        with closing(self.session()) as session:
+            result = session.execute(query, params)
+            column_names = result.keys() # type: ignore
+            result = [dict(zip(column_names, row)) for row in result] # type: ignore
             return result
 
-        # .. or run the query directly with other databases.
+    def one(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        result = self.execute(*args, **kwargs)
+
+        if not result:
+            needs_one = kwargs.get('zato_needs_one') or False
+            if needs_one:
+                raise Exception('Query returned no rows')
+            else:
+                return None # Explicitly return None
         else:
-            with closing(self.session()) as session:
-                result = session.execute(query, params)
-                column_names = result.keys()
-                result = [dict(zip(column_names, row)) for row in result]
-                return result
+            len_result = len(result)
+            if len_result > 1:
+                raise Exception(f'Query returned multiple rows (len={len_result})')
+            else:
+                return result[0]
+
+    def one_or_none(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.one(*args, zato_needs_one=True, **kwargs)
+
+    def callproc(self, proc_name:'str', params:'anylistnone'=None) -> 'any_':
+
+        if not self.is_oracle_db:
+            raise Exception('This method works with Oracle DB only.')
+
+        params = params or []
+
+        with closing(self.session()) as session:
+
+            conn = session.connection().connection
+            cursor = conn.cursor()
+
+            _params = [elem.bind(cursor) for elem in params]
+            cursor.callproc(proc_name, _params)
+
+            result = []
+            for idx, item in enumerate(_params):
+                input_item = params[idx]
+                if input_item.is_out:
+                    result.append(item.getvalue())
+
+            return result
 
     def session(self) -> 'SASession':
-        return self._Session()
+        return self._Session() # type: ignore
 
     def close(self):
         self._session.close()
@@ -225,8 +249,7 @@ class WritableTupleQuery(Query):
 class SQLConnectionPool:
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
-    def __init__(self, name, config, config_no_sensitive, should_init=True):
-        # type: (str, dict, dict) -> None
+    def __init__(self, name:'str', config:'strdict', config_no_sensitive:'strdict', should_init:'bool'=True):
         self.name = name
         self.config = config
         self.config_no_sensitive = config_no_sensitive
@@ -235,12 +258,20 @@ class SQLConnectionPool:
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
         self.engine = None
-        self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
+        self.engine_name:'str' = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
-        if should_init:
+        self._is_oracle_db = self.engine_name.startswith('oracle')
+
+        if should_init: # type: ignore
             self.init()
 
     def init(self):
+
+        # Check if Oracle DB connections are enabled
+        if self._is_oracle_db:
+            if not (key := os.environ.get('Zato_License_Key')): # type: ignore
+                self.logger.warning('Zato license key not found. Oracle DB connections will not be available.')
+                return
 
         _extra = {
             'pool_pre_ping': True, # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
@@ -248,22 +279,29 @@ class SQLConnectionPool:
 
         # MySQL only
         if self.engine_name.startswith('mysql'):
-            _extra['pool_recycle'] = 600
+            _extra['pool_recycle'] = 600 # type: ignore
 
         # Postgres-only
         elif self.engine_name.startswith('postgres'):
-            _extra['connect_args'] = {'application_name': get_component_name()}
+            _extra['connect_args'] = {'application_name': get_component_name()} # type: ignore
+
+        # Oracle DB-only
+        elif self.engine_name.startswith('oracle'):
+            self.engine_name = 'oracle+oracledb'
 
         extra = self.config.get('extra') # Optional, hence .get
-        _extra.update(parse_extra_into_dict(extra))
+        _extra.update(parse_extra_into_dict(extra)) # type: ignore
 
         # SQLite has no pools
         if self.engine_name != 'sqlite':
-            _extra['pool_size'] = int(self.config.get('pool_size', 1))
+            _extra['pool_size'] = int(self.config.get('pool_size', 1)) # type: ignore
             if _extra['pool_size'] == 0:
-                _extra['poolclass'] = NullPool
+                _extra['poolclass'] = NullPool # type: ignore
 
         engine_url = get_engine_url(self.config)
+
+        if engine_url.startswith('oracle://'):
+            engine_url = engine_url.replace('oracle://', 'oracle+oracledb://')
 
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
@@ -293,21 +331,38 @@ class SQLConnectionPool:
 
 # ################################################################################################################################
 
-    def _is_sa_engine(self, engine_url):
-        # type: (str)
+    def _is_oracle_engine(self, engine_url:'str') -> 'bool':
+        return engine_url.startswith('oracle')
+
+# ################################################################################################################################
+
+    def _is_sa_engine(self, engine_url:'str') -> 'bool':
         return 'zato+mssql1' not in engine_url
 
 # ################################################################################################################################
 
-    def _is_unittest_engine(self, engine_url):
-        # type: (str)
+    def _is_unittest_engine(self, engine_url:'str') -> 'bool':
         return 'zato+unittest' in engine_url
 
 # ################################################################################################################################
 
     def _create_unittest_engine(self, engine_url, config):
-        # type: (str, dict)
         return UnittestEngine(engine_url, config)
+
+# ################################################################################################################################
+
+    def _create_oracle_engine(self, engine_url, config):
+
+        return create_engine(
+            'oracle://:@',
+            connect_args={
+                'user': 'system',
+                'password': 'new_password',
+                'host': 'localhost',
+                'port': '1521',
+                'service_name': 'FREEPDB1',
+            }
+        )
 
 # ################################################################################################################################
 
@@ -315,6 +370,9 @@ class SQLConnectionPool:
 
         if self._is_unittest_engine(engine_url):
             return self._create_unittest_engine(engine_url, config)
+
+        elif self._is_oracle_engine(engine_url):
+            return self._create_oracle_engine(engine_url, config)
 
         elif self._is_sa_engine(engine_url):
             return create_engine(engine_url, **extra)
@@ -387,7 +445,7 @@ class SQLConnectionPool:
         self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
         start_time = time()
-        func(*args)
+        _ = func(*args)
         response_time = time() - start_time
 
         self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)
@@ -399,7 +457,7 @@ class SQLConnectionPool:
     def _conn(self):
         """ Returns an SQLAlchemy connection object.
         """
-        return self.engine.connect()
+        return self.engine.connect() # type: ignore
 
 # ################################################################################################################################
 
@@ -498,9 +556,9 @@ class PoolStore:
 
     def __str__(self):
         out = StringIO()
-        out.write('<{} at {} wrappers:['.format(self.__class__.__name__, hex(id(self))))
-        out.write(', '.join(sorted(self.wrappers.keys())))
-        out.write(']>')
+        _ = out.write('<{} at {} wrappers:['.format(self.__class__.__name__, hex(id(self))))
+        _ = out.write(', '.join(sorted(self.wrappers.keys())))
+        _ = out.write(']>')
         return out.getvalue()
 
 # ################################################################################################################################
@@ -517,10 +575,13 @@ class PoolStore:
             # Do not check if the connection is active when changing the password,
             # sometimes it is desirable to change it even if it is Inactive.
             item = self.get(name, enforce_is_active=False)
-            item.pool.engine.dispose()
-            config = deepcopy(self.wrappers[name].pool.config)
-            config['password'] = password
-            self[name] = config
+            if item.pool.engine:
+                item.pool.engine.dispose()
+                config = deepcopy(self.wrappers[name].pool.config)
+                config['password'] = password
+                self[name] = config
+            else:
+                self.logger.warning('No engine found for %s (change password)', name)
 
 # ################################################################################################################################
 
@@ -583,9 +644,7 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             try:
 
-                server = session.query(Server).\
-                       filter(Server.token == self.token).\
-                       one()
+                server = session.query(Server).filter(Server.token == self.token).one() # type: ignore
                 self.server = _Server(server, server.cluster)
                 self.server_id = server.id
                 self.cluster = server.cluster
@@ -604,26 +663,27 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
 
-            query = session.query(Server).\
-                filter(Server.cluster_id == self.cluster_id)
+            query = session.query( # type: ignore
+                        Server).\
+                        filter(Server.cluster_id == self.cluster_id)
 
             if up_status:
-                query = query.filter(Server.up_status == up_status)
+                query = query.filter(Server.up_status == up_status) # type: ignore
 
             if filter_out_self:
-                query = query.filter(Server.id != self.server_id)
+                query = query.filter(Server.id != self.server_id) # type: ignore
 
-            return query.all()
+            return query.all() # type: ignore
 
 # ################################################################################################################################
 
     def get_default_internal_pubsub_endpoint(self):
         with closing(self.session()) as session:
-            return session.query(PubSubEndpoint).\
-                filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
-                filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
-                filter(PubSubEndpoint.cluster_id==self.cluster_id).\
-                one()
+            return session.query(  # type: ignore
+                PubSubEndpoint).\
+                    filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                    filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                    filter(PubSubEndpoint.cluster_id==self.cluster_id).one()
 
 # ################################################################################################################################
 
@@ -635,9 +695,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             server_services = session.query(
                 Service.id, Service.name,
-                DeployedService.source_path, DeployedService.source).\
-                join(DeployedService, Service.id==DeployedService.service_id).\
-                join(Server, DeployedService.server_id==Server.id).\
+                DeployedService.source_path, DeployedService.source # type: ignore
+                ).\
+                join(DeployedService, Service.id==DeployedService.service_id # type: ignore
+                ).\
+                join(Server, DeployedService.server_id==Server.id # type: ignore
+                ).\
                 filter(Service.is_internal!=true()).\
                 all()
 
@@ -655,9 +718,10 @@ class ODBManager(SessionWrapper):
         and what host it's running on.
         """
         with closing(self.session()) as session:
-            server = session.query(Server).\
+            server = session.query(Server # type: ignore
+                ).\
                 filter(Server.token==token).\
-                first()
+                first() # type: ignore
 
             # It may be the case that the server has been deleted from web-admin before it shut down,
             # in which case during the shut down it will not be able to find itself in ODB anymore.
@@ -666,7 +730,7 @@ class ODBManager(SessionWrapper):
                 return
 
             server.up_status = status
-            server.up_mod_date = datetime.utcnow()
+            server.up_mod_date = datetime.utcnow() # type: ignore
 
             if update_host:
                 server.host = current_host()
@@ -748,9 +812,10 @@ class ODBManager(SessionWrapper):
 
                         # Will raise KeyError if the DB gets somehow misconfigured.
                         db_class = sec_type_db_class[item.sec_type]
-                        sec_def_item = session.query(db_class).\
+                        sec_def_item = session.query(db_class # type: ignore
+                                ).\
                                 filter(db_class.id==item.security_id).\
-                                one()
+                                one() # type: ignore
                         sec_def = bunchify(sec_def_item.asdict())
                         ElemsWithOpaqueMaker.process_config_dict(sec_def)
                         sec_def_cache[item.security_id] = sec_def
@@ -800,14 +865,14 @@ class ODBManager(SessionWrapper):
         and is used during server startup to decide if any new services should be added from what is found in the filesystem.
         """
         with closing(self.session()) as session:
-            return session.query(
+            return session.query( # type: ignore
                 Service.id,
                 Service.impl_name,
                 Service.is_active,
                 Service.slow_threshold,
                 ).\
                 filter(Service.cluster_id==cluster_id).\
-                all()
+                all() # type: ignore
 
 # ################################################################################################################################
 
@@ -840,20 +905,19 @@ class ODBManager(SessionWrapper):
                 DeployedServiceTable.c.server_id==self.server_id
             ))
 
-            return session.execute(query).\
-                fetchall()
+            return session.execute(query).fetchall() # type: ignore
 
 # ################################################################################################################################
 
     def add_services(self, session, data):
         # type: (list[dict]) -> None
         try:
-            session.execute(ServiceTableInsert().values(data))
+            session.execute(ServiceTableInsert().values(data)) # type: ignore
         except IntegrityError:
             # This can be ignored because it is possible that there will be
             # more than one server trying to insert rows related to services
             # that are hot-deployed from web-admin or another source.
-            logger.debug('Ignoring IntegrityError with `%s`', data)
+            logger.debug('Ignoring IntegrityError with `%s`', data) # type: ignore
 
 # ################################################################################################################################
 
@@ -872,7 +936,7 @@ class ODBManager(SessionWrapper):
     def drop_deployed_services_by_name(self, session, service_id_list):
         session.execute(
             DeployedServiceDelete().\
-            where(DeployedService.service_id.in_(service_id_list))
+            where(DeployedService.service_id.in_(service_id_list)) # type: ignore
         )
 
 # ################################################################################################################################
@@ -882,8 +946,9 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             session.execute(
-                DeployedServiceDelete().\
-                where(DeployedService.server_id==server_id)
+                DeployedServiceDelete(). # type: ignore
+                \
+                where(DeployedService.server_id==server_id)  # type: ignore
             )
             session.commit()
 
@@ -893,9 +958,10 @@ class ODBManager(SessionWrapper):
         """ Returns whether the given service is active or not.
         """
         with closing(self.session()) as session:
-            return session.query(Service.is_active).\
+            return session.query(Service.is_active # type: ignore
+                ).\
                 filter(Service.id==service_id).\
-                one()[0]
+                one()[0] # type: ignore
 
 # ################################################################################################################################
 
@@ -917,16 +983,17 @@ class ODBManager(SessionWrapper):
             session.add(dp)
 
             # .. for each of the servers in this cluster set the initial status ..
-            servers = session.query(Cluster).\
+            servers = session.query(Cluster # type: ignore
+                   ).\
                    filter(Cluster.id == self.server.cluster_id).\
-                   one().servers
+                   one().servers # type: ignore
 
             for server in servers:
                 ds = DeploymentStatus()
                 ds.package_id = dp.id
                 ds.server_id = server.id
                 ds.status = DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT
-                ds.status_change_time = datetime.utcnow()
+                ds.status_change_time = datetime.utcnow() # type: ignore
 
                 session.add(ds)
 
@@ -948,7 +1015,7 @@ class ODBManager(SessionWrapper):
         channels pointing to internal services.
         """
         with closing(self.session()) as session:
-            return query.internal_channel_list(session, cluster_id, needs_columns)
+            return query.internal_channel_list(session, cluster_id, needs_columns) # type: ignore
 
     def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
         """ Returns the list of all HTTP/SOAP connections.
