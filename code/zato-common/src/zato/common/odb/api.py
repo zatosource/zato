@@ -39,7 +39,6 @@ from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, NTLM, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
 from zato.common.odb.testing import UnittestEngine
-from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
@@ -765,9 +764,6 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
                 SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.NTLM: NTLM,
-                SEC_DEF_TYPE.OAUTH: OAuth,
-                SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
-                SEC_DEF_TYPE.VAULT: VaultConnection,
             }
 
             result = {}
@@ -838,17 +834,6 @@ class ODBManager(SessionWrapper):
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.header = 'HTTP_{}'.format(sec_def.header.upper().replace('-', '_'))
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
-
-                    elif item.sec_type == SEC_DEF_TYPE.WSS:
-                        result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.password_type = sec_def.password_type
-                        result[target].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
-                        result[target].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
-                        result[target].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
-                        result[target].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
-
-                    elif item.sec_type == SEC_DEF_TYPE.TLS_CHANNEL_SEC:
-                        result[target].sec_def.value = dict(parse_tls_channel_security_definition(sec_def.value))
 
                     elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
@@ -1100,54 +1085,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.oauth_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of TLS CA certs on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.tls_ca_cert_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_tls_channel_sec_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of definitions for securing TLS channels.
-        """
-        with closing(self.session()) as session:
-            return query.tls_channel_sec_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_tls_key_cert_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of TLS key/cert pairs on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.tls_key_cert_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_wss_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of WS-Security definitions on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.wss_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_vault_connection_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Vault connections on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.vault_connection_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_xpath_sec_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of XPath-based security definitions on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.xpath_sec_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1458,20 +1395,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of SQL notification definitions.
         """
         return query.notif_sql_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_cassandra_conn_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Cassandra connections.
-        """
-        return query.cassandra_conn_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_cassandra_query_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Cassandra queries.
-        """
-        return query.cassandra_query_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

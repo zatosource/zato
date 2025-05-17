@@ -1178,17 +1178,6 @@ SERVICES = [
         name='outconn_redis',
         prefix='zato.outgoing.redis',
     ),
-    ServiceInfo(
-        name='query_cassandra',
-        prefix='zato.query.cassandra',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_cassandra',
-                'dependent_field': 'name',
-                'empty_value': Zato_No_Security,
-            },
-        },
-    ),
 ]
 
 SERVICE_BY_NAME = {info.name: info for info in SERVICES}
