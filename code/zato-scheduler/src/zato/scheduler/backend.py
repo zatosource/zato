@@ -25,11 +25,10 @@ from paodate import Delta
 from zato.common.ext.future.utils import iterkeys, itervalues
 
 # Zato
-from zato.common.api import FILE_TRANSFER, SCHEDULER
+from zato.common.api import SCHEDULER
 from zato.common.util.api import asbool, make_repr, new_cid, spawn_greenlet
 from zato.common.util.scheduler import load_scheduler_jobs_by_api, load_scheduler_jobs_by_odb, add_startup_jobs_to_odb_by_api, \
     add_startup_jobs_to_odb_by_odb
-from zato.scheduler.cleanup.cli import start_cleanup
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -293,12 +292,6 @@ class Job:
 
         # OK, we're ready
         try:
-
-            # If we are a job that triggers file transfer channels we do not start
-            # unless our extra data is filled in. Otherwise, we would not trigger any transfer anyway.
-            if self.service == FILE_TRANSFER.SCHEDULER_SERVICE and (not self.extra):
-                logger.warning('Skipped file transfer job `%s` without extra set `%s` (%s)', self.name, self.extra, self.service)
-                return
 
             if not self.start_time:
                 logger.warning('Job `%s` cannot start without start_time set', self.name)

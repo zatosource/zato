@@ -17,7 +17,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common.api import EnvFile, FILE_TRANSFER
+from zato.common.api import EnvFile
 from zato.common.broker_message import ValueConstant, HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import cast_, dataclass, from_dict, optional
 from zato.common.util.api import get_config, get_user_config_name
@@ -173,7 +173,7 @@ class _OnUpdate(Service):
         #
 
         # Use tue full path from input ..
-        if (not ctx.relative_dir) or (ctx.relative_dir == FILE_TRANSFER.DEFAULT.RelativeDir):
+        if not ctx.relative_dir:
             full_path = ctx.full_path
 
         # Build relative_dir from its constituents
@@ -256,7 +256,7 @@ class _OnUpdate(Service):
             # to pick up the file again while we are modifying it.
             sleep(2)
 
-            self.server.worker_store.file_transfer_api.remove_local_ignored_path(ctx.full_path)
+            # TODO: Bring it back if needed
 
 # ################################################################################################################################
 
