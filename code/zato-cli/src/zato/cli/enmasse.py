@@ -1727,19 +1727,9 @@ class ObjectImporter:
             'apikey',
             'ntlm',
             'oauth',
-            'jwt',
-            'aws',
-            'tls_key_cert',
-            'tls_channel_sec',
             'security_groups',
-            # 'wss',
-            # 'openstack',
-            # 'xpath_sec',
-            # 'vault_conn_sec',
             'http_soap',
             'web_socket',
-            'pubsub_topic',
-            'pubsub_endpoint',
         ]
 
         # Do populate the dependencies first ..
@@ -1759,15 +1749,7 @@ class ObjectImporter:
             item_type = _replace_item_type(True, item_type)
 
             if self.may_be_dependency(item_type):
-
-                if item_type == 'rbac_role':
-                    append_to = new_rbac_role
-                elif item_type == 'rbac_role_permission':
-                    append_to = new_rbac_role_permission
-                elif item_type == 'rbac_client_role':
-                    append_to = new_rbac_client_role
-                else:
-                    append_to = new_defs
+                append_to = new_defs
             else:
                 append_to = new_other
 

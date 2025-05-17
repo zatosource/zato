@@ -287,9 +287,7 @@ class ConfigStore:
         self.email_imap = None   # type: ConfigDict
 
         self.generic_connection = None   # type: ConfigDict
-        self.notif_sql = None   # type: ConfigDict
         self.service = None   # type: ConfigDict
-        self.sms_twilio = None   # type: ConfigDict
         self.search_es = None   # type: ConfigDict
         self.cache_builtin = None   # type: ConfigDict
         self.cache_memcached = None   # type: ConfigDict
@@ -301,7 +299,6 @@ class ConfigStore:
         self.apikey = None   # type: ConfigDict
         self.aws = None   # type: ConfigDict
         self.basic_auth = None # type: ConfigDict
-        self.jwt = None   # type: ConfigDict
         self.ntlm = None   # type: ConfigDict
         self.oauth = None   # type: ConfigDict
 
@@ -324,9 +321,6 @@ class ConfigStore:
         self.service = None # type: ConfigDict
 
         # MQ
-        self.definition_wmq = None # type: ConfigDict
-        self.out_wmq = None        # type: ConfigDict
-        self.channel_wmq = None    # type: ConfigDict
         self.channel_amqp = None   # type: ConfigDict
 
 # ################################################################################################################################

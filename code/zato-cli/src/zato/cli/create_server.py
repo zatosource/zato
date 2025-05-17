@@ -126,14 +126,9 @@ locale=
 ensure_sql_connections_exist=True
 http_server_header=Apache
 needs_x_zato_cid=False
-zeromq_connect_sleep=0.1
-aws_host=
-jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
-enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
-return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
 service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
 
@@ -511,30 +506,9 @@ key1={keys_key1}
 well_known_data={zato_well_known_data} # Pi number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
-server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
 """
 
-# ################################################################################################################################
-
-lua_zato_rename_if_exists = """
--- Checks whether a from_key exists and if it does renames it to to_key.
--- Returns an error code otherwise.
-
--- Return codes:
--- 10 = Ok, renamed from_key -> to_key
--- 11 = No such from_key
-
-local from_key = KEYS[1]
-local to_key = KEYS[2]
-
-if redis.call('exists', from_key) == 1 then
-    redis.call('rename', from_key, to_key)
-    return 10
-else
-    return 11
-end
-"""
 
 # ################################################################################################################################
 
@@ -546,10 +520,6 @@ directories = (
     'config',
     'config/repo',
     'config/repo/lua',
-    'config/repo/lua/internal',
-    'config/repo/lua/user',
-    'config/repo/schema',
-    'config/repo/schema/json',
     'config/repo/sftp',
     'config/repo/sftp/channel',
     'config/repo/static',
@@ -557,9 +527,6 @@ directories = (
     'config/repo/static/sso/email',
     'config/repo/static/sso/email/en_GB',
     'config/repo/static/sso/email/en_US',
-    'config/repo/tls',
-    'config/repo/tls/keys-certs',
-    'config/repo/tls/ca-certs',
     'logs',
     'pickup',
     'pickup/incoming',
@@ -575,21 +542,12 @@ directories = (
     'pickup/processed/json',
     'pickup/processed/xml',
     'pickup/processed/csv',
-    'profiler',
     'work',
-    'work/events',
-    'work/events/v1',
-    'work/events/v2',
     'work/hot-deploy',
     'work/hot-deploy/current',
     'work/hot-deploy/backup',
     'work/hot-deploy/backup/last',
 )
-
-# ################################################################################################################################
-
-priv_key_location = './config/repo/config-priv.pem'
-priv_key_location = './config/repo/config-pub.pem'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -627,7 +585,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--cert-path', 'help':'Path to the server\'s certificate in PEM'})
     opts.append({'name':'--ca-certs-path', 'help':'Path to list of PEM certificates the server will trust'})
     opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
-    opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
     opts.append({'name':'--scheduler-host', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
     opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
@@ -758,7 +715,6 @@ class Create(ZatoCommand):
         from six import PY3
 
         # Zato
-        from zato.cli._apispec_default import apispec_files
         from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
@@ -770,7 +726,6 @@ class Create(ZatoCommand):
         files = {
             'config/repo/logging.conf': logging_conf_contents,
             'config/repo/service-sources.txt': service_sources_contents,
-            'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
             'config/repo/sql.conf': sql_conf_contents,
 
             'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
@@ -937,24 +892,11 @@ class Create(ZatoCommand):
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
 
-            zato_misc_jwt_secret = getattr(args, 'jwt_secret', None)
-            if not zato_misc_jwt_secret:
-                zato_misc_jwt_secret = Fernet.generate_key()
-
-            if not isinstance(zato_misc_jwt_secret, bytes):
-                zato_misc_jwt_secret = zato_misc_jwt_secret.encode('utf8')
-
-            zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
-
-            if isinstance(zato_misc_jwt_secret, bytes): # type: ignore
-                zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
-
             _ = secrets_conf.write(secrets_conf_template.format(
                 keys_key1=secret_key,
                 zato_well_known_data=zato_well_known_data,
                 zato_kvdb_password=kvdb_password,
                 zato_main_token=zato_main_token,
-                zato_misc_jwt_secret=zato_misc_jwt_secret,
                 zato_odb_password=odb_password,
             ))
             secrets_conf.close()
