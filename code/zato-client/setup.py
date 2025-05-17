@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-version = '3.3'
+version = '4.1'
 
 long_description = description = 'Python API client for Zato - ESB, APIs, AI and Cloud Integrations in Python (https://zato.io)'
 

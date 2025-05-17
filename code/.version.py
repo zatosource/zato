@@ -78,7 +78,7 @@ except Exception as e:
     else:
         suffix = platform_system
 
-    version = f'3.3-nogit-{suffix}'
+    version = f'4.1-nogit-{suffix}'
 else:
 
     major = release['major']
