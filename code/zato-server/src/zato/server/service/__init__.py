@@ -31,12 +31,11 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
@@ -93,7 +92,6 @@ if 0:
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
-    from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.rules.api import RulesManager
@@ -126,7 +124,6 @@ if 0:
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO # type: ignore
     FTPStore = FTPStore
-    JSONSchemaValidator = JSONSchemaValidator
     KVDBAPI = KVDBAPI # type: ignore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -363,12 +360,6 @@ class Service:
 
     # Vendors - Keysight
     keysight: 'KeysightContainer'
-
-    # By default, services do not use JSON Schema
-    schema = '' # type: str
-
-    # JSON Schema validator attached only if service declares a schema to use
-    _json_schema_validator:'JSONSchemaValidator | None' = None
 
     server: 'ParallelServer'
     broker_client: 'BrokerClient'
@@ -703,30 +694,6 @@ class Service:
                     _ = service.server.current_usage.incr(service.name)
 
                 service.invocation_time = _utcnow()
-
-                # Check if there is a JSON Schema validator attached to the service and if so,
-                # validate input before proceeding any further.
-                if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    if isinstance(raw_request, str):
-                        data = raw_request.decode('utf8') # type: ignore
-                        data = loads(data)
-                    else:
-                        data = raw_request
-                    validation_result = service._json_schema_validator.validate(cid, data)
-                    if not validation_result:
-                        error = validation_result.get_error()
-
-                        error_msg = error.get_error_message()
-                        error_msg_details = error.get_error_message(True)
-
-                        raise JSONSchemaValidationException(
-                            cid,
-                            CHANNEL.SERVICE,
-                            service.name,
-                            error.needs_err_details,
-                            error_msg,
-                            error_msg_details
-                        )
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 

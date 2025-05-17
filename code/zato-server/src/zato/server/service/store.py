@@ -46,8 +46,6 @@ except ImportError:
 from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
-     Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.simpleio import DataClassSimpleIO
@@ -419,49 +417,7 @@ class ServiceStore:
 # ################################################################################################################################
 
     def post_deploy(self, class_:'type[Service]') -> 'None':
-        self.set_up_class_json_schema(class_)
-
-# ################################################################################################################################
-
-    def set_up_class_json_schema(self, class_:'type[Service]', service_config:'dictnone'=None) -> 'None':
-
-        class_name = class_.get_name()
-
-        # We are required to configure JSON Schema for this service
-        # but first we need to check if the service is already deployed.
-        # If it is not, we need to set a flag indicating that our caller
-        # should do it later, once the service has been actually deployed.
-        service_info = self.server.config.service.get(class_name)
-        if not service_info:
-            setattr(class_, self.needs_post_deploy_attr, True)
-            return
-
-        _service_config = service_config or service_info['config'] # type: anydict
-        json_schema_config = get_service_config(_service_config, self.server)
-
-        # Make sure the schema points to an absolute path and that it exists
-        if not os.path.isabs(class_.schema):
-            schema_path = os.path.join(self.server.json_schema_dir, class_.schema)
-        else:
-            schema_path = class_.schema
-
-        if not os.path.exists(schema_path):
-            logger.warning('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
-                class_name, schema_path, class_.schema)
-            return
-
-        config = JSONSchemaValidationConfig()
-        config.is_enabled = json_schema_config['is_json_schema_enabled']
-        config.object_name = class_name
-        config.object_type = CHANNEL.SERVICE
-        config.schema_path = schema_path
-        config.needs_err_details = json_schema_config['needs_json_schema_err_details']
-
-        validator = JSONSchemaValidator()
-        validator.config = config
-        validator.init()
-
-        class_._json_schema_validator = validator
+        pass
 
 # ################################################################################################################################
 
