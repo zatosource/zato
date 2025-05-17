@@ -18,7 +18,6 @@ from dateutil.relativedelta import relativedelta
 from django.template.defaultfilters import date as django_date_filter
 
 # Zato
-from zato.common.api import INVOCATION_TARGET
 from zato.common.util.api import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)
@@ -57,16 +56,6 @@ MONTH_YEAR_FORMATS = {
 TIME_FORMATS = {
     '12': 'g:i.s A',
     '24': 'H:i:s',
-}
-
-TARGET_TYPE_HUMAN = {
-    INVOCATION_TARGET.CHANNEL_AMQP: 'AMQP channel',
-    INVOCATION_TARGET.CHANNEL_WMQ: 'IBM MQ channel',
-    INVOCATION_TARGET.CHANNEL_ZMQ: 'ZeroMQ channel',
-    INVOCATION_TARGET.OUTCONN_AMQP: 'AMQP outgoing connection',
-    INVOCATION_TARGET.OUTCONN_WMQ: 'IBM MQ outgoing connection',
-    INVOCATION_TARGET.OUTCONN_ZMQ: 'ZeroMQ outgoing connection',
-    INVOCATION_TARGET.SERVICE: 'Service',
 }
 
 def last_hour_start_stop(now):

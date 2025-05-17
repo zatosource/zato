@@ -42,12 +42,5 @@ class CreateForm(DataFormatForm):
         for item in AMQP.ACK_MODE():
             self.fields['ack_mode'].choices.append([item.id, item.name])
 
-    def set_def_id(self, def_ids):
-        # Sort AMQP definitions by their names.
-        def_ids = sorted(iteritems(def_ids), key=itemgetter(1))
-
-        for id, name in def_ids:
-            self.fields['def_id'].choices.append([id, name])
-
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

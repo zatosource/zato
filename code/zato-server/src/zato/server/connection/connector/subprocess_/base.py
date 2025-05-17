@@ -39,7 +39,6 @@ from zato.common.json_internal import dumps, loads
 from zato.common.util.api import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
 from zato.common.util.open_ import open_r, open_w
-from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 # ################################################################################################################################
 
@@ -189,7 +188,7 @@ class BaseConnectionContainer:
         self.logger = None # type: Logger
         self.parent_pid = getppid()
 
-        self.config_ipc = ConnectorConfigIPC()
+        self.config_ipc = ConnectorConfigIPC() # TODO: This used to use Posix IPC
 
         if self.options['zato_subprocess_mode']:
             self.config_ipc.create(self.deployment_key, self.shmem_size, False)
