@@ -14,7 +14,7 @@ from logging import getLogger
 from sqlalchemy import and_, delete, exists, insert, update
 
 # Zato
-from zato.common.api import GENERIC, FILE_TRANSFER, NotGiven
+from zato.common.api import GENERIC, NotGiven
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
 from zato.common.typing_ import cast_
@@ -46,7 +46,7 @@ class GenericObjectWrapper:
     """
     type_:'strnone' = None
     subtype:'strnone' = None
-    model_class:'type_[ModelGenericObject]' = ModelGenericObject
+    model_class:'type_[ModelGenericObject]' = ModelGenericObject # type: ignore
 
     def __init__(self, session:'SASession', cluster_id:'int') -> 'None':
         self.session = session
@@ -73,11 +73,7 @@ class GenericObjectWrapper:
         # Local variables
         type_ = type_ or self.type_
 
-        item = self.session.query(self.model_class).\
-            filter(self.model_class.name==name).\
-            filter(self.model_class.type_==type_).\
-            filter(self.model_class.cluster_id==self.cluster_id).\
-            first()
+        item = self.session.query(self.model_class).filter(self.model_class.name==name).filter(self.model_class.type_==type_).filter(self.model_class.cluster_id==self.cluster_id).first() # type: ignore
 
         return cast_('any_', get_dict_with_opaque(item) if item else None)
 
@@ -92,9 +88,7 @@ class GenericObjectWrapper:
         # Our response to produce
         out:'dictlist' = []
 
-        items = self.session.query(self.model_class).\
-            filter(self.model_class.type_==type_).\
-            filter(self.model_class.cluster_id==self.cluster_id)
+        items = self.session.query(self.model_class).filter(self.model_class.type_==type_).filter(self.model_class.cluster_id==self.cluster_id) # type: ignore
 
         if subtype:
             items = items.filter(self.model_class.subtype==subtype)
@@ -106,7 +100,7 @@ class GenericObjectWrapper:
         items = items.all()
 
         for item in items:
-            item:'strdict' = get_dict_with_opaque(item)
+            item:'strdict' = get_dict_with_opaque(item) # type: ignore
             item = self.build_list_item_from_sql_row(item)
             out.append(item)
 
@@ -270,18 +264,6 @@ class GenericObjectWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FileTransferWrapper(GenericObjectWrapper):
-    type_ = GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
-
-class FTPFileTransferWrapper(FileTransferWrapper):
-    subtype = FILE_TRANSFER.SOURCE_TYPE.FTP.id
-
-class SFTPFileTransferWrapper(FileTransferWrapper):
-    subtype = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GroupsWrapper(GenericObjectWrapper):
 
     def build_list_item_from_sql_row(self, row: 'strdict') -> 'strdict':
@@ -303,7 +285,7 @@ def connection_list(session:'SASession', cluster_id:'int', type_:'strnone'=None,
     """ A list of generic connections by their type.
     """
     q = session.query(ModelGenericConn).\
-        filter(ModelGenericConn.cluster_id==cluster_id)
+        filter(ModelGenericConn.cluster_id==cluster_id) # type: ignore
 
     if type_:
         q = q.filter(ModelGenericConn.type_==type_)
