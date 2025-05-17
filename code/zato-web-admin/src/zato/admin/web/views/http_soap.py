@@ -20,7 +20,7 @@ from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, get_tls_ca_cert_list, id_only_service, \
         method_allowed, parse_response_data, SecurityList
-from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
+from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
@@ -62,9 +62,6 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.OAUTH,
     SEC_DEF_TYPE.TLS_KEY_CERT,
 }
-
-_max_len_messages = AuditLog.Default.max_len_messages
-_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,12 +114,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'rate_limit_type': params.get(prefix + 'rate_limit_type'),
         'rate_limit_def': params.get(prefix + 'rate_limit_def'),
         'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
-
-        'max_len_messages_sent': params.get(prefix + 'max_len_messages_sent') or _max_len_messages,
-        'max_len_messages_received': params.get(prefix + 'max_len_messages_received') or _max_len_messages,
-
-        'max_bytes_per_message_sent': params.get(prefix + 'max_bytes_per_message_sent') or _max_data_stored_per_message,
-        'max_bytes_per_message_received': params.get(prefix + 'max_bytes_per_message_received') or _max_data_stored_per_message,
     }
 
     # If these fields exist, no matter what their values are, perhaps empty,

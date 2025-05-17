@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import WithAuditLog
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -21,7 +20,7 @@ _default = HL7.Default
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(WithAuditLog):
+class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
