@@ -74,5 +74,4 @@ extraPaths = [
     "./zato-sso/src",
     "./zato-testing/src",
     "./zato-web-admin/src",
-    "./zato-zmq/src",
 ]
