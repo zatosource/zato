@@ -17,7 +17,6 @@ from hl7apy.core import Message
 
 # Zato
 from zato.common.api import GENERIC, HL7
-from zato.common.audit_log import DataReceived, DataSent
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
@@ -210,9 +209,6 @@ class HL7MLLPServer:
     end_seq: 'str'
     end_seq_len: 'int'
 
-    is_audit_log_sent_active: 'bool'
-    is_audit_log_received_active: 'bool'
-
     keep_running: 'bool'
     impl: 'ZatoStreamServer'
 
@@ -233,7 +229,6 @@ class HL7MLLPServer:
         self.config = config
         self.callback_func = callback_func
         self.object_id = config.id
-        self.audit_log = audit_log
         self.address = config.address
         self.name = config.name
         self.service_name = config.service_name
@@ -246,9 +241,6 @@ class HL7MLLPServer:
 
         self.end_seq     = cast_('str', config.end_seq)
         self.end_seq_len = len(self.end_seq)
-
-        self.is_audit_log_sent_active = config.get('is_audit_log_sent_active') or False
-        self.is_audit_log_received_active = config.get('is_audit_log_received_active') or False
 
         self.keep_running = True
 
@@ -548,10 +540,6 @@ class HL7MLLPServer:
         # .. asign the actual business data to message ..
         args.request_ctx.data = _buffer_data
 
-        # .. update our runtime metadata first (data received) ..
-        if self.is_audit_log_received_active:
-            self._store_data_received(args.request_ctx)
-
         # .. update counters ..
         args.conn_ctx.total_messages_received += 1
 
@@ -566,43 +554,8 @@ class HL7MLLPServer:
         # .. write the response back ..
         args._socket_send(response)
 
-        # .. update our runtime metadata first (data sent) ..
-        if self.is_audit_log_sent_active:
-            self._store_data_sent(args.request_ctx, response)
-
         # .. and reset the message to make it possible to handle a new one.
         args._request_ctx_reset()
-
-# ################################################################################################################################
-
-    def _store_data(
-        self,
-        request_ctx,     # type: RequestCtx
-        _DataEventClass, # type: type_[DataSent | DataReceived]
-        response=None,   # type: bytes | None
-        _conn_type=conn_type # type: str
-    ) -> 'None':
-
-        # Create and fill out details of the new event ..
-        data_event = _DataEventClass()
-        data_event.data = response or request_ctx.data
-        data_event.type_ = _conn_type
-        data_event.object_id = self.object_id
-        data_event.conn_id = request_ctx.conn_id
-        data_event.msg_id = request_ctx.msg_id
-
-        # .. and store it in our log.
-        self.audit_log.store_data(data_event)
-
-# ################################################################################################################################
-
-    def _store_data_received(self, request_ctx:'RequestCtx', event_class:'type_[DataReceived]'=DataReceived):
-        self._store_data(request_ctx, event_class)
-
-# ################################################################################################################################
-
-    def _store_data_sent(self, request_ctx:'RequestCtx', response:'bytes', event_class:'type_[DataSent]'=DataSent):
-        self._store_data(request_ctx, event_class, response)
 
 # ################################################################################################################################
 
