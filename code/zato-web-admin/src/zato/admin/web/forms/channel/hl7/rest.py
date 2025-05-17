@@ -10,13 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_select, add_services, WithAuditLog
+from zato.admin.web.forms import add_security_select, add_select, add_services
 from zato.common.api import HL7
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(WithAuditLog):
+class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_parse_on_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
@@ -31,7 +31,6 @@ class CreateForm(WithAuditLog):
 
     def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
         security_list = security_list or []
-        super(WithAuditLog, self).__init__(post_data, prefix=prefix)
 
         add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
         add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)

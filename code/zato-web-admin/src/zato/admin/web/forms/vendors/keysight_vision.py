@@ -10,12 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_sec_tls_ca_cert_id_select, WithAuditLog
+from zato.admin.web.forms import add_sec_tls_ca_cert_id_select
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(WithAuditLog):
+class CreateForm(forms.Form):
 
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))

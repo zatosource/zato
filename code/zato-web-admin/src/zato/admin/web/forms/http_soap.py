@@ -11,7 +11,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_sec_tls_ca_cert_id_select, add_security_select, add_select, add_services, \
-    SearchForm as _ChooseClusterForm, DataFormatForm, WithAuditLog
+    SearchForm as _ChooseClusterForm, DataFormatForm
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
@@ -32,7 +32,7 @@ url_params_priority = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(DataFormatForm, WithAuditLog):
+class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -79,7 +79,6 @@ class CreateForm(DataFormatForm, WithAuditLog):
         cache_list = cache_list or []
 
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        super(WithAuditLog).__init__()
 
         self.fields['url_params_pri'].choices = []
         for value, label in url_params_priority:

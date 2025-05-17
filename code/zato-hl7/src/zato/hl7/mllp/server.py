@@ -29,7 +29,6 @@ if 0:
     from logging import Logger
     from socket import socket as Socket
     from bunch import Bunch
-    from zato.common.audit_log import AuditLog
     from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
     byteslist = byteslist
 
@@ -204,9 +203,6 @@ class HL7MLLPServer:
     address: 'str'
     service_name: 'str'
 
-    audit_log: 'AuditLog'
-    should_log_messages: 'bool'
-
     start_seq: 'str'
     start_seq_len: 'int'
     start_seq_len_eq_one: 'bool'
@@ -232,7 +228,6 @@ class HL7MLLPServer:
         self,
         config,        # type: Bunch
         callback_func, # type: callable_
-        audit_log      # type: AuditLog
     ) -> 'None':
 
         self.config = config
@@ -724,7 +719,6 @@ def main():
 
     # Zato
     from zato.common.api import HL7
-    from zato.common.audit_log import AuditLog, LogContainerConfig
 
     log_level = logging.DEBUG
     log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
@@ -761,9 +755,6 @@ def main():
     })
 
     log_container_config = LogContainerConfig()
-
-    audit_log = AuditLog()
-    audit_log.create_container(log_container_config)
 
     server = HL7MLLPServer(config, on_message, audit_log)
     server.start()
