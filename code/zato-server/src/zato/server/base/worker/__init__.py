@@ -163,7 +163,6 @@ class WorkerStore(_WorkerStoreBase):
         self.worker_config = worker_config
         self.server = server
         self.update_lock = RLock()
-        self.kvdb = server.kvdb
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
         # To expedite look-ups
@@ -273,7 +272,6 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.ntlm,
             self.worker_config.oauth,
             self.worker_config.apikey,
-            self.kvdb,
             self.broker_client,
             self.server.odb,
         )

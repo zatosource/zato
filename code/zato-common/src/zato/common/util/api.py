@@ -109,7 +109,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, \
-     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1109,107 +1109,6 @@ def get_kvdb_config_for_log(config):
     if config.shadow_password_in_logs:
         config.password = SECRET_SHADOW
     return config
-
-# ################################################################################################################################
-
-def validate_tls_from_payload(payload, is_key=False):
-
-    with NamedTemporaryFile(prefix='zato-tls-') as tf:
-        payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
-        tf.write(payload)
-        tf.flush()
-
-        pem = open(tf.name, encoding='utf8').read()
-
-        cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-        cert_info = sorted(cert_info.get_subject().get_components())
-        cert_info = '; '.join('{}={}'.format(k.decode('utf8'), v.decode('utf8')) for k, v in cert_info)
-
-        if is_key:
-            key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
-            key_info = '{}; {} bits'.format(TLS_KEY_TYPE[key_info.type()], key_info.bits())
-            return '{}; {}'.format(key_info, cert_info)
-        else:
-            return cert_info
-
-get_tls_from_payload = validate_tls_from_payload
-
-# ################################################################################################################################
-
-def get_tls_full_path(root_dir, component, info):
-    return os.path.join(root_dir, component, fs_safe_name(info) + '.pem')
-
-# ################################################################################################################################
-
-def get_tls_ca_cert_full_path(root_dir, info):
-    return get_tls_full_path(root_dir, TLS.DIR_CA_CERTS, info)
-
-# ################################################################################################################################
-
-def get_tls_key_cert_full_path(root_dir, info):
-    return get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS, info)
-
-# ################################################################################################################################
-
-def store_tls(root_dir, payload, is_key=False):
-
-    # Raises exception if it's not really a certificate.
-    info = get_tls_from_payload(payload, is_key)
-
-    pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
-    pem_file = open(pem_file_path, 'w', encoding='utf8')
-
-    if has_portalocker:
-        exception_to_catch = portalocker.LockException
-    else:
-        # Purposefully, catch an exception that will never be raised
-        # so that we can actually get the traceback.
-        exception_to_catch = ZeroDivisionError
-
-    try:
-        if has_portalocker:
-            portalocker.lock(pem_file, portalocker.LOCK_EX)
-
-        pem_file.write(payload)
-        pem_file.close()
-
-        os.chmod(pem_file_path, 0o640)
-
-        return pem_file_path
-
-    except exception_to_catch:
-        pass # It's OK, something else is doing the same thing right now
-
-# ################################################################################################################################
-
-def replace_private_key(orig_payload):
-    if isinstance(orig_payload, basestring):
-        if isinstance(orig_payload, bytes):
-            orig_payload = orig_payload.decode('utf8')
-        for item in TLS.BEGIN_END:
-            begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
-            if begin in orig_payload:
-                end = '-----END {}PRIVATE KEY-----'.format(item)
-
-                begin_last_idx = orig_payload.find(begin) + len(begin) + 1
-                end_preceeding_idx = orig_payload.find(end) -1
-
-                return orig_payload[0:begin_last_idx] + SECRET_SHADOW + orig_payload[end_preceeding_idx:]
-
-    # No private key at all in payload
-    return orig_payload
-
-# ################################################################################################################################
-
-def delete_tls_material_from_fs(server, info, full_path_func):
-    try:
-        os.remove(full_path_func(server.tls_dir, info))
-    except OSError as e:
-        if e.errno == errno.ENOENT:
-            # It's ok - some other worker must have deleted it already
-            pass
-        else:
-            raise
 
 # ################################################################################################################################
 
