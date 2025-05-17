@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zato-cy"
-version = "3.3"
+version = "4.1"
 authors = [
     { name = "Zato Source s.r.o.", email = "info@zato.io" },
 ]

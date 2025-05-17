@@ -11,7 +11,7 @@ from platform import system as platform_system
 from setuptools import Extension, find_packages, setup
 from Cython.Build import cythonize # type: ignore
 
-version = '3.3'
+version = '4.1'
 
 is_windows = 'windows' in platform_system().lower()
 

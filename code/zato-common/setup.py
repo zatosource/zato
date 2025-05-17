@@ -12,7 +12,7 @@ import os
 # flake8: noqa
 from setuptools import setup, find_packages
 
-version = '3.3'
+version = '4.1'
 
 def parse_requirements(requirements): # type: ignore
     ignored = ['#', 'setuptools', '-e']
