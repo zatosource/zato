@@ -685,8 +685,6 @@ class ServiceStore:
                 class_.component_enabled_odoo = True
                 class_.component_enabled_zeromq = True
                 class_.component_enabled_patterns = True
-                class_.component_enabled_target_matcher = True
-                class_.component_enabled_invoke_matcher = True
                 class_.component_enabled_sms = True
 
             else:
@@ -724,8 +722,6 @@ class ServiceStore:
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
                 class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
-                class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
-                class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
                 class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
                 # New in Zato 3.2, thus optional
