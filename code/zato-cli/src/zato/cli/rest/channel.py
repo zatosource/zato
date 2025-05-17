@@ -160,10 +160,6 @@ class CreateChannel(SecurityAwareCommand):
         if not url_path:
             url_path = '/'+ name
 
-        # Enable the audit log if told to
-        is_audit_log_received_active = bool(store_requests)
-        is_audit_log_sent_active = bool(store_responses)
-
         # Obtain the security ID based on input data, creating the definition if necessary.
         sec_name = 'auto.sec.' + now
         security_info = self._get_security_id(name=sec_name, basic_auth=basic_auth, api_key=api_key)
@@ -180,14 +176,6 @@ class CreateChannel(SecurityAwareCommand):
             'is_active': is_active,
             'connection': CONNECTION.CHANNEL,
             'security_id': security_id,
-            'is_audit_log_received_active': is_audit_log_received_active,
-            'is_audit_log_sent_active': is_audit_log_sent_active,
-
-            'max_len_messages_received': store_requests,
-            'max_len_messages_sent': store_responses,
-
-            'max_bytes_per_message_received': max_bytes_requests,
-            'max_bytes_per_message_sent': max_bytes_responses,
         }
 
         # Invoke the base service that creates a channel ..
