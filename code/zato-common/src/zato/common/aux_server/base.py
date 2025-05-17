@@ -20,7 +20,7 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
+from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore

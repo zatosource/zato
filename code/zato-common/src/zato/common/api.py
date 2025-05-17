@@ -510,7 +510,6 @@ class CHANNEL(Attrs):
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
-    IPC = 'ipc'
     NEW_INSTANCE = 'new-instance'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
     PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on_target'
