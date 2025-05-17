@@ -30,18 +30,15 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, IPC, \
-    KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, IPC, RATE_LIMIT, SERVER_STARTUP, \
+    SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
-from zato.common.events.common import Default as EventsDefault
 from zato.common.facade import SecurityFacade
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
-from zato.common.kv_data import KVDataAPI
-from zato.common.kvdb.api import KVDB
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.oauth import OAuthStore
 from zato.common.odb.api import PoolStore
@@ -125,11 +122,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     odb: 'ODBManager'
-    kvdb: 'KVDB'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
-    kv_data_api: 'KVDataAPI'
     on_wsgi_request: 'any_'
 
     cluster: 'ClusterModel'
@@ -142,7 +137,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     broker_client: 'BrokerClient'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
-    oauth_store: 'OAuthStore'
     bearer_token_manager: 'BearerTokenManager'
     security_facade: 'SecurityFacade'
 
@@ -204,8 +198,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
-        self.ipc_api = IPCAPI(self)
-        self.fifo_response_buffer_size = -1
         self.is_first_worker = False
         self.process_idx = -1
         self.shmem_size = -1.0
@@ -228,9 +220,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
-
-        # Current state of subprocess-based connectors
-        self.subproc_current_state = SubprocessCurrentState()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -923,9 +912,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if is_posix:
             register_diag_handlers()
 
-        # Configure paths and load data pertaining to Zato KVDB
-        self.set_up_zato_kvdb()
-
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
         self.set_up_odb()
@@ -1583,11 +1569,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
 
-        # Per-worker cleanup
+        # Cleanup
         else:
-
-            # Store Zato KVDB data on disk
-            self.save_zato_main_proc_state()
 
             # Set the flag to True only the first time we are called, otherwise simply return
             if self._is_process_closing:

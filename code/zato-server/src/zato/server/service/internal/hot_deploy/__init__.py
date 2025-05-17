@@ -18,7 +18,7 @@ from time import sleep
 from traceback import format_exc
 
 # Zato
-from zato.common.api import DEPLOYMENT_STATUS, KVDB
+from zato.common.api import DEPLOYMENT_STATUS
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.typing_ import cast_
@@ -330,13 +330,13 @@ class Create(AdminService):
         if dp:
 
             # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
-            details = loads(dp.details)
+            details = loads(dp.details) # type: ignore
 
             should_deploy_in_place = details['should_deploy_in_place']
             in_place_dir_name = os.path.dirname(details['fs_location'])
 
             if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-                return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
+                return self._deploy_package(session, package_id, dp.payload_name, dp.payload, # type: ignore
                     should_deploy_in_place, in_place_dir_name)
             else:
                 # This shouldn't really happen at all because the pickup notifier is to
@@ -350,17 +350,15 @@ class Create(AdminService):
 # ################################################################################################################################
 
     def get_package(self, package_id:'int', session:'SASession') -> 'DeploymentPackage | None':
-        return session.query(DeploymentPackage).\
-            filter(DeploymentPackage.id==package_id).\
-            first()
+        return session.query(DeploymentPackage).filter(DeploymentPackage.id==package_id).first() # type: ignore
 
 # ################################################################################################################################
 
     def handle(self):
         package_id = self.request.input.package_id
         server_token = self.server.fs_server_config.main.token
-        lock_name = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_UPLOADING, server_token, package_id)
-        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_ALREADY_UPLOADED, server_token, package_id)
+        lock_name = '{}{}:{}'.format('uploading', server_token, package_id)
+        already_deployed_flag = '{}{}:{}'.format('already-deployed', server_token, package_id)
 
         # TODO: Stuff below - and the methods used - needs to be rectified.
         # As of now any worker process will always set deployment status

@@ -103,35 +103,6 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
-
-        # Bunch
-        from bunch import Bunch
-
-        # Zato
-        from zato.common.kvdb.api import KVDB
-
-        # Redis is not configured = we can return
-        kvdb_config = conf.get(conf_key) or {}
-        if not kvdb_config:
-            return
-
-        # Redis is not enabled = we can return
-        if not KVDB.is_config_enabled(kvdb_config):
-            return
-
-        kvdb_config = Bunch(kvdb_config)
-
-        kvdb = KVDB(kvdb_config, cm.decrypt)
-        kvdb.init()
-        kvdb.conn.info()
-        kvdb.close()
-
-        if self.show_output:
-            self.logger.info('Redis connection OK')
-
-# ################################################################################################################################
-
     def ensure_no_pidfile(self, log_file_marker):
 
         # stdlib
