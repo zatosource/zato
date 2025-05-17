@@ -47,8 +47,7 @@ from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, HL7API, HL7RequestData, IBMMQRequestData, \
-     InstantMessaging, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, Cloud, HL7API, HL7RequestData, Outgoing, Request
 
 # Zato - Cython
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -314,7 +313,6 @@ class Service:
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     cloud = Cloud()
-    im = InstantMessaging()
     odb:'ODBManager'
     static_config:'Bunch'
 
@@ -1216,9 +1214,6 @@ class Service:
 
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
-
-        elif channel_type == _IBM_MQ:
-            service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
         elif data_format == _HL7v2:
             service.request.hl7 = HL7RequestData(channel_item['hl7_mllp_conn_ctx'], payload)

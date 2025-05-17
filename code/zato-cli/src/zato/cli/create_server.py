@@ -526,6 +526,7 @@ directories = (
     'pickup/processed',
     'pickup/incoming/services',
     'pickup/incoming/user',
+    'pickup/incoming/user-conf',
     'work',
     'work/hot-deploy',
     'work/hot-deploy/current',
@@ -903,20 +904,6 @@ class Create(ZatoCommand):
             # .. and create it now.
             self._add_demo_service(demo_py_fs.pickup_incoming_full_path, demo_py_fs.pickup_incoming_full_path)
             self._add_demo_service(demo_py_fs.work_dir_full_path, demo_py_fs.pickup_incoming_full_path)
-
-            # Sphinx APISpec files
-            for file_path, contents in apispec_files.items(): # type: ignore
-                full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
-                dir_name = os.path.dirname(full_path)
-                try:
-                    os.makedirs(dir_name, 0o770)
-                except OSError:
-                    # That is fine, the directory must have already created in one of previous iterations
-                    pass
-                finally:
-                    api_file = open_w(full_path)
-                    _ = api_file.write(contents)
-                    api_file.close()
 
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
