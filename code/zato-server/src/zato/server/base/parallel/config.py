@@ -26,11 +26,9 @@ from zato.url_dispatcher import Matcher
 # ################################################################################################################################
 
 if 0:
-    from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.odb.model import Server as ServerModel
     from zato.common.typing_ import anydict, anydictnone, anyset
     from zato.server.base.parallel import ParallelServer
-    WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -436,58 +434,6 @@ class ConfigLoader:
                 self.rate_limiting.delete(object_info.type_, object_info.name)
 
         return is_rate_limit_active
-
-# ################################################################################################################################
-
-    def set_up_object_audit_log(
-        self:'ParallelServer', # type: ignore
-        object_type, # type: str
-        object_id,   # type: str
-        config,      # type: WSXConnectorConfig
-        is_edit      # type: bool
-    ) -> 'None':
-
-        # Prepare a new configuration object for that log ..
-        log_config = LogContainerConfig()
-
-        log_config.type_ = object_type
-        log_config.object_id = object_id
-
-        if isinstance(config, dict):
-            config_max_len_messages_sent = config['max_len_messages_sent'] or 0
-            config_max_len_messages_received = config['max_len_messages_received'] or 0
-        else:
-            config_max_len_messages_sent = config.max_len_messages_sent or 0
-            config_max_len_messages_received = config.max_len_messages_received or 0
-
-        log_config.max_len_messages_sent     = config_max_len_messages_sent
-        log_config.max_len_messages_received = config_max_len_messages_received
-
-        # .. convert both from kilobytes to bytes (we use kB = 1,000 bytes rather than KB = 1,024 bytes) ..
-        log_config.max_bytes_per_message_sent     = int(config_max_len_messages_sent) * 1000
-        log_config.max_bytes_per_message_received = int(config_max_len_messages_received) * 1000
-
-        # .. and now we can create our audit log container
-        func = self.audit_log.edit_container if is_edit else self.audit_log.create_container
-        func(log_config)
-
-# ################################################################################################################################
-
-    def set_up_object_audit_log_by_config(
-        self:'ParallelServer', # type: ignore
-        object_type, # type: str
-        object_id,   # type: str
-        config,      # type: WSXConnectorConfig
-        is_edit      # type: bool
-    ) -> 'None':
-
-        if getattr(config, 'is_audit_log_sent_active', False) or getattr(config, 'is_audit_log_received_active', False):
-
-            # These may be string objects
-            config.max_len_messages_sent     = int(config.max_len_messages_sent or ModuleCtx.Audit_Max_Len_Messages)
-            config.max_len_messages_received = int(config.max_len_messages_received or ModuleCtx.Audit_Max_Len_Messages)
-
-            self.set_up_object_audit_log(object_type, object_id, config, is_edit)
 
 # ################################################################################################################################
 

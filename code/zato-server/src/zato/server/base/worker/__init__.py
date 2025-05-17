@@ -43,9 +43,6 @@ from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENER
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
-from zato.common.match import Matcher
-from zato.common.model.amqp_ import AMQPConnectorConfig
-from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
@@ -60,7 +57,6 @@ from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, connector_type
-# from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -90,7 +86,6 @@ from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.rbac_ import RBAC
@@ -238,38 +233,20 @@ class WorkerStore(_WorkerStoreBase):
         # Generic connections - MongoDB outconns
         self.outconn_mongodb = {}
 
-        # Generic connections - WSX outconns
-        self.outconn_wsx = {}
-
 # ################################################################################################################################
 
     def init(self) -> 'None':
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
-        self.search_solr_api = SolrAPI(SolrConnStore())
-
-        # SMS
-        self.sms_twilio_api = TwilioAPI(TwilioConnStore())
 
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
-        # ZeroMQ
-        self.zmq_mdp_v01_api = ConnectorStore(connector_type.duplex.zmq_v01, ChannelZMQMDPv01)
-        self.zmq_channel_api = ConnectorStore(connector_type.channel.zmq, ChannelZMQSimple)
-        self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
-
-        # WebSocket
-        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, self.server)
-
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
-
-        # Vault connections
-        self.vault_conn_api = VaultConnAPI()
 
         # Caches
         self.cache_api = CacheAPI(self.server)
@@ -282,56 +259,33 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
-            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
-            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
         # Maps message actions against generic connection types and their message handlers
         self.generic_impl_func_map = {}
 
-        # After connection is establised, a flag is stored here to let queries consult it
-        # before they attempt to prepare statements. In other words, queries wait for connections.
-        # They do it in separate greenlets.
-        self._cassandra_connections_ready = {}
-
-        # Cassandra
-        self.init_cassandra()
-        self.init_cassandra_queries()
-
         # Search
         self.init_search_es()
-        self.init_search_solr()
-
-        # SMS
-        self.init_sms_twilio()
 
         # E-mail
         self.init_email_smtp()
@@ -345,12 +299,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # SAP RFC
         self.init_sap()
-
-        # RBAC
-        self.init_rbac()
-
-        # Vault connections
-        self.init_vault_conn()
 
         # Caches
         self.init_caches()
@@ -367,19 +315,12 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.http_soap,
             self._get_channel_url_sec(),
             self.worker_config.basic_auth,
-            self.worker_config.jwt,
             self.worker_config.ntlm,
             self.worker_config.oauth,
             self.worker_config.apikey,
-            self.worker_config.aws,
-            self.worker_config.tls_channel_sec,
-            self.worker_config.tls_key_cert,
-            self.worker_config.vault_conn_sec,
             self.kvdb,
             self.broker_client,
             self.server.odb,
-            self.server.jwt_secret,
-            self.vault_conn_api
         )
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
@@ -454,12 +395,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def after_broker_client_set(self) -> 'None':
         self.pubsub.broker_client = self.broker_client
-
-        # Pub/sub requires broker client
-        self.init_pubsub()
-
-        # WebSocket connections may depend on pub/sub so we create them only after pub/sub is initialized
-        self.init_wsx()
 
 # ################################################################################################################################
 
@@ -815,102 +750,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _set_up_zmq_channel(self, name:'str', config:'bunch_', action:'str', start:'bool'=False) -> 'None':
-        """ Actually initializes a ZeroMQ channel, taking into account dissimilarities between MDP ones and PULL/SUB.
-        """
-        # We need to consult old_socket_type because it may very well be the case that someone
-        # not only (say) renamed a channel but also changed its socket type as well.
-
-        if config.get('old_socket_type') and config.socket_type != config.old_socket_type:
-            raise ValueError('Cannot change a ZeroMQ channel\'s socket type')
-
-        if config.socket_type.startswith(ZMQ.MDP):
-            api = self.zmq_mdp_v01_api
-
-            zeromq_mdp_config = self.server.fs_server_config.zeromq_mdp
-            zeromq_mdp_config = {k:int(v) for k, v in zeromq_mdp_config.items()}
-            config.update(zeromq_mdp_config)
-
-        else:
-            api = self.zmq_channel_api
-
-        getattr(api, action)(name, config, self.on_message_invoke_service)
-
-        if start:
-            api.start(name)
-
-# ################################################################################################################################
-
-    def init_zmq_channels(self) -> 'None':
-        """ Initializes ZeroMQ channels and MDP connections.
-        """
-        # Channels
-        for name, data in self.worker_config.channel_zmq.items():
-
-            # Each worker uses a unique bind port
-            data = bunchify(data)
-            update_bind_port(data.config, self.worker_idx)
-
-            self._set_up_zmq_channel(name, bunchify(data.config), 'create')
-
-        self.zmq_mdp_v01_api.start()
-        self.zmq_channel_api.start()
-
-    def init_zmq_outconns(self):
-        """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
-        """
-        for name, data in self.worker_config.out_zmq.items():
-
-            # MDP ones were already handled in channels above
-            if data.config['socket_type'].startswith(ZMQ.MDP):
-                continue
-
-            self.zmq_out_api.create(name, data.config)
-
-        self.zmq_out_api.start()
-
-# ################################################################################################################################
-
-    def init_zmq(self) -> 'None':
-        """ Initializes all ZeroMQ connections.
-        """
-        # Iterate over channels and outgoing connections and populate their respetive connectors.
-        # Note that MDP are duplex and we create them in channels while in outgoing connections they are skipped.
-
-        self.init_zmq_channels()
-        self.init_zmq_outconns()
-
-# ################################################################################################################################
-
-    def init_wsx(self) -> 'None':
-        """ Initializes all WebSocket connections.
-        """
-        # Channels
-        for name, data in self.worker_config.channel_web_socket.items():
-
-            # Convert configuration to expected datatypes
-            data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent') or 0)
-            data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received') or 0)
-
-            data.config['pings_missed_threshold'] = int(
-                data.config.get('pings_missed_threshold') or WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD)
-
-            data.config['ping_interval'] = int(
-                data.config.get('ping_interval') or WEB_SOCKET.DEFAULT.PING_INTERVAL)
-
-            # Create a new WebSocket connector definition ..
-            config = WSXConnectorConfig.from_dict(data.config)
-
-            # .. append common hook service to the configuration.
-            config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
-
-            self.web_socket_api.create(name, config, self.on_message_invoke_service,
-                self.request_dispatcher.url_data.authenticate_web_socket)
-
-        self.web_socket_api.start()
-
-# ################################################################################################################################
-
     def init_amqp(self) -> 'None':
         """ Initializes all AMQP connections.
         """
@@ -937,34 +776,6 @@ class WorkerStore(_WorkerStoreBase):
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             item.conn = SAPWrapper(config, self.server)
             item.conn.build_queue()
-
-# ################################################################################################################################
-
-    def init_rbac(self) -> 'None':
-
-        for value in self.worker_config.service.values():
-            self.rbac.create_resource(value.config.id)
-
-        for value in self.worker_config.rbac_permission.values():
-            self.rbac.create_permission(value.config.id, value.config.name)
-
-        for value in self.worker_config.rbac_role.values():
-            self.rbac.create_role(value.config.id, value.config.name, value.config.parent_id)
-
-        for value in self.worker_config.rbac_client_role.values():
-            self.rbac.create_client_role(value.config.client_def, value.config.role_id)
-
-        # TODO - handle 'deny' as well
-        for value in self.worker_config.rbac_role_permission.values():
-            self.rbac.create_role_permission_allow(value.config.role_id, value.config.perm_id, value.config.service_id)
-
-        self.rbac.set_http_permissions()
-
-# ################################################################################################################################
-
-    def init_vault_conn(self) -> 'None':
-        for value in self.worker_config.vault_conn_sec.values():
-            self.vault_conn_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
 
@@ -1001,58 +812,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # .. now, initialize connections that may depend on what we have just loaded ..
         self.init_http_soap(has_sec_config=False)
-
-# ################################################################################################################################
-
-    def sync_pubsub(self):
-        """ Rebuilds all the in-RAM pub/sub structures and tasks.
-        """
-        # First, stop everything ..
-        self.pubsub.stop()
-
-        # .. now, load it into RAM from the database ..
-        self.server.set_up_pubsub(self.server.cluster_id)
-
-        # .. finally, initialize everything once more.
-        self.init_pubsub()
-
-# ################################################################################################################################
-
-    def init_pubsub(self) -> 'None':
-        """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
-        """
-        if not self.server.should_run_pubsub:
-            logger.info('Not starting publish/subscribe')
-            return
-
-        # This is a pub/sub tool for delivery of Zato services within this server
-        service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
-        self.pubsub.service_pubsub_tool = service_pubsub_tool
-
-        for value in self.worker_config.pubsub_topic.values(): # type: ignore
-            self.pubsub.create_topic_object(bunchify(value['config']))
-
-        for value in self.worker_config.pubsub_endpoint.values(): # type: ignore
-            self.pubsub.create_endpoint(bunchify(value['config']))
-
-        for value in self.worker_config.pubsub_subscription.values(): # type: ignore
-
-            config:'bunch_' = bunchify(value['config'])
-            config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-
-            self.pubsub.create_subscription_object(config)
-
-            # Special-case delivery of messages to services
-            if is_service_subscription(config):
-                self.pubsub.set_config_for_service_subscription(config['sub_key'])
-
-        self.pubsub.set_endpoint_impl_getter(PUBSUB.ENDPOINT_TYPE.REST.id, self.worker_config.out_plain_http.get_by_id)
-
-        # Not used but needed for API completeness
-        self.pubsub.set_endpoint_impl_getter(
-            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            cast_('callable_', None),
-        )
 
 # ################################################################################################################################
 
@@ -1277,49 +1036,33 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
-        channel_file_transfer_map = self.generic_impl_func_map.setdefault(
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
-        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
+        channel_file_transfer_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
+        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
-        cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
-        def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
-        outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
-        outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
-        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_file_transfer_map,
             channel_hl7_mllp_map,
             cloud_confluence_map,
-            cloud_dropbox_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
             cloud_salesforce_map,
-            def_kafka_map,
             outconn_hl7_fhir_map,
             outconn_hl7_mllp_map,
-            outconn_im_slack_map,
-            outconn_im_telegram_map,
-            outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
-            outconn_wsx_map,
         ]
 
         password_maps = [
-            cloud_dropbox_map,
-            outconn_im_slack_map,
-            outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]
@@ -1899,9 +1642,6 @@ class WorkerStore(_WorkerStoreBase):
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
             'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
-
-        if 'wsx' in msg:
-            wsgi_environ['zato.wsx'] = msg['wsx']
 
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')

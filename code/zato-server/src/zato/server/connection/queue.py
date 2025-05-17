@@ -40,11 +40,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class _Connection:
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
@@ -176,14 +171,7 @@ class ConnectionQueue:
 
     def connection_exists(self) -> 'bool':
 
-        # Right now, we check only whether WSX outgoing connections exist
-        # and assume that all the other ones always do.
-
-        if self.conn_type != COMMON_GENERIC.ConnName.OutconnWSX:
-            return True
-
-        # This may be None during tests ..
-        elif not self.server:
+        if not self.server:
             return True
 
         # .. same as above ..
@@ -196,7 +184,7 @@ class ConnectionQueue:
                     if conn_dict['id'] == self.conn_id:
                         return True
 
-            # By default, assume that there is no such WSX outconn
+            # By default, assume that there is no such outconn
             return False
 
 # ################################################################################################################################
@@ -420,7 +408,7 @@ class Wrapper:
 
     def delete_in_progress_connections(self, reason:'strnone'=None) -> 'None':
 
-        # These connections are trying to connect (e.g. WSXClient objects)
+        # These connections are trying to connect
         if self.conn_in_progress_list:
             for item in self.conn_in_progress_list:
                 try:

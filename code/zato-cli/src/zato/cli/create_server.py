@@ -178,9 +178,6 @@ patterns=True
 sms=True
 sso=True
 
-[pubsub]
-wsx_gateway_service_allowed=
-
 [content_type]
 json = {JSON}
 

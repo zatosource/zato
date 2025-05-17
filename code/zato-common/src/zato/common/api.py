@@ -640,8 +640,7 @@ class SCHEDULER:
         Resume = 'resume'
         SetServer = 'set_server'
 
-    # These jobs were removed in 3.2 and should be ignored
-    JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
+    JobsToIgnore = {}
 
     # This is the job that cleans up pub/sub data
     PubSubCleanupJob = 'zato.pubsub.cleanup'
@@ -988,15 +987,11 @@ class GENERIC:
     DeleteReasonBytes = DeleteReason.encode('utf8')
     InitialReason = 'ReasonInitial'
 
-    class ConnName:
-        OutconnWSX = 'outgoing WebSocket'
-
     class CONNECTION:
         class TYPE:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_CONFLUENCE = 'cloud-confluence'
-            CLOUD_DROPBOX = 'cloud-dropbox'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'

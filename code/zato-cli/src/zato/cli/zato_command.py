@@ -33,7 +33,7 @@ class CommandStore:
                 if name in opt:
                     arguments[name] = opt[name]
 
-            parser.add_argument(opt['name'], **arguments)
+            _ = parser.add_argument(opt['name'], **arguments)
 
 # ################################################################################################################################
 
@@ -43,9 +43,9 @@ class CommandStore:
         import argparse
 
         base_parser = argparse.ArgumentParser(add_help=False)
-        base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
-        base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
-        base_parser.add_argument(
+        _ = base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
+        _ = base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
+        _ = base_parser.add_argument(
             '--store-config',
             help='Whether to store config options in a file for a later use', action='store_true')
 
@@ -97,7 +97,7 @@ class CommandStore:
         # Zato
         from zato.common.version import get_version
 
-        parser.add_argument('--version', action='version', version=get_version())
+        _ = parser.add_argument('--version', action='version', version=get_version())
 
 # ################################################################################################################################
 
@@ -105,12 +105,6 @@ class CommandStore:
 
         # Zato
         from zato.cli import \
-             apispec             as apispec_mod,             \
-             ca_create_ca        as ca_create_ca_mod,        \
-             ca_create_lb_agent  as ca_create_lb_agent_mod,  \
-             ca_create_scheduler as ca_create_scheduler_mod, \
-             ca_create_server    as ca_create_server_mod,    \
-             ca_create_web_admin as ca_create_web_admin_mod, \
              cache               as cache_mod,               \
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
@@ -127,14 +121,12 @@ class CommandStore:
              hl7_                as hl7_mod,                 \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
-             openapi_            as openapi_mod,             \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              sso                 as sso_mod,                 \
              stop                as stop_mod,                \
              wait                as wait_mod,                \
-             web_admin_auth      as web_admin_auth_mod,      \
-             wsx                 as wsx_mod # noqa: E272
+             web_admin_auth      as web_admin_auth_mod
 
         # Zato - Pub/sub
         from zato.cli.pubsub import \
@@ -153,54 +145,6 @@ class CommandStore:
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
-
-        #
-        # apispec
-        #
-        apispec = subs.add_parser(
-            'apispec',
-            description='API specifications generator',
-            parents=[base_parser])
-        apispec.set_defaults(command='apispec')
-        apispec.add_argument('path', help='Path to a Zato server')
-        self.add_opts(apispec, apispec_mod.APISpec.opts)
-
-        #
-        # ca
-        #
-        ca = subs.add_parser('ca', description='Basic certificate authority (CA) management')
-        ca_subs = ca.add_subparsers()
-        ca_create = ca_subs.add_parser('create', description='Creates crypto material for Zato components')
-        ca_create_subs = ca_create.add_subparsers()
-
-        ca_create_ca = ca_create_subs.add_parser('ca', description=ca_create_ca_mod.Create.__doc__, parents=[base_parser])
-        ca_create_ca.set_defaults(command='ca_create_ca')
-        ca_create_ca.add_argument('path', help='Path to an empty directory to hold the CA')
-        self.add_opts(ca_create_ca, ca_create_ca_mod.Create.opts)
-
-        ca_create_lb_agent = ca_create_subs.add_parser(
-            'lb_agent', description=ca_create_lb_agent_mod.Create.__doc__, parents=[base_parser])
-        ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
-        ca_create_lb_agent.add_argument('path', help='Path to a CA directory')
-        self.add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.Create.opts)
-
-        ca_create_scheduler = ca_create_subs.add_parser(
-            'scheduler', description=ca_create_scheduler_mod.Create.__doc__, parents=[base_parser])
-        ca_create_scheduler.set_defaults(command='ca_create_scheduler')
-        ca_create_scheduler.add_argument('path', help='Path to a CA directory')
-        self.add_opts(ca_create_scheduler, ca_create_scheduler_mod.Create.opts)
-
-        ca_create_server = ca_create_subs.add_parser(
-            'server', description=ca_create_server_mod.Create.__doc__, parents=[base_parser])
-        ca_create_server.set_defaults(command='ca_create_server')
-        ca_create_server.add_argument('path', help='Path to a CA directory')
-        self.add_opts(ca_create_server, ca_create_server_mod.Create.opts)
-
-        ca_create_web_admin = ca_create_subs.add_parser(
-            'web_admin', description=ca_create_web_admin_mod.Create.__doc__, parents=[base_parser])
-        ca_create_web_admin.set_defaults(command='ca_create_web_admin')
-        ca_create_web_admin.add_argument('path', help='Path to a CA directory')
-        self.add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
 
         #
         # cache
@@ -319,24 +263,6 @@ class CommandStore:
         self.add_opts(create_rest_channel, rest_channel_mod.CreateChannel.opts)
 
         #
-        # create-wsx-channel
-        #
-
-        create_wsx_channel = subs.add_parser('create-wsx-channel',
-            description=wsx_mod.CreateChannel.__doc__, parents=[base_parser])
-        create_wsx_channel.set_defaults(command='create_wsx_channel')
-        self.add_opts(create_wsx_channel, wsx_mod.CreateChannel.opts)
-
-        #
-        # create-wsx-outconn
-        #
-
-        create_wsx_outconn = subs.add_parser('create-wsx-outconn',
-            description=wsx_mod.CreateOutconn.__doc__, parents=[base_parser])
-        create_wsx_outconn.set_defaults(command='create_wsx_outconn')
-        self.add_opts(create_wsx_outconn, wsx_mod.CreateOutconn.opts)
-
-        #
         # crypto
         #
         crypto = subs.add_parser('crypto', description='Cryptographic operations')
@@ -383,24 +309,6 @@ class CommandStore:
             description=rest_channel_mod.DeleteChannel.__doc__, parents=[base_parser])
         delete_rest_channel.set_defaults(command='delete_rest_channel')
         self.add_opts(delete_rest_channel, rest_channel_mod.DeleteChannel.opts)
-
-        #
-        # delete-wsx-channel
-        #
-
-        delete_wsx_channel = subs.add_parser('delete-wsx-channel',
-            description=wsx_mod.DeleteChannel.__doc__, parents=[base_parser])
-        delete_wsx_channel.set_defaults(command='delete_wsx_channel')
-        self.add_opts(delete_wsx_channel, wsx_mod.DeleteChannel.opts)
-
-        #
-        # delete-wsx-channel
-        #
-
-        delete_wsx_outconn = subs.add_parser('delete-wsx-outconn',
-            description=wsx_mod.DeleteOutconn.__doc__, parents=[base_parser])
-        delete_wsx_outconn.set_defaults(command='delete_wsx_outconn')
-        self.add_opts(delete_wsx_outconn, wsx_mod.CreateOutconn.opts)
 
         #
         # encrypt
@@ -462,17 +370,6 @@ class CommandStore:
         info.add_argument('path', help='Path to a Zato component')
         info.set_defaults(command='info')
         self.add_opts(info, info_mod.Info.opts)
-
-        #
-        # openapi
-        #
-        openapi = subs.add_parser(
-            'openapi',
-            description='OpenAPI specification generator',
-            parents=[base_parser])
-        openapi.set_defaults(command='openapi')
-        openapi.add_argument('path', help='Path to a Zato server')
-        self.add_opts(openapi, openapi_mod.OpenAPI.opts)
 
         #
         # pubsub

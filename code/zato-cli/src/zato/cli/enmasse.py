@@ -78,11 +78,9 @@ Error_Include_Not_Found = Code('E14', 'include not found')
 
 # ################################################################################################################################
 
-outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
 _prefix_generic = 'zato_generic_connection'
-_attr_outconn_wsx = f'{_prefix_generic}_{outconn_wsx}'
 _attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 
 # We need to have our own version because type "bearer_token" exists in enmasse only.
@@ -303,18 +301,6 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'server_list',
     ],
 
-    # Outgoing WSX connections
-    _attr_outconn_wsx: [
-        'name',
-        'address',
-        'data_format',
-        'has_auto_reconnect',
-        'on_connect_service_name',
-        'on_message_service_name',
-        'on_close_service_name',
-        'subscription_list',
-    ],
-
     # Pub/sub - Endpoints
     'pubsub_endpoint':  [
         'name',
@@ -459,9 +445,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
     # REST channels
     'channel_plain_http': ['data_format'],
 
-    # Outgoing WSX connections
-    _attr_outconn_wsx:  ['data_format', 'subscription_list'],
-
     # Pub/sub - Topics
     'pubsub_topic':  [
         'hook_service_name',
@@ -479,9 +462,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
-
-    # Outgoing WSX connections
-    _attr_outconn_wsx:  ['has_auto_reconnect'],
 }
 
 # ################################################################################################################################
@@ -590,7 +570,6 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
     'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
-    'zato_generic_connection_outconn-wsx': 'outgoing_wsx',
 }
 
 # ################################################################################################################################
@@ -663,46 +642,6 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'cron_definition',
         'repeats',
         'extra',
-    ],
-
-    # Outgoing WSX connections
-    f'zato_generic_connection_{outconn_wsx}': [
-        'name',
-        'address',
-        'data_format',
-        'has_auto_reconnect',
-        'on_connect_service_name',
-        'on_message_service_name',
-        'on_close_service_name',
-        'subscription_list',
-    ],
-
-    # Pub/sub - Endpoints
-    'pubsub_endpoint':  [
-        'name',
-        'endpoint_type',
-        'security_name',
-        'service_name',
-        'topic_patterns',
-    ],
-
-    # Pub/sub - Topics
-    'pubsub_topic':  [
-        'name',
-        'has_gd',
-        'hook_service_name',
-    ],
-
-    # Pub/sub - Subscription
-    'pubsub_subscription':  [
-        'name',
-        'endpoint_name',
-        'endpoint_type',
-        'delivery_method',
-        'rest_connection',
-        'rest_method',
-        'delivery_server',
-        'topic_list',
     ],
 
     # Generic connections - Cloud Microsoft 365
@@ -1012,72 +951,6 @@ SERVICES = [
         },
         service_dependencies={
             'service_name': {}
-        },
-    ),
-    ServiceInfo(
-        name='web_socket',
-        prefix='zato.channel.web-socket',
-        object_dependencies={
-            'sec_def': {
-                'dependent_type': 'def_sec',
-                'dependent_field': 'name',
-                'empty_value': Zato_No_Security,
-                'id_field': 'security_id',
-            },
-        },
-        service_dependencies={
-            'service': {}
-        },
-    ),
-
-    ServiceInfo(
-        name='pubsub_endpoint',
-        prefix='zato.pubsub.endpoint',
-        object_dependencies={
-            'ws_channel_name': {
-                'dependent_type': 'web_socket',
-                'dependent_field': 'name',
-                'condition': {
-                    'only_if_field': 'endpoint_type',
-                    'only_if_value': 'wsx',
-                },
-                'id_field': 'ws_channel_id',
-            },
-            'sec_name': {
-                'dependent_type': 'basic_auth',
-                'dependent_field': 'name',
-                'empty_value': Zato_No_Security,
-                'condition': {
-                    'only_if_field': 'endpoint_type',
-                    'only_if_value': ['soap', 'rest'],
-                },
-                'id_field': 'security_id',
-            }
-        },
-    ),
-
-    ServiceInfo(
-        name='pubsub_subscription',
-        prefix='zato.pubsub.subscription',
-        object_dependencies={
-            'endpoint_name': {
-                'dependent_type': 'pubsub_endpoint',
-                'dependent_field': 'name',
-            },
-            'rest_connection': {
-                'dependent_type': 'http_soap',
-                'dependent_field': 'name',
-                'condition': [
-                {
-                    'only_if_field': 'endpoint_type',
-                    'only_if_value': ['soap', 'rest'],
-                },
-                {
-                    'only_if_field': 'delivery_method',
-                    'only_if_value': ['push'],
-                }
-                ],
-            },
         },
     ),
 
@@ -1538,15 +1411,6 @@ class ObjectImporter:
 
         # By default, assume that we do need to change a given password.
         out = True
-
-        if is_edit and item_type == 'rbac_role_permission':
-            out = False
-
-        if item_type == 'zato_generic_connection' and attrs.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
-            out = False
-
-        if item_type == 'pubsub_subscription':
-            out = False
 
         return out
 
@@ -2287,10 +2151,6 @@ class ObjectManager:
 
         name:'any_' = item.name.lower()
 
-        # Special-case scheduler jobs that can be overridden by users
-        if name.startswith('zato.wsx.cleanup'):
-            return False
-
         if item_type not in {'pubsub_subscription', 'rbac_role_permission'}:
 
             if name in self.ignored_names:
@@ -2803,37 +2663,7 @@ class InputParser:
                     # .. populate the type ..
                     value['type_'] = wrapper_type
 
-                    # .. populate wrapper type-specific attributes ..
-                    if wrapper_type == outconn_wsx:
-
-                        if not 'is_outconn' in value:
-                            value['is_outconn'] = True
-
-                        if not 'is_channel' in value:
-                            value['is_channel'] = False
-
-                        if not 'is_internal' in value:
-                            value['is_internal'] = False
-
-                        if not 'pool_size' in value:
-                            value['pool_size'] = 1
-
-                        if not 'sec_use_rbac' in value:
-                            value['sec_use_rbac'] = False
-
-                        if not 'is_zato' in value:
-                            value['is_zato'] = False
-
-                        if not 'data_format' in value:
-                            value['data_format'] = Data_Format.JSON
-
-                        if not 'has_auto_reconnect' in value:
-                            value['has_auto_reconnect'] = True
-
-                        if not 'security_def' in value:
-                            value['security_def'] = Zato_None
-
-                    elif wrapper_type == outconn_ldap:
+                    if wrapper_type == outconn_ldap:
 
                         # .. passwords are to be turned into secrets ..
                         if password := value.pop('password', None):
@@ -3815,7 +3645,6 @@ class Enmasse(ManageCommand):
         # .. now, replace generic connection types which are more involved ..
         new_names:'any_' = {
             'outgoing_ldap': [],
-            'outgoing_wsx': [],
         }
 
         for old_name, value_list in to_write.items():
