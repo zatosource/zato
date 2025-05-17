@@ -84,9 +84,6 @@ class ChannelHL7MLLPWrapper(Wrapper):
             # .. start the server in a new greenlet, waiting a moment to confirm that it runs ..
             spawn_greenlet(self._impl.start)
 
-            # .. and set up audit log.
-            self.server.set_up_object_audit_log_by_config(_audit_log_type, self.config.id, self.config, False)
-
             # We can assume we are done building the channel now
             self.is_connected = True
 
