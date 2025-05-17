@@ -569,29 +569,9 @@ class Invoke(AdminService):
 
         # This method is the same as the one for async, except that in async there was no all_pids
 
-        # It is possible that we were given the all_pids flag on input but we know
-        # ourselves that there is only one process, the current one, so we can just
-        # invoke it directly instead of going through IPC.
-        if all_pids and self.server.fs_server_config.main.gunicorn_workers > 1:
-            use_all_pids = True
-        else:
-            use_all_pids = False
-
-        if use_all_pids:
-            args = (name, payload, timeout) if timeout else (name, payload)
-            response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
-
-        else:
-
-            # We are invoking another server by its PID ..
-            if pid and pid != self.server.pid:
-                response = self._invoke_other_server_pid(name, payload, pid, data_format, skip_response_elem)
-
-            # .. we are invoking our own process ..
-            else:
-                response = self._invoke_current_server_pid(
-                    id, name, all_pids, payload, channel, data_format, transport,
-                    zato_response_headers_container, skip_response_elem)
+        response = self._invoke_current_server_pid(
+            id, name, all_pids, payload, channel, data_format, transport,
+            zato_response_headers_container, skip_response_elem)
 
         return response
 

@@ -30,17 +30,15 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, IPC, RATE_LIMIT, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, RATE_LIMIT, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
-from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import MarshalAPI
-from zato.common.oauth import OAuthStore
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.rate_limiting import RateLimiting
@@ -104,11 +102,6 @@ kvdb_logger = logging.getLogger('zato_kvdb')
 # ################################################################################################################################
 
 megabyte = 10 ** 6
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_ipc_timeout = IPC.Default.Timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1093,9 +1086,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
 
-        # Per-process IPC tasks
-        self.init_ipc()
-
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
             'server': self,
@@ -1116,39 +1106,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def set_scheduler_address(self, scheduler_address:'str') -> 'None':
         self.broker_client.set_scheduler_address(scheduler_address)
-
-# ################################################################################################################################
-
-    def init_ipc(self):
-
-        # Name of the environment key that points to our password ..
-        _ipc_password_key = IPC.Credentials.Password_Key
-
-        # .. which we can extract ..
-        ipc_password = os.environ[_ipc_password_key]
-
-        # .. and decrypt it ..
-        ipc_password = self.decrypt(ipc_password)
-
-        # .. this is the same for all processes ..
-        bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
-
-        # .. this is set to a different value for each process ..
-        bind_port = (self.fs_server_config.main.get('ipc_port_start') or IPC.Default.TCP_Port_Start) + self.process_idx
-
-        # .. now, the IPC server can be started ..
-        _:'any_' = spawn_greenlet(self.ipc_api.start_server,
-            self.pid,
-            self.base_dir,
-            bind_host=bind_host,
-            bind_port=bind_port,
-            username=IPC.Credentials.Username,
-            password=ipc_password,
-            callback_func=self.on_ipc_invoke_callback,
-        )
-
-        # .. we can now store the information about what IPC port to use with this PID.
-        save_ipc_pid_port(self.cluster_name, self.name, self.pid, bind_port)
 
 # ################################################################################################################################
 
