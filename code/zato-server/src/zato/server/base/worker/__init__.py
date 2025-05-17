@@ -36,7 +36,7 @@ from orjson import dumps
 # Zato
 from zato.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
+from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
      URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
@@ -49,7 +49,6 @@ from zato.common.util.api import get_tls_key_cert_full_path, get_tls_from_payloa
      fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, visit_py_source, wait_for_dict_key, \
      wait_for_dict_key_by_get_func
 from zato.common.util.file_system import resolve_path
-from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -63,8 +62,6 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
-from zato.server.file_transfer.api import FileTransferAPI
-from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
@@ -172,9 +169,6 @@ class WorkerStore(_WorkerStoreBase):
         # To expedite look-ups
         self._simple_types = simple_types
 
-        # Generic connections - File transfer channels
-        self.channel_file_transfer = {}
-
         # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
 
@@ -223,12 +217,8 @@ class WorkerStore(_WorkerStoreBase):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
-        # File transfer
-        self.file_transfer_api = FileTransferAPI(self.server, self)
-
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
@@ -241,7 +231,6 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         self._generic_conn_handler = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
@@ -310,9 +299,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # AMQP
         self.init_amqp()
-
-        # Initialise file transfer-based pickup here because it is required when generic connections are being created
-        self.convert_pickup_to_file_transfer()
 
         # Generic connections
         self.init_generic_connections_config()
@@ -711,128 +697,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'anydict | bunch_') -> 'bunch_ | None':
-
-        # Convert paths to full ones
-        pickup_from_list = config.get('pickup_from') or []
-
-        if not pickup_from_list:
-            return
-
-        pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
-        pickup_from_list = [resolve_path(elem, self.server.base_dir) for elem in pickup_from_list]
-
-        move_processed_to = config.get('move_processed_to')
-        if move_processed_to:
-            move_processed_to = resolve_path(move_processed_to, self.server.base_dir)
-
-        # Make sure we have lists on input
-        service_list = config.get('services') or []
-        service_list = service_list if isinstance(service_list, list) else [service_list]
-
-        topic_list = config.get('topic_list') or []
-        topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
-
-        data = {
-
-          # Tell the manager to start this channel only
-          # if we are very first process among potentially many ones for this server.
-          '_start_channel': True if self.server.is_starting_first else False,
-
-          'type_': COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER,
-          'name': name,
-          'is_active': True,
-          'is_internal': True,
-          'data_encoding': config.get('data_encoding') or 'utf-8',
-          'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
-          'pickup_from_list': pickup_from_list,
-          'is_hot_deploy': config.get('is_hot_deploy'),
-          'should_deploy_in_place': config.get('deploy_in_place', False),
-          'service_list': service_list,
-          'topic_list': topic_list,
-          'move_processed_to': move_processed_to,
-          'file_patterns': config.get('patterns') or '*',
-          'parse_with': config.get('parse_with'),
-          'should_read_on_pickup': config.get('read_on_pickup', True),
-          'should_parse_on_pickup': config.get('parse_on_pickup', False),
-          'should_delete_after_pickup': config.get('delete_after_pickup', True),
-          'is_case_sensitive': config.get('is_case_sensitive', True),
-          'is_line_by_line': config.get('is_line_by_line', False),
-          'is_recursive': config.get('is_recursive', False),
-          'binary_file_patterns': config.get('binary_file_patterns') or [],
-          'outconn_rest_list': [],
-        }
-
-        return bunchify(data)
-
-# ################################################################################################################################
-
-    def convert_pickup_to_file_transfer(self) -> 'None':
-
-        # Default pickup directory
-        self._add_service_pickup_to_file_transfer(
-            'hot-deploy', self.server.hot_deploy_config.pickup_dir,
-            self.server.hot_deploy_config.delete_after_pickup, False)
-
-        # User-defined pickup directories
-        for name, config in self.server.pickup_config.items():
-            if name.startswith(HotDeploy.UserPrefix):
-                self._add_service_pickup_to_file_transfer(
-                    name, config.pickup_from, False,
-                    config.get('deploy_in_place', True))
-
-        # Convert all the other pickup entries
-        self._convert_pickup_to_file_transfer()
-
-# ################################################################################################################################
-
-    def _add_service_pickup_to_file_transfer(
-        self,
-        name,       # type: str
-        pickup_dir, # type: str
-        delete_after_pickup, # type: bool
-        deploy_in_place      # type: bool
-    ) -> 'None':
-
-        # Explicitly create configuration for hot-deployment
-        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, name)
-        hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
-            'is_hot_deploy': True,
-            'patterns': '*.py',
-            'services': 'zato.hot-deploy.create',
-            'pickup_from': pickup_dir,
-            'delete_after_pickup': delete_after_pickup,
-            'deploy_in_place': deploy_in_place,
-        })
-
-        # Add hot-deployment to local file transfer
-        self.worker_config.generic_connection[hot_deploy_name] = {'config': hot_deploy_config}
-
-# ################################################################################################################################
-
-    def _convert_pickup_to_file_transfer(self) -> 'None':
-
-        # Create transfer channels based on pickup.conf
-        for key, value in self.server.pickup_config.items(): # type: (str, dict)
-
-            # Skip user-defined service pickup because it was already added in self.convert_pickup_to_file_transfer
-            if key.startswith(HotDeploy.UserPrefix):
-                continue
-
-            # This is an internal name
-            name = '{}.{}'.format(pickup_conf_item_prefix, key)
-
-            # We need to convert between config formats
-            config = self._convert_pickup_config_to_file_transfer(name, value)
-
-            if not config:
-                continue
-
-            # Add pickup configuration to local file transfer
-            self.worker_config.generic_connection[name] = {'config': config}
-
-# ################################################################################################################################
-
     def init_generic_connections(self) -> 'None':
 
         # Some connection types are built elsewhere
@@ -856,7 +720,6 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
-        channel_file_transfer_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
         channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
@@ -869,7 +732,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
-            channel_file_transfer_map,
             channel_hl7_mllp_map,
             cloud_confluence_map,
             cloud_jira_map,
@@ -1095,11 +957,6 @@ class WorkerStore(_WorkerStoreBase):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
                 self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def get_channel_file_transfer_config(self, name:'str') -> 'stranydict':
-        return self.generic_conn_api[COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER][name]
 
 # ################################################################################################################################
 

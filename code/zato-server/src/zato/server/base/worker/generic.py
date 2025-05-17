@@ -31,7 +31,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
 # ################################################################################################################################
@@ -44,9 +43,6 @@ class Generic(WorkerImpl):
     generic_conn_api: 'stranydict'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
-    _delete_file_transfer_channel: 'callable_'
-    _edit_file_transfer_channel: 'callable_'
-    _create_file_transfer_channel: 'callable_'
 
 # ################################################################################################################################
 
@@ -113,10 +109,6 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
-        # Run a special path for file transfer channels
-        if msg['type_'] == _type_channel_file_transfer:
-            self._delete_file_transfer_channel(msg)
-
 # ################################################################################################################################
 
     def _create_generic_connection(
@@ -175,20 +167,9 @@ class Generic(WorkerImpl):
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
-        if not is_starting:
-
-            # Run a special path for file transfer channels
-            if msg['type_'] == _type_channel_file_transfer:
-                self._create_file_transfer_channel(msg)
-
 # ################################################################################################################################
 
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
-
-        # Special-case file transfer channels
-        if msg['type_'] == _type_channel_file_transfer:
-            self._edit_file_transfer_channel(msg)
-            return
 
         # If we do not have a secret on input, we need to look it up in the incoming message.
         # If it is still not there, assume that we are going to reuse the same secret

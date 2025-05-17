@@ -766,7 +766,6 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
-            CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
