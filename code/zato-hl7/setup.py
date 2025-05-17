@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from setuptools import find_packages, setup
 from setuptools import setup, find_packages
 
-version = '3.3'
+version = '4.1'
 
 _ = setup(
       name = 'zato-hl7',
