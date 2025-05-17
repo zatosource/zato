@@ -32,7 +32,6 @@ from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
 from zato.common.json_ import dumps as json_dumps
 from zato.common.json_internal import dumps, loads
-from zato.common.json_schema import get_service_config
 from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, \
     Service as ODBService
@@ -91,9 +90,8 @@ class GetList(AdminService):
         input_required = 'cluster_id'
         input_optional = ('should_include_scheduler',) + GetListAdminSIO.input_optional
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), Integer('usage'), \
-            Integer('usage'), Integer('slow_threshold')
+        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def'), Integer('usage'), Integer('usage'), Integer('slow_threshold')
         output_repeated = True
         default_value = ''
 
@@ -122,12 +120,6 @@ class GetList(AdminService):
                 continue
 
             item.may_be_deleted = internal_del if item.is_internal else True
-
-            # Attach JSON Schema validation configuration
-            json_schema_config = get_service_config(item, self.server)
-
-            item.is_json_schema_enabled = json_schema_config['is_json_schema_enabled']
-            item.needs_json_schema_err_details = json_schema_config['needs_json_schema_err_details']
 
             out.append(item)
 
@@ -227,9 +219,8 @@ class _Get(AdminService):
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
         output_optional = Integer('usage'), Integer('slow_threshold'), 'last_duration', \
             Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
-            'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), 'last_timestamp', \
-            'usage_min', 'usage_max', 'usage_mean'
+            'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
+            'last_timestamp', 'usage_min', 'usage_max', 'usage_mean'
 
     def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
@@ -294,7 +285,7 @@ class Edit(AdminService):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
         input_required = 'id', 'is_active', Integer('slow_threshold')
-        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+        input_optional = 'is_rate_limit_active', \
             'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
@@ -311,12 +302,6 @@ class Edit(AdminService):
                 service.slow_threshold = input.slow_threshold
 
                 set_instance_opaque_attrs(service, input)
-
-                # Configure JSON Schema validation if service has a schema assigned by user.
-                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: anydict
-                class_ = class_info['service_class'] # type: ODBService
-                if class_.schema:
-                    self.server.service_store.set_up_class_json_schema(class_, input) # type: ignore
 
                 # Set up rate-limiting each time an object was edited
                 self.server.service_store.set_up_rate_limiting(service.name)

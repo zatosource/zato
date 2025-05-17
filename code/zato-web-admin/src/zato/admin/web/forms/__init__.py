@@ -288,13 +288,6 @@ class WithTLSForm(forms.Form):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WithJSONSchema(forms.Form):
-    is_json_schema_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    needs_json_schema_err_details = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class WithRateLimiting(forms.Form):
     rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
     rate_limit_def = forms.CharField(widget=forms.Textarea(
