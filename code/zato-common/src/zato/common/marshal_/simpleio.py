@@ -16,7 +16,6 @@ from orjson import loads
 # Zato
 from zato.common import DATA_FORMAT
 from zato.common.marshal_.api import Model
-from zato.common.pubsub import PubSubMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,9 +103,6 @@ class DataClassSimpleIO:
             # .. if it already is a model, we give it to the service as-is ..
             if isinstance(data, Model):
                 return data
-
-            elif isinstance(data, PubSubMessage):
-                data = data.data
 
             # .. otherwise, it can be a dict and we extract its contents.
             if data_format in _dict_like and (not isinstance(data, (dict))):

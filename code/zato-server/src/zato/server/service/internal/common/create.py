@@ -4,15 +4,10 @@
 from dataclasses import dataclass
 
 # Zato
-from zato.common.api import CommonObject, PUBSUB
+from zato.common.api import CommonObject
 from zato.common.exception import BadRequest
 from zato.common.typing_ import any_, anylist, anylistnone, intlistnone, intnone, strdict, strlistnone, strnone
 from zato.server.service import Model, Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,57 +44,6 @@ class CreateObjects(Service):
 
 # ################################################################################################################################
 
-    def _get_basic_pubsub_endpoint(self, name:'str', initial_data:'strdict') -> 'strdict':
-
-        request = {
-            'role': PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id,
-            'is_active': True,
-            'is_internal': False,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.REST.id
-        }
-
-        return request
-
-# ################################################################################################################################
-
-    def _get_basic_pubsub_publish(self, name:'str', initial_data:'strdict') -> 'strdict':
-
-        request:'strdict' = {}
-        return request
-
-# ################################################################################################################################
-
-    def _get_basic_pubsub_subscription(self, name:'str', initial_data:'strdict') -> 'strdict':
-
-        request = {
-            'is_active': True,
-            'is_internal': False,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.REST.id,
-        }
-
-        return request
-
-# ################################################################################################################################
-
-    def _get_basic_pubsub_topic(self, name:'str', initial_data:'strdict') -> 'strdict':
-
-        request = {
-            'has_gd': True,
-            'is_active': True,
-            'is_api_sub_allowed': True,
-            'cluster_id': 1,
-            'task_sync_interval': _ps_default.TASK_SYNC_INTERVAL,
-            'task_delivery_interval': _ps_default.TASK_DELIVERY_INTERVAL,
-            'depth_check_freq': _ps_default.DEPTH_CHECK_FREQ,
-            'max_depth_gd': _ps_default.TOPIC_MAX_DEPTH_GD,
-            'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
-            'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
-        }
-
-        return request
-
-# ################################################################################################################################
-
     def _get_basic_security_basic_auth(self, name:'str', initial_data:'strdict') -> 'strdict':
 
         request = {
@@ -132,10 +76,7 @@ class CreateObjects(Service):
     def _turn_names_into_objects_list(self, input:'CreateObjectsRequest') -> 'CreateObjectsRequest':
 
         # Requests of these types will not have any names on input ..
-        no_name_requests = {
-            CommonObject.PubSub_Publish,
-            CommonObject.PubSub_Subscription,
-        }
+        no_name_requests = {}
 
         # .. populate empty names per the above ..
         if input.object_type in no_name_requests:
@@ -177,10 +118,6 @@ class CreateObjects(Service):
     def handle(self):
 
         # Zato
-        from zato.server.service.internal.pubsub.endpoint import Create as CreateEndpoint
-        from zato.server.service.internal.pubsub.publish import Publish as PublishMessage
-        from zato.server.service.internal.pubsub.subscription import Create as CreateSubscription
-        from zato.server.service.internal.pubsub.topic import Create as CreateTopic
         from zato.server.service.internal.security.basic_auth import Create as SecBasicAuthCreate
 
         # Local variables
@@ -194,19 +131,11 @@ class CreateObjects(Service):
 
         # Maps incoming string names of objects to services that actually delete them
         service_map = {
-            CommonObject.PubSub_Endpoint: CreateEndpoint,
-            CommonObject.PubSub_Publish: PublishMessage,
-            CommonObject.PubSub_Subscription: CreateSubscription,
-            CommonObject.PubSub_Topic: CreateTopic,
             CommonObject.Security_Basic_Auth: SecBasicAuthCreate,
         }
 
         # Maps incoming string names of objects to functions that prepare basic create requests
         request_func_map = {
-            CommonObject.PubSub_Endpoint: self._get_basic_pubsub_endpoint,
-            CommonObject.PubSub_Publish: self._get_basic_pubsub_publish,
-            CommonObject.PubSub_Subscription: self._get_basic_pubsub_subscription,
-            CommonObject.PubSub_Topic: self._get_basic_pubsub_topic,
             CommonObject.Security_Basic_Auth: self._get_basic_security_basic_auth,
         }
 

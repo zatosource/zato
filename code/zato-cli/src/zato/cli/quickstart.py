@@ -364,31 +364,6 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _set_pubsub_server(self, args:'any_', server_id:'int', cluster_name:'str', topic_name:'str') -> 'None':
-
-        # Zato
-        from zato.common.odb.model import Cluster, PubSubSubscription, PubSubTopic
-
-        engine = self._get_engine(args) # type: ignore
-        session = self._get_session(engine) # type: ignore
-
-        sub_list:'any_' = session.query(PubSubSubscription).\
-            filter(PubSubTopic.id==PubSubSubscription.topic_id).\
-            filter(PubSubTopic.name==topic_name).\
-            filter(PubSubTopic.cluster_id==Cluster.id).\
-            filter(Cluster.name==cluster_name).\
-            all()
-
-        for sub in sub_list: # type: ignore
-
-            # Set publishing server for that subscription
-            sub.server_id = server_id
-
-            session.add(sub)
-        session.commit()
-
-# ################################################################################################################################
-
     def execute(self, args:'any_') -> 'None':
         """ Quickly creates Zato components
         1) CA and crypto material
@@ -591,17 +566,8 @@ class Create(ZatoCommand):
                     create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
                     create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
 
-                server_id:'int' = create_server.Create(
+                _ = create_server.Create(
                     create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
-
-                # We special case the first server ..
-                if idx == 0:
-
-                    # .. make it a delivery server for sample pub/sub topics ..
-                    self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
-
-                    # .. make the scheduler use it.
-                    first_server_path = server_path
 
                 self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 

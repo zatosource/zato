@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import CONNECTION
-from zato.common.odb.model import HTTPSOAP, PubSubTopic
+from zato.common.odb.model import HTTPSOAP
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -27,7 +27,6 @@ if 0:
 # ################################################################################################################################
 
 RESTTable:'any_' = HTTPSOAP.__table__
-TopicTable:'any_' = PubSubTopic.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################

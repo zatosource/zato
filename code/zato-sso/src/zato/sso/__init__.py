@@ -132,7 +132,6 @@ class const:
     class auth_type:
         basic_auth = 'basic_auth'
         default    = 'default'
-        jwt        = 'jwt'
 
     class password_reset:
         token_type = 'prt'

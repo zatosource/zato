@@ -11,34 +11,24 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
-from json import dumps, loads
 from logging import DEBUG, getLogger
 from tempfile import gettempdir
-from time import sleep
-from traceback import format_exc
 from unittest import TestCase
 
 # Zato
-from zato.common.api import WEB_SOCKET
-from zato.common.exception import Forbidden
-from zato.common.pubsub import PUBSUB
 from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
-from zato.common.util.open_ import open_rw, open_w
+from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
-from zato.server.connection.facade import RESTInvoker
-from zato.server.service import AsIs, Model, PubSubHook, Service
+from zato.server.service import Model, Service
 from zato.server.service.internal.service import Invoke
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from requests import Response
-    from zato.common.pubsub import PubSubMessage
-    from zato.common.typing_ import any_, anydict, anytuple
+    from zato.common.typing_ import any_, anydict
     anydict = anydict
-    PubSubMessage = PubSubMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -567,89 +557,6 @@ class CommandsService(Service):
         test_suite.test_invoke_async_core()
 
         self.response.payload = 'OK'
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class RESTInternalTester(Service):
-
-    name = 'helpers.rest.internal.tester'
-
-    def _run_assertions(self, result:'str | Response', *, is_ping:'bool'=False) -> 'None':
-
-        # stdlib
-        from http.client import OK
-
-        if is_ping:
-            if isinstance(result, str):
-                if not 'HEAD' in result:
-                    raise Exception(f'Invalid ping result (1) -> {result}')
-            else:
-                if not result.status_code == OK:
-                    raise Exception(f'Invalid ping result (2) -> {result}')
-
-        else:
-            result = cast_('Response', result)
-            headers = result.headers
-            server = headers['Server']
-            if not server == 'Zato':
-                raise Exception(f'Unrecognized Server header in {headers}')
-
-# ################################################################################################################################
-
-    def test_rest_by_getitem_no_cid(self, conn_name:'str') -> 'None':
-
-        conn = self.rest[conn_name]
-
-        result = conn.ping()
-        self._run_assertions(result, is_ping=True)
-
-        result = conn.get()
-        self._run_assertions(result)
-
-        result = conn.post('abc')
-        self._run_assertions(result)
-
-# ################################################################################################################################
-
-    def test_rest_by_getitem_with_cid(self, conn_name:'str') -> 'None':
-
-        conn = self.rest[conn_name]
-
-        result = conn.ping(self.cid)
-        self._run_assertions(result, is_ping=True)
-
-        result = conn.get(self.cid)
-        self._run_assertions(result)
-
-        result = conn.post(self.cid, 'abc')
-        self._run_assertions(result)
-
-# ################################################################################################################################
-
-    def test_rest_by_getattr(self, conn:'RESTInvoker') -> 'None':
-
-        result = conn.ping()
-        self._run_assertions(result, is_ping=True)
-
-        result = conn.get()
-        self._run_assertions(result)
-
-        result = conn.post('abc')
-        self._run_assertions(result)
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-
-        conn_name = 'pubsub.demo.sample.outconn'
-
-        self.test_rest_by_getitem_no_cid(conn_name)
-        self.test_rest_by_getitem_with_cid(conn_name)
-
-        conn = self.rest.pubsub_demo_sample_outconn
-        self.test_rest_by_getattr(conn) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

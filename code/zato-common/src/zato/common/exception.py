@@ -179,11 +179,6 @@ class ServiceUnavailable(Reportable):
 
 # ################################################################################################################################
 
-class PubSubSubscriptionExists(BadRequest):
-    pass
-
-# ################################################################################################################################
-
 class ConnectorClosedException(Exception):
     def __init__(self, exc, message):
         self.inner_exc = exc

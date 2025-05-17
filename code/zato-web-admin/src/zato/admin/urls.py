@@ -42,9 +42,8 @@ from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
-from zato.admin.web.views.security import apikey, basic_auth, jwt, ntlm
+from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
-from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.vendors import keysight_vision
 
 urlpatterns = [
@@ -206,26 +205,6 @@ urlpatterns += [
         login_required(basic_auth.change_password), name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(basic_auth.Delete()), name=basic_auth.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. JWT
-
-    url(r'^zato/security/jwt/$',
-        login_required(jwt.Index()), name=jwt.Index.url_name),
-    url(r'^zato/security/jwt/$',
-        login_required(jwt.Index()), name=jwt.Index.url_name),
-    url(r'^zato/security/jwt/create/$',
-        login_required(jwt.Create()), name=jwt.Create.url_name),
-    url(r'^zato/security/jwt/edit/$',
-        login_required(jwt.Edit()), name=jwt.Edit.url_name),
-    url(r'^zato/security/jwt/change-password/$',
-        login_required(jwt.change_password), name='security-jwt-change-password'),
-    url(r'^zato/security/jwt/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(jwt.Delete()), name=jwt.Delete.url_name),
     ]
 
 # ################################################################################################################################

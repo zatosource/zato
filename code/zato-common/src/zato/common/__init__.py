@@ -7,4 +7,3 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from zato.common.api import *    # noqa: F401
-from zato.common.vault_ import * # noqa: F401
