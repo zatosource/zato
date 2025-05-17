@@ -36,7 +36,7 @@ from lxml.etree import _Element as EtreeElementClass, SubElement, XPath
 from sqlalchemy.engine.row import Row as SQLAlchemyRow
 
 # Zato
-from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
+from zato.common.api import DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
 from zato.common.odb.api import SQLRow
 from zato.util_convert import to_bool
@@ -889,7 +889,7 @@ class SIO_TYPE_MAP:
 
     class OPEN_API_V3:
 
-        name    = APISPEC.OPEN_API_V3
+        name    = 'openapi-v3'
         STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'int32')
