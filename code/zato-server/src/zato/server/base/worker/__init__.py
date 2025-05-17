@@ -62,7 +62,6 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
@@ -275,9 +274,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # API keys
         self.update_apikeys()
-
-        # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
-        self.init_sftp()
 
         request_handler = RequestHandler(self.server)
         url_data = URLData(
@@ -536,13 +532,6 @@ class WorkerStore(_WorkerStoreBase):
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore() # type: ignore
         self.worker_config.out_ftp.add_params(config_list)
-
-    def init_sftp(self) -> 'None':
-        """ Each outgoing SFTP connection requires a connection handle to be attached here,
-        later, in run-time, this is the 'conn' parameter available via self.out[name].conn.
-        """
-        for value in self.worker_config.out_sftp.values():
-            value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
     def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':
         """ Initializes plain HTTP/SOAP connections.
@@ -847,9 +836,7 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections(self) -> 'None':
 
         # Some connection types are built elsewhere
-        to_skip = {
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
-        }
+        to_skip = {}
 
         for config_dict in self.worker_config.generic_connection.values():
 
@@ -879,7 +866,6 @@ class WorkerStore(_WorkerStoreBase):
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
-        outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
@@ -908,64 +894,11 @@ class WorkerStore(_WorkerStoreBase):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
-        # Some generic connections require different admin APIs
-        outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
-        outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
-        outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
-
-# ################################################################################################################################
-
-    def _on_outconn_sftp_create(self, msg:'bunch_') -> 'any_':
-
-        if not self.server.is_first_worker:
-            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
-            return
-
-        if not self.server.subproc_current_state.is_sftp_running:
-            config = SubprocessStartConfig()
-            config.has_sftp = True
-            self.server.init_subprocess_connectors(config)
-
-        connector_msg = deepcopy(msg)
-        self.worker_config.out_sftp[msg.name] = msg
-        self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
-        return self.server.connector_sftp.invoke_connector(connector_msg)
-
-# ################################################################################################################################
-
-    def _on_outconn_sftp_edit(self, msg:'bunch_') -> 'any_':
-
-        if not self.server.is_first_worker:
-            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
-            return
-
-        connector_msg = deepcopy(msg)
-        del self.worker_config.out_sftp[msg.old_name]
-        return self._on_outconn_sftp_create(connector_msg)
-
-# ################################################################################################################################
-
-    def _on_outconn_sftp_delete(self, msg:'bunch_') -> 'any_':
-
-        if not self.server.is_first_worker:
-            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
-            return
-
-        connector_msg = deepcopy(msg)
-        del self.worker_config.out_sftp[msg.name]
-        return self.server.connector_sftp.invoke_connector(connector_msg)
-
-# ################################################################################################################################
-
-    def _on_outconn_sftp_change_password(self, msg:'bunch_') -> 'None':
-        raise NotImplementedError('No password for SFTP connections can be set')
-
 # ################################################################################################################################
 
     def _get_generic_impl_func(self, msg:'bunch_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Returns a function/method to invoke depending on which generic connection type is given on input.
-        Required because some connection types (e.g. SFTP) are not managed via GenericConnection objects,
-        for instance, in the case of SFTP, it uses subprocesses and a different management API.
+        Required because some connection types are not managed via GenericConnection objects.
         """
         conn_type = msg['type_']
         msg_action = msg['action']

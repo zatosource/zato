@@ -279,10 +279,10 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'sftp', 'ldap', 'mongodb', 'hl7', 'redis')
+    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'hl7', 'redis')
 
     def __init__(self, amqp=None, ftp=None, odoo=None, plain_http=None, soap=None, sql=None,
-            sap=None, sftp=None, ldap=None, mongodb=None, redis=None, hl7=None):
+            sap=None, ldap=None, mongodb=None, redis=None, hl7=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
         self.ftp  = cast_('FTPStore', ftp)
@@ -296,7 +296,6 @@ class Outgoing:
         self.sql   = cast_('PoolStore', sql)
 
         self.sap  = cast_('ConfigDict', sap)
-        self.sftp = cast_('ConfigDict', sftp)
         self.ldap = cast_('stranydict', ldap)
 
         self.mongodb = cast_('stranydict', mongodb)
