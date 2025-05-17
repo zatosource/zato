@@ -135,14 +135,6 @@ last_backup_work_dir=./hot-deploy/backup/last
 order=true_false
 *=True
 
-[invoke_patterns_allowed]
-order=true_false
-*=True
-
-[invoke_target_patterns_allowed]
-order=true_false
-*=True
-
 [spring]
 context_class=zato.server.spring_context.ZatoContext
 
@@ -159,7 +151,6 @@ http_server_header=Apache
 needs_x_zato_cid=False
 zeromq_connect_sleep=0.1
 aws_host=
-fifo_response_buffer_size=0.2 # In MB
 jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
 enforce_service_invokes=False
 return_tracebacks=True
@@ -169,11 +160,6 @@ return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
 service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
-
-[events]
-fs_data_path = {{events_fs_data_path}}
-sync_threshold = {{events_sync_threshold}}
-sync_interval = {{events_sync_interval}}
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -199,24 +185,11 @@ log_connection_info_sleep_time=5 # In seconds
 [startup_services_first_worker]
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
-zato.kvdb.log-connection-info=
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
-pub.zato.channel.web-socket.cleanup-wsx=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
-pub.zato.channel.web-socket.cleanup-wsx=
-
-[profiler]
-enabled=False
-profiler_dir=profiler
-log_filename=profiler.log
-cachegrind_filename=cachegrind.out
-discard_first_request=True
-flush_at_shutdown=True
-url_path=/zato-profiler
-unwind=False
 
 [user_config]
 # All paths are either absolute or relative to the directory server.conf is in
@@ -234,13 +207,7 @@ dsn=
 timeout=5
 level=WARN
 
-[rbac]
-custom_auth_list_service=
-
-[[auth_type_hook]]
-
 [component_enabled]
-stats=False
 slow_response=True
 cassandra=True
 email=True
@@ -249,67 +216,21 @@ search=True
 msg_path=True
 ibm_mq=False
 odoo=True
-zeromq=True
 patterns=True
-target_matcher=False
-invoke_matcher=False
 sms=True
 sso=True
 
 [pubsub]
 wsx_gateway_service_allowed=
-log_if_deliv_server_not_found=True
-log_if_wsx_deliv_server_not_found=False
-data_prefix_len=2048
-data_prefix_short_len=64
-sk_server_table_columns=6, 15, 8, 6, 17, 75
-
-[pubsub_meta_topic]
-enabled=True
-store_frequency=1
-
-[pubsub_meta_endpoint_pub]
-enabled=True
-store_frequency=1
-max_history=100
-data_len=0
-
-[pubsub_meta_endpoint_sub]
-enabled=True
-store_frequency=1
-max_history=100
-data_len=0
-
-[wsx]
-hook_service=
-json_library=stdlib
-pings_missed_threshold=2
-ping_interval=30
 
 [content_type]
 json = {JSON}
-
-[zeromq_mdp]
-linger=0
-poll_interval=100
-heartbeat=3
-workers_pool_initial = 10
-workers_pool_mult = 2
-workers_pool_max = 250
-
-[updates]
-notify_major_versions=True
-notify_minor_versions=True
-notify_if_from_source=True
 
 [preferred_address]
 address=
 ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
 boot_if_preferred_not_found=False
 allow_loopback=False
-
-[shmem]
-size=0.1 # In MB
 
 [logging]
 http_access_log_ignore=
@@ -990,9 +911,6 @@ class Create(ZatoCommand):
                     kvdb_port=self.get_arg('kvdb_port'),
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
-                    events_fs_data_path=EventsDefault.fs_data_path,
-                    events_sync_threshold=EventsDefault.sync_threshold,
-                    events_sync_interval=EventsDefault.sync_interval,
                     scheduler_host=scheduler_config.scheduler_host,
                     scheduler_port=scheduler_config.scheduler_port,
                     scheduler_use_tls=scheduler_config.scheduler_use_tls,

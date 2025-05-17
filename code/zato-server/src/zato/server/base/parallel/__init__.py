@@ -1105,8 +1105,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Reads in all configuration from ODB
         self.worker_store = WorkerStore(self.config, self)
-        self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
-        self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
         self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration

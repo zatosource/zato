@@ -489,8 +489,6 @@ class Service:
     component_enabled_zeromq: 'bool'
     component_enabled_msg_path: 'bool'
     component_enabled_patterns: 'bool'
-    component_enabled_target_matcher: 'bool'
-    component_enabled_invoke_matcher: 'bool'
 
     cache: 'CacheAPI'
 
@@ -1039,10 +1037,6 @@ class Service:
     def invoke_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its ID.
         """
-        if self.component_enabled_target_matcher:
-            service_id, target = self.extract_target(service_id) # type: ignore
-            kwargs['target'] = target
-
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
 # ################################################################################################################################
@@ -1066,19 +1060,6 @@ class Service:
 
         zato_ctx = zato_ctx if zato_ctx is not None else {}
         environ = environ if environ is not None else {}
-
-        if self.component_enabled_target_matcher:
-            name, target = self.extract_target(name)
-            zato_ctx['zato.request_ctx.target'] = target
-        else:
-            target = None
-
-        # Let's first find out if the service can be invoked at all
-        impl_name = self.server.service_store.name_to_impl_name[name]
-
-        if self.component_enabled_invoke_matcher:
-            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
-                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
 
         if to_json_string:
             payload = dumps(payload)
