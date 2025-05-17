@@ -366,14 +366,13 @@ class Create(ZatoCommand):
 
     def execute(self, args:'any_') -> 'None':
         """ Quickly creates Zato components
-        1) CA and crypto material
-        2) ODB
-        3) ODB initial data
-        4) Servers
-        5) Load-balancer
-        6) Dashboard
-        7) Scheduler
-        8) Scripts
+        1) ODB
+        2) ODB initial data
+        3) Servers
+        4) Load-balancer
+        5) Dashboard
+        6) Scheduler
+        7) Scripts
         """
 
         # stdlib
@@ -382,7 +381,6 @@ class Create(ZatoCommand):
         import stat
         from collections import OrderedDict
         from contextlib import closing
-        from copy import deepcopy
         from itertools import count
         from uuid import uuid4
 
@@ -527,12 +525,6 @@ class Create(ZatoCommand):
                 create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
                 create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
-                if has_tls:
-                    create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
-                    create_server_args.pub_key_path = server_crypto_loc[name].pub_path # type: ignore
-                    create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
-                    create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
-
                 _ = create_server.Create(
                     create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
@@ -551,12 +543,6 @@ class Create(ZatoCommand):
 
             create_lb_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_lb_args.path = lb_path
-
-            if has_tls:
-                create_lb_args.cert_path = lb_agent_crypto_loc.cert_path # type: ignore
-                create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path # type: ignore
-                create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path # type: ignore
-                create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path # type: ignore
 
             # Need to substract 1 because we've already called .next() twice
             # when creating servers above.
@@ -582,12 +568,6 @@ class Create(ZatoCommand):
             create_web_admin_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_web_admin_args.path = web_admin_path
             create_web_admin_args.admin_invoke_password = admin_invoke_password
-
-            if has_tls:
-                create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path # type: ignore
-                create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path # type: ignore
-                create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path # type: ignore
-                create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path # type: ignore
 
             web_admin_password:'bytes' = CryptoManager.generate_password() # type: ignore
             admin_created = create_web_admin.Create(create_web_admin_args).execute(
@@ -615,9 +595,7 @@ class Create(ZatoCommand):
             session = get_session(get_engine(args)) # type: ignore
 
             with closing(session):
-                cluster_id:'int' = session.query(Cluster.id).\
-                    filter(Cluster.name==cluster_name).\
-                    one()[0]
+                cluster_id:'int' = session.query(Cluster.id).filter(Cluster.name==cluster_name).one()[0] # type: ignore
 
             create_scheduler_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_scheduler_args.path = scheduler_path
@@ -626,12 +604,6 @@ class Create(ZatoCommand):
             create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
             create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
             create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
-
-            if has_tls:
-                create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path # type: ignore
-                create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path # type: ignore
-                create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path # type: ignore
-                create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path # type: ignore
 
             _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
             self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
