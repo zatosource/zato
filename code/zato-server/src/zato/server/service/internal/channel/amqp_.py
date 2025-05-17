@@ -13,7 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import CHANNEL
 from zato.common.exception import ServiceMissingException
-from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
+from zato.common.odb.model import ChannelAMQP, Cluster, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -62,8 +62,6 @@ class Create(AdminService):
             # Let's see if we already have a channel of that name before committing
             # any stuff into the database.
             existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
-                filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
                 filter(ChannelAMQP.name==input.name).\
                 first()
 
@@ -134,8 +132,6 @@ class Edit(AdminService):
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
-                filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
                 filter(ChannelAMQP.name==input.name).\
                 filter(ChannelAMQP.id!=input.id).\
                 first()
