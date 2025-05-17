@@ -35,6 +35,8 @@ from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 from zato.common.util.config import get_url_protocol_from_config_item
 
+CID_LENGTH = 24
+
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
 CID_NO_CLIP = int(CID_LENGTH / 2)

@@ -53,7 +53,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.worker = worker
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
-        self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
@@ -64,7 +63,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
         self.sec_config_getter[SEC_DEF_TYPE.APIKEY] = self.apikey_get
-        self.sec_config_getter[SEC_DEF_TYPE.JWT] = self.jwt_get
 
         self.url_sec_lock = RLock()
         self.update_lock = RLock()
@@ -82,65 +80,18 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def set_security_objects(self, *, url_sec, basic_auth_config, jwt_config, ntlm_config,
-        oauth_config, apikey_config, aws_config, tls_channel_sec_config, tls_key_cert_config, vault_conn_sec_config):
+    def set_security_objects(self, *, url_sec, basic_auth_config, ntlm_config, oauth_config, apikey_config):
 
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
-        self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
-        self.aws_config = aws_config
-        self.tls_channel_sec_config = tls_channel_sec_config
-        self.tls_key_cert_config = tls_key_cert_config
-        self.vault_conn_sec_config = vault_conn_sec_config
 
 # ################################################################################################################################
 
     def dispatcher_callback(self, event, ctx, **opaque):
         getattr(self, 'on_broker_msg_{}'.format(code_to_name[event]))(ctx)
-
-# ################################################################################################################################
-
-    # OAuth data store API
-
-    def _lookup_oauth(self, username, class_):
-        # usernames are unique so we know the first match is ours
-        for sec_config in self.oauth_config.values():
-            if sec_config.config.username == username:
-                return class_(sec_config.config.username, sec_config.config.password)
-
-    def lookup_consumer(self, key):
-        return self._lookup_oauth(key, OAuthConsumer)
-
-    def lookup_token(self, token_type, token_field):
-        return self._lookup_oauth(token_field, OAuthToken)
-
-    def lookup_nonce(self, oauth_consumer, oauth_token, nonce):
-        for sec_config in self.oauth_config.values():
-            if sec_config.config.username == oauth_consumer.key:
-
-                # The nonce was reused
-                existing_nonce = self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce)
-                if existing_nonce:
-                    return nonce
-                else:
-                    # No such nonce so we add it to the store
-                    self.kvdb.add_oauth_nonce(
-                        oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
-
-    def fetch_request_token(self, oauth_consumer, oauth_callback):
-        """-> OAuthToken."""
-        raise NotImplementedError
-
-    def fetch_access_token(self, oauth_consumer, oauth_token, oauth_verifier):
-        """-> OAuthToken."""
-        raise NotImplementedError
-
-    def authorize_request_token(self, oauth_token, user):
-        """-> OAuthToken."""
-        raise NotImplementedError
 
 # ################################################################################################################################
 
@@ -190,111 +141,6 @@ class URLData(CyURLData, OAuthDataStore):
                 raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
             else:
                 return False
-
-        return True
-
-# ################################################################################################################################
-
-    def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
-        """ Performs the authentication using a JavaScript Web Token (JWT).
-        """
-        authorization = wsgi_environ.get('HTTP_AUTHORIZATION')
-        if not authorization:
-            if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'JWT')
-            else:
-                return False
-
-        if not authorization.startswith('Bearer '):
-            if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'JWT')
-            else:
-                return False
-
-        token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
-            sec_def.username, token.encode('utf8'))
-
-        if not result.valid:
-            if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'JWT')
-            else:
-                return False
-
-        return result
-
-# ################################################################################################################################
-
-    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, post_data, enforce_auth=True):
-        """ Performs the authentication using OAuth.
-        """
-        http_url = '{}://{}{}'.format(wsgi_environ['wsgi.url_scheme'],
-            wsgi_environ['HTTP_HOST'], wsgi_environ['RAW_URI'])
-
-        # The underlying library needs Authorization instead of HTTP_AUTHORIZATION
-        http_auth_header = wsgi_environ.get('HTTP_AUTHORIZATION')
-
-        if not http_auth_header:
-            if enforce_auth:
-                msg = 'No Authorization header in wsgi_environ:[%r]'
-                logger.error(msg, wsgi_environ)
-                raise Unauthorized(cid, 'No Authorization header found', 'OAuth')
-            else:
-                return False
-
-        wsgi_environ['Authorization'] = http_auth_header
-
-        oauth_request = OAuthRequest.from_request(
-            wsgi_environ['REQUEST_METHOD'], http_url, wsgi_environ, post_data.copy(),
-            wsgi_environ['QUERY_STRING'])
-
-        if oauth_request is None:
-            msg = 'No sig could be built using wsgi_environ:[%r], post_data:[%r]'
-            logger.error(msg, wsgi_environ, post_data)
-
-            if enforce_auth:
-                raise Unauthorized(cid, 'No parameters to build signature found', 'OAuth')
-            else:
-                return False
-
-        try:
-            self._oauth_server.verify_request(oauth_request)
-        except Exception as e:
-            if enforce_auth:
-                msg = 'Signature verification failed, wsgi_environ:`%r`, e:`%s`, e.message:`%s`'
-                logger.error(msg, wsgi_environ, format_exc(e), e.message)
-                raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
-            else:
-                return False
-
-        else:
-            # Store for later use, custom channels may want to inspect it later on
-            wsgi_environ['zato.oauth.request'] = oauth_request
-
-        return True
-
-# ################################################################################################################################
-
-    def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ,
-        ignored_post_data=None, enforce_auth=True):
-        user_msg = 'You are not allowed to access this resource'
-
-        for header, expected_value in sec_def.value.items():
-            given_value = wsgi_environ.get(header)
-
-            if expected_value != given_value:
-                if enforce_auth:
-                    logger.error(
-                        '%s, header:`%s`, expected:`%s`, given:`%s` (%s)', user_msg, header, expected_value, given_value, cid)
-                    raise Unauthorized(cid, user_msg, 'zato-tls-channel-sec')
-                else:
-                    return False
 
         return True
 
@@ -485,60 +331,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _update_jwt(self, name, config):
-        self.jwt_config[name] = Bunch()
-        self.jwt_config[name].config = config
-
-    def jwt_get(self, name):
-        """ Returns configuration of a JWT security definition of the given name.
-        """
-        wait_for_dict_key(self.jwt_config, name)
-        with self.url_sec_lock:
-            return self.jwt_config.get(name)
-
-    def jwt_get_by_id(self, def_id):
-        """ Same as jwt_get but returns information by definition ID.
-        """
-        with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.jwt_config, def_id)
-
-    def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
-        """ Creates a new JWT security definition.
-        """
-        with self.url_sec_lock:
-            self._update_jwt(msg.name, msg)
-
-    def on_broker_msg_SECURITY_JWT_EDIT(self, msg, *args):
-        """ Updates an existing JWT security definition.
-        """
-        with self.url_sec_lock:
-            del self.jwt_config[msg.old_name]
-            self._update_jwt(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
-
-    def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
-        """ Deletes a JWT security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('jwt', msg.name)
-            del self.jwt_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
-
-            # This will delete a link from this account an SSO user,
-            # assuming that SSO is enabled (in which case it is not None).
-            if self.worker.server.sso_api:
-                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.JWT, msg.id)
-
-    def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of a JWT security definition.
-        """
-        wait_for_dict_key(self.jwt_config, msg.name)
-        with self.url_sec_lock:
-            self.jwt_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
-
-# ################################################################################################################################
-
     def _update_ntlm(self, name, config):
         self.ntlm_config[name] = Bunch()
         self.ntlm_config[name].config = config
@@ -673,13 +465,12 @@ class URLData(CyURLData, OAuthDataStore):
         """
         old_data = old_data or {}
         channel_item = {}
-        for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
+        for name in('connection', 'content_type', 'data_format', 'host', 'id', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
-            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
+            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
-            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
-            'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-            'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'security_groups', 'security_groups_ctx'):
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
+            'security_groups', 'security_groups_ctx'):
 
             channel_item[name] = msg.get(name)
 
@@ -693,9 +484,6 @@ class URLData(CyURLData, OAuthDataStore):
             self.worker.server.security_groups_ctx_builder.populate_members()
             security_groups_ctx = self.worker.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
             channel_item['security_groups_ctx'] = security_groups_ctx
-
-        # For JSON-RPC
-        channel_item['service_whitelist'] = msg.get('service_whitelist', [])
 
         channel_item['service_impl_name'] = msg['impl_name']
         channel_item['match_target'] = match_target

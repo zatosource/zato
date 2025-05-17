@@ -96,8 +96,7 @@ _data_format_hl7 = HL7.Const.Version.v2.id
 # ################################################################################################################################
 
 _basic_auth = SEC_DEF_TYPE.BASIC_AUTH
-_jwt = SEC_DEF_TYPE.JWT
-_sso_ext_auth = _basic_auth, _jwt
+_sso_ext_auth = _basic_auth,
 
 # ################################################################################################################################
 
@@ -405,11 +404,7 @@ class RequestDispatcher:
 
                         if sec.sec_def.sec_type in _sso_ext_auth:
 
-                            # JWT comes with external sessions whereas Basic Auth does not
-                            if auth_result and sec.sec_def.sec_type and hasattr(auth_result, 'raw_token'):
-                                ext_session_id = auth_result.raw_token
-                            else:
-                                ext_session_id = None
+                            ext_session_id = None
 
                             # Try to log in the user to SSO by that account's external credentials.
                             self.server.sso_tool.on_external_auth(
