@@ -49,58 +49,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _FSConfig:
-    def get(self, key):
-        return getattr(self, key, None)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FSPubSub(_FSConfig):
-    __slots__ = 'data_prefix_len', 'data_prefix_short_len', 'log_if_deliv_server_not_found', 'log_if_wsx_deliv_server_not_found'
-
-    def __init__(self):
-        self.data_prefix_len = 100
-        self.data_prefix_short_len = 100
-        self.log_if_deliv_server_not_found = False
-        self.log_if_wsx_deliv_server_not_found = False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FSPubSubMetaTopic(_FSConfig):
-    __slots__ = 'enabled', 'store_frequency'
-
-    def __init__(self):
-        self.enabled = False
-        self.store_frequency = None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FSPubSubMetaEndpointPub(_FSConfig):
-    __slots__ = 'enabled', 'store_frequency', 'data_len', 'max_history'
-
-    def __init__(self):
-        self.enabled = False
-        self.store_frequency = 1000
-        self.data_len = 50
-        self.max_history = 200
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FSServerConfig(_FSConfig):
-    __slots__ = 'pubsub', 'pubsub_meta_topic', 'pubsub_meta_endpoint_pub', 'misc'
-
-    def __init__(self):
-        self.pubsub = FSPubSub()
-        self.pubsub_meta_topic = FSPubSubMetaTopic()
-        self.pubsub_meta_endpoint_pub = FSPubSubMetaEndpointPub()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ServiceTestCaseConfig:
     pass
 
@@ -157,14 +105,9 @@ class ServiceTestCase(TestCase):
 
         self.worker_store = WorkerStore(self.worker_config, self.server)
         self.worker_store.sql_pool_store = self.sql_pool_store
-        self.worker_store.outconn_wsx = None
-        self.worker_store.vault_conn_api = self.vault_conn_api
-        self.worker_store.sms_twilio_api = None
         self.worker_store.out_sap = None
         self.worker_store.out_sftp = None
         self.worker_store.outconn_ldap = {}
-        self.worker_store.outconn_mongodb = {}
-        self.worker_store.def_kafka = {}
 
         self.worker_store.cache_api = CacheAPI(self.server)
         self.worker_store.cache_api.default = self.cache

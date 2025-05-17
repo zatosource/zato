@@ -147,28 +147,6 @@ class AMQPRequestData:
 
 # ################################################################################################################################
 
-class IBMMQRequestData:
-    """ Metadata for IBM MQ requests.
-    """
-    __slots__ = ('ctx', 'data', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to', 'mqmd')
-
-    def __init__(self, ctx):
-        # type: dict
-        self.ctx = ctx
-        self.data = ctx['data'] # type: str
-        self.msg_id = ctx['msg_id'] # type: str
-        self.correlation_id = ctx['correlation_id'] # type: str
-        self.timestamp = ctx['timestamp'] # type: Arrow
-        self.put_date = ctx['put_date'] # type: str
-        self.put_time = ctx['put_time'] # type: str
-        self.reply_to = ctx['reply_to'] # type: str
-        self.mqmd = ctx['mqmd'] # type: object
-
-# Backward compatibility
-WebSphereMQRequestData = IBMMQRequestData
-
-# ################################################################################################################################
-
 class HL7RequestData:
     """ Details of an individual HL7 request.
     """
@@ -210,7 +188,6 @@ class Request:
         self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
-        self.wmq = self.ibm_mq = cast_('IBMMQRequestData', None)
         self.hl7 = cast_('HL7RequestData', None)
         self.encrypt_func = None
         self.encrypt_secrets = True
@@ -302,20 +279,13 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'zmq', 'wsx', 'vault',
-        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka', 'hl7', 'redis')
+    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'sftp', 'ldap', 'mongodb', 'hl7', 'redis')
 
-    def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
-            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None,
-            redis=None, hl7=None):
+    def __init__(self, amqp=None, ftp=None, odoo=None, plain_http=None, soap=None, sql=None,
+            sap=None, sftp=None, ldap=None, mongodb=None, redis=None, hl7=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
         self.ftp  = cast_('FTPStore', ftp)
-
-        # Backward compat with 2.0, self.ibm_mq is now preferred
-        self.ibm_mq = cast_('WMQFacade', jms_wmq)
-        self.wmq = self.ibm_mq
-        self.jms_wmq = self.ibm_mq
 
         self.odoo = cast_('ConfigDict', odoo)
 
@@ -324,17 +294,12 @@ class Outgoing:
 
         self.soap  = cast_('ConfigDict', soap)
         self.sql   = cast_('PoolStore', sql)
-        self.zmq   = cast_('ZMQFacade', zmq)
-        self.wsx   = cast_('stranydict', wsx)
-        self.vault = cast_('VaultConnAPI', vault)
 
-        self.sms  = cast_('SMSAPI', sms)
         self.sap  = cast_('ConfigDict', sap)
         self.sftp = cast_('ConfigDict', sftp)
         self.ldap = cast_('stranydict', ldap)
 
         self.mongodb = cast_('stranydict', mongodb)
-        self.def_kafka = cast_('stranydict', None)
 
         self.redis = cast_('KVDBAPI', redis)
         self.hl7   = cast_('HL7API', hl7)
@@ -353,37 +318,15 @@ class AWS:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'aws', 'confluence', 'dropbox', 'jira', 'salesforce', 'ms365'
+    __slots__ = 'confluence', 'jira', 'salesforce', 'ms365'
 
-    aws: 'AWS'
     confluence: 'stranydict'
-    dropbox: 'stranydict'
     jira: 'stranydict'
     salesforce: 'stranydict'
     ms365: 'stranydict'
 
     def __init__(self) -> 'None':
         self.aws = AWS()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Definition:
-    """ A container for connection definitions a service has access to.
-    """
-    __slots__ = 'kafka',
-    kafka: 'stranydict'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InstantMessaging:
-    """ A container for Instant Messaging connections, e.g. Slack or Telegram.
-    """
-    __slots__ = 'slack', 'telegram'
-
-    slack: 'stranydict'
-    telegram: 'stranydict'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -461,11 +461,6 @@ class ImportObjects(Service):
         # Go through each item that we potentially need to create and see if there is a match
         for new_item in incoming:
 
-            # Turn WSX channel names into their IDs
-            if ws_channel_name := new_item.get('ws_channel_name'):
-                ws_channel_id:'int' = self.server.worker_store.get_web_socket_channel_id_by_name(ws_channel_name)
-                new_item['ws_channel_id'] = ws_channel_id
-
             for existing_item in existing:
                 if new_item['name'] == existing_item['name']:
                     new_item['id'] = existing_item['id']
