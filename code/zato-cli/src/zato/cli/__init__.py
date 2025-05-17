@@ -144,18 +144,11 @@ ping_query=SELECT 1
 # ################################################################################################################################
 
 command_imports = (
-    ('apispec', 'zato.cli.apispec.APISpec'),
-    ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
-    ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
-    ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
-    ('ca_create_server', 'zato.cli.ca_create_server.Create'),
-    ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
     ('cache_delete', 'zato.cli.cache.CacheDelete'),
     ('cache_get', 'zato.cli.cache.CacheGet'),
     ('cache_set', 'zato.cli.cache.CacheSet'),
     ('change_password', 'zato.cli.security.basic_auth.ChangePassword'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
-    ('component_version', 'zato.cli.component_version.ComponentVersion'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
     ('create_basic_auth', 'zato.cli.security.basic_auth.CreateDefinition'),
     ('create_cluster', 'zato.cli.create_cluster.Create'),
@@ -167,15 +160,11 @@ command_imports = (
     ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
     ('create_web_admin', 'zato.cli.create_web_admin.Create'),
-    ('create_wsx_channel', 'zato.cli.wsx.CreateChannel'),
-    ('create_wsx_outconn', 'zato.cli.wsx.CreateOutconn'),
     ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('delete_odb', 'zato.cli.delete_odb.Delete'),
     ('delete_api_key', 'zato.cli.security.api_key.DeleteDefinition'),
     ('delete_basic_auth', 'zato.cli.security.basic_auth.DeleteDefinition'),
     ('delete_rest_channel', 'zato.cli.rest.channel.DeleteChannel'),
-    ('delete_wsx_channel', 'zato.cli.wsx.DeleteChannel'),
-    ('delete_wsx_outconn', 'zato.cli.wsx.DeleteOutconn'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
     ('enmasse', 'zato.cli.enmasse.Enmasse'),
@@ -183,16 +172,6 @@ command_imports = (
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
     ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
-    ('openapi', 'zato.cli.openapi_.OpenAPI'),
-    ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
-    ('pubsub_create_endpoint', 'zato.cli.pubsub.endpoint.CreateEndpoint'),
-    ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
-    ('pubsub_create_test_topics', 'zato.cli.pubsub.topic.CreateTestTopics'),
-    ('pubsub_delete_endpoint', 'zato.cli.pubsub.endpoint.DeleteEndpoint'),
-    ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopics'),
-    ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
-    ('pubsub_get_topic', 'zato.cli.pubsub.topic.GetTopics'),
-    ('pubsub_get_topics', 'zato.cli.pubsub.topic.GetTopics'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
@@ -301,7 +280,6 @@ class ZatoCommand:
                 self.code = code
                 self.name = name
 
-        CA = _ComponentName('CA', 'Certificate authority')
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SCHEDULER = _ComponentName('SCHEDULER', 'Scheduler')
         SERVER = _ComponentName('SERVER', 'Server')

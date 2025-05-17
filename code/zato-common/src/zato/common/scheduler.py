@@ -75,15 +75,6 @@ startup_jobs=f"""
 [zato.outgoing.sql.auto-ping]
 minutes=3
 service=zato.outgoing.sql.auto-ping
-
-[zato.wsx.cleanup]
-minutes=30
-service=pub.zato.channel.web-socket.cleanup-wsx
-
-[{pubsub_cleanup_job}]
-minutes=60
-service=zato.pubsub.cleanup-service
-extra=
 """.lstrip()
 
 # ################################################################################################################################

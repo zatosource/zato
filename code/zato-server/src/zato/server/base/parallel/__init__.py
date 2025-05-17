@@ -97,7 +97,6 @@ if 0:
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
-    from zato.server.generic.api.outconn.wsx.common import WSXCtx
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
@@ -685,23 +684,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_wsx_gateway_service_allowed(self) -> 'None':
-
-        wsx_gateway_service_allowed = os.environ.get('Zato_WSX_Gateway_Service_Allowed', '')
-
-        if wsx_gateway_service_allowed:
-
-            config_wsx_gateway_service_allowed = self.fs_server_config.pubsub.wsx_gateway_service_allowed
-            config_wsx_gateway_service_allowed = config_wsx_gateway_service_allowed or []
-
-            self.fs_server_config.pubsub.wsx_gateway_service_allowed = config_wsx_gateway_service_allowed
-
-            wsx_gateway_service_allowed = wsx_gateway_service_allowed.split(',')
-            wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed if elem]
-            _ = self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
-
-# ################################################################################################################################
-
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
@@ -764,9 +746,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # pick up changes to this file too.
         if self.env_file:
             self.add_pickup_conf_for_env_file()
-
-        # Append additional services that can be invoked through WebSocket gateways.
-        self.add_wsx_gateway_service_allowed()
 
         if _needs_details:
             logger.info('*' * 60)
@@ -1167,11 +1146,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
                 'server': self,
             })
-
-            # Clean up any old WSX connections possibly registered for this server
-            # which may be still lingering around, for instance, if the server was previously
-            # shut down forcibly and did not have an opportunity to run self.cleanup_on_stop
-            self.cleanup_wsx()
 
             # Startup services
             self.invoke_startup_services()
@@ -1615,11 +1589,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_wsx_adapter(self, service_name:'str', ctx:'WSXCtx') -> 'None':
-        ctx.invoke_service(self, service_name)
-
-# ################################################################################################################################
-
     def on_ipc_invoke_callback(self, msg:'bunch_') -> 'anydict':
 
         service:'str' = msg['service']
@@ -1828,13 +1797,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
-
-    def is_active_outconn_wsx(self, conn_id:'str') -> 'bool':
-        is_active:'bool' = self.worker_store.is_active_generic_conn(conn_id)
-        return is_active
-
-    def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.service_store.is_service_wsx_adapter(*args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################

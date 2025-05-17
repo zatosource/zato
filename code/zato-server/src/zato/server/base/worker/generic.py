@@ -31,7 +31,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_type_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 _type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
@@ -274,18 +273,6 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _get_edit_generic_lock(self, is_outconn_wsx:'bool', msg:'stranydict') -> 'callable_':
-
-        # Outgoing WSX connections that connect to Zato use a specific lock type ..
-        if is_outconn_wsx:
-            lock = self.server.wsx_connection_pool_wrapper.get_update_lock(is_zato=msg['is_zato'])
-            return lock
-
-        # .. if we are here, we use a pass-through lock.
-        return PassThroughLock
-
-# ################################################################################################################################
-
     def on_broker_msg_GENERIC_CONNECTION_EDIT(
         self,
         msg:'stranydict',
@@ -293,17 +280,8 @@ class Generic(WorkerImpl):
         **kwargs: 'any_'
     ) -> 'None':
 
-        # Local variables
-        _is_outconn_wsx = msg['type_'] == _type_outconn_wsx
-
-        # Find out what kind of a lock to use ..
-        _lock = self._get_edit_generic_lock(_is_outconn_wsx, msg)
-
-        # .. do use it ..
-        with _lock(msg['id']):
-
-            # .. and update the connection now.
-            return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+        # Update the connection now.
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
 
 # ################################################################################################################################
 

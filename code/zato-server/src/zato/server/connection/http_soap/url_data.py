@@ -15,51 +15,25 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Python 2/3 compatibility
-from zato.common.ext.future.utils import iteritems, iterkeys
+from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import unicode
-from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import CHANNEL, CONNECTION, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
-from zato.common.vault_ import VAULT
-from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
+from zato.common.api import CHANNEL, CONNECTION, MISC, RATE_LIMIT, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.dispatch import dispatcher
-from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel, wait_for_dict_key
+from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
-from zato.server.jwt_ import JWT
 from zato.url_dispatcher import CyURLData, Matcher
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
     from zato.server.base.worker import WorkerStore
-
-    # For pyflakes
     WorkerStore = WorkerStore
-
-# ################################################################################################################################
-
-if PY2:
-    from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
-         OAuthSignatureMethod_PLAINTEXT, OAuthToken
-else:
-    class _Placeholder:
-        def __init__(self, *ignored_args, **ignored_kwargs):
-            pass
-
-        def _placeholder(self, *ignored_args, **ignored_kwargs):
-            pass
-
-        add_signature_method = _placeholder
-
-    OAuthDataStore = OAuthConsumer = OAuthRequest = OAuthServer = OAuthSignatureMethod_HMAC_SHA1 = \
-        OAuthSignatureMethod_PLAINTEXT = OAuthToken = _Placeholder
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,29 +46,20 @@ logger = logging.getLogger(__name__)
 class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
-    def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, aws_config=None, \
-                 tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, jwt_secret=None, vault_conn_api=None):
+    def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
+                 oauth_config=None, apikey_config=None, kvdb=None, broker_client=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
-        self.worker = worker # type: WorkerStore
+        self.worker = worker
         self.url_sec = url_sec
-        self.basic_auth_config = basic_auth_config # type: dict
-        self.jwt_config = jwt_config # type: dict
-        self.ntlm_config = ntlm_config # type: dict
-        self.oauth_config = oauth_config # type: dict
-        self.apikey_config = apikey_config # type: dict
-        self.aws_config = aws_config # type: dict
-        self.tls_channel_sec_config = tls_channel_sec_config # type: dict
-        self.tls_key_cert_config = tls_key_cert_config # type: dict
-        self.vault_conn_sec_config = vault_conn_sec_config # type: dict
+        self.basic_auth_config = basic_auth_config
+        self.jwt_config = jwt_config
+        self.ntlm_config = ntlm_config
+        self.oauth_config = oauth_config
+        self.apikey_config = apikey_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
-        self.jwt_secret = jwt_secret
-        self.vault_conn_api = vault_conn_api
-        self.rbac_auth_type_hooks = self.worker.server.fs_server_config.rbac.auth_type_hook
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -104,10 +69,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.url_sec_lock = RLock()
         self.update_lock = RLock()
         self._target_separator = MISC.SEPARATOR
-
-        self._oauth_server = OAuthServer(self)
-        self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
-        self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
         dispatcher.listen_for_updates(VAULT_BROKER_MSG, self.dispatcher_callback)
@@ -180,43 +141,6 @@ class URLData(CyURLData, OAuthDataStore):
     def authorize_request_token(self, oauth_token, user):
         """-> OAuthToken."""
         raise NotImplementedError
-
-# ################################################################################################################################
-
-    def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, vault_conn_default_auth_method,
-        initial_http_wsgi_environ, initial_headers=None, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT,
-        _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
-        _vault_ws=VAULT.WEB_SOCKET):
-        """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
-        """
-        headers = initial_headers if initial_headers is not None else {}
-        headers['zato.ws.initial_http_wsgi_environ'] = initial_http_wsgi_environ
-
-        if sec_def_type == _basic_auth:
-            auth_func = self._handle_security_basic_auth
-            get_func = self.basic_auth_get
-
-            username = auth['username'] or 'url_data.wsx.invalid.username'
-            secret = auth['secret'] or 'url_data.wsx.invalid.password.{}'.format(uuid4().hex)
-
-            username = username if isinstance(username, unicode) else username.decode('utf8')
-            secret = secret if isinstance(secret, unicode) else secret.decode('utf8')
-
-            auth_info = '{}:{}'.format(username, secret)
-            auth_info = auth_info.encode('utf8')
-
-            auth = b64encode(auth_info)
-            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(auth.decode('utf8'))
-
-        elif sec_def_type == _jwt:
-            auth_func = self._handle_security_jwt
-            get_func = self.jwt_get
-            headers['HTTP_AUTHORIZATION'] ='Bearer {}'.format(auth['secret'])
-
-        else:
-            raise ValueError('Unrecognized sec_def_type:`{}`'.format(sec_def_type))
-
-        return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
 
 # ################################################################################################################################
 
@@ -376,70 +300,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()): # noqa: C408
-
-        auth_result = False
-
-        http_method = wsgi_environ.get('REQUEST_METHOD')
-        http_method_permission_id = worker_store.rbac.http_permissions.get(http_method)
-
-        if not http_method_permission_id:
-            logger.error('Invalid HTTP method `%s`, cid:`%s`', http_method, cid)
-            raise Forbidden(cid, 'You are not allowed to access this URL\n')
-
-        for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
-
-            if auth_result:
-                return auth_result
-
-            if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
-                for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
-
-                    _, sec_type, sec_name = client_def.split(sep)
-
-                    _sec = Bunch()
-                    _sec.is_active = True
-                    _sec.transport = plain_http
-                    _sec.sec_use_rbac = False
-                    _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
-
-                    auth_result = self.check_security(
-                        _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-                        enforce_auth=False)
-
-                    if auth_result:
-
-                        # If input sec object is a dict/Bunch-like one, it means that we have just confirmed
-                        # credentials of the underlying security definition behind an RBAC one,
-                        # in which case we need to overwrite the sec object's sec_def attribute and make it
-                        # point to the one that we have just found. Otherwise, it would still point to ZATO_NONE.
-                        if hasattr(sec, 'keys'):
-                            sec.sec_def = _sec['sec_def']
-
-                        enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
-                        break
-
-        if auth_result:
-            return auth_result
-        else:
-            logger.warning('None of RBAC definitions allowed request in, cid:`%s`', cid)
-
-            # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
-            # that this channel can be accessed through so we as the last resort, we invoke a hook
-            # service which decides what it should be. If there is no hook, we default to 'zato'.
-            if channel_item['url_path'] in self.rbac_auth_type_hooks:
-                service_name = self.rbac_auth_type_hooks[channel_item['url_path']]
-                response = self.worker.invoke(service_name, {'channel_item':channel_item}, serialize=False)
-                response = response.getvalue(serialize=False)
-                auth_type = response['response']['auth_type']
-            else:
-                auth_type = 'zato'
-
-            raise Unauthorized(cid, 'You are not allowed to access this resource', auth_type)
-
-# ################################################################################################################################
-
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
         enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         """ Authenticates and authorizes a given request. Returns None on success
@@ -558,46 +418,6 @@ class URLData(CyURLData, OAuthDataStore):
         with self.url_sec_lock:
             self.apikey_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
-
-# ################################################################################################################################
-
-    def _update_aws(self, name, config):
-        self.aws_config[name] = Bunch()
-        self.aws_config[name].config = config
-
-    def aws_get(self, name):
-        """ Returns the configuration of the AWS security definition of the given name.
-        """
-        wait_for_dict_key(self.aws_config, name)
-        with self.url_sec_lock:
-            return self.aws_config.get(name)
-
-    def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
-        """ Creates a new AWS security definition.
-        """
-        with self.url_sec_lock:
-            self._update_aws(msg.name, msg)
-
-    def on_broker_msg_SECURITY_AWS_EDIT(self, msg, *args):
-        """ Updates an existing AWS security definition.
-        """
-        with self.url_sec_lock:
-            del self.aws_config[msg.old_name]
-            self._update_aws(msg.name, msg)
-
-    def on_broker_msg_SECURITY_AWS_DELETE(self, msg, *args):
-        """ Deletes an AWS security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('aws', msg.name)
-            del self.aws_config[msg.name]
-
-    def on_broker_msg_SECURITY_AWS_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an AWS security definition.
-        """
-        wait_for_dict_key(self.aws_config, msg.name)
-        with self.url_sec_lock:
-            self.aws_config[msg.name]['config']['password'] = msg.password
 
 # ################################################################################################################################
 
@@ -815,79 +635,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _update_tls_channel_sec(self, name, config):
-        self.tls_channel_sec_config[name] = Bunch()
-        self.tls_channel_sec_config[name].config = config
-        self.tls_channel_sec_config[name].config.value = dict(parse_tls_channel_security_definition(config.value))
-
-    def tls_channel_security_get(self, name):
-        wait_for_dict_key(self.tls_channel_sec_config, name)
-        with self.url_sec_lock:
-            return self.tls_channel_sec_config.get(name)
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_CREATE(self, msg, *args):
-        """ Creates a new security definition based on TLS certificates.
-        """
-        with self.url_sec_lock:
-            self._update_tls_channel_sec(msg.name, msg)
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_EDIT(self, msg, *args):
-        """ Updates an existing security definition based on TLS certificates.
-        """
-        with self.url_sec_lock:
-            del self.tls_channel_sec_config[msg.old_name]
-            self._update_tls_channel_sec(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_CHANNEL_SEC)
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_DELETE(self, msg, *args):
-        """ Deletes a security definition based on TLS certificates.
-        """
-        with self.url_sec_lock:
-            del self.tls_channel_sec_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_CHANNEL_SEC, True)
-
-# ################################################################################################################################
-
-    def _update_tls_key_cert(self, name, config):
-        self.tls_key_cert_config[name] = Bunch()
-        self.tls_key_cert_config[name].config = config
-
-# ################################################################################################################################
-
-    def tls_key_cert_get(self, name):
-        wait_for_dict_key(self.tls_key_cert_config, name)
-        with self.url_sec_lock:
-            return self.tls_key_cert_config.get(name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg, *args):
-        """ Creates a new TLS key/cert security definition.
-        """
-        with self.url_sec_lock:
-            self._update_tls_key_cert(msg.name, msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg, *args):
-        """ Updates an existing TLS key/cert security definition.
-        """
-        with self.url_sec_lock:
-            del self.tls_key_cert_config[msg.old_name]
-            self._update_tls_key_cert(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg, *args):
-        """ Deletes an TLS key/cert security definition.
-        """
-        with self.url_sec_lock:
-            del self.tls_key_cert_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT, True)
-
-# ################################################################################################################################
-
     def get_channel_by_name(self, name, _channel=CONNECTION.CHANNEL):
         # type: (unicode, unicode) -> dict
         for item in self.channel_data:
@@ -986,16 +733,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _set_up_audit_log(self, channel_item, is_edit):
-        # type: (dict, bool)
-
-        # Set up audit log if it is enabled
-        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
-            self.worker.server.set_up_object_audit_log(
-                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
-
-# ################################################################################################################################
-
     def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
@@ -1082,22 +819,6 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             self._delete_channel(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg):
-        pass
-
-    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
-        pass
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
-        # Ignored, does nothing.
-        pass
-
-    on_broker_msg_SECURITY_TLS_CA_CERT_DELETE = on_broker_msg_SECURITY_TLS_CA_CERT_EDIT = on_broker_msg_SECURITY_TLS_CA_CERT_CREATE
 
 # ################################################################################################################################
 # ################################################################################################################################
