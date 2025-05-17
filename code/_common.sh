@@ -55,11 +55,9 @@ function pip_install() {
         -e $CURDIR/zato-cy          \
         -e $CURDIR/zato-distlock    \
         -e $CURDIR/zato-hl7         \
-        -e $CURDIR/zato-lib         \
         -e $CURDIR/zato-scheduler   \
         -e $CURDIR/zato-server      \
         -e $CURDIR/zato-web-admin   \
-        -e $CURDIR/zato-zmq         \
         -e $CURDIR/zato-sso         \
         -e $CURDIR/zato-testing
 
