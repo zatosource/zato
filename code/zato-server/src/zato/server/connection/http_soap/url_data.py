@@ -47,7 +47,7 @@ class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, kvdb=None, broker_client=None, odb=None):
+                 oauth_config=None, apikey_config=None, broker_client=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.worker = worker
@@ -56,7 +56,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
-        self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
 

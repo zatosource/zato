@@ -19,7 +19,7 @@ from uuid import uuid4
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, Groups as Common_Groups, \
-    LDAP as COMMON_LDAP, NotGiven, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
+    LDAP as COMMON_LDAP, NotGiven, Sec_Def_Type, Zato_No_Security
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -597,10 +597,7 @@ def dict_match(item_type, item, fields): # type: ignore
 # ################################################################################################################################
 
 #: List of zato services we explicitly don't support.
-IGNORE_PREFIXES = {
-    'zato.kvdb.data-dict.dictionary',
-    'zato.kvdb.data-dict.translation',
-}
+IGNORE_PREFIXES = {}
 
 # ################################################################################################################################
 
