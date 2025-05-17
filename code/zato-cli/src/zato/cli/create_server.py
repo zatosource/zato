@@ -129,7 +129,6 @@ needs_x_zato_cid=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
-sftp_genkey_command=dropbearkey
 service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
 
 [http]
@@ -519,9 +518,6 @@ default_odb_pool_size = 60
 directories = (
     'config',
     'config/repo',
-    'config/repo/lua',
-    'config/repo/sftp',
-    'config/repo/sftp/channel',
     'config/repo/static',
     'config/repo/static/sso',
     'config/repo/static/sso/email',
@@ -532,16 +528,7 @@ directories = (
     'pickup/incoming',
     'pickup/processed',
     'pickup/incoming/services',
-    'pickup/incoming/static',
-    'pickup/incoming/user-conf',
-    'pickup/incoming/json',
-    'pickup/incoming/xml',
-    'pickup/incoming/csv',
-    'pickup/processed/static',
-    'pickup/processed/user-conf',
-    'pickup/processed/json',
-    'pickup/processed/xml',
-    'pickup/processed/csv',
+    'pickup/incoming/user',
     'work',
     'work/hot-deploy',
     'work/hot-deploy/current',

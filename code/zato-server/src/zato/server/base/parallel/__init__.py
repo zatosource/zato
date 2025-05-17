@@ -30,10 +30,9 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, IPC, \
     KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
-from zato.common.audit_log import AuditLog
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
@@ -44,7 +43,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
 from zato.common.kvdb.api import KVDB
 from zato.common.marshal_.api import MarshalAPI
-from zato.common.oauth import OAuthStore, OAuthTokenClient
+from zato.common.oauth import OAuthStore
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.rate_limiting import RateLimiting
@@ -64,9 +63,6 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
      StartConfig as SubprocessStartConfig
-from zato.server.base.parallel.subprocess_.ftp import FTPIPC
-from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
-from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
@@ -180,8 +176,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logs_dir = ''
         self.tls_dir = ''
         self.static_dir = ''
-        self.json_schema_dir = 'server-'
-        self.sftp_channel_dir = 'server-'
         self.hot_deploy_config = Bunch()
         self.fs_server_config = None # type: any_
         self.fs_sql_config = Bunch()
@@ -253,10 +247,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
         self.user_ctx_lock = RLock()
-
-        # Connectors
-        self.connector_ftp  = FTPIPC(self)
-        self.connector_sftp = SFTPIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
@@ -702,12 +692,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         needs_x_zato_cid = self.fs_server_config.misc.get('needs_x_zato_cid') or False
         self.needs_x_zato_cid = needs_x_zato_cid
 
-        # New in 3.1, it may be missing in the config file
-        if not self.fs_server_config.misc.get('sftp_genkey_command'):
-            self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
-
-        # New in 3.2, may be missing in the config file
-        allow_internal:'listorstr' = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
+        allow_internal:'listorstr' = self.fs_server_config.misc.get.service_invoker_allow_internal
         allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
         self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
@@ -1107,52 +1092,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.odb.server_up_down(
             server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
-        # These flags are needed if we are the first worker or not
-        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
-            and self.fs_server_config.component_enabled.ibm_mq
-        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
-        has_stats = self.fs_server_config.component_enabled.stats
+        logger.info('PID of `%s` is %s', self.name, self.pid)
 
-        subprocess_start_config = SubprocessStartConfig()
+        self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
+            'server': self,
+        })
 
-        subprocess_start_config.has_ibm_mq = has_ibm_mq
-        subprocess_start_config.has_sftp   = has_sftp
-        subprocess_start_config.has_stats  = has_stats
+        # Startup services
+        self.invoke_startup_services()
 
-        # Directories for SSH keys used by SFTP channels
-        self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
-
-        # This is the first process
-        if self.is_starting_first:
-
-            logger.info('First worker of `%s` is %s', self.name, self.pid)
-
-            self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
-                'server': self,
-            })
-
-            # Startup services
-            self.invoke_startup_services()
-
-            # Local file-based configuration to apply
-            try:
-                self.apply_local_config()
-            except Exception as e:
-                logger.info('Exception while applying local config -> %s', e)
-
-            self.init_subprocess_connectors(subprocess_start_config)
-
-            # SFTP channels are new in 3.1 and the directories may not exist
-            if not os.path.exists(self.sftp_channel_dir):
-                os.makedirs(self.sftp_channel_dir)
-
-        # These are subsequent processes
-        else:
-            self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
-                'server': self,
-            })
-
-            self._populate_connector_config(subprocess_start_config)
+        # Local file-based configuration to apply
+        try:
+            self.apply_local_config()
+        except Exception as e:
+            logger.info('Exception while applying local config -> %s', e)
 
         # Stops the environment after N seconds
         if self.stop_after:
