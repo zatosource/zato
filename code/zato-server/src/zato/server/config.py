@@ -283,28 +283,16 @@ class ConfigStore:
         self.out_sap = None   # type: ConfigDict
         self.out_plain_http = None # type: ConfigDict
         self.out_amqp = None       # type: ConfigDict
-        self.cloud_aws_s3 = None   # type: ConfigDict
         self.email_smtp = None   # type: ConfigDict
         self.email_imap = None   # type: ConfigDict
 
-        self.channel_zmq = None   # type: ConfigDict
-        self.out_zmq = None   # type: ConfigDict
-        self.channel_web_socket = None   # type: ConfigDict
         self.generic_connection = None   # type: ConfigDict
         self.notif_sql = None   # type: ConfigDict
         self.service = None   # type: ConfigDict
         self.sms_twilio = None   # type: ConfigDict
         self.search_es = None   # type: ConfigDict
-        self.search_solr = None   # type: ConfigDict
-        self.cassandra_conn = None   # type: ConfigDict
-        self.cassandra_query = None   # type: ConfigDict
         self.cache_builtin = None   # type: ConfigDict
         self.cache_memcached = None   # type: ConfigDict
-
-        self.pubsub = None   # type: ConfigDict
-        self.pubsub_endpoint = None   # type: ConfigDict
-        self.pubsub_topic = None   # type: ConfigDict
-        self.pubsub_subscription = None   # type: ConfigDict
 
         # Local on-disk configuraion repository
         self.repo_location = None # type: str
@@ -316,14 +304,6 @@ class ConfigStore:
         self.jwt = None   # type: ConfigDict
         self.ntlm = None   # type: ConfigDict
         self.oauth = None   # type: ConfigDict
-        self.rbac_permission = None   # type: ConfigDict
-        self.rbac_role = None   # type: ConfigDict
-        self.rbac_client_role = None   # type: ConfigDict
-        self.rbac_role_permission = None   # type: ConfigDict
-        self.tls_ca_cert = None   # type: ConfigDict
-        self.tls_channel_sec = None   # type: ConfigDict
-        self.tls_key_cert = None   # type: ConfigDict
-        self.vault_conn_sec = None   # type: ConfigDict
 
         # URL security
         self.url_sec = None # type: ConfigDict
@@ -340,21 +320,14 @@ class ConfigStore:
         # SimpleIO
         self.simple_io = None # type: stranydict
 
-        # Namespace
-        self.msg_ns = None # type: ConfigDict
-
-        # JSON Pointer
-        self.json_pointer = None # type: ConfigDict
-
         # Services
         self.service = None # type: ConfigDict
 
-        # IBM MQ
+        # MQ
         self.definition_wmq = None # type: ConfigDict
         self.out_wmq = None        # type: ConfigDict
         self.channel_wmq = None    # type: ConfigDict
         self.channel_amqp = None   # type: ConfigDict
-        self.definition_amqp = None   # type: ConfigDict
 
 # ################################################################################################################################
 

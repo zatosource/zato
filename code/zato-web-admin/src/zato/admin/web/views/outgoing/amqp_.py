@@ -85,8 +85,6 @@ class Index(_Index):
 
         if self.req.zato.cluster_id:
             def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')
-            create_form.set_def_id(def_ids)
-            edit_form.set_def_id(def_ids)
 
         for item in self.items:
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]

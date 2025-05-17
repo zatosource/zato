@@ -36,14 +36,6 @@ class MESSAGE_TYPE:
     TO_PARALLEL_ANY = '0001'
     TO_PARALLEL_ALL = '0002'
 
-    TO_AMQP_PUBLISHING_CONNECTOR_ALL = '0003'
-    TO_AMQP_CONSUMING_CONNECTOR_ALL = '0004'
-    TO_AMQP_CONNECTOR_ALL = '0005'
-
-    TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL = '0006'
-    TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = '0007'
-    TO_JMS_WMQ_CONNECTOR_ALL = '0008'
-
     USER_DEFINED_START = '5000'
 
 TOPICS = {
@@ -51,14 +43,6 @@ TOPICS = {
 
     MESSAGE_TYPE.TO_PARALLEL_ANY: '/zato/to-parallel/any',
     MESSAGE_TYPE.TO_PARALLEL_ALL: '/zato/to-parallel/all',
-
-    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: '/zato/connector/amqp/publishing/all',
-    MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: '/zato/connector/amqp/consuming/all',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: '/zato/connector/amqp/all',
-
-    MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL: '/zato/connector/jms-wmq/publishing/all',
-    MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL: '/zato/connector/jms-wmq/consuming/all',
-    MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: '/zato/connector/jms-wmq/all',
 
 }
 
@@ -78,10 +62,6 @@ class SCHEDULER(Constants):
     DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
     SET_SERVER_ADDRESS = ValueConstant('')
     SET_SCHEDULER_ADDRESS = ValueConstant('')
-
-class ZMQ_SOCKET(Constants):
-    code_start = 100200
-    CLOSE = ValueConstant('')
 
 class SECURITY(Constants):
     code_start = 100400
@@ -111,40 +91,13 @@ class SECURITY(Constants):
     NTLM_DELETE = ValueConstant('')
     NTLM_CHANGE_PASSWORD = ValueConstant('')
 
-    AWS_CREATE = ValueConstant('')
-    AWS_EDIT = ValueConstant('')
-    AWS_DELETE = ValueConstant('')
-    AWS_CHANGE_PASSWORD = ValueConstant('')
-
     APIKEY_CREATE = ValueConstant('')
     APIKEY_EDIT = ValueConstant('')
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
-    XPATH_SEC_CREATE = ValueConstant('')
-    XPATH_SEC_EDIT = ValueConstant('')
-    XPATH_SEC_DELETE = ValueConstant('')
-    XPATH_SEC_CHANGE_PASSWORD = ValueConstant('')
-
-    TLS_CA_CERT_CREATE = ValueConstant('')
-    TLS_CA_CERT_EDIT = ValueConstant('')
-    TLS_CA_CERT_DELETE = ValueConstant('')
-
-    TLS_CHANNEL_SEC_CREATE = ValueConstant('')
-    TLS_CHANNEL_SEC_EDIT = ValueConstant('')
-    TLS_CHANNEL_SEC_DELETE = ValueConstant('')
-
-    TLS_KEY_CERT_CREATE = ValueConstant('')
-    TLS_KEY_CERT_EDIT = ValueConstant('')
-    TLS_KEY_CERT_DELETE = ValueConstant('')
-
 class DEFINITION(Constants):
     code_start = 100600
-
-    AMQP_CREATE = ValueConstant('')
-    AMQP_EDIT = ValueConstant('')
-    AMQP_DELETE = ValueConstant('')
-    AMQP_CHANGE_PASSWORD = ValueConstant('')
 
     WMQ_CREATE = ValueConstant('')
     WMQ_EDIT = ValueConstant('')
@@ -155,11 +108,6 @@ class DEFINITION(Constants):
     ZMQ_CREATE = ValueConstant('')
     ZMQ_EDIT = ValueConstant('')
     ZMQ_DELETE = ValueConstant('')
-
-    CASSANDRA_CREATE = ValueConstant('')
-    CASSANDRA_EDIT = ValueConstant('')
-    CASSANDRA_DELETE = ValueConstant('')
-    CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
 
 class OUTGOING(Constants):
     code_start = 100800
@@ -173,11 +121,6 @@ class OUTGOING(Constants):
     WMQ_EDIT = ValueConstant('')
     WMQ_DELETE = ValueConstant('')
     WMQ_SEND = ValueConstant('')
-
-    ZMQ_CREATE = ValueConstant('')
-    ZMQ_EDIT = ValueConstant('')
-    ZMQ_DELETE = ValueConstant('')
-    ZMQ_SEND = ValueConstant('')
 
     SQL_CREATE_EDIT = ValueConstant('') # Same for creating and updating the pools
     SQL_CHANGE_PASSWORD = ValueConstant('')
@@ -222,18 +165,8 @@ class CHANNEL(Constants):
     WMQ_DELETE = ValueConstant('')
     WMQ_MESSAGE_RECEIVED = ValueConstant('')
 
-    ZMQ_CREATE = ValueConstant('')
-    ZMQ_EDIT = ValueConstant('')
-    ZMQ_DELETE = ValueConstant('')
-    ZMQ_MESSAGE_RECEIVED = ValueConstant('')
-
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
-
-    WEB_SOCKET_CREATE = ValueConstant('')
-    WEB_SOCKET_EDIT = ValueConstant('')
-    WEB_SOCKET_DELETE = ValueConstant('')
-    WEB_SOCKET_BROADCAST = ValueConstant('')
 
     FTP_CREATE = ValueConstant('')
     FTP_EDIT = ValueConstant('')
@@ -244,24 +177,6 @@ class CHANNEL(Constants):
     FTP_USER_DELETE = ValueConstant('')
     FTP_USER_CHANGE_PASSWORD = ValueConstant('')
 
-class AMQP_CONNECTOR(Constants):
-    """ Since 3.0, this is not used anymore.
-    """
-    code_start = 101200
-    CLOSE = ValueConstant('')
-
-class JMS_WMQ_CONNECTOR(Constants):
-    """ Since 3.0, this is not used anymore.
-    """
-    code_start = 101400
-    CLOSE = ValueConstant('')
-
-class ZMQ_CONNECTOR(Constants):
-    """ Since 3.0, this is not used anymore.
-    """
-    code_start = 101600
-    CLOSE = ValueConstant('')
-
 class SERVICE(Constants):
     code_start = 101800
 
@@ -269,72 +184,12 @@ class SERVICE(Constants):
     DELETE = ValueConstant('')
     PUBLISH = ValueConstant('')
 
-class STATS(Constants):
-    code_start = 102000
-
-    DELETE = ValueConstant('')
-    DELETE_DAY = ValueConstant('')
-
 class HOT_DEPLOY(Constants):
     code_start = 102200
     CREATE_SERVICE = ValueConstant('')
     CREATE_STATIC = ValueConstant('')
     CREATE_USER_CONF = ValueConstant('')
     AFTER_DEPLOY = ValueConstant('')
-
-class SINGLETON(Constants):
-    code_start = 102400
-    CLOSE = ValueConstant('')
-
-class MSG_NS(Constants):
-    code_start = 102600
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-class MSG_XPATH(Constants):
-    code_start = 102800
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-class MSG_JSON_POINTER(Constants):
-    code_start = 103000
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-class PUB_SUB_TOPIC(Constants):
-    code_start = 103200
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-    ADD_DEFAULT_PRODUCER = ValueConstant('')
-    DELETE_DEFAULT_PRODUCER = ValueConstant('')
-
-class PUB_SUB_PRODUCER(Constants):
-    code_start = 103400
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-class PUB_SUB_CONSUMER(Constants):
-    code_start = 103600
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-class CLOUD(Constants):
-    code_start = 103800
-
-    AWS_S3_CREATE_EDIT = ValueConstant('')
-    AWS_S3_DELETE = ValueConstant('')
 
 class NOTIF(Constants):
     code_start = 104000
@@ -356,19 +211,6 @@ class SEARCH(Constants):
     ES_DELETE = ValueConstant('')
     ES_CHANGE_PASSWORD = ValueConstant('')
 
-    SOLR_CREATE = ValueConstant('')
-    SOLR_EDIT = ValueConstant('')
-    SOLR_DELETE = ValueConstant('')
-    SOLR_CHANGE_PASSWORD = ValueConstant('')
-
-class QUERY(Constants):
-    code_start = 104400
-
-    CASSANDRA_CREATE = ValueConstant('')
-    CASSANDRA_EDIT = ValueConstant('')
-    CASSANDRA_DELETE = ValueConstant('')
-    CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
-
 class EMAIL(Constants):
     code_start = 104800
 
@@ -381,64 +223,6 @@ class EMAIL(Constants):
     IMAP_EDIT = ValueConstant('')
     IMAP_DELETE = ValueConstant('')
     IMAP_CHANGE_PASSWORD = ValueConstant('')
-
-class RBAC(Constants):
-    code_start = 105200
-
-    ROLE_CREATE = ValueConstant('')
-    ROLE_EDIT = ValueConstant('')
-    ROLE_DELETE = ValueConstant('')
-
-    CLIENT_ROLE_CREATE = ValueConstant('')
-    CLIENT_ROLE_DELETE = ValueConstant('')
-
-    PERMISSION_CREATE = ValueConstant('')
-    PERMISSION_EDIT = ValueConstant('')
-    PERMISSION_DELETE = ValueConstant('')
-
-    ROLE_PERMISSION_CREATE = ValueConstant('')
-    ROLE_PERMISSION_EDIT = ValueConstant('')
-    ROLE_PERMISSION_DELETE = ValueConstant('')
-
-class VAULT(Constants):
-    code_start = 105400
-
-    CONNECTION_CREATE = ValueConstant('')
-    CONNECTION_EDIT = ValueConstant('')
-    CONNECTION_DELETE = ValueConstant('')
-
-    POLICY_CREATE = ValueConstant('')
-    POLICY_EDIT = ValueConstant('')
-    POLICY_DELETE = ValueConstant('')
-
-class PUBSUB(Constants):
-    code_start = 105600
-
-    ENDPOINT_CREATE = ValueConstant('')
-    ENDPOINT_EDIT = ValueConstant('')
-    ENDPOINT_DELETE = ValueConstant('')
-
-    SUBSCRIPTION_CREATE = ValueConstant('')
-    SUBSCRIPTION_EDIT = ValueConstant('')
-    SUBSCRIPTION_DELETE = ValueConstant('')
-
-    TOPIC_CREATE = ValueConstant('')
-    TOPIC_EDIT = ValueConstant('')
-    TOPIC_DELETE = ValueConstant('')
-
-    SUB_KEY_SERVER_SET = ValueConstant('') # This is shared by WSX and other endpoint types
-    WSX_CLIENT_SUB_KEY_SERVER_REMOVE = ValueConstant('')
-
-    DELIVERY_SERVER_CHANGE = ValueConstant('')
-
-    QUEUE_CLEAR = ValueConstant('')
-
-class SMS(Constants):
-    code_start = 106000
-
-    TWILIO_CREATE = ValueConstant('')
-    TWILIO_EDIT = ValueConstant('')
-    TWILIO_DELETE = ValueConstant('')
 
 class CACHE(Constants):
     code_start = 106400
@@ -493,17 +277,6 @@ class SSO(Constants):
 
     USER_CREATE = ValueConstant('')
     USER_EDIT   = ValueConstant('')
-
-    LINK_AUTH_CREATE = ValueConstant('')
-    LINK_AUTH_DELETE = ValueConstant('')
-
-class EVENT(Constants):
-    code_start = 107400
-    PUSH = ValueConstant('')
-
-class SERVER_IPC(Constants):
-    code_start = 107600
-    INVOKE = ValueConstant('')
 
 class Common(Constants):
     code_start = 107800

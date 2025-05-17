@@ -44,66 +44,6 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_DEFINITION_AMQP_CREATE(
-        self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
-    ) -> 'None':
-        start_connectors(self, 'zato.connector.amqp_.start', msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_DEFINITION_AMQP_EDIT(
-        self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
-    ) -> 'None':
-
-        # Convert to a dataclass first
-        msg = AMQPConnectorConfig.from_dict(msg) # type: ignore
-
-        # Definitions are always active
-        msg.is_active = True
-
-        # Make sure connection passwords are always in clear text
-        msg.password = self.server.decrypt(msg.password)
-
-        with self.update_lock:
-
-            # Update outconn -> definition mappings
-            for out_name, def_name in self.amqp_out_name_to_def.items():
-                if def_name == msg.old_name:
-                    self.amqp_out_name_to_def[out_name] = msg.name
-
-            # Update definition itself
-            self.amqp_api.edit(msg.old_name, msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_DEFINITION_AMQP_DELETE(
-        self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
-    ) -> 'None':
-        with self.update_lock:
-            to_del = []
-            for out_name, def_name in self.amqp_out_name_to_def.items():
-                if def_name == msg.name:
-                    to_del.append(out_name)
-
-            for out_name in to_del:
-                del self.amqp_out_name_to_def[out_name]
-
-            self.amqp_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_DEFINITION_AMQP_CHANGE_PASSWORD(
-        self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
-    ) -> 'None':
-        with self.update_lock:
-            self.amqp_api.change_password(msg.name, msg)
-
-# ################################################################################################################################
-
     def on_broker_msg_OUTGOING_AMQP_CREATE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch

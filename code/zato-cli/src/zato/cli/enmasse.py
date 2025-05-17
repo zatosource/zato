@@ -1082,26 +1082,6 @@ SERVICES = [
     ),
 
     ServiceInfo(
-        name='channel_jms_wmq',
-        prefix='zato.channel.jms-wmq',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_jms_wmq',
-                'dependent_field': 'name',
-            },
-        },
-        service_dependencies={
-            'service_name': {}
-        },
-    ),
-    ServiceInfo(
-        name='channel_zmq',
-        prefix='zato.channel.zmq',
-        service_dependencies={
-            'service_name': {}
-        },
-    ),
-    ServiceInfo(
         name='def_sec',
         prefix='zato.security',
     ),
@@ -1160,16 +1140,6 @@ SERVICES = [
         object_dependencies={
             'def_name': {
                 'dependent_type': 'def_amqp',
-                'dependent_field': 'name',
-            },
-        },
-    ),
-    ServiceInfo(
-        name='outconn_jms_wmq',
-        prefix='zato.outgoing.jms-wmq',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_jms_wmq',
                 'dependent_field': 'name',
             },
         },
@@ -2185,13 +2155,6 @@ class ObjectImporter:
 
         if response.ok:
             self.logger.info("Updated password for '{}' ({})".format(attrs.name, service_name))
-
-            # Wait for a moment before continuing to let AMQP connectors change their passwords.
-            # This is needed because we may want to create channels right after the password
-            # has been changed and this requires valid credentials, including the very
-            # which is being changed here.
-            if item_type == 'def_amqp':
-                sleep(5)
 
         return response
 

@@ -148,9 +148,6 @@ class Create(ZatoCommand):
             self.add_crypto_endpoints(session, cluster)
             self.add_pubsub_sec_endpoints(session, cluster)
 
-            # IBM MQ connections / connectors
-            self.add_internal_callback_wmq(session, cluster)
-
             # SFTP connections / connectors
             self.add_sftp_credentials(session, cluster)
 
@@ -887,27 +884,6 @@ class Create(ZatoCommand):
 
         session.add(outconn_demo)
         session.add(outconn_test)
-
-# ################################################################################################################################
-
-    def add_internal_callback_wmq(self, session, cluster):
-
-        from zato.common.api import IPC
-        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
-
-        impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
-        service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
-
-        username = IPC.CONNECTOR.USERNAME.IBM_MQ
-        sec = HTTPBasicAuth(None, username, True, username, 'Zato IBM MQ', self.generate_password(), cluster)
-
-        channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
-            '/zato/internal/callback/wmq',
-            None, '', None, None, security=sec, service=service, cluster=cluster)
-
-        session.add(sec)
-        session.add(service)
-        session.add(channel)
 
 # ################################################################################################################################
 
