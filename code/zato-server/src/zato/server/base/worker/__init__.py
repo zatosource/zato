@@ -914,28 +914,6 @@ class WorkerStore(_WorkerStoreBase):
     def init_amqp(self) -> 'None':
         """ Initializes all AMQP connections.
         """
-        def _name_matches(def_name:'str') -> 'callable_':
-            def _inner(config:'stranydict') -> 'bool':
-                return config['def_name']==def_name
-            return _inner
-
-        for def_name, data in self.worker_config.definition_amqp.items():
-
-            channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
-            outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
-
-            for outconn in outconns:
-                self.amqp_out_name_to_def[outconn['name']] = def_name
-
-            # Create a new AMQP connector definition ..
-            config = AMQPConnectorConfig.from_dict(data.config)
-
-            # .. AMQP definitions as such are always active. It is channels or outconns that can be inactive.
-            config.is_active = True
-
-            self.amqp_api.create(def_name, config, self.invoke,
-                channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
-
         self.amqp_api.start()
 
 # ################################################################################################################################

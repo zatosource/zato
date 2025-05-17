@@ -143,24 +143,6 @@ class ConfigLoader:
         server:'ServerModel'
     ) -> 'None':
 
-        # Which components are enabled
-        self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
-        self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
-
-        #
-        # Cassandra - start
-        #
-
-        query = self.odb.get_cassandra_conn_list(server.cluster.id, True)
-        self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query, decrypt_func=self.decrypt)
-
-        query = self.odb.get_cassandra_query_list(server.cluster.id, True)
-        self.config.cassandra_query = ConfigDict.from_query('cassandra_query', query, decrypt_func=self.decrypt)
-
-        #
-        # Cassandra - end
-        #
-
         #
         # Search - start
         #
@@ -168,35 +150,8 @@ class ConfigLoader:
         query = self.odb.get_search_es_list(server.cluster.id, True)
         self.config.search_es = ConfigDict.from_query('search_es', query, decrypt_func=self.decrypt)
 
-        query = self.odb.get_search_solr_list(server.cluster.id, True)
-        self.config.search_solr = ConfigDict.from_query('search_solr', query, decrypt_func=self.decrypt)
-
         #
         # Search - end
-        #
-
-        #
-        # SMS - start
-        #
-
-        query = self.odb.get_sms_twilio_list(server.cluster.id, True)
-        self.config.sms_twilio = ConfigDict.from_query('sms_twilio', query, decrypt_func=self.decrypt)
-
-        #
-        # SMS - end
-        #
-
-        #
-        # Cloud - start
-        #
-
-        # AWS S3
-
-        query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
-        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query, decrypt_func=self.decrypt)
-
-        #
-        # Cloud - end
         #
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,10 +163,6 @@ class ConfigLoader:
         #
         # Definitions - start
         #
-
-        # AMQP
-        query = self.odb.get_definition_amqp_list(server.cluster.id, True)
-        self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query, decrypt_func=self.decrypt)
 
         # IBM MQ
         query = self.odb.get_definition_wmq_list(server.cluster.id, True)
@@ -284,18 +235,6 @@ class ConfigLoader:
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
-        # ZMQ channels
-        query = self.odb.get_channel_zmq_list(server.cluster.id, True)
-        self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query, decrypt_func=self.decrypt)
-
-        # ZMQ outgoing
-        query = self.odb.get_out_zmq_list(server.cluster.id, True)
-        self.config.out_zmq = ConfigDict.from_query('out_zmq', query, decrypt_func=self.decrypt)
-
-        # WebSocket channels
-        query = self.odb.get_channel_web_socket_list(server.cluster.id, True)
-        self.config.channel_web_socket = ConfigDict.from_query('channel_web_socket', query, decrypt_func=self.decrypt)
-
         #
         # Outgoing connections - end
         #
@@ -361,10 +300,6 @@ class ConfigLoader:
 
         self.config.http_soap = http_soap
 
-        # JSON Pointer
-        query = self.odb.get_json_pointer_list(server.cluster.id, True)
-        self.config.json_pointer = ConfigDict.from_query('json_pointer', query, decrypt_func=self.decrypt)
-
         # SimpleIO
         # In preparation for a SIO rewrite, we loaded SIO config from a file
         # but actual code paths require the pre-3.0 format so let's prepare it here.
@@ -380,18 +315,6 @@ class ConfigLoader:
 
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
         self.config.simple_io['bytes_to_str'] = {'encoding': self.sio_config.bytes_to_str_encoding or None}
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        #
-        # Pub/sub - start
-        #
-
-        self.set_up_pubsub(self.cluster_id)
-
-        #
-        # Pub/sub - end
-        #
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

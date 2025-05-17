@@ -23,10 +23,6 @@ from uuid import uuid4
 from gevent import sleep
 from gevent.lock import RLock
 
-# Needed for Cassandra
-import gevent.monkey # type: ignore
-gevent.monkey        # type: ignore
-
 # Paste
 from paste.util.converters import asbool
 
@@ -34,9 +30,8 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
-    KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
-        ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+    KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.bearer_token import BearerTokenManager
@@ -64,9 +59,7 @@ from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
-from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
-from zato.common.util.tcp import wait_until_port_taken
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
@@ -231,21 +224,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_first_worker = False
         self.process_idx = -1
         self.shmem_size = -1.0
-        self.server_startup_ipc = ServerStartupIPC()
-        self.connector_config_ipc = ConnectorConfigIPC()
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
         self.env_file = ''
         self.env_variables_from_files:'strlist' = []
         self.default_internal_pubsub_endpoint_id = 0
-        self.jwt_secret = b''
         self._hash_secret_method = ''
         self._hash_secret_rounds = -1
         self._hash_secret_salt_size = -1
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower()
-        self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
         self.work_dir = 'ParallelServer-work_dir'
@@ -258,34 +247,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
-
-        # Should pub/sub be started
-        _should_run_pubsub = os.environ.get('Zato_Start_PubSub') or True
-        _should_run_pubsub = as_bool(_should_run_pubsub)
-        self.should_run_pubsub = _should_run_pubsub
-
-        # A server-wide publication counter, indicating which one the current publication is,
-        # increased after each successful publication.
-        self.pub_counter = 1
-
-        # A lock to guard the publication counter.
-        self.pub_counter_lock = RLock()
-
-        # Transient API for in-RAM messages
-        self.zato_kvdb = ZatoKVDB()
-
-        # In-RAM statistics
-        self.slow_responses = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.SlowResponsesName)
-        self.usage_samples = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.UsageSamplesName)
-        self.current_usage = self.zato_kvdb.internal_create_number_repo(CommonZatoKVDB.CurrentUsageName)
-        self.pub_sub_metadata = self.zato_kvdb.internal_create_object_repo(CommonZatoKVDB.PubSubMetadataName)
-
-        self.stats_client = ServiceStatsClient()
-        self._stats_host = '<ParallelServer-_stats_host>'
-        self._stats_port = -1
-
-        # Audit log
-        self.audit_log = AuditLog()
 
         # Current state of subprocess-based connectors
         self.subproc_current_state = SubprocessCurrentState()
@@ -303,9 +264,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_ctx_lock = RLock()
 
         # Connectors
-        self.connector_ftp    = FTPIPC(self)
-        self.connector_ibm_mq = IBMMQIPC(self)
-        self.connector_sftp   = SFTPIPC(self)
+        self.connector_ftp  = FTPIPC(self)
+        self.connector_sftp = SFTPIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
@@ -322,9 +282,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(DEBUG)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
-
-        # A wrapper for outgoing WSX connections
-        self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(self, GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
 
         # Rule engine
         self.rules = RulesManager()
@@ -425,20 +382,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Internal modules with that are potentially to be deployed
             internal_service_modules = []
 
-            # This was added between 3.0 and 3.1, which is why it is optional
-            deploy_internal = self.fs_server_config.get('deploy_internal', default_internal_modules)
-
-            # Above, we potentially got the list of internal modules to be deployed as they were defined in server.conf.
-            # However, if someone creates an environment and then we add a new module, this module will not neccessarily
-            # exist in server.conf. This is why we need to add any such missing ones explicitly below.
-            for internal_module, is_enabled in default_internal_modules.items():
-                if internal_module not in deploy_internal:
-                    deploy_internal[internal_module] = is_enabled
+            # TODO: Auto-populate this list instead of reading it from [deploy_internal] in server.conf
+            deploy_internal = []
 
             # All internal modules were found, now we can build a list of what is to be enabled.
-            for module_name, is_enabled in deploy_internal.items():
-                if is_enabled:
-                    internal_service_modules.append(module_name)
+            if deploy_internal:
+                for module_name, is_enabled in deploy_internal.items():
+                    if is_enabled:
+                        internal_service_modules.append(module_name)
+            else:
+                raise Exception('No internal modules found to be imported')
 
             locally_deployed.extend(self.service_store.import_internal_services(
                 internal_service_modules, self.base_dir, self.sync_internal, cast_('bool', self.is_starting_first)))
@@ -1029,22 +982,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Configure paths and load data pertaining to Zato KVDB
         self.set_up_zato_kvdb()
 
-        # Find out if we are on a platform that can handle our posix_ipc
-        _skip_platform:'listorstr' = self.fs_server_config.misc.get('posix_ipc_skip_platform')
-        _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
-        _skip_platform = [elem for elem in _skip_platform if elem]
-        self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
-
-        # Create all POSIX IPC objects now that we have the deployment key,
-        # but only if our platform allows it.
-        if self.has_posix_ipc:
-            self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
-            self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
-            self.connector_config_ipc.create(self.deployment_key, self.shmem_size)
-        else:
-            self.server_startup_ipc = None
-            self.connector_config_ipc = None
-
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
         self.set_up_odb()
@@ -1245,9 +1182,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             except Exception as e:
                 logger.info('Exception while applying local config -> %s', e)
 
-            # Subprocess-based connectors
-            if self.has_posix_ipc:
-                self.init_subprocess_connectors(subprocess_start_config)
+            self.init_subprocess_connectors(subprocess_start_config)
 
             # SFTP channels are new in 3.1 and the directories may not exist
             if not os.path.exists(self.sftp_channel_dir):
@@ -1259,8 +1194,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'server': self,
             })
 
-            if self.has_posix_ipc:
-                self._populate_connector_config(subprocess_start_config)
+            self._populate_connector_config(subprocess_start_config)
 
         # Stops the environment after N seconds
         if self.stop_after:
@@ -1787,84 +1721,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def incr_pub_counter(self):
-        with self.pub_counter_lock:
-            self.pub_counter += 1
-
-# ################################################################################################################################
-
-    def get_pub_counter(self):
-        with self.pub_counter_lock:
-            return self.pub_counter
-
-# ################################################################################################################################
-
-    def set_up_zato_kvdb(self) -> 'None':
-
-        self.kvdb_dir = os.path.join(self.work_dir, 'kvdb', 'v10')
-
-        if not os.path.exists(self.kvdb_dir):
-            os.makedirs(self.kvdb_dir, exist_ok=True)
-
-        self.load_zato_kvdb_data()
-
-# ################################################################################################################################
-
-    def set_up_oauth_store(self) -> 'None':
-
-        # Create the base object ..
-        self.oauth_store = OAuthStore(
-            self.worker_store.oauth_get_by_id,
-            OAuthTokenClient.obtain_from_config
-        )
-
-        # .. and populate it with initial data now.
-        for item_id in self.worker_store.oauth_get_all_id_list():
-            self.oauth_store.create(item_id)
-
-# ################################################################################################################################
-
-    def load_zato_kvdb_data(self) -> 'None':
-
-        #
-        # Only now do we know what the full paths for KVDB data are so we can set them accordingly here ..
-        #
-
-        self.slow_responses.set_data_path(
-            os.path.join(self.kvdb_dir, CommonZatoKVDB.SlowResponsesPath),
-        )
-
-        self.usage_samples.set_data_path(
-            os.path.join(self.kvdb_dir, CommonZatoKVDB.UsageSamplesPath),
-        )
-
-        self.current_usage.set_data_path(
-            os.path.join(self.kvdb_dir, CommonZatoKVDB.CurrentUsagePath),
-        )
-
-        self.pub_sub_metadata.set_data_path(
-            os.path.join(self.kvdb_dir, CommonZatoKVDB.PubSubMetadataPath),
-        )
-
-        #
-        # .. and now we can load all the data.
-        #
-
-        self.slow_responses.load_data()
-        self.usage_samples.load_data()
-        self.current_usage.load_data()
-        self.pub_sub_metadata.load_data()
-
-# ################################################################################################################################
-
-    def save_zato_main_proc_state(self) -> 'None':
-        self.slow_responses.save_data()
-        self.usage_samples.save_data()
-        self.current_usage.save_data()
-        self.pub_sub_metadata.save_data()
-
-# ################################################################################################################################
-
     @staticmethod
     def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
         """ A Gunicorn hook which initializes the worker.
@@ -1911,16 +1767,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def cleanup_wsx(self, needs_pid:'bool'=False) -> 'None':
-        """ Delete persistent information about WSX clients currently registered with the server.
-        """
-        wsx_service = 'zato.channel.web-socket.client.delete-by-server'
-
-        if self.service_store.is_deployed(wsx_service):
-            self.invoke(wsx_service, {'needs_pid': needs_pid})
-
-# ################################################################################################################################
-
     def cleanup_on_stop(self) -> 'None':
         """ A shutdown cleanup procedure.
         """
@@ -1954,14 +1800,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
-
-            # Close all POSIX IPC structures
-            if self.has_posix_ipc:
-                self.server_startup_ipc.close()
-                self.connector_config_ipc.close()
-
-            # WSX connections for this server cleanup
-            self.cleanup_wsx(True)
 
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
@@ -1997,14 +1835,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.service_store.is_service_wsx_adapter(*args, **kwargs)
-
-    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
-        """ This does not do anything by default but tests can overwrite it with custom functionality.
-        """
-
-    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
-        """ This does not do anything by default but tests can overwrite it with custom functionality.
-        """
 
 # ################################################################################################################################
 # ################################################################################################################################

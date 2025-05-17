@@ -178,7 +178,7 @@ class Edit(AdminService):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Could not update the AMQP definition, e:`%s`', format_exc())
+                self.logger.error('AMQP channel could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise

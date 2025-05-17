@@ -674,8 +674,6 @@ class CHANNEL(Attrs):
     NEW_INSTANCE = 'new-instance'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
-    PARALLEL_EXEC_CALL = 'parallel-exec-call'
-    PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on-target'
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
@@ -683,10 +681,8 @@ class CHANNEL(Attrs):
     SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
-    WEB_SOCKET = 'web-socket'
-    IBM_MQ = 'websphere-mq'
+    IBM_MQ = 'ibm-mq'
     WORKER = 'worker'
-    ZMQ = 'zmq'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -694,40 +690,6 @@ class CHANNEL(Attrs):
 class CONNECTION:
     CHANNEL = 'channel'
     OUTGOING = 'outgoing'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class INVOCATION_TARGET(Attrs):
-    CHANNEL_AMQP = 'channel-amqp'
-    CHANNEL_WMQ = 'channel-wmq'
-    CHANNEL_ZMQ = 'channel-zmq'
-    OUTCONN_AMQP = 'outconn-amqp'
-    OUTCONN_WMQ = 'outconn-wmq'
-    OUTCONN_ZMQ = 'outconn-zmq'
-    SERVICE = 'service'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DELIVERY_STATE(Attrs):
-    IN_DOUBT = 'in-doubt'
-    IN_PROGRESS_ANY = 'in-progress-any' # A wrapper for all in-progress-* states
-    IN_PROGRESS_RESUBMITTED = 'in-progress-resubmitted'
-    IN_PROGRESS_RESUBMITTED_AUTO = 'in-progress-resubmitted-auto'
-    IN_PROGRESS_STARTED = 'in-progress'
-    IN_PROGRESS_TARGET_OK = 'in-progress-target-ok'
-    IN_PROGRESS_TARGET_FAILURE = 'in-progress-target-failure'
-    CONFIRMED = 'confirmed'
-    FAILED = 'failed'
-    UNKNOWN = 'unknown'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DELIVERY_CALLBACK_INVOKER(Attrs):
-    SOURCE = 'source'
-    TARGET = 'target'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -779,37 +741,6 @@ class INFO_FORMAT:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MSG_MAPPER:
-    DICT_TO_DICT = 'dict-to-dict'
-    DICT_TO_XML = 'dict-to-xml'
-    XML_TO_DICT = 'xml-to-dict'
-    XML_TO_XML = 'xml-to-xml'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CLOUD:
-    class AWS:
-        class S3:
-            class STORAGE_CLASS:
-                STANDARD = 'STANDARD'
-                REDUCED_REDUNDANCY = 'REDUCED_REDUNDANCY'
-                GLACIER = 'GLACIER'
-                DEFAULT = STANDARD
-
-                def __iter__(self):
-                    return iter((self.STANDARD, self.REDUCED_REDUNDANCY, self.GLACIER))
-
-            class DEFAULTS:
-                ADDRESS = 'https://s3.amazonaws.com/'
-                CONTENT_TYPE = 'application/octet-stream' # Taken from boto.s3.key.Key.DefaultContentType
-                DEBUG_LEVEL = 0
-                POOL_SIZE = 5
-                PROVIDER = 'aws'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
     QS_OVER_PATH = 'qs-over-path'
@@ -840,240 +771,6 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
     def __iter__(self):
         return iter((self.STRING_VALUE, self.SUDS))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PUBSUB:
-
-    SUBSCRIBE_CLASS: '_PUBSUB_SUBSCRIBE_CLASS'
-    SKIPPED_PATTERN_MATCHING = '<skipped>'
-
-    # All float values are converted to strings of that precision
-    # to make sure pg8000 does not round up the floats with loss of precision.
-    FLOAT_STRING_CONVERT = '{:.7f}'
-
-    class DATA_FORMAT:
-        CSV  = NameId('CSV', DATA_FORMAT.CSV)
-        DICT = NameId('Dict', DATA_FORMAT.DICT)
-        JSON = NameId('JSON', DATA_FORMAT.JSON)
-        POST = NameId('POST', DATA_FORMAT.POST)
-
-        def __iter__(self):
-            return iter((self.CSV, self.DICT, self.JSON, self.POST))
-
-    class HOOK_TYPE:
-        BEFORE_PUBLISH = 'pubsub_before_publish'
-        BEFORE_DELIVERY = 'pubsub_before_delivery'
-        ON_OUTGOING_SOAP_INVOKE = 'pubsub_on_topic_outgoing_soap_invoke'
-        ON_SUBSCRIBED = 'pubsub_on_subscribed'
-        ON_UNSUBSCRIBED = 'pubsub_on_unsubscribed'
-
-    class HOOK_ACTION:
-        SKIP = 'skip'
-        DELETE = 'delete'
-        DELIVER = 'deliver'
-
-        def __iter__(self):
-            return iter((self.SKIP, self.DELETE, self.DELIVER))
-
-    class DELIVER_BY:
-        PRIORITY = 'priority'
-        EXT_PUB_TIME = 'ext_pub_time'
-        PUB_TIME = 'pub_time'
-
-        def __iter__(self):
-            return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
-
-    class ON_NO_SUBS_PUB:
-        ACCEPT = NameId('Accept', 'accept')
-        DROP = NameId('Drop', 'drop')
-
-    class DEFAULT:
-        DATA_FORMAT = 'text'
-        MIME_TYPE = 'application/json'
-        TOPIC_MAX_DEPTH_GD = 10000
-        TOPIC_MAX_DEPTH_NON_GD = 1000
-        DEPTH_CHECK_FREQ = 100
-        EXPIRATION = 2147483647 # (2 ** 31 - 1) = around 70 years
-        GET_BATCH_SIZE = 50
-        DELIVERY_BATCH_SIZE = 500
-        DELIVERY_MAX_RETRY = 123456789
-        DELIVERY_MAX_SIZE = 500000 # 500 kB
-        PUB_BUFFER_SIZE_GD = 0
-        TASK_SYNC_INTERVAL = 500
-        TASK_DELIVERY_INTERVAL = 2000
-        WAIT_TIME_SOCKET_ERROR = 10
-        WAIT_TIME_NON_SOCKET_ERROR = 3
-        ON_NO_SUBS_PUB = 'accept'
-        SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
-
-        Dashboard_Message_Body = 'This is a sample message'
-        Delivery_Err_Should_Block = True
-        Has_GD = False
-        PositionInGroup = 1
-        UnsubOnWSXClose = True
-        Wrap_One_Msg_In_List = True
-
-        LimitMessageExpiry  = 86_400 # In seconds = 1 day # 0.1
-        LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
-        LimitSubInactivity  = 86_400 # In seconds = 1 day # 0.1
-
-        DEFAULT_USERNAME    = 'zato.pubsub'
-        DEFAULT_SECDEF_NAME = 'pub.zato.pubsub.default'
-
-        TEST_USERNAME    = 'zato.pubsub.test'
-        TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
-
-        PUBAPI_USERNAME    = 'pubapi'
-        PUBAPI_SECDEF_NAME = 'pubapi'
-
-        INTERNAL_USERNAME      = 'zato.pubsub.internal'
-        INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
-        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.internal.default'
-
-        Topic_Patterns_All = 'pub=/*\nsub=/*'
-
-    class SERVICE_SUBSCRIBER:
-        NAME = 'zato.pubsub.service.subscriber'
-        TOPICS_ALLOWED = 'sub=/zato/s/to/*'
-
-    class TOPIC_PATTERN:
-        TO_SERVICE = '/zato/s/to/{}'
-
-    class QUEUE_TYPE:
-        STAGING = 'staging'
-        CURRENT = 'current'
-
-        def __iter__(self):
-            return iter((self.STAGING, self.CURRENT))
-
-    class GD_CHOICE:
-        DEFAULT_PER_TOPIC = NameId('----------', 'default-per-topic')
-        YES = NameId('Yes', 'true')
-        NO = NameId('No', 'false')
-
-        def __iter__(self):
-            return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
-
-    class QUEUE_ACTIVE_STATUS:
-        FULLY_ENABLED = NameId('Pub and sub', 'pub-sub')
-        PUB_ONLY = NameId('Pub only', 'pub-only')
-        SUB_ONLY = NameId('Sub only', 'sub-only')
-        DISABLED = NameId('Disabled', 'disabled')
-
-        def __iter__(self):
-            return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
-
-    class DELIVERY_METHOD:
-        NOTIFY = NameId('Notify', 'notify')
-        PULL = NameId('Pull', 'pull')
-        WEB_SOCKET = NameId('WebSocket', 'web-socket')
-
-        def __iter__(self):
-            # Note that WEB_SOCKET is not included because it's not shown in GUI for subscriptions
-            return iter((self.NOTIFY, self.PULL))
-
-    class DELIVERY_STATUS:
-        DELIVERED = 1
-        INITIALIZED = 2
-        TO_DELETE = 3
-        WAITING_FOR_CONFIRMATION = 4
-
-    class PRIORITY:
-        DEFAULT = 5
-        MIN = 1
-        MAX = 9
-
-    class ROLE:
-        PUBLISHER = NameId('Publisher', 'pub-only')
-        SUBSCRIBER = NameId('Subscriber', 'sub-only')
-        PUBLISHER_SUBSCRIBER = NameId('Publisher/subscriber', 'pub-sub')
-
-        def __iter__(self):
-            return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
-
-    class RunDeliveryStatus:
-
-        class StatusCode:
-            OK = 1
-            Warning = 2
-            Error = 3
-
-        class ReasonCode:
-            Error_IO = 1
-            Error_Other = 2
-            No_Msg = 3
-            Error_Runtime_Invoke = 4
-
-    class ENDPOINT_TYPE:
-        INTERNAL = NameId('Internal', 'internal')
-        REST = NameId('REST', 'rest')
-        SERVICE = NameId('Service', 'srv')
-        WEB_SOCKETS = NameId('WebSockets', 'wsx')
-
-        def __iter__(self):
-            return iter((
-                self.INTERNAL.id,
-                self.REST.id,
-                self.WEB_SOCKETS.id,
-                self.SERVICE.id
-            ))
-
-        def get_pub_types(self):
-            return iter((
-                self.REST,
-                self.WEB_SOCKETS,
-                self.SERVICE
-            ))
-
-        @staticmethod
-        def get_name_by_type(endpoint_type:'str') -> 'str':
-            data = {
-                'srv':        'Service',
-                'rest':       'REST',
-                'internal':   'Internal',
-                'wsx': 'WebSockets',
-            }
-            return data[endpoint_type]
-
-    class REDIS:
-        META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
-        META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
-        META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
-
-    class MIMEType:
-        Zato = 'application/vnd.zato.ps.msg'
-
-    class Env:
-        Log_Table = 'Zato_Pub_Sub_Log_Table'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _PUBSUB_SUBSCRIBE_CLASS:
-
-    classes = {
-        PUBSUB.ENDPOINT_TYPE.REST.id: 'zato.pubsub.subscription.subscribe-rest',
-        PUBSUB.ENDPOINT_TYPE.SERVICE.id: 'zato.pubsub.subscription.subscribe-service',
-        PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.pubsub.subscription.create-wsx-subscription',
-    }
-
-    @staticmethod
-    def get(name:'str'):
-        return _PUBSUB_SUBSCRIBE_CLASS.classes[name]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-skip_endpoint_types = (
-    PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
-)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1125,23 +822,6 @@ class NOTIF:
 
     class TYPE:
         SQL = 'sql'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CASSANDRA:
-    class DEFAULT:
-        CONTACT_POINTS = '127.0.0.1\n'
-        EXEC_SIZE = 2
-        PORT = 9042
-        PROTOCOL_VERSION = 4
-        KEYSPACE = 'not-set'
-
-    class COMPRESSION:
-        DISABLED = 'disabled'
-        ENABLED_NEGOTIATED = 'enabled-negotiated'
-        ENABLED_LZ4 = 'enabled-lz4'
-        ENABLED_SNAPPY = 'enabled-snappy'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1264,96 +944,6 @@ class ContentType:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IPC:
-
-    Status_OK = 'ok'
-
-    class Default:
-        Timeout = 90
-        TCP_Port_Start = 17050
-
-    class Credentials:
-        Username = 'zato.server.ipc'
-        Password_Key = 'Zato_Server_IPC_Password'
-
-    class ACTION:
-        INVOKE_SERVICE = 'invoke-service'
-        INVOKE_WORKER_STORE = 'invoke-worker-store'
-
-    class STATUS:
-        SUCCESS = 'zs'
-        FAILURE = 'zf'
-        LENGTH = 2 # Length of either success or failure messages
-
-    class CONNECTOR:
-        class USERNAME:
-            FTP = 'zato.connector.ftp'
-            IBM_MQ = 'zato.connector.wmq'
-            SFTP   = 'zato.connector.sftp'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WEB_SOCKET:
-
-    AUDIT_KEY = 'wsx-connection'
-    GatewayResponseElem = 'zato_gateway_response'
-
-    class DEFAULT:
-        NEW_TOKEN_TIMEOUT = 5
-        TOKEN_TTL = 3600
-        FQDN_UNKNOWN = '(Unknown)'
-        INTERACT_UPDATE_INTERVAL = 60 # 60 minutes = 1 hour
-        PINGS_MISSED_THRESHOLD = 2
-        PINGS_MISSED_THRESHOLD_OUTGOING = 1
-        PING_INTERVAL = 45
-        Socket_Read_Timeout  = 60
-        Socket_Write_Timeout = 60
-
-    class PATTERN:
-        BY_EXT_ID = 'zato.by-ext-id.{}'
-        BY_CHANNEL = 'zato.by-channel.{}'
-        MSG_BROWSER_PREFIX = 'zato.msg-browser.' # This is used as a prefix in SQL queries
-        MSG_BROWSER = MSG_BROWSER_PREFIX + '{}'
-
-    class ACTION:
-        CLIENT_RESPONSE = 'client-response'
-        CREATE_SESSION = 'create-session'
-        INVOKE_SERVICE = 'invoke-service'
-
-    class OUT_MSG_TYPE:
-        CONNECT = 'connect'
-        MESSAGE = 'message'
-        CLOSE = 'close'
-
-    class HOOK_TYPE:
-        ON_CONNECTED = 'wsx_on_connected'
-        ON_DISCONNECTED = 'wsx_on_disconnected'
-        ON_PUBSUB_RESPONSE = 'wsx_on_pubsub_response'
-        ON_VAULT_MOUNT_POINT_NEEDED = 'wsx_on_vault_mount_point_needed'
-
-    class ExtraProperties:
-        StoreCtx = 'StoreCtx'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class APISPEC:
-    OPEN_API_V3 = 'openapi_v3'
-    NAMESPACE_NULL = ''
-    DEFAULT_TAG = 'public'
-    GENERIC_INVOKE_PATH = '/zato/api/invoke/{service_name}' # OpenAPI
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PADDING:
-    LEFT = 'left'
-    RIGHT = 'right'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class AMQP:
     class DEFAULT:
         POOL_SIZE = 10
@@ -1410,15 +1000,11 @@ class GENERIC:
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
-            DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
-            OUTCONN_IM_SLACK = 'outconn-im-slack'
-            OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
-            OUTCONN_WSX = 'outconn-wsx'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1433,19 +1019,6 @@ class Groups:
     class Membership_Action:
         Add    = 'add'
         Remove = 'remove'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AuditLog:
-
-    class Direction:
-        received = 'received'
-        sent     = 'sent'
-
-    class Default:
-        max_len_messages = 50
-        max_data_stored_per_message = 500 # In kilobytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1567,31 +1140,6 @@ class MONGODB:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Kafka:
-
-    class Default:
-        Broker_Version = '3.3'
-        Server_List    = '127.0.0.1:2181'
-        Username = 'admin'
-
-        class Timeout:
-            Socket  = 1
-            Offsets = 10
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TELEGRAM:
-    class DEFAULT:
-        ADDRESS = 'https://api.telegram.org/bot{token}/{method}'
-
-    class TIMEOUT:
-        CONNECT = 5
-        INVOKE = 10
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SFTP:
 
     class DEFAULT:
@@ -1635,20 +1183,6 @@ class DROPBOX:
         POOL_SIZE = 10
         TIMEOUT = 60
         USER_AGENT = None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class JSON_RPC:
-    class PREFIX:
-        CHANNEL = 'json.rpc.channel'
-        OUTGOING = 'json.rpc.outconn'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CONFIG_FILE:
-    USER_DEFINED = 'user-defined'
 
 # We need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
@@ -1844,54 +1378,6 @@ class HotDeploy:
 
     class Env:
         Pickup_Patterns = 'Zato_Hot_Deploy_Pickup_Patterns'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ZatoKVDB:
-
-    SlowResponsesName  = 'zato.service.slow_responses'
-    UsageSamplesName   = 'zato.service.usage_samples'
-    CurrentUsageName   = 'zato.service.current_usage'
-    PubSubMetadataName = 'zato.pubsub.metadata'
-
-    SlowResponsesPath  = SlowResponsesName  + '.json'
-    UsageSamplesPath   = UsageSamplesName   + '.json'
-    CurrentUsagePath   = CurrentUsageName   + '.json'
-    PubSubMetadataPath = PubSubMetadataName + '.json'
-
-    DefaultSyncThreshold = 3_000
-    DefaultSyncInterval  = 3
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Stats:
-
-    # This is in milliseconds, for how long do we keep old statistics in persistent storage. Defaults to two years.
-    # 1k ms * 60 s * 60 min * 24 hours * 365 days * 2 years = 94_608_000_000 milliseconds (or two years).
-    # We use milliseconds because that makes it easier to construct tests.
-    MaxRetention = 1000 * 60 * 60 * 24 * 365 * 2
-
-    # By default, statistics will be aggregated into time buckets of that duration
-    DefaultAggrTimeFreq = '5min' # Five minutes
-
-    # We always tabulate by object_id (e.g. service name)
-    TabulateAggr = 'object_id'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class StatsKey:
-    CurrentValue = 'current_value'
-
-    PerKeyMin   = 'min'
-    PerKeyMax   = 'max'
-    PerKeyMean  = 'mean'
-
-    PerKeyValue         = 'value'
-    PerKeyLastTimestamp = 'last_timestamp'
-    PerKeyLastDuration  = 'last_duration'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2096,21 +1582,6 @@ class IMAPMessage:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IBMMQCallData:
-    """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
-    """
-    __slots__ = ('msg_id', 'correlation_id')
-
-    def __init__(self, msg_id, correlation_id):
-        self.msg_id = msg_id
-        self.correlation_id = correlation_id
-
-# For compatibility with Zato < 3.2
-WebSphereMQCallData = IBMMQCallData
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class Name_Prefix:
     Keysight_Hawkeye = 'KeysightHawkeye.'
     Keysight_Vision  = 'KeysightVision.'
@@ -2179,82 +1650,6 @@ class MyService(Service):
         # Reply to our caller
         self.response.payload.salutation = message
 """.lstrip()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-default_internal_modules = {
-    'zato.server.service.internal': True,
-    'zato.server.service.internal.cache.builtin': True,
-    'zato.server.service.internal.cache.builtin.entry': True,
-    'zato.server.service.internal.cache.builtin.pubapi': True,
-    'zato.server.service.internal.cache.memcached': True,
-    'zato.server.service.internal.channel.amqp_': True,
-    'zato.server.service.internal.channel.file_transfer': True,
-    'zato.server.service.internal.channel.jms_wmq': True,
-    'zato.server.service.internal.channel.json_rpc': True,
-    'zato.server.service.internal.channel.zmq': True,
-    'zato.server.service.internal.cloud.aws.s3': True,
-    'zato.server.service.internal.common': True,
-    'zato.server.service.internal.common.create': True,
-    'zato.server.service.internal.common.delete': True,
-    'zato.server.service.internal.common.import_': True,
-    'zato.server.service.internal.common.sync': True,
-    'zato.server.service.internal.connector.amqp_': True,
-    'zato.server.service.internal.crypto': True,
-    'zato.server.service.internal.definition.amqp_': True,
-    'zato.server.service.internal.definition.jms_wmq': True,
-    'zato.server.service.internal.email.imap': True,
-    'zato.server.service.internal.email.smtp': True,
-    'zato.server.service.internal.generic.connection': True,
-    'zato.server.service.internal.generic.rest_wrapper': True,
-    'zato.server.service.internal.groups': True,
-    'zato.server.service.internal.helpers': True,
-    'zato.server.service.internal.hot_deploy': True,
-    'zato.server.service.internal.ide_deploy': True,
-    'zato.server.service.internal.info': True,
-    'zato.server.service.internal.http_soap': True,
-    'zato.server.service.internal.kv_data': True,
-    'zato.server.service.internal.kvdb': True,
-    'zato.server.service.internal.notif': True,
-    'zato.server.service.internal.notif.sql': True,
-    'zato.server.service.internal.outgoing.amqp_': True,
-    'zato.server.service.internal.outgoing.ftp': True,
-    'zato.server.service.internal.outgoing.jms_wmq': True,
-    'zato.server.service.internal.outgoing.odoo': True,
-    'zato.server.service.internal.outgoing.redis': True,
-    'zato.server.service.internal.outgoing.sql': True,
-    'zato.server.service.internal.outgoing.sap': True,
-    'zato.server.service.internal.outgoing.sftp': True,
-    'zato.server.service.internal.pattern': True,
-    'zato.server.service.internal.pickup': True,
-    'zato.server.service.internal.pattern.invoke_retry': True,
-    'zato.server.service.internal.scheduler': True,
-    'zato.server.service.internal.search.es': True,
-    'zato.server.service.internal.security': True,
-    'zato.server.service.internal.security.apikey': True,
-    'zato.server.service.internal.security.basic_auth': True,
-    'zato.server.service.internal.security.jwt': True,
-    'zato.server.service.internal.security.ntlm': True,
-    'zato.server.service.internal.security.oauth': True,
-    'zato.server.service.internal.security.tls.ca_cert': True,
-    'zato.server.service.internal.security.tls.channel': True,
-    'zato.server.service.internal.security.tls.key_cert': True,
-    'zato.server.service.internal.server': True,
-    'zato.server.service.internal.service': True,
-    'zato.server.service.internal.service.ide': True,
-    'zato.server.service.internal.sms': True,
-    'zato.server.service.internal.sms.twilio': True,
-    'zato.server.service.internal.sso': True,
-    'zato.server.service.internal.sso.cleanup': True,
-    'zato.server.service.internal.sso.password_reset': True,
-    'zato.server.service.internal.sso.session': True,
-    'zato.server.service.internal.sso.session_attr': True,
-    'zato.server.service.internal.sso.signup': True,
-    'zato.server.service.internal.sso.user': True,
-    'zato.server.service.internal.sso.user_attr': True,
-    'zato.server.service.internal.updates': True,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################

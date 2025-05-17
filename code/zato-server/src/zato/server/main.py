@@ -176,36 +176,12 @@ class ZatoGunicornApplication(Application):
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
         self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
 
-        for k, v in self.config_main.items():
-            if k.startswith('gunicorn') and v:
-                k = k.replace('gunicorn_', '')
-                if k == 'bind':
-                    if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind')
-                    else:
-                        host, port = v.split(':')
-                        self.zato_host = host
-                        self.zato_port = port
-                self.cfg.set(k, v)
-            else:
-                if 'deployment_lock' in k:
-                    v = int(v)
-
-                self.zato_config[k] = v
-
-        # Override pre-3.2 names with non-gunicorn specific ones ..
+        self.zato_config['deployment_lock_expires'] = 1073741824 # 2 ** 30 seconds = +/- 34 years
+        self.zato_config['deployment_lock_timeout'] =180
 
         # .. number of processes / threads ..
         if num_threads := self.get_config_value('num_threads'):
             self.cfg.set('workers', num_threads)
-
-        # .. what interface to bind to ..
-        if bind_host := self.get_config_value('bind_host'): # type: ignore
-            self.zato_host = bind_host
-
-        # .. what is our main TCP port ..
-        if bind_port := self.get_config_value('bind_port'): # type: ignore
-            self.zato_port = bind_port
 
         # .. now, set the bind config value once more in self.cfg  ..
         # .. because it could have been overwritten via bind_host or bind_port ..
@@ -215,16 +191,7 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        if asbool(self.crypto_config.use_tls):
-            self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
-            self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
-            self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
-            self.cfg.set('ca_certs', absjoin(self.repo_location, self.crypto_config.ca_certs_location))
-            self.cfg.set('keyfile', absjoin(self.repo_location, self.crypto_config.priv_key_location))
-            self.cfg.set('certfile', absjoin(self.repo_location, self.crypto_config.cert_location))
-            self.cfg.set('do_handshake_on_connect', True)
-
-        self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
+        self.zato_wsgi_app.has_gevent = True
 
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
@@ -361,28 +328,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     sio_config = get_sio_server_config(sio_config)
 
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
-    normalize_sso_config(sso_config)
-
-    # Now that we have access to server.conf, greenify libraries required to be made greenlet-friendly,
-    # assuming that there are any - otherwise do not do anything.
-    to_greenify = []
-    for key, value in server_config.get('greenify', {}).items():
-        if asbool(value):
-            if not os.path.exists(key):
-                raise ValueError('No such path `{}`'.format(key))
-            else:
-                to_greenify.append(key)
-
-    # Go ahead only if we actually have anything to greenify
-    if to_greenify:
-        import greenify # type: ignore
-        greenify.greenify()
-        for name in to_greenify:
-            result = greenify.patch_lib(name)
-            if not result:
-                raise ValueError('Library `{}` could not be greenified'.format(name))
-            else:
-                logger.info('Greenified library `%s`', name)
+    normalize_sso_config(sso_config) # type: ignore
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
@@ -408,13 +354,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'sso_config': sso_config,
         'base_dir': base_dir,
     })
-
-    # Start monitoring as soon as possible
-    if server_config.get('newrelic', {}).get('config'):
-        import newrelic.agent # type: ignore
-        newrelic.agent.initialize(
-            server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
-            server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
 
     zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Apache')
 
@@ -480,7 +419,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
-    server.json_schema_dir = os.path.join(server.base_dir, 'config', 'repo', 'schema', 'json')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.logging_config = logging_config
@@ -509,57 +447,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
-    # For IPC communication
-    ipc_password = crypto_manager.generate_secret()
-    ipc_password = ipc_password.decode('utf8')
-
-    # .. this is for our own process ..
-    server.set_ipc_password(ipc_password)
-
-    # .. this is for other processes.
-    ipc_password_encrypted = crypto_manager.encrypt(ipc_password, needs_str=True)
-    _ipc_password_key = IPC.Credentials.Password_Key
-    os.environ[_ipc_password_key] = ipc_password_encrypted
-
-    profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
-    sentry_config = server_config.get('sentry') or {}
-
-    dsn = sentry_config.pop('dsn', None)
-    if dsn:
-
-        from raven import Client
-        from raven.handlers.logging import SentryHandler
-
-        handler_level = sentry_config.pop('level')
-        client = Client(dsn, **sentry_config)
-
-        handler = SentryHandler(client=client)
-        handler.setLevel(getattr(logging, handler_level))
-
-        logger = logging.getLogger('')
-        logger.addHandler(handler)
-
-        for name in logging.Logger.manager.loggerDict:
-            if name.startswith('zato'):
-                logger = logging.getLogger(name)
-                logger.addHandler(handler)
-
-    if asbool(profiler_enabled):
-
-        # Repoze
-        from repoze.profile import ProfileMiddleware
-
-        profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))
-        server.on_wsgi_request = ProfileMiddleware(
-            server.on_wsgi_request,
-            log_filename = os.path.join(profiler_dir, server_config.profiler.log_filename),
-            cachegrind_filename = os.path.join(profiler_dir, server_config.profiler.cachegrind_filename),
-            discard_first_request = server_config.profiler.discard_first_request,
-            flush_at_shutdown = server_config.profiler.flush_at_shutdown,
-            path = server_config.profiler.url_path,
-            unwind = server_config.profiler.unwind)
-
-    os_environ = server_config.get('os_environ', {})
+    os_environ = server_config.get('os_environ') or {}
     for key, value in os_environ.items():
         os.environ[key] = value
 
@@ -567,31 +455,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IMPL_BEFORE_RUN, kwargs={
         'zato_gunicorn_app': zato_gunicorn_app,
     })
-
-    # This will optionally enable the RAM usage profiler.
-    memory_profiler_key = OS_Env.Zato_Enable_Memory_Profiler
-    enable_memory_profiler = os.environ.get(memory_profiler_key)
-
-    if enable_memory_profiler:
-
-        # stdlib
-        from tempfile import mkdtemp
-
-        # memray
-        import memray # type: ignore
-
-        # Create an empty directory to store the output in ..
-        dir_name = mkdtemp(prefix='zato-memory-profiler-')
-
-        # .. now, the full path to the memory profile file ..
-        full_path = os.path.join(dir_name, 'zato-memory-profile.bin')
-
-        # .. we can start the memray's tracker now ..
-        with memray.Tracker(full_path):
-            logger.info('Starting with memory profiler; output in -> %s', full_path)
-
-            # .. finally, start the server
-            start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)
 
     # .. no memory profiler here.
     start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)

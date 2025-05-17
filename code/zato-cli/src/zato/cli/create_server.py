@@ -13,14 +13,13 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, Default_Service_File_Data, NotGiven, SCHEDULER, \
+from zato.common.api import CONTENT_TYPE, Default_Service_File_Data, NotGiven, SCHEDULER, \
      SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util.api import as_bool, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
-from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,33 +37,13 @@ simple_io_conf_contents = simple_io_conf_contents
 # ################################################################################################################################
 
 server_conf_dict = deepcopy(CONTENT_TYPE)
-server_conf_dict.deploy_internal = {}
-
-deploy_internal = []
-
-for key, value in default_internal_modules.items():
-    deploy_internal.append('{}={}'.format(key, value))
-
-server_conf_dict.deploy_internal = '\n'.join(deploy_internal)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
-gunicorn_worker_class=gevent
-gunicorn_workers={{gunicorn_workers}}
-gunicorn_timeout=1234567890
-gunicorn_user=
-gunicorn_group=
-gunicorn_proc_name=
-gunicorn_logger_class=
-gunicorn_graceful_timeout=1
-debugger_enabled=False
-debugger_host=0.0.0.0
-debugger_port=5678
-ipc_host=127.0.0.1
-ipc_port_start=17050
+num_threads={{gunicorn_workers}}
 
 work_dir=../../work
 
@@ -75,8 +54,6 @@ token=zato+secret://zato.server_conf.main.token
 service_sources=./service-sources.txt
 
 [http_response]
-server_header=Zato
-return_x_zato_cid=True
 code_400_message=400 Bad Request
 code_400_content_type=text/plain
 code_401_message=401 Unauthorized
@@ -158,14 +135,10 @@ default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
-posix_ipc_skip_platform=darwin
 service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
-
-[stats]
-expire_after=168 # In hours, 168 = 7 days = 1 week
 
 [kvdb]
 host={{kvdb_host}}
@@ -194,18 +167,6 @@ zato.helpers.input-logger=Sample payload for a startup service (any worker)
 [user_config]
 # All paths are either absolute or relative to the directory server.conf is in
 user=./user.conf
-
-[newrelic]
-config=
-environment=
-ignore_errors=
-log_file=
-log_level=
-
-[sentry]
-dsn=
-timeout=5
-level=WARN
 
 [component_enabled]
 email=True

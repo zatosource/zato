@@ -37,11 +37,10 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, NTLM, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
+     JWT, NTLM, PubSubEndpoint, Server, Service
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
-from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
-     parse_tls_channel_security_definition, spawn_greenlet
+from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
@@ -1048,14 +1047,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_aws_security_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of AWS definitions existing on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.aws_security_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_basic_auth_list(self, cluster_id, cluster_name, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
@@ -1085,22 +1076,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.oauth_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_definition_amqp(self, cluster_id, def_id):
-        """ Returns an AMQP definition's details.
-        """
-        with closing(self.session()) as session:
-            return query.definition_amqp(session, cluster_id, def_id)
-
-# ################################################################################################################################
-
-    def get_definition_amqp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of AMQP definitions on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.definition_amqp_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1181,63 +1156,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.channel_wmq_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_out_zmq(self, cluster_id, out_id):
-        """ Returns an outgoing ZMQ connection's details.
-        """
-        with closing(self.session()) as session:
-            return query.out_zmq(session, cluster_id, out_id)
-
-# ################################################################################################################################
-
-    def get_out_zmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing ZMQ connections.
-        """
-        with closing(self.session()) as session:
-            return query.out_zmq_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_channel_zmq(self, cluster_id, channel_id):
-        """ Returns a particular ZMQ channel.
-        """
-        with closing(self.session()) as session:
-            return query.channel_zmq(session, cluster_id, channel_id)
-
-# ################################################################################################################################
-
-    def get_channel_zmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of ZMQ channels.
-        """
-        with closing(self.session()) as session:
-            return query.channel_zmq_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_channel_file_transfer_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of file transfer channels.
-        """
-        with closing(self.session()) as session:
-            return query_generic.connection_list(
-                session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, needs_columns)
-
-# ################################################################################################################################
-
-    def get_channel_web_socket(self, cluster_id, channel_id):
-        """ Returns a particular WebSocket channel.
-        """
-        with closing(self.session()) as session:
-            return query.channel_web_socket(session, cluster_id, channel_id)
-
-# ################################################################################################################################
-
-    def get_channel_web_socket_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of WebSocket channels.
-        """
-        with closing(self.session()) as session:
-            return query.channel_web_socket_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1337,60 +1255,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_cache_memcached_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Memcached-based cache definitions.
-        """
-        with closing(self.session()) as session:
-            return query.cache_memcached_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_namespace_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of XML namespaces.
-        """
-        with closing(self.session()) as session:
-            return query.namespace_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_xpath_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of XPath expressions.
-        """
-        with closing(self.session()) as session:
-            return query.xpath_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_json_pointer_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JSON Pointer expressions.
-        """
-        with closing(self.session()) as session:
-            return query.json_pointer_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_cloud_aws_s3_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of AWS S3 connections.
-        """
-        with closing(self.session()) as session:
-            return query.cloud_aws_s3_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_pubsub_topic_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub topics defined in a cluster.
-        """
-        return elems_with_opaque(query.pubsub_topic_list(self._session, cluster_id, needs_columns))
-
-# ################################################################################################################################
-
-    def get_pubsub_subscription_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub subscriptions defined in a cluster.
-        """
-        return query_ps_subscription.pubsub_subscription_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_notif_sql_list(self, cluster_id, needs_columns=False):
         """ Returns a list of SQL notification definitions.
         """
@@ -1402,20 +1266,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of ElasticSearch connections.
         """
         return query.search_es_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_search_solr_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Solr connections.
-        """
-        return query.search_solr_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_sms_twilio_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Twilio connections.
-        """
-        return query.sms_twilio_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1433,42 +1283,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_rbac_permission_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of RBAC permissions.
-        """
-        return query.rbac_permission_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_rbac_role_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of RBAC roles.
-        """
-        return query.rbac_role_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_rbac_client_role_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of RBAC roles assigned to clients.
-        """
-        return query.rbac_client_role_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_rbac_role_permission_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of RBAC permissions for roles.
-        """
-        return query.rbac_role_permission_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_pubsub_endpoint_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub endpoints.
-        """
-        out = query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
-        return out
-
-# ################################################################################################################################
-
     def get_generic_connection_list(self, cluster_id, needs_columns=False):
         """ Returns a list of generic connections.
         """
@@ -1481,27 +1295,5 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return get_sso_user_rate_limiting_info(session)
-
-# ################################################################################################################################
-
-    def _migrate_30_encrypt_sec_base(self, session, id, attr_name, encrypted_value):
-        """ Sets an encrypted value of a named attribute in a security definition.
-        """
-        item = session.query(SecurityBase).\
-            filter(SecurityBase.id==id).\
-            one()
-
-        setattr(item, attr_name, encrypted_value)
-        session.add(item)
-
-    _migrate_30_encrypt_sec_apikey             = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_aws                = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_basic_auth         = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_jwt                = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_ntlm               = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_oauth              = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_vault_conn_sec     = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_wss                = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
 
 # ################################################################################################################################
