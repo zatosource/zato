@@ -46,18 +46,13 @@ if 0:
     from kombu.message import Message as KombuAMQPMessage
 
     # Zato
-    from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
-    from zato.server.connection.jms_wmq.outgoing import WMQFacade
     from zato.server.connection.search import SearchAPI
-    from zato.server.connection.sms import SMSAPI
-    from zato.server.connection.vault import VaultConnAPI
-    from zato.server.connection.zmq_.outgoing import ZMQFacade
     from zato.server.service import AMQPFacade, Service
 
     # Zato - Cython
@@ -80,10 +75,6 @@ if 0:
     PoolStore = PoolStore
     SearchAPI = SearchAPI
     Service = Service
-    SMSAPI = SMSAPI
-    VaultConnAPI = VaultConnAPI
-    WMQFacade = WMQFacade
-    ZMQFacade = ZMQFacade
 
 # ################################################################################################################################
 # ################################################################################################################################

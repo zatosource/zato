@@ -38,7 +38,6 @@ patch_contextvars()
 import locale
 import logging
 import os
-import ssl
 import sys
 from logging.config import dictConfig
 
@@ -51,16 +50,15 @@ Logger._log = logging_Logger_log # type: ignore
 import yaml
 
 # Zato
-from zato.common.api import IPC, OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
 from zato.common.typing_ import cast_
-from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, is_encrypted, parse_cmd_line_options, \
+from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
@@ -357,10 +355,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Apache')
 
-    # Store KVDB config in logs, possibly replacing its password if told to
-    kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
-    kvdb_logger.info('Main process config `%s`', kvdb_config)
-
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
         _ = locale.setlocale(locale.LC_ALL, user_locale)
@@ -372,7 +366,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         os.environ['http_proxy'] = server_config.misc.http_proxy
 
     # Basic components needed for the server to boot up
-    kvdb = KVDB()
     odb_manager = ODBManager()
     odb_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
     sql_pool_store = PoolStore()
@@ -391,7 +384,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.service_store = service_store
     server.service_store.server = server
     server.sql_pool_store = sql_pool_store
-    server.kvdb = kvdb
     server.stderr_path = options.get('stderr_path') or ''
 
     # Assigned here because it is a circular dependency
