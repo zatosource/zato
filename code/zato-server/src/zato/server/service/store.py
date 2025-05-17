@@ -58,7 +58,7 @@ from zato.common.util.platform_ import is_non_windows
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
-    PubSubHook, SchedulerFacade, Service, WSXAdapter, WSXFacade
+    PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -134,19 +134,11 @@ class ModuleCtx:
 
 class _TestingWorkerStore:
     sql_pool_store = None
-    outconn_wsx = None
-    vault_conn_api = None
     outconn_ldap = None
     outconn_mongodb = None
-    def_kafka = None
-    zmq_out_api = None
-    sms_twilio_api = None
-    cassandra_api = None
-    cassandra_query_api = None
     email_smtp_api = None
     email_imap_api = None
     search_es_api = None
-    search_solr_api = None
     cache_api = None
 
     def __init__(self):
@@ -320,18 +312,6 @@ class ServiceStore:
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
             self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
-
-# ################################################################################################################################
-
-    def is_service_wsx_adapter(self, service_name:'str') -> 'bool':
-        try:
-            impl_name = self.name_to_impl_name[service_name]
-            service_info = self.services[impl_name]
-            service_class = service_info['service_class']
-            return issubclass(service_class, WSXAdapter)
-        except Exception as e:
-            logger.warn('Exception in ServiceStore.is_service_wsx_adapter -> %s', e.args)
-            return False
 
 # ################################################################################################################################
 
@@ -671,7 +651,6 @@ class ServiceStore:
 
             # Set up all attributes that do not have to be assigned to each instance separately
             # and can be shared as class attributes.
-            class_.wsx = WSXFacade(service_store.server)
 
             if self.is_testing:
 
@@ -679,13 +658,10 @@ class ServiceStore:
                 class_._worker_config = self._testing_worker_store.worker_config
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
-                class_.component_enabled_msg_path = True
                 class_.component_enabled_hl7 = True
-                class_.component_enabled_ibm_mq = True
                 class_.component_enabled_odoo = True
                 class_.component_enabled_zeromq = True
                 class_.component_enabled_patterns = True
-                class_.component_enabled_sms = True
 
             else:
 
@@ -696,9 +672,7 @@ class ServiceStore:
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb # type: ignore
                 class_.pubsub = service_store.server.worker_store.pubsub
-                class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
                 class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
-                class_.cloud.dropbox = service_store.server.worker_store.cloud_dropbox
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
                 class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
                 class_.cloud.ms365 = service_store.server.worker_store.cloud_microsoft_365
@@ -708,28 +682,16 @@ class ServiceStore:
                 class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
                 class_.commands.init(service_store.server)
 
-                class_.definition.kafka = service_store.server.worker_store.def_kafka
-                class_.im.slack = service_store.server.worker_store.outconn_im_slack
-                class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
-
                 class_._worker_config = service_store.server.worker_store.worker_config
                 class_.rules = service_store.server.rules
 
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
-                class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
-                class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-                class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
-                class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
                 # New in Zato 3.2, thus optional
                 class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
-
-            # JSON Schema
-            if class_.schema:
-                self.set_up_class_json_schema(class_)
 
             # User management and SSO
             if service_store.server.is_sso_enabled:

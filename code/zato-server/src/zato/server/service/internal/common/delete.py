@@ -333,19 +333,6 @@ class DeleteMany(Service):
 
 # ################################################################################################################################
 
-    def _delete_wsx(self, session:'SASession', pattern:'strlist') -> 'None':
-
-        # Zato
-        from zato.common.odb.model import ChannelWebSocket
-
-        tables:'any_' = {
-            ChannelWebSocket.__table__: [ChannelWebSocket.name],
-        }
-
-        self._delete(session, tables, pattern)
-
-# ################################################################################################################################
-
     def _delete_scheduler(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
@@ -383,14 +370,11 @@ class DeleteMany(Service):
         tables:'any_' = {
             Cache.__table__: [Cache.name],
             ChannelAMQP.__table__: [ChannelAMQP.name],
-            ChannelWMQ.__table__: [ChannelWMQ.name],
-            ConnDefWMQ.__table__: [ConnDefWMQ.name],
             IMAP.__table__: [IMAP.name],
             OutgoingAMQP.__table__: [OutgoingAMQP.name],
             OutgoingFTP.__table__: [OutgoingFTP.name],
             OutgoingOdoo.__table__: [OutgoingOdoo.name],
             OutgoingSAP.__table__: [OutgoingSAP.name],
-            OutgoingWMQ.__table__: [OutgoingWMQ.name],
             Service.__table__: [Service.name],
             SMTP.__table__: [SMTP.name],
         }
@@ -419,19 +403,14 @@ class DeleteMany(Service):
                 'Test Basic Auth',
                 'Test.Complex',
                 '-test-cli-',
-                'test.wsx',
                 'zato-test',
-                TestConfig.pubsub_topic_name_perf_auto_create,
-                TestConfig.pubsub_topic_name_unique_auto_create,
             ]
 
         with closing(self.odb.session()) as session:
 
             self._delete_rest(session, name)
             self._delete_security(session, name)
-            self._delete_pubsub(session, name)
             self._delete_sql(session, name)
-            self._delete_wsx(session, name)
             self._delete_scheduler(session, name)
             self._delete_generic(session, name)
             self._delete_misc(session, name)

@@ -292,80 +292,6 @@ class ChannelSecurityInfo:
 
 # ################################################################################################################################
 
-class _WSXChannel:
-    """ Provides communication with WebSocket channels.
-    """
-    def __init__(self, server:'ParallelServer', channel_name:'str') -> 'None':
-        self.server = server
-        self.channel_name = channel_name
-
-# ################################################################################################################################
-
-    def broadcast(self, data:'str', _action:'str'=BROKER_MSG_CHANNEL.WEB_SOCKET_BROADCAST.value) -> 'None':
-        """ Sends data to all WSX clients connected to this channel.
-        """
-        # type: (str, str)
-
-        # If we are invoked, it means that self.channel_name points to an existing object
-        # so we can just let all servers know that they are to invoke their connected clients.
-        self.server.broker_client.publish({
-            'action': _action,
-            'channel_name': self.channel_name,
-            'data': data
-        })
-
-# ################################################################################################################################
-
-class _WSXChannelContainer:
-    """ A thin wrapper to mediate access to WebSocket channels.
-    """
-    def __init__(self, server:'ParallelServer') -> 'None':
-        self.server = server
-        self._lock = RLock()
-        self._channels = {}
-
-    def invoke(self, cid:'str', conn_name:'str', **kwargs:'any_') -> 'any_':
-
-        wsx_channel:'Connector' = self.server.worker_store.web_socket_api.connectors[conn_name] # type: ignore
-        wsx_channel:'ChannelWebSocket' = cast_('ChannelWebSocket', wsx_channel) # type: ignore
-
-        response = wsx_channel.invoke_client(cid, **kwargs)
-        return response
-
-# ################################################################################################################################
-
-    def __getitem__(self, channel_name):
-        # type: (str) -> _WSXChannel
-        with self._lock:
-            if channel_name not in self._channels:
-                if self.server.worker_store.web_socket_api.connectors.get(channel_name):
-                    self._channels[channel_name] = _WSXChannel(self.server, channel_name)
-                else:
-                    raise KeyError('No such WebSocket channel `{}`'.format(channel_name))
-
-            return self._channels[channel_name]
-
-# ################################################################################################################################
-
-    def get(self, channel_name:'str') -> '_WSXChannel | None':
-        try:
-            return self[channel_name]
-        except KeyError:
-            return None # Be explicit in returning None
-
-# ################################################################################################################################
-
-class WSXFacade:
-    """ An object via which WebSocket channels and outgoing connections may be invoked or send broadcasts to.
-    """
-    __slots__ = 'server', 'channel', 'out'
-
-    def __init__(self, server:'ParallelServer') -> 'None':
-        self.server = server
-        self.channel = _WSXChannelContainer(self.server)
-
-# ################################################################################################################################
-
 class AMQPFacade:
     """ Introduced solely to let service access outgoing connections through self.amqp.invoke/_async
     rather than self.out.amqp_invoke/_async. The .send method is kept for pre-3.0 backward-compatibility.
@@ -412,14 +338,9 @@ class Service:
     email:'EMailAPI | None' = None
     search:'SearchAPI | None' = None
     patterns: 'PatternsFacade | None' = None
-    cassandra_conn:'CassandraAPI | None' = None
-    cassandra_query:'CassandraQueryAPI | None' = None
 
     amqp = AMQPFacade()
     commands = CommandsFacade()
-
-    # For WebSockets
-    wsx:'WSXFacade'
 
     _worker_store:'WorkerStore'
     _worker_config:'ConfigStore'
@@ -480,14 +401,10 @@ class Service:
     # Rule engine
     rules: 'RulesManager'
 
-    component_enabled_sms: 'bool'
     component_enabled_hl7: 'bool'
     component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
     component_enabled_search: 'bool'
-    component_enabled_ibm_mq: 'bool'
-    component_enabled_zeromq: 'bool'
-    component_enabled_msg_path: 'bool'
     component_enabled_patterns: 'bool'
 
     cache: 'CacheAPI'
@@ -525,21 +442,14 @@ class Service:
         self.out = self.outgoing = Outgoing(
             self.amqp,
             self._out_ftp,
-            WMQFacade(self) if self.component_enabled_ibm_mq else None,
             self._worker_config.out_odoo,
             self._out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
-            ZMQFacade(self._worker_store.zmq_out_api) if self.component_enabled_zeromq else NO_DEFAULT_VALUE,
-            self._worker_store.outconn_wsx,
-            self._worker_store.vault_conn_api,
-            SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
             self._worker_config.out_sap,
             self._worker_config.out_sftp,
             self._worker_store.outconn_ldap,
             self._worker_store.outconn_mongodb,
-            self._worker_store.def_kafka,
-            self.kvdb
         ) # type: Outgoing
 
         # REST facade for outgoing connections
@@ -778,7 +688,7 @@ class Service:
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'),
-            channel_item=channel_item, wsx=wsgi_environ.get('zato.wsx'))
+            channel_item=channel_item)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -1318,9 +1228,7 @@ class Service:
         wmq_ctx=None,          # type: dictnone
         channel_info=None,     # type: ChannelInfo | None
         channel_item=None,     # type: dictnone
-        wsx=None,              # type: WebSocket | None
         _AMQP=CHANNEL.AMQP,            # type: str
-        _IBM_MQ=CHANNEL.IBM_MQ,        # type: str
         _HL7v2=HL7.Const.Version.v2.id # type: str
     ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
@@ -1446,47 +1354,6 @@ PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke' # type: ignore
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'                     # type: ignore
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'                 # type: ignore
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WSXHook(_Hook):
-    """ Subclasses of this class may act as WebSockets hooks.
-    """
-    _hook_func_name = {}
-
-    def on_connected(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked each time a new WSX connection is established.
-        """
-
-    def on_disconnected(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked each time an existing WSX connection is dropped.
-        """
-
-    def on_pubsub_response(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked each time a response to a previous pub/sub message arrives.
-        """
-
-    def on_vault_mount_point_needed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked each time there is need to discover the name of a Vault mount point
-        that a particular WSX channel is secured ultimately with, i.e. the mount point
-        where the incoming user's credentials are stored in.
-        """
-
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'                               # type: ignore
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'                         # type: ignore
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'                   # type: ignore
-WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed' # type: ignore
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WSXAdapter(Service):
-    """ Subclasses of this class can be used in events related to outgoing WebSocket connections.
-    """
-    on_connected:'callable_'
-    on_message_received:'callable_'
-    on_closed:'callable_'
 
 # ################################################################################################################################
 # ################################################################################################################################
