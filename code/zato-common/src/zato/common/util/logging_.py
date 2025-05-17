@@ -62,11 +62,6 @@ loggers:
         handlers: [stdout, hl7]
         qualname: zato_hl7
         propagate: false
-    zato_kvdb:
-        level: INFO
-        handlers: [kvdb]
-        qualname: zato_kvdb
-        propagate: false
     zato_scheduler:
         level: INFO
         handlers: [stdout, scheduler]
@@ -121,14 +116,6 @@ handlers:
         formatter: default
         class: {log_handler_class}
         filename: './logs/hl7.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
-    kvdb:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/kvdb.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
