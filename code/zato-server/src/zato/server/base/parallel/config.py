@@ -142,10 +142,6 @@ class ConfigLoader:
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 
-        # SFTP
-        query = self.odb.get_out_sftp_list(server.cluster.id, True)
-        self.config.out_sftp = ConfigDict.from_query('out_sftp', query, decrypt_func=self.decrypt, drop_opaque=True)
-
         # SOAP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
