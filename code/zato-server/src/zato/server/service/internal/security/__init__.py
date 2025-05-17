@@ -78,12 +78,8 @@ class GetList(AdminService):
                 (SEC_DEF_TYPE.APIKEY, query.apikey_security_list),
                 (SEC_DEF_TYPE.AWS, query.aws_security_list),
                 (SEC_DEF_TYPE.BASIC_AUTH, query.basic_auth_list),
-                (SEC_DEF_TYPE.JWT, query.jwt_list),
                 (SEC_DEF_TYPE.NTLM, query.ntlm_list),
                 (SEC_DEF_TYPE.OAUTH, query.oauth_list),
-                (SEC_DEF_TYPE.VAULT, query.vault_connection_list),
-                (SEC_DEF_TYPE.TLS_CHANNEL_SEC, query.tls_channel_sec_list),
-                (SEC_DEF_TYPE.TLS_KEY_CERT, query.tls_key_cert_list),
             )
 
             for def_type, func in pairs:
