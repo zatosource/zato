@@ -280,15 +280,9 @@ class SEARCH:
 
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
-    AWS = 'aws'
     BASIC_AUTH = 'basic_auth'
-    JWT = 'jwt'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
-    TLS_CHANNEL_SEC = 'tls_channel_sec'
-    TLS_KEY_CERT = 'tls_key_cert'
-    VAULT = 'vault_conn_sec'
-    WSS = 'wss'
 
 Sec_Def_Type = SEC_DEF_TYPE
 
@@ -297,15 +291,9 @@ Sec_Def_Type = SEC_DEF_TYPE
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
-    SEC_DEF_TYPE.AWS: 'AWS',
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
-    SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'Bearer token',
-    SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
-    SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
-    SEC_DEF_TYPE.VAULT: 'Vault',
-    SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
 All_Sec_Def_Types = sorted(SEC_DEF_TYPE_NAME)

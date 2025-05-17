@@ -317,7 +317,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
-    opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
     opts.append({'name':'--preamble-script', 'help':'Extra script to add to startup scripts'})
@@ -417,7 +416,6 @@ class Create(ZatoCommand):
 
         # These are shared by all servers
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
-        jwt_secret = getattr(args, 'jwt_secret_key', None) or Fernet.generate_key()
 
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
@@ -581,7 +579,6 @@ class Create(ZatoCommand):
                 create_server_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
                 create_server_args.server_name = server_names[name]
                 create_server_args.path = server_path
-                create_server_args.jwt_secret = jwt_secret
                 create_server_args.secret_key = secret_key
                 create_server_args.threads = threads_per_server
                 create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required

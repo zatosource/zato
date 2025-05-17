@@ -31,7 +31,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 # Definitions of these security types may be linked to SSO users and their rate limiting definitions
-_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH,
 
 # ################################################################################################################################
 # ################################################################################################################################

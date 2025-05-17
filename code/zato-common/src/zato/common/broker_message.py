@@ -71,16 +71,6 @@ class SECURITY(Constants):
     BASIC_AUTH_DELETE = ValueConstant('')
     BASIC_AUTH_CHANGE_PASSWORD = ValueConstant('')
 
-    JWT_CREATE = ValueConstant('')
-    JWT_EDIT = ValueConstant('')
-    JWT_DELETE = ValueConstant('')
-    JWT_CHANGE_PASSWORD = ValueConstant('')
-
-    WSS_CREATE = ValueConstant('')
-    WSS_EDIT = ValueConstant('')
-    WSS_DELETE = ValueConstant('')
-    WSS_CHANGE_PASSWORD = ValueConstant('')
-
     OAUTH_CREATE = ValueConstant('')
     OAUTH_EDIT = ValueConstant('')
     OAUTH_DELETE = ValueConstant('')
@@ -96,19 +86,6 @@ class SECURITY(Constants):
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
-class DEFINITION(Constants):
-    code_start = 100600
-
-    WMQ_CREATE = ValueConstant('')
-    WMQ_EDIT = ValueConstant('')
-    WMQ_DELETE = ValueConstant('')
-    WMQ_CHANGE_PASSWORD = ValueConstant('')
-    WMQ_PING = ValueConstant('')
-
-    ZMQ_CREATE = ValueConstant('')
-    ZMQ_EDIT = ValueConstant('')
-    ZMQ_DELETE = ValueConstant('')
-
 class OUTGOING(Constants):
     code_start = 100800
 
@@ -116,11 +93,6 @@ class OUTGOING(Constants):
     AMQP_EDIT = ValueConstant('')
     AMQP_DELETE = ValueConstant('')
     AMQP_PUBLISH = ValueConstant('')
-
-    WMQ_CREATE = ValueConstant('')
-    WMQ_EDIT = ValueConstant('')
-    WMQ_DELETE = ValueConstant('')
-    WMQ_SEND = ValueConstant('')
 
     SQL_CREATE_EDIT = ValueConstant('') # Same for creating and updating the pools
     SQL_CHANGE_PASSWORD = ValueConstant('')
@@ -159,11 +131,6 @@ class CHANNEL(Constants):
     AMQP_EDIT = ValueConstant('')
     AMQP_DELETE = ValueConstant('')
     AMQP_MESSAGE_RECEIVED = ValueConstant('')
-
-    WMQ_CREATE = ValueConstant('')
-    WMQ_EDIT = ValueConstant('')
-    WMQ_DELETE = ValueConstant('')
-    WMQ_MESSAGE_RECEIVED = ValueConstant('')
 
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')

@@ -37,21 +37,18 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
-     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_DEFAULT, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
+     URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
-     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key, \
+from zato.common.util.api import get_tls_key_cert_full_path, get_tls_from_payload, \
+     fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, visit_py_source, wait_for_dict_key, \
      wait_for_dict_key_by_get_func
 from zato.common.util.file_system import resolve_path
-from zato.common.util.pubsub import is_service_subscription
-from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -65,32 +62,19 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sftp import SFTPIPCFacade
-from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
-from zato.server.connection.web_socket import ChannelWebSocket
-from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
-from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
-from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
-from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
-from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.pubsub import PubSub
-from zato.server.pubsub.delivery.tool import PubSubTool
-from zato.server.rbac_ import RBAC
-from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
-from zato.zmq_.outgoing import Simple as OutZMQSimple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,7 +87,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictnone, stranydict, tupnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, dictnone, stranydict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -184,8 +168,6 @@ class WorkerStore(_WorkerStoreBase):
         self.server = server
         self.update_lock = RLock()
         self.kvdb = server.kvdb
-        self.pubsub = PubSub(self.server.cluster_id, self.server)
-        self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
         # To expedite look-ups
@@ -212,20 +194,11 @@ class WorkerStore(_WorkerStoreBase):
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
 
-        # Generic connections - Kafka definitions
-        self.def_kafka = {}
-
         # Generic connections - HL7 FHIR outconns
         self.outconn_hl7_fhir = {}
 
         # Generic connections - HL7 MLLP outconns
         self.outconn_hl7_mllp = {}
-
-        # Generic connections - IM Slack
-        self.outconn_im_slack = {}
-
-        # Generic connections - IM Telegram
-        self.outconn_im_telegram = {}
 
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
@@ -290,9 +263,6 @@ class WorkerStore(_WorkerStoreBase):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
-
-        # ZeroMQ
-        self.init_zmq()
 
         # Odoo
         self.init_odoo()
@@ -393,11 +363,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def after_broker_client_set(self) -> 'None':
-        self.pubsub.broker_client = self.broker_client
-
-# ################################################################################################################################
-
     def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
         self.after_broker_client_set()
@@ -411,32 +376,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def _update_queue_build_cap(self, item:'any_') -> 'None':
         item.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-
-# ################################################################################################################################
-
-    def _update_aws_config(self, msg:'bunch_') -> 'None':
-        """ Parses the address to AWS we store into discrete components S3Connection objects expect.
-        Also turns metadata string into a dictionary
-        """
-        url_info = urlparse(msg.address)
-
-        msg.is_secure = True if url_info.scheme == 'https' else False
-        msg.port = url_info.port if url_info.port else (443 if msg.is_secure else 80)
-        msg.host = url_info.netloc
-
-        msg.metadata = parse_extra_into_dict(msg.metadata_)
-
-# ################################################################################################################################
-
-    def _get_tls_verify_from_config(self, config:'any_') -> 'bool':
-
-        tls_config = self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name]
-        tls_config = tls_config.config
-        tls_config = tls_config.value
-        tls_from_payload = get_tls_from_payload(tls_config)
-        tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, tls_from_payload)
-
-        return tls_verify
 
 # ################################################################################################################################
 
@@ -530,12 +469,8 @@ class WorkerStore(_WorkerStoreBase):
         }
         wrapper_config.update(sec_config)
 
-        # Key 'sec_tls_ca_cert_verify_strategy' was added in 3.2
-        # so we need to handle cases when it exists or it does not.
-        sec_tls_ca_cert_verify_strategy = config.get('sec_tls_ca_cert_verify_strategy')
-
         # 3.2+
-        if sec_tls_ca_cert_verify_strategy:
+        if config.sec_tls_ca_cert_verify_strategy:
             if sec_tls_ca_cert_verify_strategy is True:
                 tls_verify = True
 
@@ -545,12 +480,6 @@ class WorkerStore(_WorkerStoreBase):
             else:
                 tls_verify = self._get_tls_verify_from_config(config)
 
-        # < 3.2
-        else:
-            if not config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id in {ZATO_DEFAULT, ZATO_NONE}:
-                tls_verify = self._get_tls_verify_from_config(config)
-            else:
-                tls_verify = False
 
         wrapper_config['tls_verify'] = tls_verify
 
@@ -631,88 +560,6 @@ class WorkerStore(_WorkerStoreBase):
             # Store ID -> name mapping
             config_dict.set_key_id_data(config_data.config)
 
-    def init_cloud(self) -> 'None':
-        """ Initializes all the cloud connections.
-        """
-        # data = (
-        #     ('cloud_aws_s3', S3Wrapper),
-        # )
-        data = []
-        S3Wrapper = None
-
-        for config_key, wrapper in data:
-            config_attr = getattr(self.worker_config, config_key)
-            for name in config_attr:
-                config = config_attr[name]['config']
-                if isinstance(wrapper, S3Wrapper):
-                    self._update_aws_config(config)
-                config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-                config_attr[name].conn = wrapper(config, self.server)
-                config_attr[name].conn.build_queue()
-
-    def get_notif_config(self, notif_type:'str', name:'str') -> 'ConfigDict':
-        config_dict = {
-            NOTIF.TYPE.SQL: self.worker_config.notif_sql,
-        }[notif_type]
-
-        return config_dict.get(name)
-
-    def create_edit_notifier(self, msg:'bunch_', action:'str', config_dict:'ConfigDict', update_func:'callnone'=None) -> 'None':
-
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg.name
-
-        config_dict.pop(del_name, None) # Delete and ignore if it doesn't exit (it's CREATE then)
-        config_dict[msg.name] = Bunch()
-        config_dict[msg.name].config = msg
-
-        if update_func:
-            update_func(msg)
-
-        # Start a new background notifier either if it's a create action or on rename.
-        if msg.source_service_type == 'create' or (old_name and old_name != msg.name):
-
-            self.on_message_invoke_service({
-                'service': 'zato.notif.invoke-run-notifier',
-                'payload': {'config': msg},
-                'cid': new_cid(),
-            }, CHANNEL.NOTIFIER_RUN, action)
-
-# ################################################################################################################################
-
-    def _on_cassandra_connection_established(self, config:'bunch_') -> 'None':
-        self._cassandra_connections_ready[config.id] = True
-
-    def init_cassandra(self) -> 'None':
-        for k, v in self.worker_config.cassandra_conn.items():
-            try:
-                self._cassandra_connections_ready[v.config.id] = False
-                self.update_cassandra_conn(v.config)
-                self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
-            except Exception:
-                logger.warning('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
-
-# ################################################################################################################################
-
-    def _init_cassandra_query(self, create_func:'callable_', k:'str', config:'bunch_') -> 'None':
-        idx = 0
-        while not self._cassandra_connections_ready.get(config.def_id):
-            gevent.sleep(1)
-
-            idx += 1
-            if not idx % 20:
-                logger.warning('Still waiting for `%s` Cassandra connection', config.def_name)
-
-        create_func(k, config, def_=self.cassandra_api[config.def_name])
-
-    def init_cassandra_queries(self) -> 'None':
-        for k, v in self.worker_config.cassandra_query.items():
-            try:
-                gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
-            except Exception:
-                logger.warning('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
-
 # ################################################################################################################################
 
     def init_simple(self, config:'bunch_', api:'BaseAPI', name:'str') -> 'None':
@@ -725,18 +572,8 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def init_sms_twilio(self) -> 'None':
-        self.init_simple(self.worker_config.sms_twilio, self.sms_twilio_api, 'a Twilio')
-
-# ################################################################################################################################
-
     def init_search_es(self) -> 'None':
         self.init_simple(self.worker_config.search_es, self.search_es_api, 'an ElasticSearch')
-
-# ################################################################################################################################
-
-    def init_search_solr(self) -> 'None':
-        self.init_simple(self.worker_config.search_solr, self.search_solr_api, 'a Solr')
 
 # ################################################################################################################################
 
@@ -800,14 +637,10 @@ class WorkerStore(_WorkerStoreBase):
         self.request_dispatcher.url_data.set_security_objects(
             url_sec=url_sec,
             basic_auth_config=self.worker_config.basic_auth,
-            jwt_config=self.worker_config.jwt,
             ntlm_config=self.worker_config.ntlm,
             oauth_config=self.worker_config.oauth,
             apikey_config=self.worker_config.apikey,
             aws_config=self.worker_config.aws,
-            tls_channel_sec_config=self.worker_config.tls_channel_sec,
-            tls_key_cert_config=self.worker_config.tls_key_cert,
-            vault_conn_sec_config=self.worker_config.vault_conn_sec,
         )
 
         # .. now, initialize connections that may depend on what we have just loaded ..
@@ -1297,41 +1130,6 @@ class WorkerStore(_WorkerStoreBase):
             security_groups_ctx.set_current_apikey(msg.id, msg.password)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-    def wait_for_aws(self, name:'str', timeout:'int'=999999) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.aws_get, name, timeout, interval=0.5)
-
-    def aws_get(self, name:'str') -> 'bunch_':
-        """ Returns the configuration of the AWS security definition
-        of the given name.
-        """
-        return self.request_dispatcher.url_data.aws_get(name)
-
-    def on_broker_msg_SECURITY_AWS_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates a new AWS security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.AWS_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_AWS_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Updates an existing AWS security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.AWS,
-                self._visit_wrapper_edit, keys=('username', 'name'))
-
-    def on_broker_msg_SECURITY_AWS_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Deletes an AWS security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.AWS,
-                self._visit_wrapper_delete)
-
-    def on_broker_msg_SECURITY_AWS_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Changes password of an AWS security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.AWS,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
 
     def wait_for_ntlm(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.ntlm_get, name, timeout, interval=0.5)
@@ -1363,64 +1161,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Changes password of an NTLM security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg:'bunch_') -> 'None':
-        msg.token = self.server.decrypt(msg.token)
-        self.vault_conn_api.create(msg)
-        dispatcher.notify(broker_message.VAULT.CONNECTION_CREATE.value, msg)
-
-    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg:'bunch_') -> 'None':
-        msg.token = self.server.decrypt(msg.token)
-        self.vault_conn_api.edit(msg)
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
-                self._visit_wrapper_edit, keys=('username', 'name'))
-
-    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg:'bunch_') -> 'None':
-        self.vault_conn_api.delete(msg.name)
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
-                self._visit_wrapper_delete)
-
-# ################################################################################################################################
-
-    def wait_for_jwt(self, name:'str', timeout:'int'=999999) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.jwt_get, name, timeout, interval=0.5)
-
-    def jwt_get(self, name:'str') -> 'bunch_':
-        """ Returns the configuration of the JWT security definition of the given name.
-        """
-        return self.request_dispatcher.url_data.jwt_get(name)
-
-    def jwt_get_by_id(self, def_id:'int') -> 'bunch_':
-        """ Same as jwt_get but returns information by definition ID.
-        """
-        return self.request_dispatcher.url_data.jwt_get_by_id(def_id)
-
-    def on_broker_msg_SECURITY_JWT_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates a new JWT security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.JWT_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_JWT_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Updates an existing JWT security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
-                self._visit_wrapper_edit, keys=('username', 'name'))
-        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'jwt')
-
-    def on_broker_msg_SECURITY_JWT_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Deletes a JWT security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
-                self._visit_wrapper_delete)
-        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
-
-    def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Changes password of a JWT security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
@@ -1472,134 +1212,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Changes password of an OAuth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def _update_tls_outconns(self, material_type_id:'str', update_key:'str', msg:'bunch_') -> 'None':
-
-        for config_dict, config_data in self.get_outconn_http_config_dicts():
-
-            # Here, config_data is a string such as _zato_id_633 that points to an actual outconn name
-            if isinstance(config_data, str):
-                config_data = config_dict[config_data]
-
-            if config_data.config[material_type_id] == msg.id:
-                config_data.conn.config[update_key] = msg.full_path
-                config_data.conn.https_adapter.clear_pool()
-
-# ################################################################################################################################
-
-    def _add_tls_from_msg(self, config_attr:'str', msg:'bunch_', msg_key:'str') -> 'None':
-        config = getattr(self.worker_config, config_attr)
-        config[msg.name] = Bunch(config=Bunch(value=msg[msg_key]))
-
-    def update_tls_ca_cert(self, msg:'bunch_') -> 'None':
-        msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
-
-    def update_tls_key_cert(self, msg:'bunch_') -> 'None':
-        decrypted = self.server.decrypt(msg.auth_data)
-        msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(decrypted, True))
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates a new security definition basing on TLS client certificates.
-        """
-        # Parse it to be on the safe side
-        list(parse_tls_channel_security_definition(msg.value))
-
-        dispatcher.notify(broker_message.SECURITY.TLS_CHANNEL_SEC_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Updates an existing security definition basing on TLS client certificates.
-        """
-        # Parse it to be on the safe side
-        list(parse_tls_channel_security_definition(msg.value))
-
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.TLS_CHANNEL_SEC,
-                self._visit_wrapper_edit, keys=('name', 'value'))
-
-    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Deletes a security definition basing on TLS client certificates.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.TLS_CHANNEL_SEC, self._visit_wrapper_delete)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg:'bunch_') -> 'None':
-        self.update_tls_key_cert(msg)
-        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
-        decrypted = self.server.decrypt(msg.auth_data)
-        store_tls(self.server.tls_dir, decrypted, True)
-        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg:'bunch_') -> 'None':
-        self.update_tls_key_cert(msg)
-        del self.worker_config.tls_key_cert[msg.old_name]
-        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
-        decrypted = self.server.decrypt(msg.auth_data)
-        store_tls(self.server.tls_dir, decrypted, True)
-        self._update_tls_outconns('security_id', 'tls_key_cert_full_path', msg)
-        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
-
-    def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg:'bunch_') -> 'None':
-        self.update_tls_key_cert(msg)
-        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg:'bunch_') -> 'None':
-        self.update_tls_ca_cert(msg)
-        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
-        store_tls(self.server.tls_dir, msg.value)
-        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg:'bunch_') -> 'None':
-        self.update_tls_ca_cert(msg)
-        del self.worker_config.tls_ca_cert[msg.old_name]
-        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
-        store_tls(self.server.tls_dir, msg.value)
-        self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
-        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
-
-    def on_broker_msg_SECURITY_TLS_CA_CERT_DELETE(self, msg:'bunch_') -> 'None':
-        self.update_tls_ca_cert(msg)
-        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
-
-# ################################################################################################################################
-
-    def wait_for_wss(self, name:'str', timeout:'int'=999999) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.wss_get, name, timeout, interval=0.5)
-
-    def wss_get(self, name:'str') -> 'bunch_':
-        """ Returns the configuration of the WSS definition of the given name.
-        """
-        self.request_dispatcher.url_data.wss_get(name)
-
-    def on_broker_msg_SECURITY_WSS_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates a new WS-Security definition.
-        """
-        dispatcher.notify(broker_message.SECURITY.WSS_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_WSS_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Updates an existing WS-Security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
-                self._visit_wrapper_edit, keys=('is_active', 'username', 'name',
-                    'nonce_freshness_time', 'reject_expiry_limit', 'password_type',
-                    'reject_empty_nonce_creat', 'reject_stale_tokens'))
-
-    def on_broker_msg_SECURITY_WSS_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Deletes a WS-Security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
-                self._visit_wrapper_delete)
-
-    def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Changes the password of a WS-Security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
@@ -1714,11 +1326,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_SCHEDULER_SET_SCHEDULER_ADDRESS(self, msg:'bunch_', args:'any_'=None) -> 'any_':
         self.invoke('zato.scheduler.set-scheduler-address-impl', msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
-        return self.on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
 
 # ################################################################################################################################
 
@@ -1928,9 +1535,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
-        # Delete the service from RBAC resources
-        self.rbac.delete_resource(msg.id)
-
         # Where to delete it from in the second step
         deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
 
@@ -2012,15 +1616,9 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Uploads the service
-        response = self.on_broker_msg_hot_deploy(
+        _ = self.on_broker_msg_hot_deploy(
             msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
-
-        # If there were any services deployed, let pub/sub know that this service has been just deployed -
-        # pub/sub will go through all of its topics and reconfigure any of its hooks that this service implements.
-        services_deployed = response.get('zato_hot_deploy_create_response', '{}').get('services_deployed')
-        if services_deployed:
-            self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(services_deployed)
 
 # ################################################################################################################################
 
@@ -2046,12 +1644,8 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg:'bunch_', *args:'any_') -> 'None':
 
-        # Update RBAC configuration
-        self.rbac.create_resource(msg.service_id)
-
         # Redeploy services that depended on the service just deployed.
-        # Uses .get below because the feature is new in 3.1 which is why it is optional.
-        if self.server.fs_server_config.hot_deploy.get('redeploy_on_parent_change', True):
+        if self.server.fs_server_config.hot_deploy.redeploy_on_parent_change:
             self.server.service_store.redeploy_on_parent_changed(msg.service_name, msg.service_impl_name)
 
 # ################################################################################################################################
@@ -2091,22 +1685,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates or updates an AWS S3 connection.
-        """
-        S3Wrapper = None
-        msg.password = self.server.decrypt(msg.password)
-
-        self._update_aws_config(msg)
-        self._on_broker_msg_cloud_create_edit(msg, 'AWS S3', self.worker_config.cloud_aws_s3, S3Wrapper)
-
-    def on_broker_msg_CLOUD_AWS_S3_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Closes and deletes an AWS S3 connection.
-        """
-        self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_aws_s3, 'AWS S3', logger.debug)
-
-# ################################################################################################################################
-
     def on_broker_msg_OUTGOING_ODOO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an Odoo connection.
         """
@@ -2135,70 +1713,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg:'bunch_') -> 'None':
-        self.on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
-
-# ################################################################################################################################
-
-    def _on_broker_msg_NOTIF_SQL_CREATE_EDIT(self, msg:'bunch_', source_service_type:'str') -> 'None':
-        msg.source_service_type = source_service_type
-        self.create_edit_notifier(msg, 'NOTIF_SQL', self.server.worker_store.worker_config.notif_sql)
-
-    def on_broker_msg_NOTIF_SQL_CREATE(self, msg:'bunch_') -> 'None':
-        self._on_broker_msg_NOTIF_SQL_CREATE_EDIT(msg, 'create')
-
-    def on_broker_msg_NOTIF_SQL_EDIT(self, msg:'bunch_') -> 'None':
-        self._on_broker_msg_NOTIF_SQL_CREATE_EDIT(msg, 'edit')
-
-    def on_broker_msg_NOTIF_SQL_DELETE(self, msg:'bunch_') -> 'None':
-        del self.server.worker_store.worker_config.notif_sql[msg.name]
-
-# ################################################################################################################################
-
-    def update_cassandra_conn(self, msg:'bunch_') -> 'None':
-        for name in 'tls_ca_certs', 'tls_client_cert', 'tls_client_priv_key':
-            value = msg.get(name)
-            if value:
-                value = os.path.join(self.server.repo_location, 'tls', value)
-                msg[name] = value
-
-    def on_broker_msg_DEFINITION_CASSANDRA_CREATE(self, msg:'bunch_') -> 'None':
-        self.cassandra_api.create_def(msg.name, msg)
-        self.update_cassandra_conn(msg)
-
-    def on_broker_msg_DEFINITION_CASSANDRA_EDIT(self, msg:'bunch_') -> 'None':
-        # It might be a rename
-        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.update_cassandra_conn(msg)
-        new_def = self.cassandra_api.edit_def(del_name, msg)
-        self.cassandra_query_store.update_by_def(del_name, new_def)
-
-    def on_broker_msg_DEFINITION_CASSANDRA_DELETE(self, msg:'bunch_') -> 'None':
-        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_DELETE.value, msg)
-        self.cassandra_api.delete_def(msg.name)
-
-    def on_broker_msg_DEFINITION_CASSANDRA_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
-        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_CHANGE_PASSWORD.value, msg)
-        self.cassandra_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_QUERY_CASSANDRA_CREATE(self, msg:'bunch_') -> 'None':
-        self.cassandra_query_api.create(msg.name, msg, def_=self.cassandra_api[msg.def_name])
-
-    def on_broker_msg_QUERY_CASSANDRA_EDIT(self, msg:'bunch_') -> 'None':
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.cassandra_query_api.edit(del_name, msg, def_=self.cassandra_api[msg.def_name])
-
-    def on_broker_msg_QUERY_CASSANDRA_DELETE(self, msg:'bunch_') -> 'None':
-        self.cassandra_query_api.delete(msg.name)
-
-# ################################################################################################################################
-
     def on_broker_msg_SEARCH_ES_CREATE(self, msg:'bunch_') -> 'None':
         self.search_es_api.create(msg.name, msg)
 
@@ -2210,22 +1724,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_SEARCH_ES_DELETE(self, msg:'bunch_') -> 'None':
         self.search_es_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SEARCH_SOLR_CREATE(self, msg:'bunch_') -> 'None':
-        self._update_queue_build_cap(msg)
-        self.search_solr_api.create(msg.name, msg)
-
-    def on_broker_msg_SEARCH_SOLR_EDIT(self, msg:'bunch_') -> 'None':
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self._update_queue_build_cap(msg)
-        self.search_solr_api.edit(del_name, msg)
-
-    def on_broker_msg_SEARCH_SOLR_DELETE(self, msg:'bunch_') -> 'None':
-        self.search_solr_api.delete(msg.name)
 
 # ################################################################################################################################
 
@@ -2262,140 +1760,5 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
         self.email_imap_api.change_password(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_RBAC_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
-        self.rbac.create_permission(msg.id, msg.name)
-
-    def on_broker_msg_RBAC_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
-        self.rbac.edit_permission(msg.id, msg.name)
-
-    def on_broker_msg_RBAC_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
-        self.rbac.delete_permission(msg.id)
-
-# ################################################################################################################################
-
-    def on_broker_msg_RBAC_ROLE_CREATE(self, msg:'bunch_') -> 'None':
-        self.rbac.create_role(msg.id, msg.name, msg.parent_id)
-
-    def on_broker_msg_RBAC_ROLE_EDIT(self, msg:'bunch_') -> 'None':
-        self.rbac.edit_role(msg.id, msg.old_name, msg.name, msg.parent_id)
-
-    def on_broker_msg_RBAC_ROLE_DELETE(self, msg:'bunch_') -> 'None':
-        self.rbac.delete_role(msg.id, msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_RBAC_CLIENT_ROLE_CREATE(self, msg:'bunch_') -> 'None':
-        self.rbac.create_client_role(msg.client_def, msg.role_id)
-
-    def on_broker_msg_RBAC_CLIENT_ROLE_DELETE(self, msg:'bunch_') -> 'None':
-        self.rbac.delete_client_role(msg.client_def, msg.role_id)
-
-# ################################################################################################################################
-
-    def on_broker_msg_RBAC_ROLE_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
-        self.rbac.create_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
-
-    def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
-        self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
-
-# ################################################################################################################################
-
-    def zmq_channel_create_edit(
-        self,
-        name,   # type: str
-        msg,    # type: Bunch
-        action, # type: str
-        lock_timeout, # type: int
-        start   # type: bool
-    ) -> 'None':
-        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
-            self._set_up_zmq_channel(name, msg, action, start)
-
-# ################################################################################################################################
-
-    def zmq_channel_create(self, msg:'bunch_') -> 'None':
-        self.zmq_channel_create_edit(msg.name, msg, 'create', 0, True)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg:'bunch_') -> 'None':
-        if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
-            start_connectors(self, 'zato.channel.zmq.start', msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg:'bunch_') -> 'None':
-
-        # Each worker uses a unique bind port
-        msg = bunchify(msg)
-        update_bind_port(msg, self.worker_idx)
-
-        self.zmq_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg:'bunch_') -> 'None':
-        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
-            api = self.zmq_mdp_v01_api if msg.socket_type.startswith(ZMQ.MDP) else self.zmq_channel_api
-            if msg.name in api.connectors:
-                api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_OUTGOING_ZMQ_CREATE(self, msg:'bunch_') -> 'None':
-        self.zmq_out_api.create(msg.name, msg)
-
-    def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg:'bunch_') -> 'None':
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.zmq_out_api.edit(del_name, msg)
-
-    def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg:'bunch_') -> 'None':
-        self.zmq_out_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_ipc_message(
-        self,
-        msg, # type: any_
-        success=IPC.STATUS.SUCCESS, # type: str
-        failure=IPC.STATUS.FAILURE  # type: str
-    ) -> 'None':
-
-        # If there is target_pid we cannot continue if we are not the recipient.
-        if msg.target_pid and msg.target_pid != self.server.pid:
-            return
-
-        # By default, assume we will not succeed.
-        status = failure
-        response = 'default-ipc-response'
-
-        # We get here if there is no target_pid or if there is one and it matched that of ours.
-        try:
-            response = self.invoke(
-                msg.service,
-                msg.payload,
-                skip_response_elem=True,
-                channel=CHANNEL.IPC,
-                data_format=DATA_FORMAT.JSON,
-                serialize=True,
-            )
-            response = response.getvalue() if isinstance(response, SimpleIOPayload) else response
-            status = success
-        except Exception:
-            response = format_exc()
-            status = failure
-        finally:
-            data = '{};{}'.format(status, response)
-
-        try:
-            with open(msg.reply_to_fifo, 'wb') as fifo:
-                _ = fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
-        except Exception:
-            logger.warning('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
 # ################################################################################################################################
