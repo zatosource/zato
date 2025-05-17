@@ -73,10 +73,6 @@ class URLData(CyURLData, OAuthDataStore):
         # Needs always to be sorted by name in case of conflicts in paths resolution
         self.sort_channel_data()
 
-        # Set up audit log
-        for channel_item in channel_data:
-            self._set_up_audit_log(channel_item, False)
-
 # ################################################################################################################################
 
     def set_security_objects(self, *, url_sec, basic_auth_config, ntlm_config, oauth_config, apikey_config):
@@ -541,9 +537,6 @@ class URLData(CyURLData, OAuthDataStore):
             self.worker.server.set_up_object_rate_limiting(
                 RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config_=channel_item)
 
-        # Set up audit log
-        self._set_up_audit_log(channel_item, is_edit)
-
 # ################################################################################################################################
 
     def _delete_channel(self, msg):
@@ -580,9 +573,6 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Delete rate limiting configuration
         self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
-
-        # Delete audit log configuration
-        self.worker.server.audit_log.delete_container(CHANNEL.HTTP_SOAP, msg.id)
 
         return old_data
 

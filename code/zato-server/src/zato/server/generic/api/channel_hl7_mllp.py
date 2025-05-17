@@ -25,11 +25,6 @@ from zato.server.connection.wrapper import Wrapper
 
 logger = getLogger(__name__)
 
-# ###############################################################################################################################
-# ###############################################################################################################################
-
-_audit_log_type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,13 +68,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 'start_seq': hex_sequence_to_bytes(self.config.start_seq),
                 'end_seq': hex_sequence_to_bytes(self.config.end_seq),
 
-                'is_audit_log_sent_active': self.config.get('is_audit_log_sent_active'),
-                'is_audit_log_received_active': self.config.get('is_audit_log_received_active'),
-
             })
 
             # Create a server ..
-            self._impl = HL7MLLPServer(config, self.server.invoke, self.server.audit_log)
+            self._impl = HL7MLLPServer(config, self.server.invoke)
 
             # .. start the server in a new greenlet, waiting a moment to confirm that it runs ..
             spawn_greenlet(self._impl.start)
@@ -91,9 +83,6 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
     def _delete(self):
         if self._impl:
-
-            # Clear the audit log ..
-            self.server.audit_log.delete_container(_audit_log_type, self.config.id)
 
             # .. and stop the connection.
             self._impl.stop()

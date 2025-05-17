@@ -115,18 +115,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
     }
 
-    # If these fields exist, no matter what their values are, perhaps empty,
-    # it means that they are on (True). Otherwise, the values are set to False,
-    # again, the mere fact that they do not exist means that.
-    field_is_audit_log_received_active = prefix + 'is_audit_log_received_active'
-    field_is_audit_log_sent_active = prefix + 'is_audit_log_sent_active'
-
-    is_audit_log_received_active = field_is_audit_log_received_active in params
-    is_audit_log_sent_active = field_is_audit_log_sent_active in params
-
-    message['is_audit_log_received_active'] = is_audit_log_received_active
-    message['is_audit_log_sent_active'] = is_audit_log_sent_active
-
     return message
 
 # ################################################################################################################################
