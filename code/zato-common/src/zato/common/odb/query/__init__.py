@@ -15,26 +15,17 @@ from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import and_, func, not_, or_
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
-from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, CacheMemcached, \
-     ChannelAMQP, ChannelWMQ, Cluster, ConnDefWMQ, \
-     CronStyleJob, DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JWT, \
-     NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OutgoingAMQP, OutgoingFTP, OutgoingWMQ, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
-     TLSCACert, OutgoingSAP
+from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, CacheMemcached, ChannelAMQP, Cluster, CronStyleJob, \
+    DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
+    OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -300,44 +291,6 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
 
     return q
 
-def _jwt(session, cluster_id, cluster_name, needs_columns=False):
-    """ All the JWT definitions.
-    """
-    q = session.query(
-        JWT.id,
-        JWT.name,
-        JWT.is_active,
-        JWT.username,
-        JWT.password,
-        JWT.ttl,
-        JWT.sec_type,
-        JWT.password_type,
-        JWT.opaque1,
-        Cluster.id.label('cluster_id'),
-        Cluster.name.label('cluster_name')).\
-        filter(Cluster.id==JWT.cluster_id)
-
-    if cluster_id:
-        q = q.filter(Cluster.id==cluster_id)
-    else:
-        q = q.filter(Cluster.name==cluster_name)
-
-    q = q.filter(SecurityBase.id==JWT.id).\
-        order_by(SecurityBase.name)
-
-    return q
-
-@query_wrapper
-def jwt_list(*args, **kwargs):
-    return _jwt(*args, **kwargs)
-
-def jwt_by_username(session, cluster_id, username, needs_columns=False):
-    """ An individual JWT definition by its username.
-    """
-    return _jwt(session, cluster_id, None, needs_columns).\
-        filter(JWT.username==username).\
-        one()
-
 @query_wrapper
 def ntlm_list(session, cluster_id, needs_columns=False):
     """ All the NTLM definitions.
@@ -378,33 +331,6 @@ def oauth_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _def_wmq(session, cluster_id):
-    return session.query(
-        ConnDefWMQ.id, ConnDefWMQ.name, ConnDefWMQ.host,
-        ConnDefWMQ.port, ConnDefWMQ.queue_manager, ConnDefWMQ.channel,
-        ConnDefWMQ.cache_open_send_queues, ConnDefWMQ.cache_open_receive_queues,
-        ConnDefWMQ.use_shared_connections, ConnDefWMQ.ssl, ConnDefWMQ.ssl_cipher_spec,
-        ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd, ConnDefWMQ.max_chars_printed,
-        ConnDefWMQ.username, ConnDefWMQ.password, ConnDefWMQ.use_jms).\
-        filter(Cluster.id==ConnDefWMQ.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(ConnDefWMQ.name)
-
-def definition_wmq(session, cluster_id, id):
-    """ A particular IBM MQ definition
-    """
-    return _def_wmq(session, cluster_id).\
-        filter(ConnDefWMQ.id==id).\
-        one()
-
-@query_wrapper
-def definition_wmq_list(session, cluster_id, needs_columns=False):
-    """ IBM MQ connection definitions.
-    """
-    return _def_wmq(session, cluster_id)
-
-# ################################################################################################################################
-
 def _out_amqp(session, cluster_id):
     return session.query(
         OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active,
@@ -426,39 +352,6 @@ def out_amqp_list(session, cluster_id, needs_columns=False):
     """ Outgoing AMQP connections.
     """
     return _out_amqp(session, cluster_id)
-
-# ################################################################################################################################
-
-def _out_wmq(session, cluster_id):
-    return session.query(
-        OutgoingWMQ.id, OutgoingWMQ.name, OutgoingWMQ.is_active,
-        OutgoingWMQ.delivery_mode, OutgoingWMQ.priority, OutgoingWMQ.expiration,
-        ConnDefWMQ.name.label('def_name'), OutgoingWMQ.def_id).\
-        filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
-        filter(ConnDefWMQ.id==OutgoingWMQ.def_id).\
-        filter(Cluster.id==ConnDefWMQ.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingWMQ.name)
-
-def out_wmq(session, cluster_id, id):
-    """ An outgoing IBM MQ connection (by ID).
-    """
-    return _out_wmq(session, cluster_id).\
-        filter(OutgoingWMQ.id==id).\
-        one()
-
-def out_wmq_by_name(session, cluster_id, name):
-    """ An outgoing IBM MQ connection (by name).
-    """
-    return _out_wmq(session, cluster_id).\
-        filter(OutgoingWMQ.name==name).\
-        first()
-
-@query_wrapper
-def out_wmq_list(session, cluster_id, needs_columns=False):
-    """ Outgoing IBM MQ connections.
-    """
-    return _out_wmq(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -487,33 +380,6 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP channels.
     """
     return _channel_amqp(session, cluster_id)
-
-# ################################################################################################################################
-
-def _channel_wmq(session, cluster_id):
-    return session.query(
-        ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
-        ChannelWMQ.queue, ConnDefWMQ.name.label('def_name'), ChannelWMQ.def_id,
-        ChannelWMQ.data_format, Service.name.label('service_name'),
-        Service.impl_name.label('service_impl_name')).\
-        filter(ChannelWMQ.def_id==ConnDefWMQ.id).\
-        filter(ChannelWMQ.service_id==Service.id).\
-        filter(Cluster.id==ConnDefWMQ.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(ChannelWMQ.name)
-
-def channel_wmq(session, cluster_id, id):
-    """ A particular IBM MQ channel.
-    """
-    return _channel_wmq(session, cluster_id).\
-        filter(ChannelWMQ.id==id).\
-        one()
-
-@query_wrapper
-def channel_wmq_list(session, cluster_id, needs_columns=False):
-    """ IBM MQ channels.
-    """
-    return _channel_wmq(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -759,30 +625,6 @@ def service_deployment_list(session, service_id=None, include_internal=None):
         )
 
     return query.all()
-
-# ################################################################################################################################
-
-def _notif_sql(session, cluster_id, needs_password):
-    """ SQL notifications.
-    """
-
-    columns = [NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query, NotifSQL.notif_type, NotifSQL.interval,
-        NotifSQL.def_id, SQLConnectionPool.name.label('def_name'), Service.name.label('service_name')]
-
-    if needs_password:
-        columns.append(SQLConnectionPool.password)
-
-    return session.query(*columns).\
-        filter(Cluster.id==NotifSQL.cluster_id).\
-        filter(SQLConnectionPool.id==NotifSQL.def_id).\
-        filter(Service.id==NotifSQL.service_id).\
-        filter(Cluster.id==cluster_id)
-
-@query_wrapper
-def notif_sql_list(session, cluster_id, needs_password=False, needs_columns=False):
-    """ All the SQL notifications.
-    """
-    return _notif_sql(session, cluster_id, needs_password)
 
 # ################################################################################################################################
 

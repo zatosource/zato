@@ -169,7 +169,7 @@ class _SSOSession(Base):
     auth_principal = Column(Text(), nullable=False)
 
     # ID of a session external to SSO that is linked to this one,
-    # where external may still mean JWT or Basic Auth,
+    # where external may still mean Basic Auth for instance,
     # but it is not a built-in SSO one.
     ext_session_id = Column(Text(), nullable=True)
 

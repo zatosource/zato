@@ -14,7 +14,7 @@ import random
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
+from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.api import DATA_FORMAT, SSO
 from zato.common.const import ServiceConst
 
@@ -58,24 +58,13 @@ class Create(ZatoCommand):
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
-        if engine.dialect.has_table(engine.connect(), 'install_state'):
-            if is_arg_given(args, 'skip-if-exists', 'skip_if_exists'):
-                if show_output:
-                    if self.verbose:
-                        self.logger.debug('Cluster already exists, skipped its creation')
-                    else:
-                        self.logger.info('OK')
-                return
-
         with session.no_autoflush:
 
             cluster = Cluster()
             cluster.name = args.cluster_name
             cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
 
-            for name in(
-                  'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
-                  'lb_host', 'lb_port', 'lb_agent_port'):
+            for name in( 'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name', 'lb_host', 'lb_port', 'lb_agent_port'):
                 setattr(cluster, name, getattr(args, name))
             session.add(cluster)
 

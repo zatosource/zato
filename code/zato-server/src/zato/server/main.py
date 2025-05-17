@@ -429,7 +429,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.env_manager = env_manager
-    server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso

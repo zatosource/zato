@@ -297,56 +297,6 @@ class HTTPBasicAuth(SecurityBase):
 
 # ################################################################################################################################
 
-class JWT(SecurityBase):
-    """ A set of JavaScript Web Token (JWT) credentials.
-    """
-    __tablename__ = 'sec_jwt'
-    __mapper_args__ = {'polymorphic_identity': 'jwt'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    ttl = Column(Integer, nullable=False)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, ttl=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.ttl = ttl
-        self.cluster = cluster
-
-# ################################################################################################################################
-
-class WSSDefinition(SecurityBase):
-    """ A WS-Security definition.
-    """
-    __tablename__ = 'sec_wss_def'
-    __mapper_args__ = {'polymorphic_identity':'wss'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    reject_empty_nonce_creat = Column(Boolean(), nullable=False)
-    reject_stale_tokens = Column(Boolean(), nullable=True)
-    reject_expiry_limit = Column(Integer(), nullable=False)
-    nonce_freshness_time = Column(Integer(), nullable=True)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, password_type=None,
-            reject_empty_nonce_creat=None, reject_stale_tokens=None, reject_expiry_limit=None, nonce_freshness_time=None,
-            cluster=None, password_type_raw=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.password_type = password_type
-        self.reject_empty_nonce_creat = reject_empty_nonce_creat
-        self.reject_stale_tokens = reject_stale_tokens
-        self.reject_expiry_limit = reject_expiry_limit
-        self.nonce_freshness_time = nonce_freshness_time
-        self.cluster = cluster
-        self.password_type_raw = password_type_raw
-
-# ################################################################################################################################
-
 class OAuth(SecurityBase):
     """ Stores OAuth credentials.
     """
@@ -847,64 +797,6 @@ class CacheMemcached(Cache):
 
 # ################################################################################################################################
 
-class ConnDefWMQ(Base):
-    """ A IBM MQ connection definition.
-    """
-    __tablename__ = 'conn_def_wmq'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('conn_def_wmq_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    # TODO is_active = Column(Boolean(), nullable=False)
-
-    host = Column(String(200), nullable=False)
-    port = Column(Integer, nullable=False)
-    queue_manager = Column(String(200), nullable=True)
-    channel = Column(String(200), nullable=False)
-    cache_open_send_queues = Column(Boolean(), nullable=False)
-    cache_open_receive_queues = Column(Boolean(), nullable=False)
-    use_shared_connections = Column(Boolean(), nullable=False)
-    dynamic_queue_template = Column(String(200), nullable=False, server_default='SYSTEM.DEFAULT.MODEL.QUEUE') # We're not actually using it yet
-    ssl = Column(Boolean(), nullable=False)
-    ssl_cipher_spec = Column(String(200))
-    ssl_key_repository = Column(String(200))
-    needs_mcd = Column(Boolean(), nullable=False)
-    use_jms = Column(Boolean(), nullable=False)
-    max_chars_printed = Column(Integer, nullable=False)
-    username = Column(String(100), nullable=True)
-    password = Column(String(200), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, host=None, port=None, queue_manager=None, channel=None, cache_open_send_queues=None,
-            cache_open_receive_queues=None, use_shared_connections=None, ssl=None, ssl_cipher_spec=None, ssl_key_repository=None,
-            needs_mcd=None, max_chars_printed=None, cluster_id=None, cluster=None, username=None, password=None, use_jms=None):
-        self.id = id
-        self.name = name
-        self.host = host
-        self.queue_manager = queue_manager
-        self.channel = channel
-        self.port = port
-        self.cache_open_receive_queues = cache_open_receive_queues
-        self.cache_open_send_queues = cache_open_send_queues
-        self.use_shared_connections = use_shared_connections
-        self.ssl = ssl
-        self.ssl_cipher_spec = ssl_cipher_spec
-        self.ssl_key_repository = ssl_key_repository
-        self.needs_mcd = needs_mcd
-        self.max_chars_printed = max_chars_printed
-        self.cluster_id = cluster_id
-        self.cluster = cluster
-        self.username = username
-        self.password = password
-        self.use_jms = use_jms
-
-# ################################################################################################################################
-
 class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
     """
@@ -1055,42 +947,6 @@ class OutgoingSAP(Base):
 
 # ################################################################################################################################
 
-class OutgoingWMQ(Base):
-    """ An outgoing IBM MQ connection.
-    """
-    __tablename__ = 'out_wmq'
-    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-
-    id = Column(Integer, Sequence('out_wmq_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    delivery_mode = Column(SmallInteger(), nullable=False)
-    priority = Column(SmallInteger(), server_default=str(WMQ_DEFAULT_PRIORITY), nullable=False)
-    expiration = Column(String(20), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefWMQ, backref=backref('out_conns_wmq', cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, delivery_mode=None, priority=None, expiration=None, def_id=None,
-            cluster=None, delivery_mode_text=None, def_name=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.delivery_mode = delivery_mode
-        self.priority = priority
-        self.expiration = expiration
-        self.def_id = def_id
-        self.cluster = cluster
-        self.delivery_mode_text = delivery_mode_text # Not used by the DB
-        self.def_name = def_name # Not used by DB
-        self.def_name_full_text = None # Not used by DB
-
-# ################################################################################################################################
-
 class ChannelAMQP(Base):
     """ An incoming AMQP connection.
     """
@@ -1129,40 +985,6 @@ class ChannelAMQP(Base):
         self.is_active = is_active
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
-        self.service_name = service_name # Not used by the DB
-        self.data_format = data_format
-
-# ################################################################################################################################
-
-class ChannelWMQ(Base):
-    """ An incoming IBM MQ connection.
-    """
-    __tablename__ = 'channel_wmq'
-    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-
-    id = Column(Integer, Sequence('channel_wmq_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    queue = Column(String(200), nullable=False)
-    data_format = Column(String(20), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship(Service, backref=backref('channels_wmq', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefWMQ, backref=backref('channels_wmq', cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, queue=None, def_id=None, def_name=None, service_name=None,
-            data_format=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.queue = queue
-        self.def_id = def_id
-        self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
 
@@ -1227,54 +1049,6 @@ class DeploymentStatus(Base):
         self.server_id = server_id
         self.status = status
         self.status_change_time = status_change_time
-
-# ################################################################################################################################
-
-class Notification(Base):
-    """ A base class for all notifications, be it cloud, FTP-based or others.
-    """
-    __tablename__ = 'notif'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    __mapper_args__ = {'polymorphic_on': 'notif_type'}
-
-    id = Column(Integer, Sequence('sec_base_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False, default=True)
-    notif_type = Column(String(45), nullable=False)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    interval = Column(Integer, nullable=False, default=NOTIF.DEFAULT.CHECK_INTERVAL)
-    name_pattern = Column(String(2000), nullable=True, default=NOTIF.DEFAULT.NAME_PATTERN)
-    name_pattern_neg = Column(Boolean(), nullable=True, default=False)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    get_data = Column(Boolean(), nullable=True, default=False)
-    get_data_patt = Column(String(2000), nullable=True, default=NOTIF.DEFAULT.GET_DATA_PATTERN)
-    get_data_patt_neg = Column(Boolean(), nullable=True, default=False)
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship(Service, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class NotificationSQL(Notification):
-    """ Stores SQL notifications.
-    """
-    __tablename__ = 'notif_sql'
-    __mapper_args__ = {'polymorphic_identity': 'sql'}
-
-    id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
-
-    query = Column(Text, nullable=False)
-
-    def_id = Column(Integer, ForeignKey('sql_pool.id'), primary_key=True)
-    definition = relationship(
-        SQLConnectionPool, backref=backref('notif_sql_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -1344,27 +1118,6 @@ class IMAP(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class KVData(Base):
-    """ Key/value data table.
-    """
-    __tablename__ = 'kv_data'
-    __table_args__ = (Index('key_clust_id_idx', 'key', 'cluster_id', unique=True, mysql_length={'key':767}),)
-
-    id = Column(Integer, Sequence('kv_data_id_seq'), primary_key=True)
-    key = Column(LargeBinary(), nullable=False)
-    value = Column(LargeBinary(), nullable=True)
-    data_type = Column(String(200), nullable=False, default='text')
-    creation_time = Column(DateTime(), nullable=False)
-    expiry_time = Column(DateTime(), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

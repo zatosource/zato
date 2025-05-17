@@ -37,7 +37,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, NTLM, PubSubEndpoint, Server, Service
+     NTLM, PubSubEndpoint, Server, Service
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
@@ -761,7 +761,6 @@ class ODBManager(SessionWrapper):
             sec_type_db_class = {
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
-                SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.NTLM: NTLM,
             }
 
@@ -824,10 +823,6 @@ class ODBManager(SessionWrapper):
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.realm = sec_def.realm
-                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
-
-                    elif item.sec_type == SEC_DEF_TYPE.JWT:
-                        result[target].sec_def.username = sec_def.username
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
@@ -1052,14 +1047,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return elems_with_opaque(query.basic_auth_list(session, cluster_id, cluster_name, needs_columns))
-
-# ################################################################################################################################
-
-    def get_jwt_list(self, cluster_id, cluster_name, needs_columns=False):
-        """ Returns a list of JWT definitions existing on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return elems_with_opaque(query.jwt_list(session, cluster_id, cluster_name, needs_columns))
 
 # ################################################################################################################################
 
