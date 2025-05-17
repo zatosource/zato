@@ -630,9 +630,6 @@ class SCHEDULER:
 
     JobsToIgnore = {}
 
-    # This is the job that cleans up pub/sub data
-    PubSubCleanupJob = 'zato.pubsub.cleanup'
-
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'
@@ -868,10 +865,6 @@ class CommonObject:
     Prefix_Invalid = 'prefix-invalid'
 
     Invalid = 'invalid-invalid'
-    PubSub_Endpoint = 'pubsub-endpoint'
-    PubSub_Publish = 'pubsub-publish'
-    PubSub_Subscription = 'pubsub-subscription'
-    PubSub_Topic = 'pubsub-topic'
     Security_Basic_Auth = 'security-basic-auth'
 
 # ################################################################################################################################
@@ -1349,7 +1342,6 @@ class SIMPLE_IO:
 class UNITTEST:
     SQL_ENGINE = 'zato+unittest'
     HTTP       = 'zato+unittest'
-    VAULT_URL  = 'https://zato+unittest'
 
 class HotDeploy:
     UserPrefix = 'hot-deploy.user'

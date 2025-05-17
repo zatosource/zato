@@ -127,7 +127,7 @@ def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
     # .. preprocess all the items received ..
     for item in response.data:
         name = item['name']
-        if name in {'pubsub', 'ide_publisher', 'pubapi'}:
+        if name in {'ide_publisher', 'pubapi'}:
             continue
         elif 'zato.' in name:
             continue

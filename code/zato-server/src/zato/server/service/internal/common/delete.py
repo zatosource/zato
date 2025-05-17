@@ -18,11 +18,9 @@ from gevent import sleep
 from sqlalchemy import delete
 
 # Zato
-from zato.common.api import CommonObject
 from zato.common.odb.model.base import Base as BaseTable
 from zato.common.odb.query.common import get_object_list_by_id_list, get_object_list_by_name_list, \
     get_object_list_by_name_contains
-from zato.common.test.config import TestConfig
 from zato.common.typing_ import any_, anylist, callable_, intlistnone, intnone, strdict, strlistnone, strnone, type_
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import Model, Service
@@ -119,7 +117,7 @@ class DeleteObjectsImpl(Service):
                     'id': object_id
                 })
             except Exception as e:
-                self.logger.warn('Exception while deleting object `%s` -> `%s`', object_id, e)
+                self.logger.warning('Exception while deleting object `%s` -> `%s`', object_id, e)
             else:
                 # If we are here, it means that the object was deleted
                 # in which case we add its ID for later use ..
@@ -211,22 +209,14 @@ class DeleteObjects(Service):
 
     def handle(self) -> 'None':
 
-        # Zato
-        from zato.common.odb.model import PubSubTopic
-        from zato.server.service.internal.pubsub.topic import Delete as DeleteTopic
-
         # Add type hints
         input:'DeleteObjectsRequest' = self.request.input
 
         # Maps incoming string names of objects to their actual ODB classes
-        odb_map:'strdict' = {
-            CommonObject.PubSub_Topic: PubSubTopic.__table__,
-        }
+        odb_map:'strdict' = {}
 
         # Maps incoming string names of objects to services that actually delete them
-        service_map = {
-            CommonObject.PubSub_Topic: DeleteTopic,
-        }
+        service_map = {}
 
         # Get a class that represents the input object ..
         table = odb_map[input.object_type]
@@ -306,20 +296,6 @@ class DeleteMany(Service):
 
 # ################################################################################################################################
 
-    def _delete_pubsub(self, session:'SASession', pattern:'strlist') -> 'None':
-
-        # Zato
-        from zato.common.odb.model import PubSubEndpoint, PubSubTopic
-
-        tables:'any_' = {
-            PubSubEndpoint.__table__: [PubSubEndpoint.name],
-            PubSubTopic.__table__: [PubSubTopic.name],
-        }
-
-        self._delete(session, tables, pattern)
-
-# ################################################################################################################################
-
     def _delete_sql(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
@@ -364,8 +340,8 @@ class DeleteMany(Service):
     def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
-        from zato.common.odb.model import Cache, ChannelAMQP, ChannelWMQ, ConnDefWMQ, IMAP, OutgoingAMQP, \
-            OutgoingFTP, OutgoingOdoo, OutgoingSAP, OutgoingWMQ, Service, SMTP
+        from zato.common.odb.model import Cache, ChannelAMQP, IMAP, OutgoingAMQP, \
+            OutgoingFTP, OutgoingOdoo, OutgoingSAP, Service, SMTP
 
         tables:'any_' = {
             Cache.__table__: [Cache.name],

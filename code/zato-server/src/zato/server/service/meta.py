@@ -526,9 +526,7 @@ class DeleteMeta(AdminServiceMeta):
                     # with enmasse which may attempt to delete objects that no longer exist.
                     # This may happen if it deletes an object that was an FK to another one.
                     # That other one will be always deleted but enmasse will not know it
-                    # so it will try to delete it too, which will fail. This happens, for instance,
-                    # when a WebSocket channel is deleted - it may cascade to a pub/sub endpoint
-                    # but enmasse does not know about, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
+                    # so it will try to delete it too, which will fail.
                     if not instance:
                         if attrs.delete_require_instance:
                             if input_id:

@@ -505,18 +505,12 @@ class Scheduler:
         if not self.is_scheduler_active():
             return
 
-        # If this is a specal, pub/sub cleanup job, run its underlying command in background ..
-        if ctx['name'] == SCHEDULER.PubSubCleanupJob:
-            start_cleanup(self.config.component_dir)
+        logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
+        self.on_job_executed_cb(ctx) # type: ignore
+        self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
 
-        # .. otherwise, this is a job that runs in a server.
-        else:
-            logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
-            self.on_job_executed_cb(ctx)
-            self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
-
-            if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
-                self.unschedule_by_name(ctx['name'])
+        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
+            self.unschedule_by_name(ctx['name'])
 
 # ################################################################################################################################
 

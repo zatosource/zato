@@ -53,7 +53,7 @@ from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessS
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
-from zato.server.connection.connector import ConnectorStore, connector_type
+from zato.server.connection.connector import ConnectorStore, Connector_Type
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -218,7 +218,7 @@ class WorkerStore(_WorkerStoreBase):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # AMQP
-        self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
+        self.amqp_api = ConnectorStore(Connector_Type.duplex.amqp, ConnectorAMQP)
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
 
         # Caches

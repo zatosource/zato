@@ -367,10 +367,6 @@ class ConfigLoader:
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
 
-        # Populate default pub/sub endpoint data
-        default_internal_pubsub_endpoint = self.odb.get_default_internal_pubsub_endpoint()
-        self.default_internal_pubsub_endpoint_id = default_internal_pubsub_endpoint.id
-
         # Default content type
         self.json_content_type = self.fs_server_config.content_type.json
 
@@ -406,12 +402,8 @@ class ConfigLoader:
     def _encrypt_secrets(
         self: 'ParallelServer' # type: ignore
     ) -> 'None':
-        """ All passwords are always encrypted so we need to look up any that are not,
-        for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
-        """
-        sec_config_dict_types = (
-            'apikey', 'aws', 'basic_auth', 'ntlm', 'oauth', 'tls_key_cert', 'vault_conn_sec'
-        )
+
+        sec_config_dict_types = ('apikey', 'basic_auth', 'ntlm', 'oauth',)
 
         # Global lock to make sure only one server attempts to do it at a time
         with self.zato_lock_manager('zato_encrypt_secrets'):

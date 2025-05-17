@@ -58,7 +58,7 @@ from zato.common.util.platform_ import is_non_windows
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
-    PubSubHook, SchedulerFacade, Service
+    SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -671,7 +671,6 @@ class ServiceStore:
                 class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb # type: ignore
-                class_.pubsub = service_store.server.worker_store.pubsub
                 class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
                 class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
@@ -689,8 +688,6 @@ class ServiceStore:
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
-
-                # New in Zato 3.2, thus optional
                 class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
 
             # User management and SSO
@@ -1634,7 +1631,7 @@ class ServiceStore:
         """
 
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
-            if item is not Service and item is not AdminService and item is not PubSubHook:
+            if item is not Service and item is not AdminService:
                 if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
 
                     # Do not deploy services that only happened to have been imported

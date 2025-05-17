@@ -65,7 +65,7 @@ SessionModelDelete = SessionModelTable.delete
 # ################################################################################################################################
 
 _dummy_password='dummy.{}'.format(uuid4().hex)
-_ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+_ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH,
 
 # ################################################################################################################################
 
@@ -150,19 +150,8 @@ class SessionAPI:
         # Make sure we let in only allowed security definitions
         if sec_type in _ext_sec_type_supported:
 
-            # This is always required
-            _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
-
-            # JWT tokens need to be included if this is the security type used
-            if sec_type == SEC_DEF_TYPE.JWT:
-
-                if isinstance(ext_session_id, str):
-                    ext_session_id = cast_('bytes', ext_session_id.encode('utf8')) # type: ignore
-
-                ext_session_id = ext_session_id.replace(_bearer, b'')
-                _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
-
             # Return the reformatted external session ID
+            _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
             return _ext_session_id
 
         else:
@@ -185,7 +174,7 @@ class SessionAPI:
         _utcnow=datetime.utcnow, # type: callable_
     ) -> 'SessionInfo':
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
-        e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
+        e.g. through Basic Auth. Creates an SSO session related to that event or renews an existing one.
         """
         remote_addr = remote_addr if isinstance(remote_addr, str) else remote_addr.decode('utf8')
 

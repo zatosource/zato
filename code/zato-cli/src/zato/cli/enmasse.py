@@ -19,7 +19,7 @@ from uuid import uuid4
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, Groups as Common_Groups, \
-    LDAP as COMMON_LDAP, NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
+    LDAP as COMMON_LDAP, NotGiven, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -86,18 +86,13 @@ _attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 # We need to have our own version because type "bearer_token" exists in enmasse only.
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
-_pubsub_default = Common_PubSub.DEFAULT
-
 zato_name_prefix = (
     'admin.',
     'admin.invoke',
     'ide_publisher',
     'pub.zato',
-    'pubsub.demo',
-    'pubsub.test',
     'zato.',
     '/zato',
-    'zato.pubsub',
 )
 
 
@@ -120,11 +115,9 @@ class ModuleCtx:
         LDAP = 'ldap'
         Microsoft_365 = 'cloud-microsoft-365'
         SQL  = 'sql'
-        PubSub = 'pubsub'
         REST = 'rest'
         Scheduler = 'scheduler'
         Security = 'security'
-        WebSockets = 'websockets'
 
     # An indicator that this is an include directive
     Item_Type_Include = 'include'
@@ -225,12 +218,6 @@ ModuleCtx.Enmasse_Type = {
 
     # Scheduler
     'scheduler':ModuleCtx.Include_Type.Scheduler,
-
-    # Pub/sub
-    'pubsub_topic':ModuleCtx.Include_Type.PubSub,
-    'pubsub_endpoint':ModuleCtx.Include_Type.PubSub,
-    'pubsub_sub':ModuleCtx.Include_Type.PubSub,
-    'pubsub_subscription':ModuleCtx.Include_Type.PubSub,
 }
 
 # ################################################################################################################################
@@ -301,22 +288,6 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'server_list',
     ],
 
-    # Pub/sub - Endpoints
-    'pubsub_endpoint':  [
-        'name',
-        'endpoint_type',
-        'service_name',
-        'topic_patterns',
-        'sec_name',
-    ],
-
-    # Pub/sub - Topics
-    'pubsub_topic':  [
-        'name',
-        'has_gd',
-        'hook_service_name',
-    ],
-
     # Generic connections - Cloud Microsoft 365
     zato_generic_connection_microsoft_365: [
         'client_id',
@@ -365,11 +336,6 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
         'auth_server_url':'auth_endpoint'
     },
 
-    # Pub/sub endpoints
-    'pubsub_endpoint':  {
-        'sec_name':'security_name'
-    },
-
 }
 
 # ################################################################################################################################
@@ -383,16 +349,6 @@ ModuleCtx.Enmasse_Attr_List_Value_Rename = {
     'def_sec':  {
         'type': [{'oauth':'bearer_token'}]
     },
-
-    # Pub/sub endpoints
-    'pubsub_endpoint':  {
-        'endpoint_type': [{'srv':'service'}]
-    },
-
-    # Pub/sub subscriptions
-    'pubsub_subscription':  {
-        'endpoint_type': [{'srv':'service'}]
-    },
 }
 
 # ################################################################################################################################
@@ -401,16 +357,6 @@ ModuleCtx.Enmasse_Attr_List_Value_Rename = {
 # This is used during import
 #
 ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse = {
-
-    # Pub/sub endpoints
-    'pubsub_endpoint':  {
-        'endpoint_type': [{'service':'srv'}]
-    },
-
-    # Pub/sub subscriptions
-    'pubsub_subscription':  {
-        'endpoint_type': [{'service':'srv'}]
-    },
 
     # Security - OAuth & Bearer Token
     'security':  {
@@ -445,18 +391,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
     # REST channels
     'channel_plain_http': ['data_format'],
 
-    # Pub/sub - Topics
-    'pubsub_topic':  [
-        'hook_service_name',
-    ],
-
-    # Pub/sub - Subscriptions
-    'pubsub_subscription':  [
-        'rest_connection',
-        'service',
-        'service_name',
-    ],
-
 }
 
 # ################################################################################################################################
@@ -467,11 +401,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_False = {
-
-    # Pub/sub - Topics
-    'pubsub_topic':  [
-        'has_gd',
-    ],
 }
 
 # ################################################################################################################################
@@ -480,12 +409,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 
     # E-Mail IMAP
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
-
-    # Pub/sub - Endpoints
-    'pubsub_endpoint':  {'security_name':Zato_No_Security},
-
-    # Pub/sub - Subscriptions
-    'pubsub_subscription':  {'delivery_server':'server1'},
 }
 
 # ################################################################################################################################
@@ -496,12 +419,6 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
     'def_sec':  [
         {'criteria':[{'type':'apikey'}], 'attrs':['username']},
     ],
-
-    # Pub/sub subscriptions
-    'pubsub_subscription':  [
-        {'criteria':[{'delivery_method':'pull'}], 'attrs':['rest_method', 'rest_connection']},
-        {'criteria':[{'endpoint_type':'service'}], 'attrs':['rest_method', 'rest_connection']},
-    ],
 }
 
 # ################################################################################################################################
@@ -510,38 +427,11 @@ ModuleCtx.Enmasse_Attr_List_As_Multiline = {
 
     # Security definitions
     'scheduler':  ['extra'],
-    'pubsub_endpoint':  ['topic_patterns'],
 }
 
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
-
-    'pubsub_endpoint':  {
-        'is_internal': False,
-        'role': Common_PubSub.ROLE.PUBLISHER_SUBSCRIBER.id,
-
-        # Note that it is not security_name because it has been already re-mapped to sec_name
-        # by the time this check is taking place.
-        'sec_name': Zato_No_Security,
-
-    },
-
-    'pubsub_topic':  {
-        'has_gd': False,
-        'is_api_sub_allowed': True,
-        'max_depth_gd': _pubsub_default.TOPIC_MAX_DEPTH_GD,
-        'max_depth_non_gd': _pubsub_default.TOPIC_MAX_DEPTH_NON_GD,
-        'depth_check_freq': _pubsub_default.DEPTH_CHECK_FREQ,
-        'pub_buffer_size_gd': _pubsub_default.PUB_BUFFER_SIZE_GD,
-        'task_sync_interval': _pubsub_default.TASK_SYNC_INTERVAL,
-        'task_delivery_interval': _pubsub_default.TASK_DELIVERY_INTERVAL,
-    },
-
-    'pubsub_subscription':  {
-        'should_ignore_if_sub_exists': True,
-        'should_delete_all': True,
-    },
 
     'channel_rest': {
         'security_name': Zato_No_Security,
@@ -581,8 +471,6 @@ for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type = {
-    'pubsub_endpoint':  [{'security_name':'sec_name'}],
-    'pubsub_subscription':  [{'topic_list':'topic_list_json'}],
 }
 
 # ################################################################################################################################
@@ -753,10 +641,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
 
     # Services belonging here may not have all the CRUD methods and it is expected that they do not
     allow_incomplete_methods = [
-        'zato.outgoing.redis',
-        'zato.pubsub.subscription',
         'zato.security',
-        'zato.security.rbac.client-role'
     ]
 
     for prefix, methods in iteritems(by_prefix): # type: ignore
@@ -784,17 +669,11 @@ def populate_services_from_apispec(client, logger): # type: ignore
 # If it matches, that prefix is replaced by the second element. The prefixes must match exactly if the first element
 # does not end in a period.
 SHORTNAME_BY_PREFIX:'anylist' = [
-    ('zato.pubsub.', 'pubsub'),
-    ('zato.definition.', 'def'),
     ('zato.email.', 'email'),
     ('zato.message.namespace', 'def_namespace'),
-    ('zato.cloud.aws.s3', 'cloud_aws_s3'),
-    ('zato.message.json-pointer', 'json_pointer'),
-    ('zato.notif.', 'notif'),
     ('zato.outgoing.', 'outconn'),
     ('zato.scheduler.job', 'scheduler'),
     ('zato.search.', 'search'),
-    ('zato.security.tls.channel', 'tls_channel_sec'),
     ('zato.security.', ''),
     ('zato.channel.', ''),
 ]
@@ -1602,7 +1481,7 @@ class ObjectImporter:
         elif 'def' in item_type:
             return True
 
-        elif item_type in {'web_socket', 'pubsub_endpoint', 'http_soap'}:
+        elif item_type in {'http_soap'}:
             return True
 
         else:
@@ -1633,32 +1512,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
-
-        # Local variables
-        service_name = 'zato.common.import-objects'
-
-        # Resolve all values first ..
-        for item_type, values in data.items():
-            for idx, value in enumerate(values):
-                value = dict(value)
-                value = self._resolve_attrs(item_type, value)
-                values[idx] = value
-
-        # .. details of how many objects we are importing ..
-        len_imports = {
-            'topics': len(data['pubsub_topic']),
-            'endpoints': len(data['pubsub_endpoint']),
-            'subs': len(data['pubsub_subscription']),
-        }
-
-        # .. log what we are about to do ..
-        self.logger.info(f'Invoking -> import pub/sub -> {service_name} -> {len_imports}')
-        _ = self.client.invoke(service_name, data)
-
-# ################################################################################################################################
-
-    def _trigger_sync_server_objects(self, *, sync_security:'bool'=True, sync_pubsub:'bool'=True):
+    def _trigger_sync_server_objects(self, *, sync_security:'bool'=True):
 
         # Local variables
         service_name = 'pub.zato.common.sync-objects'
@@ -1666,7 +1520,6 @@ class ObjectImporter:
         # Request to send to the server
         request = {
             'security': sync_security,
-            'pubsub': sync_pubsub,
         }
 
         self.logger.info(f'Invoking -> trigger sync -> {service_name}')
@@ -1812,7 +1665,7 @@ class ObjectImporter:
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
 
-        self._trigger_sync_server_objects(sync_pubsub=False)
+        self._trigger_sync_server_objects()
         self.object_mgr.refresh_objects()
 
         for w in existing_combined:
@@ -1826,14 +1679,7 @@ class ObjectImporter:
             if item_type == Sec_Def_Type.BASIC_AUTH:
                 continue
 
-            # Skip pub/sub objects because they are handled separately (edit)
-            if item_type.startswith('pubsub'):
-                continue
-
             results = self._import(item_type, attrs, True)
-
-            if 'rbac' in item_type:
-                sleep(rbac_sleep)
 
             if results:
                 return results
@@ -1842,15 +1688,9 @@ class ObjectImporter:
         # Create new objects, again, definitions come first ..
         #
 
-        # A container for pub/sub objects to be handled separately
-        pubsub_objects:'strlistdict' = {
-            'pubsub_endpoint': [],
-            'pubsub_topic': [],
-            'pubsub_subscription': [],
-        }
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
-        self._trigger_sync_server_objects(sync_pubsub=False)
+        self._trigger_sync_server_objects()
         self.object_mgr.refresh_objects()
 
         for elem in new_combined:
@@ -1864,12 +1704,6 @@ class ObjectImporter:
                     if item_type == Sec_Def_Type.BASIC_AUTH:
                         continue
 
-                    # Pub/sub objects are handled separately at the end of this function (create)
-                    if item_type.startswith('pubsub'):
-                        container = pubsub_objects[item_type]
-                        container.append(attrs)
-                        continue
-
                     results = self._import(item_type, attrs, False)
 
                     if 'rbac' in item_type:
@@ -1877,9 +1711,6 @@ class ObjectImporter:
 
                     if results:
                         return results
-
-        # Handle pub/sub objeccts as a whole here
-        self._import_pubsub_objects(pubsub_objects)
 
         # Now, having imported all the objects, we can trigger their synchronization among the members of the cluster
         self._trigger_sync_server_objects(sync_security=False)
@@ -2133,16 +1964,14 @@ class ObjectManager:
 
         name:'any_' = item.name.lower()
 
-        if item_type not in {'pubsub_subscription', 'rbac_role_permission'}:
+        if name in self.ignored_names:
+            return True
 
-            if name in self.ignored_names:
+        elif 'zato' in name and (not 'unittest' in name):
+            if is_sec_def:
+                return False
+            else:
                 return True
-
-            elif 'zato' in name and (not 'unittest' in name):
-                if is_sec_def:
-                    return False
-                else:
-                    return True
 
 # ################################################################################################################################
 
@@ -3389,10 +3218,7 @@ class Enmasse(ManageCommand):
         name:'str'
 
         # Local aliases
-        if item_type == 'pubsub_subscription':
-            name = item['endpoint_name']
-        else:
-            name = item['name']
+        name = item['name']
 
         # By default, assume this item should be written to ouput unless we contradict it below ..
         out:'bool' = True
@@ -3443,74 +3269,6 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _rewrite_pubsub_subscriptions_during_export(self, subs:'dictlist') -> 'dictlist':
-
-        # Bunch
-        from bunch import Bunch, bunchify
-
-        # Our response to produce
-        out:'dictlist' = []
-
-        # Local variables
-        subs_by_key:'anydict' = {}
-
-        #
-        # We are going to group subscriptions by these keys
-        #
-        # - Endpoint name
-        # - Delivery method
-        # - REST method
-        # - REST connection
-        # - Delivery server
-        #
-
-        for sub in subs:
-
-            # .. for dot attribute access ..
-            sub = Bunch(sub)
-
-            # .. build a composite key to later add topics to it ..
-            key:'any_' = (sub.endpoint_name, sub.delivery_method, sub.rest_method, sub.rest_connection, sub.delivery_server)
-
-            # .. add the key if it does not already exist ..
-            if key not in subs_by_key:
-                subs_by_key[key] = bunchify({
-                    'endpoint_name': sub.get('endpoint_name'),
-                    'endpoint_type': sub.get('endpoint_type'),
-                    'delivery_method': sub.get('delivery_method'),
-                    'rest_method': sub.get('rest_method'),
-                    'rest_connection': sub.get('rest_connection'),
-                    'service_name': sub.get('service_name'),
-                    'delivery_server': sub.get('delivery_server'),
-                    'topic_list': []
-                })
-
-            # .. at this point, we know we have a list for this key so we can access it ..
-            subs_by_key_dict = subs_by_key[key]
-
-            # .. and append the current topic to what we are building for the caller ..
-            subs_by_key_dict.topic_list.append(sub.topic_name)
-
-        # .. now, we can discard the keys and we will be left with subscriptions alone ..
-        for idx, sub_info in enumerate(subs_by_key.values(), 1):
-
-            # .. return topics sorted alphabetically ..
-            sub_info.topic_list.sort()
-
-            # .. make sure we are returning a dict ..
-            sub_info = sub_info.toDict()
-
-            # .. each subscription needs a name ..
-            sub_info['name'] = 'Subscription.' + str(idx).zfill(9)
-
-            # .. append it for our caller ..
-            out.append(sub_info)
-
-        # .. now, we can return the result
-        return out
-
-# ################################################################################################################################
-
     def write_output(
         self,
         output_path,  # type: strnone
@@ -3551,10 +3309,6 @@ class Enmasse(ManageCommand):
                     dict(item, type=service_info.name)
                     for item in output.pop(service_info.name, [])
                 )
-
-        # .. rewrite pub/sub subscriptions in a way that is easier to handle ..
-        if subs := output.get('pubsub_subscription'):
-            output['pubsub_subscription'] = self._rewrite_pubsub_subscriptions_during_export(subs)
 
         # .. go through everything that we collected in earlier steps in the process ..
         for item_type, items in iteritems(output): # type: ignore

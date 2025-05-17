@@ -19,7 +19,6 @@ from zato.server.service import Model, Service
 @dataclass(init=False)
 class SyncObjectsRequest(Model):
     security: 'bool'= True
-    pubsub: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,11 +38,6 @@ class SyncObjectsImpl(Service):
         if input.security:
             self.logger.info('Synchronizing security definitions')
             self.server.worker_store.sync_security()
-
-        # Optionally, synchronize in-RAM state of pub/sub
-        if input.pubsub:
-            self.logger.info('Synchronizing pub/sub objects')
-            self.server.worker_store.sync_pubsub()
 
 # ################################################################################################################################
 # ################################################################################################################################

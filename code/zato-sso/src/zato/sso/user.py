@@ -58,7 +58,7 @@ logger_audit_pii = getLogger('zato_audit_pii')
 
 # ################################################################################################################################
 
-linked_auth_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+linked_auth_supported = SEC_DEF_TYPE.BASIC_AUTH,
 
 # ################################################################################################################################
 
@@ -269,7 +269,6 @@ class UserAPI:
         # In-RAM maps of auth IDs to SSO user IDs
         self.auth_id_link_map = {
             'zato.{}'.format(SEC_DEF_TYPE.BASIC_AUTH): {},
-            'zato.{}'.format(SEC_DEF_TYPE.JWT): {}
         }
 
         # For convenience, sessions are accessible through user API.
@@ -288,15 +287,11 @@ class UserAPI:
             # Maps all auth types that SSO users can be linked with to their server definitions
             self.auth_link_map = {
                 SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.request_dispatcher.url_data.basic_auth_config,
-                SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
             }
 
             # This cannot be done in __init__ because it references the worker store
             self.user_id_auth_type_func[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get
-            self.user_id_auth_type_func[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get
-
             self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get_by_id
-            self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get_by_id
 
             # Load in initial mappings of SSO users and concrete security definitions
             with closing(self.odb_session_func()) as session:
@@ -1517,12 +1512,6 @@ class UserAPI:
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, auth_id):
         with self.lock:
             self._on_broker_msg_sec_delete(SEC_DEF_TYPE.BASIC_AUTH, auth_id)
-
-# ################################################################################################################################
-
-    def on_broker_msg_SECURITY_JWT_DELETE(self, auth_id):
-        with self.lock:
-            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.JWT, auth_id)
 
 # ################################################################################################################################
 
