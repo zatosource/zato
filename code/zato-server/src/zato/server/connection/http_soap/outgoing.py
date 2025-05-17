@@ -73,8 +73,6 @@ _API_Key = SEC_DEF_TYPE.APIKEY
 _Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
 _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
-_TLS_Key_Cert = SEC_DEF_TYPE.TLS_KEY_CERT
-_WSS = SEC_DEF_TYPE.WSS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -238,13 +236,8 @@ class BaseHTTPSOAPWrapper:
     ) -> '_RequestsResponse':
 
         # Local variables
-        max_retries = kwargs.get('max_retries', 0)
-        retry_sleep_time = kwargs.get('retry_sleep_time', 2)
-        retry_backoff_threshold = kwargs.get('retry_backoff_threshold', 3)
-        retry_backoff_multiplier = kwargs.get('retry_backoff_multiplier', 2)
         params = kwargs.get('params')
         json = kwargs.pop('json', None)
-        cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
         if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
