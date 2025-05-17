@@ -20,13 +20,11 @@ pylint:
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-lib       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-sso       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-zmq       && $(MAKE) pylint || true
 
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
@@ -46,13 +44,11 @@ flake8:
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-lib       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-server    && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-sso       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-zmq       && $(MAKE) flake8
 	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	echo "Flake8 checks OK"
 
@@ -65,13 +61,11 @@ static-check:
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-lib       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-sso       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-zmq       && $(MAKE) static-check
 	echo "Static checks OK"
 
 	$(MAKE) type-check
