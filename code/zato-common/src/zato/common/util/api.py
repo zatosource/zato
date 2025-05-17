@@ -109,7 +109,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, \
-     SECRET_SHADOW, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1631,10 +1631,6 @@ def update_bind_port(data, idx):
 def start_connectors(worker_store, service_name, data):
 
     for idx, pid in enumerate(get_worker_pids()):
-
-        if 'socket_method' in data and data.socket_method == ZMQ.METHOD_NAME.BIND:
-            update_bind_port(data, idx)
-
         worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
