@@ -91,10 +91,7 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
-                'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
-                Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
+                'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
                 'security_group_member_count', 'needs_security_group_names'
 
 # ################################################################################################################################
@@ -392,9 +389,6 @@ class Create(_CreateEdit):
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_audit_log_sent_active', 'is_audit_log_received_active', \
-            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
@@ -583,9 +577,6 @@ class Edit(_CreateEdit):
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_audit_log_sent_active', 'is_audit_log_received_active', \
-            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_optional = 'id', 'name'

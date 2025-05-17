@@ -22,7 +22,6 @@ from regex import compile as regex_compile
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
     SSO, TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
-from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.hl7 import HL7Exception
@@ -378,20 +377,6 @@ class RequestDispatcher:
                     self.server.rate_limiting.check_limit(
                         cid, ModuleCtx.Rate_Limit_HTTP, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
 
-                # Store data received in audit log now - again, just like we rate limiting, we did not want to do it too soon.
-                if channel_item.get('is_audit_log_received_active'):
-
-                    # Describe our event ..
-                    data_event = DataReceived()
-                    data_event.type_ = ModuleCtx.Channel
-                    data_event.object_id = channel_item['id']
-                    data_event.data = payload
-                    data_event.timestamp = req_timestamp
-                    data_event.msg_id = cid
-
-                    # .. and store it in the audit log.
-                    self.server.audit_log.store_data_received(data_event)
-
                 # Security definition-based checks went fine but it is still possible
                 # that this sec_def is linked to an SSO user whose rate limits we need to check.
 
@@ -440,21 +425,6 @@ class RequestDispatcher:
                     s.close()
 
                     wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
-
-                # Store data sent in audit
-                if channel_item.get('is_audit_log_sent_active'):
-
-                    # Describe our event ..
-                    data_event = DataSent()
-                    data_event.type_ = ModuleCtx.Channel
-                    data_event.object_id = channel_item['id']
-                    data_event.data = response.payload # type: ignore
-                    data_event.timestamp = _utcnow()
-                    data_event.msg_id = 'zrp{}'.format(cid) # This is a response to this CID
-                    data_event.in_reply_to = cid
-
-                    # .. and store it in the audit log.
-                    self.server.audit_log.store_data_sent(data_event)
 
                 # Finally, return payload to the client, potentially deserializing it from CySimpleIO first.
                 if isinstance(response.payload, CySimpleIOPayload):

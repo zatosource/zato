@@ -707,9 +707,7 @@ def main():
         'end_seq': b'\x1c\x0d',
     })
 
-    log_container_config = LogContainerConfig()
-
-    server = HL7MLLPServer(config, on_message, audit_log)
+    server = HL7MLLPServer(config, on_message)
     server.start()
 
     while True:
