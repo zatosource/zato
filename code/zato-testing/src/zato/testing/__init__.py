@@ -67,8 +67,6 @@ class Cache:
 class ServiceTestCase(TestCase):
     def setUp(self):
 
-        # For mocking out Vault responses
-        self.vault_adapter = RequestsAdapter()
 
         # We are always the first process in a server
         os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
@@ -79,7 +77,6 @@ class ServiceTestCase(TestCase):
         self.worker_config = ConfigStore()
         self.fernet_key = Fernet.generate_key() # type: str
         self.crypto_manager = CryptoManager(secret_key=self.fernet_key)
-        self.vault_conn_api = VaultConnAPI(requests_adapter=self.vault_adapter)
 
         self.server = ParallelServer()
         self.server.fs_server_config = self.fs_server_config
@@ -153,7 +150,6 @@ class ServiceTestCase(TestCase):
         class_.crypto = self.server.crypto_manager
 
         service = class_() # type: Service
-        service.out.vault = self.vault_conn_api
 
         self.service_store.services[service.impl_name] = {
             'slow_threshold': 100,

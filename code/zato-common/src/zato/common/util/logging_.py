@@ -67,45 +67,10 @@ loggers:
         handlers: [kvdb]
         qualname: zato_kvdb
         propagate: false
-    zato_pubsub:
-        level: INFO
-        handlers: [stdout, pubsub]
-        qualname: zato_pubsub
-        propagate: false
-    zato_pubsub_overflow:
-        level: INFO
-        handlers: [pubsub_overflow]
-        qualname: zato_pubsub_overflow
-        propagate: false
-    zato_pubsub_audit:
-        level: INFO
-        handlers: [pubsub_audit]
-        qualname: zato_pubsub_audit
-        propagate: false
-    zato_rbac:
-        level: INFO
-        handlers: [rbac]
-        qualname: zato_rbac
-        propagate: false
     zato_scheduler:
         level: INFO
         handlers: [stdout, scheduler]
         qualname: zato_scheduler
-        propagate: false
-    zato_web_socket:
-        level: INFO
-        handlers: [stdout, web_socket]
-        qualname: zato_web_socket
-        propagate: false
-    zato_ibm_mq:
-        level: INFO
-        handlers: [stdout, ibm_mq]
-        qualname: zato_ibm_mq
-        propagate: false
-    zato_notif_sql:
-        level: INFO
-        handlers: [stdout, notif_sql]
-        qualname: zato_notif_sql
         propagate: false
 handlers:
     default:
@@ -168,66 +133,10 @@ handlers:
         maxBytes: 20000000
         backupCount: 10
         encoding: 'utf8'
-    pubsub:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/pubsub.log'
-        mode: 'a'
-        maxBytes: {server_log_max_size}
-        backupCount: {server_log_backup_count}
-        encoding: 'utf8'
-    pubsub_overflow:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/pubsub-overflow.log'
-        mode: 'a'
-        maxBytes: {server_log_max_size}
-        backupCount: {server_log_backup_count}
-        encoding: 'utf8'
-    pubsub_audit:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/pubsub-audit.log'
-        mode: 'a'
-        maxBytes: {server_log_max_size}
-        backupCount: {server_log_backup_count}
-        encoding: 'utf8'
-    rbac:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/rbac.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
     scheduler:
         formatter: default
         class: {log_handler_class}
         filename: './logs/scheduler.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
-    web_socket:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/web_socket.log'
-        mode: 'a'
-        maxBytes: {server_log_max_size}
-        backupCount: {server_log_backup_count}
-        encoding: 'utf8'
-    ibm_mq:
-        formatter: default
-        class: logging.handlers.RotatingFileHandler
-        filename: './logs/ibm-mq.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
-    notif_sql:
-        formatter: default
-        class: logging.handlers.RotatingFileHandler
-        filename: './logs/notif-sql.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

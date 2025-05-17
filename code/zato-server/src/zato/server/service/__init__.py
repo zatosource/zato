@@ -31,9 +31,8 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, PUBSUB, \
-     RESTAdapterResponse, WEB_SOCKET, zato_no_op_marker
-from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, \
+     RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
@@ -52,7 +51,6 @@ from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7API, HL7RequestData, IBMMQRequestData, \
      InstantMessaging, Outgoing, Request
 
@@ -157,11 +155,6 @@ ForceType = SIOElem
 ListOfDicts = DictList
 Nested = Opaque
 Unicode = Text
-
-# ################################################################################################################################
-
-# For code completion
-PubSub = PubSub
 
 # ################################################################################################################################
 
@@ -332,7 +325,6 @@ class Service:
     im = InstantMessaging()
     odb:'ODBManager'
     kvdb:'KVDB'
-    pubsub:'PubSub'
     static_config:'Bunch'
 
     email:'EMailAPI | None' = None
@@ -1321,39 +1313,6 @@ class _Hook(Service):
         func_name = self._hook_func_name[self.request.input.ctx.hook_type]
         func = getattr(self, func_name)
         func()
-
-# ################################################################################################################################
-
-class PubSubHook(_Hook):
-    """ Subclasses of this class may act as pub/sub hooks.
-    """
-    _hook_func_name = {}
-
-    def before_publish(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked for each pub/sub message before it is published to a topic.
-        """
-
-    def before_delivery(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked for each pub/sub message right before it is delivered to an endpoint.
-        """
-
-    def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked for each message that is to be sent through outgoing a SOAP Suds connection.
-        """
-
-    def on_subscribed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked for each new topic subscription.
-        """
-
-    def on_unsubscribed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked each time a client unsubscribes.
-        """
-
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'                   # type: ignore
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'                 # type: ignore
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke' # type: ignore
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'                     # type: ignore
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'                 # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

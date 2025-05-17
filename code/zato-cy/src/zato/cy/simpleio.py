@@ -39,7 +39,6 @@ from sqlalchemy.engine.row import Row as SQLAlchemyRow
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
 from zato.common.odb.api import SQLRow
-from zato.common.pubsub import PubSubMessage
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -1822,15 +1821,6 @@ class CySimpleIO:
 
     @cy.returns(object)
     def _parse_input_elem(self, elem:object, data_format:object, is_csv:cy.bint=False, extra:dict=None) -> object: # noqa: E252
-
-        # If this is a pub/sub message ..
-        if isinstance(elem, PubSubMessage):
-
-            # .. parse out its data ..
-            elem = elem.data
-
-            # .. and make sure it is something we can process.
-            elem = elem or {}
 
         is_dict:cy.bint = isinstance(elem, dict)
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)

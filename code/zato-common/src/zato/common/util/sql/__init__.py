@@ -36,9 +36,8 @@ if 0:
 # ################################################################################################################################
 
 logger_zato = getLogger('zato')
-logger_pubsub = getLogger('zato_pubsub')
 
-has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
+has_debug = logger_zato.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +130,6 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
                 if attempts % 50 == 0:
                     msg = 'Still in deadlock for `{}` after %d attempts cid:%s args:%s'.format(name)
                     logger_zato.warning(msg, attempts, cid, args)
-                    logger_pubsub.warning(msg, attempts, cid, args)
 
                 # Sleep for a while until the next attempt
                 sleep(0.005)

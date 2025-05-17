@@ -37,20 +37,12 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class connector_type:
+class Connector_Type:
     """ All types of ZeroMQ connections that we support.
     """
-    class channel:
-        zmq = 'ZeroMQ channel'
-
-    class out:
-        vault_conn = 'Vault connection'
-        zmq = 'ZeroMQ outgoing'
 
     class duplex:
         amqp = 'AMQP'
-        web_socket = 'WebSocket'
-        zmq_v01 = 'ZeroMQ MDP v0.1'
 
 class Inactive(Exception):
     pass
@@ -430,11 +422,5 @@ class ConnectorStore:
     def invoke(self, name, *args, **kwargs):
         # type: (str, Any, Any)
         return self.connectors[name].invoke(*args, **kwargs)
-
-# ################################################################################################################################
-
-    def notify_pubsub_message(self, name, *args, **kwargs):
-        # type: (str, Any, Any)
-        return self.connectors[name].notify_pubsub_message(*args, **kwargs)
 
 # ################################################################################################################################

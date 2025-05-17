@@ -801,7 +801,7 @@ class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
     """
     __tablename__ = 'out_amqp'
-    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
+    __table_args__ = (UniqueConstraint('name',), {})
 
     id = Column(Integer, Sequence('out_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -951,7 +951,7 @@ class ChannelAMQP(Base):
     """ An incoming AMQP connection.
     """
     __tablename__ = 'channel_amqp'
-    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
+    __table_args__ = (UniqueConstraint('name',), {})
 
     id = Column(Integer, Sequence('channel_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)

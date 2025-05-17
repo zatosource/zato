@@ -78,20 +78,6 @@ class Create(ZatoCommand):
 
         else:
 
-            # This is needed so that PubSubMessage.data can continue to use length
-            # in the column's specification which in itself is needed for MySQL to use LONGTEXT.
-
-            def _render_string_type(self, type_, name):
-
-                text = name
-                if type_.length and name != 'TEXT':
-                    text += '(%d)' % type_.length
-                if type_.collation:
-                    text += ' COLLATE "%s"' % type_.collation
-                return text
-
-            PGTypeCompiler._render_string_type = _render_string_type
-
             Base.metadata.create_all(engine)
 
             if has_alembic:

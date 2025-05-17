@@ -47,7 +47,6 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.oauth import OAuthStore, OAuthTokenClient
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
@@ -70,9 +69,6 @@ from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
-from zato.server.connection.kvdb.api import KVDB as ZatoKVDB
-from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
-from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -228,7 +224,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_fg = False
         self.env_file = ''
         self.env_variables_from_files:'strlist' = []
-        self.default_internal_pubsub_endpoint_id = 0
         self._hash_secret_method = ''
         self._hash_secret_rounds = -1
         self._hash_secret_salt_size = -1
@@ -236,9 +231,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.platform_system = platform_system().lower()
         self.user_config = Bunch()
         self.stderr_path = ''
-        self.work_dir = 'ParallelServer-work_dir'
-        self.events_dir = 'ParallelServer-events_dir'
-        self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
@@ -278,7 +270,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.needs_all_access_log = True
         self.access_log_ignore = set()
         self.rest_log_ignore   = set()
-        self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(DEBUG)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
@@ -293,13 +284,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def set_ipc_password(self, password:'str') -> 'None':
         password = self.decrypt(password)
         self.ipc_api.password = password
-
-# ################################################################################################################################
-
-    def get_default_internal_pubsub_endpoint_id(self) -> 'int':
-
-        # This value defaults to 0 and we populate it with the real value in self._after_init_accepted.
-        return self.default_internal_pubsub_endpoint_id
 
 # ################################################################################################################################
 
@@ -1603,7 +1587,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def publish(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.pubsub.publish(*args, **kwargs)
+        raise Exception('TODO: Implement it using the new pub/sub')
 
 # ################################################################################################################################
 
@@ -1611,43 +1595,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Invokes a service in background.
         """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
-
-# ################################################################################################################################
-
-    def publish_pickup(self, topic_name:'str', request:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        """ Publishes a previously picked up file to a named topic.
-        """
-        _ = self.invoke('zato.pubsub.publish.publish', {
-            'topic_name': topic_name,
-            'endpoint_id': self.default_internal_pubsub_endpoint_id,
-            'has_gd': False,
-            'data': dumps({
-                'meta': {
-                    'pickup_ts_utc': request['ts_utc'],
-                    'stanza': request.get('stanza'),
-                    'full_path': request['full_path'],
-                    'file_name': request['file_name'],
-                },
-                'data': {
-                    'raw': request['raw_data'],
-                }
-            })
-        })
-
-# ################################################################################################################################
-
-    def deliver_pubsub_msg(self, msg:'any_') -> 'None':
-        """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
-        """
-        subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
-        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']] # type: ignore
-
-        if topic.before_delivery_hook_service_invoker:
-            response:'any_' = topic.before_delivery_hook_service_invoker(topic, msg)
-            if response['skip_msg']:
-                raise SkipDelivery(msg.pub_msg_id)
-
-        _ = self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
 
 # ################################################################################################################################
 
