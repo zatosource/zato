@@ -103,7 +103,6 @@ class ServiceTestCase(TestCase):
         self.worker_store = WorkerStore(self.worker_config, self.server)
         self.worker_store.sql_pool_store = self.sql_pool_store
         self.worker_store.out_sap = None
-        self.worker_store.out_sftp = None
         self.worker_store.outconn_ldap = {}
 
         self.worker_store.cache_api = CacheAPI(self.server)

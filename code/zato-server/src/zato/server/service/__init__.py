@@ -439,7 +439,6 @@ class Service:
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
             self._worker_config.out_sap,
-            self._worker_config.out_sftp,
             self._worker_store.outconn_ldap,
             self._worker_store.outconn_mongodb,
         ) # type: Outgoing
