@@ -27,7 +27,6 @@ from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
-from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
@@ -512,15 +511,8 @@ class RequestDispatcher:
 
                 else:
 
-                    # JSON Schema validation
-                    if isinstance(e, JSONSchemaValidationException):
-                        status_code = _status_bad_request
-                        needs_prefix = False if e.needs_err_details else True
-                        response = JSONSchemaDictError(
-                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(to_string=True)
-
                     # Rate limiting and whitelisting
-                    elif isinstance(e, RateLimitingException):
+                    if isinstance(e, RateLimitingException):
                         response, status_code, status = self._on_rate_limiting_exception(e)
 
                     # HL7
