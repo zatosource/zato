@@ -53,11 +53,6 @@ class _HTTPSOAPService:
         params['action'] = action
         self.broker_client.publish(params)
 
-    def _validate_tls(self, input, sec_info):
-        if sec_info['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
-            if not input.get('sec_tls_ca_cert_id'):
-                raise ZatoException(self.cid, 'TLS CA certs is a required field if TLS keys/certs are used')
-
     def _handle_security_info(self, session, security_id, connection, transport):
         """ First checks whether the security type is correct for the given
         connection type. If it is, returns a dictionary of security-related information.
@@ -73,8 +68,7 @@ class _HTTPSOAPService:
             if connection == 'outgoing':
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
-                   sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT,
-                        SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.NTLM):
+                   sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.NTLM):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
             info['security_id'] = security_id
@@ -676,9 +670,6 @@ class Edit(_CreateEdit):
             # Will raise exception if the security type doesn't match connection
             # type and transport
             sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
-
-            # TLS data comes in combinations, i.e. certain elements are required only if TLS keys/certs are used
-            self._validate_tls(input, sec_info)
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()

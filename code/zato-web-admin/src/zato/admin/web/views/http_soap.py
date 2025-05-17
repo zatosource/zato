@@ -60,7 +60,6 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.BASIC_AUTH,
     SEC_DEF_TYPE.NTLM,
     SEC_DEF_TYPE.OAUTH,
-    SEC_DEF_TYPE.TLS_KEY_CERT,
 }
 
 # ################################################################################################################################
