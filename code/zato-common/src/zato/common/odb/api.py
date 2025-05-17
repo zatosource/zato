@@ -1184,14 +1184,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_out_sftp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing SFTP connections.
-        """
-        with closing(self.session()) as session:
-            return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, needs_columns)
-
-# ################################################################################################################################
-
     def get_out_ftp(self, cluster_id, out_id):
         """ Returns an outgoing FTP connection's details.
         """

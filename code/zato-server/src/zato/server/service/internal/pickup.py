@@ -213,7 +213,7 @@ class _OnUpdate(Service):
             #
             # Step (1) - Add the file name to ignored ones
             #
-            self.server.worker_store.file_transfer_api.add_local_ignored_path(ctx.full_path)
+            # TODO: Bring it back if needed
 
             #
             # Step (2) - Save the file

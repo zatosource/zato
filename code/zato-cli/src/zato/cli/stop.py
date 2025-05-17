@@ -59,16 +59,7 @@ class Stop(ManageCommand):
     def _on_server(self, *ignored):
 
         # stdlib
-        import os
         import signal
-
-        pidfile_ibm_mq = os.path.join(self.component_dir, 'pidfile-ibm-mq')
-        pidfile_sftp = os.path.join(self.component_dir, 'pidfile-sftp')
-        pidfile_zato_events = os.path.join(self.component_dir, 'pidfile-zato-events')
-
-        self.signal('IBM MQ connector', 'SIGTERM', signal.SIGTERM, pidfile_ibm_mq, ignore_missing=True, needs_logging=False)
-        self.signal('SFTP connector', 'SIGTERM', signal.SIGTERM, pidfile_sftp, ignore_missing=True, needs_logging=False)
-        self.signal('Events connector', 'SIGTERM', signal.SIGTERM, pidfile_zato_events, ignore_missing=True, needs_logging=False)
 
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
 

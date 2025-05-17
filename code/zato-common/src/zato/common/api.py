@@ -194,58 +194,6 @@ ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ZMQ:
-
-    PULL = 'PULL'
-    PUSH = 'PUSH'
-    PUB = 'PUB'
-    SUB = 'SUB'
-    MDP = 'MDP'
-    MDP01 = MDP + '01'
-
-    MDP01_HUMAN = 'Majordomo 0.1 (MDP)'
-
-    class POOL_STRATEGY_NAME:
-        SINGLE = 'single'
-        UNLIMITED = 'unlimited'
-
-    class SERVICE_SOURCE_NAME:
-        ZATO = 'zato'
-        MDP01 = 'mdp01'
-
-    CHANNEL = OrderedDict({
-        PULL: 'Pull',
-        SUB: 'Sub',
-        MDP01: MDP01_HUMAN,
-    })
-
-    OUTGOING = OrderedDict({
-        PUSH: 'Push',
-        PUB: 'Pub',
-    })
-
-    class METHOD_NAME:
-        BIND = 'bind'
-        CONNECT = 'connect'
-
-    METHOD = {
-        METHOD_NAME.BIND: 'Bind',
-        METHOD_NAME.CONNECT: 'Connect',
-    }
-
-    POOL_STRATEGY = OrderedDict({
-        POOL_STRATEGY_NAME.SINGLE: 'Single',
-        POOL_STRATEGY_NAME.UNLIMITED: 'Unlimited',
-    })
-
-    SERVICE_SOURCE = OrderedDict({
-        SERVICE_SOURCE_NAME.ZATO: 'Zato',
-        SERVICE_SOURCE_NAME.MDP01: MDP01_HUMAN,
-    })
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
 # ################################################################################################################################
@@ -262,18 +210,6 @@ class SEARCH:
         class DEFAULTS:
             BODY_AS = 'POST'
             HOSTS = '127.0.0.1:9200\n'
-
-    class SOLR:
-        class DEFAULTS:
-            ADDRESS = 'https://127.0.0.1:8983/solr'
-            PING_PATH = '/solr/admin/ping'
-            TIMEOUT = '10'
-            POOL_SIZE = '5'
-
-    class ZATO:
-        class DEFAULTS:
-            PAGE_SIZE = 50
-            PAGINATE_THRESHOLD = PAGE_SIZE + 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -305,17 +241,6 @@ class AUTH_RESULT:
     class BASIC_AUTH:
         INVALID_PREFIX = 'invalid-prefix'
         NO_AUTH = 'no-auth'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-DEFAULT_STATS_SETTINGS = {
-    'scheduler_per_minute_aggr_interval':60,
-    'scheduler_raw_times_interval':90,
-    'scheduler_raw_times_batch':99999,
-    'atttention_slow_threshold':2000,
-    'atttention_top_threshold':10,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -484,72 +409,6 @@ class CACHE:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class KVDB(Attrs):
-    SEPARATOR = ':::'
-
-    DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
-    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id' # ID of the last created dictionary ID, always increasing.
-
-    LOCK_PREFIX = 'zato:lock:'
-
-    LOCK_SERVER_PREFIX = '{}server:'.format(LOCK_PREFIX)
-    LOCK_SERVER_ALREADY_DEPLOYED = '{}already-deployed:'.format(LOCK_SERVER_PREFIX)
-    LOCK_SERVER_STARTING = '{}starting:'.format(LOCK_SERVER_PREFIX)
-
-    LOCK_PACKAGE_PREFIX = '{}package:'.format(LOCK_PREFIX)
-    LOCK_PACKAGE_UPLOADING = '{}uploading:'.format(LOCK_PACKAGE_PREFIX)
-    LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
-
-    LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
-    LOCK_DELIVERY_AUTO_RESUBMIT = '{}auto-resubmit:'.format(LOCK_DELIVERY)
-
-    LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
-    LOCK_CONFIG_PREFIX = '{}config:'.format(LOCK_PREFIX)
-
-    LOCK_FANOUT_PATTERN = '{}fanout:{{}}'.format(LOCK_PREFIX)
-    LOCK_PARALLEL_EXEC_PATTERN = '{}parallel-exec:{{}}'.format(LOCK_PREFIX)
-
-    LOCK_ASYNC_INVOKE_WITH_TARGET_PATTERN = '{}async-invoke-with-pattern:{{}}:{{}}'.format(LOCK_PREFIX)
-
-    TRANSLATION = 'zato:kvdb:data-dict:translation'
-    TRANSLATION_ID = TRANSLATION + ':id'
-
-    SERVICE_USAGE = 'zato:stats:service:usage:'
-    SERVICE_TIME_BASIC = 'zato:stats:service:time:basic:'
-    SERVICE_TIME_RAW = 'zato:stats:service:time:raw:'
-    SERVICE_TIME_RAW_BY_MINUTE = 'zato:stats:service:time:raw-by-minute:'
-    SERVICE_TIME_AGGREGATED_BY_MINUTE = 'zato:stats:service:time:aggr-by-minute:'
-    SERVICE_TIME_AGGREGATED_BY_HOUR = 'zato:stats:service:time:aggr-by-hour:'
-    SERVICE_TIME_AGGREGATED_BY_DAY = 'zato:stats:service:time:aggr-by-day:'
-    SERVICE_TIME_AGGREGATED_BY_MONTH = 'zato:stats:service:time:aggr-by-month:'
-    SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
-
-    SERVICE_SUMMARY_PREFIX_PATTERN = 'zato:stats:service:summary:{}:'
-    SERVICE_SUMMARY_BY_DAY = 'zato:stats:service:summary:by-day:'
-    SERVICE_SUMMARY_BY_WEEK = 'zato:stats:service:summary:by-week:'
-    SERVICE_SUMMARY_BY_MONTH = 'zato:stats:service:summary:by-month:'
-    SERVICE_SUMMARY_BY_YEAR = 'zato:stats:service:summary:by-year:'
-
-    ZMQ_CONFIG_READY_PREFIX = 'zato:zmq.config.ready.{}'
-
-    REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
-    RESP_SLOW = 'zato:resp:slow:'
-
-    DELIVERY_PREFIX = 'zato:delivery:'
-    DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
-
-    FANOUT_COUNTER_PATTERN = 'zato:fanout:counter:{}'
-    FANOUT_DATA_PATTERN = 'zato:fanout:data:{}'
-
-    PARALLEL_EXEC_COUNTER_PATTERN = 'zato:parallel-exec:counter:{}'
-    PARALLEL_EXEC_DATA_PATTERN = 'zato:parallel-exec:data:{}'
-
-    ASYNC_INVOKE_PROCESSED_FLAG_PATTERN = 'zato:async-invoke-with-pattern:processed:{}:{}'
-    ASYNC_INVOKE_PROCESSED_FLAG = '1'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SCHEDULER:
 
     InitialSleepTime = 0.1
@@ -654,10 +513,7 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
-    JSON_RPC = 'json-rpc'
     NEW_INSTANCE = 'new-instance'
-    NOTIFIER_RUN = 'notifier-run'
-    NOTIFIER_TARGET = 'notifier-target'
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
@@ -665,8 +521,6 @@ class CHANNEL(Attrs):
     SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
-    IBM_MQ = 'ibm-mq'
-    WORKER = 'worker'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -797,52 +651,6 @@ class EMAIL:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class NOTIF:
-    class DEFAULT:
-        CHECK_INTERVAL = 5 # In seconds
-        CHECK_INTERVAL_SQL = 600 # In seconds
-        NAME_PATTERN = '**'
-        GET_DATA_PATTERN = '**'
-
-    class TYPE:
-        SQL = 'sql'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TLS:
-    # All the BEGIN/END blocks we don't want to store in logs.
-    # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
-    # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
-    BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
-
-    # Directories in a server's config/tls directory keeping the material
-    DIR_CA_CERTS = 'ca-certs'
-    DIR_KEYS_CERTS = 'keys-certs'
-
-    class DEFAULT:
-        VERSION = 'SSLv23'
-        CIPHERS = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:' \
-                  'ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:' \
-                  'ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256'
-
-    class VERSION:
-        SSLv23  = NameId('SSLv23')
-        TLSv1   = NameId('TLSv1')
-        TLSv1_1 = NameId('TLSv1_1')
-        TLSv1_2 = NameId('TLSv1_2')
-
-        def __iter__(self):
-            return iter((self.SSLv23, self.TLSv1, self.TLSv1_1, self.TLSv1_2))
-
-    class CERT_VALIDATE:
-        CERT_NONE     = NameId('Disabled', 'CERT_NONE')
-        CERT_OPTIONAL = NameId('Optional', 'CERT_OPTIONAL')
-        CERT_REQUIRED = NameId('Required', 'CERT_REQUIRED')
-
-        def __iter__(self):
-            return iter((self.CERT_NONE, self.CERT_OPTIONAL, self.CERT_REQUIRED))
-
 class RATE_LIMIT:
     class TYPE:
         APPROXIMATE = NameId('Approximate', 'APPROXIMATE')
@@ -895,18 +703,6 @@ class SAP:
     class DEFAULT:
         INSTANCE = '00'
         POOL_SIZE = 1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class STOMP:
-
-    class DEFAULT:
-        ADDRESS = '127.0.0.1:61613'
-        PROTOCOL = '1.0'
-        TIMEOUT = 10 # In seconds
-        USERNAME = 'guest'
-        ACK_MODE = 'client-individual'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -980,7 +776,6 @@ class GENERIC:
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
-            OUTCONN_SFTP = 'outconn-sftp'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1113,53 +908,6 @@ class MONGODB:
         def __iter__(self):
             return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SFTP:
-
-    class DEFAULT:
-        BANDWIDTH_LIMIT = 10
-        BUFFER_SIZE = 32768
-        COMMAND_SFTP = 'sftp'
-        COMMAND_PING = 'ls .'
-        PORT = 22
-
-    class LOG_LEVEL:
-        LEVEL0 = NameId('0', '0')
-        LEVEL1 = NameId('1', '1')
-        LEVEL2 = NameId('2', '2')
-        LEVEL3 = NameId('3', '3')
-        LEVEL4 = NameId('4', '4')
-
-        def __iter__(self):
-            return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
-
-        def is_valid(self, value):
-            return value in (elem.id for elem in self)
-
-    class IP_TYPE:
-        IPV4 = NameId('IPv4', 'ipv4')
-        IPV6 = NameId('IPv6', 'ipv6')
-
-        def __iter__(self):
-            return iter((self.IPV4, self.IPV6))
-
-        def is_valid(self, value):
-            return value in (elem.id for elem in self)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DROPBOX:
-    class DEFAULT:
-        MAX_RETRIES_ON_ERROR = 5
-        MAX_RETRIES_ON_RATE_LIMIT = None
-        OAUTH2_ACCESS_TOKEN_EXPIRATION = None
-        POOL_SIZE = 10
-        TIMEOUT = 60
-        USER_AGENT = None
-
 # We need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
@@ -1172,30 +920,6 @@ class MS_SQL:
     ZATO_DIRECT = 'zato+mssql1'
     EXTRA_KWARGS = 'login_timeout', 'appname', 'blocksize', 'use_mars', 'readonly', 'use_tz', 'bytes_to_unicode', \
         'cafile', 'validate_host'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FILE_TRANSFER:
-
-    SCHEDULER_SERVICE = 'pub.zato.channel.file-transfer.handler'
-
-    class DEFAULT:
-        FILE_PATTERNS = '*'
-        ENCODING = 'utf-8'
-        RelativeDir = '<no-relative-dir>'
-
-    class SOURCE_TYPE:
-        LOCAL = NameId('Local', 'local')
-        FTP = NameId('FTP', 'ftp')
-        SFTP = NameId('SFTP', 'sftp')
-
-        def __iter__(self):
-            return iter((self.LOCAL, self.FTP, self.SFTP))
-
-    class SOURCE_TYPE_IMPL:
-        LOCAL_INOTIFY  = 'local-inotify'
-        LOCAL_SNAPSHOT = 'local-snapshot'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1389,144 +1113,6 @@ class SourceCodeInfo:
         self.hash_method = None # type: str
         self.server_name = None # type: str
         self.line_number = 0    # type: int
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class StatsElem:
-    """ A single element of a statistics query result concerning a particular service.
-    All values make sense only within the time interval of the original query, e.g. a 'min_resp_time'
-    may be 18 ms in this element because it represents statistics regarding, say,
-    the last hour yet in a different period the 'min_resp_time' may be a completely
-    different value. Likewise, 'all' in the description of parameters below means
-    'all that matched given query criteria' rather than 'all that ever existed'.
-
-    service_name - name of the service this element describes
-    usage - how many times the service has been invoked
-    mean - an arithmetical average of all the mean response times  (in ms)
-    rate - usage rate in requests/s (up to 1 decimal point)
-    time - time spent by this service on processing the messages (in ms)
-    usage_trend - a CSV list of values representing the service usage
-    usage_trend_int - a list of integers representing the service usage
-    mean_trend - a CSV list of values representing mean response times (in ms)
-    mean_trend_int - a list of integers representing mean response times (in ms)
-    min_resp_time - minimum service response time (in ms)
-    max_resp_time - maximum service response time (in ms)
-    all_services_usage - how many times all the services have been invoked
-    all_services_time - how much time all the services spent on processing the messages (in ms)
-    mean_all_services - an arithmetical average of all the mean response times  of all services (in ms)
-    usage_perc_all_services - this service's usage as a percentage of all_services_usage (up to 2 decimal points)
-    time_perc_all_services - this service's share as a percentage of all_services_time (up to 2 decimal points)
-    expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate
-    temp_rate - a temporary place for keeping request rates, needed to get a weighted mean of uneven execution periods
-    temp_mean - just like temp_rate but for mean response times
-    temp_mean_count - how many periods containing a mean rate there were
-    """
-    def __init__(self, service_name=None, mean=None):
-        self.service_name = service_name
-        self.usage = 0
-        self.mean = mean
-        self.rate = 0.0
-        self.time = 0
-        self.usage_trend_int = []
-        self.mean_trend_int = []
-        self.min_resp_time = maxsize # Assuming that there sure will be at least one response time lower than that
-        self.max_resp_time = 0
-        self.all_services_usage = 0
-        self.all_services_time = 0
-        self.mean_all_services = 0
-        self.usage_perc_all_services = 0
-        self.time_perc_all_services = 0
-        self.expected_time_elems = OrderedDict()
-        self.temp_rate = 0
-        self.temp_mean = 0
-        self.temp_mean_count = 0
-
-    def get_attrs(self, ignore=None):
-        ignore = ignore or []
-        for attr in dir(self):
-            if attr.startswith('__') or attr.startswith('temp_') or callable(getattr(self, attr)) or attr in ignore:
-                continue
-            yield attr
-
-    def to_dict(self, ignore=None):
-        if not ignore:
-            ignore = ['expected_time_elems', 'mean_trend_int', 'usage_trend_int']
-        return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
-
-    @staticmethod
-    def from_json(item):
-        stats_elem = StatsElem()
-        for k, v in item.items():
-            setattr(stats_elem, k, v)
-
-        return stats_elem
-
-    @staticmethod
-    def from_xml(item):
-        stats_elem = StatsElem()
-        for child in item.getchildren():
-            setattr(stats_elem, child.xpath('local-name()'), child.pyval)
-
-        return stats_elem
-
-    def __repr__(self):
-        buff = StringIO()
-        buff.write('<{} at {} '.format(self.__class__.__name__, hex(id(self))))
-
-        attrs = ('{}=[{}]'.format(attr, getattr(self, attr)) for attr in self.get_attrs())
-        buff.write(', '.join(attrs))
-
-        buff.write('>')
-
-        value = buff.getvalue()
-        buff.close()
-
-        return value
-
-    def __iadd__(self, other):
-        self.max_resp_time = max(self.max_resp_time, other.max_resp_time)
-        self.min_resp_time = min(self.min_resp_time, other.min_resp_time)
-        self.usage += other.usage
-
-        return self
-
-    def __bool__(self):
-        return bool(self.service_name) # Empty stats_elems won't have a service name set
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMTPMessage:
-
-    from_: 'any_'
-    to: 'any_'
-    subject: 'any_'
-    body: 'any_'
-    attachments: 'any_'
-    cc: 'any_'
-    bcc: 'any_'
-    is_html: 'any_'
-    headers: 'any_'
-    charset: 'any_'
-    is_rfc2231: 'any_'
-
-    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
-            charset='utf8', is_rfc2231=True):
-        self.from_ = from_
-        self.to = to
-        self.subject = subject
-        self.body = body
-        self.attachments = attachments or []
-        self.cc = cc
-        self.bcc = bcc
-        self.is_html = is_html
-        self.headers = headers or {}
-        self.charset = charset
-        self.is_rfc2231 = is_rfc2231
-
-    def attach(self, name, contents):
-        self.attachments.append({'name':name, 'contents':contents})
 
 # ################################################################################################################################
 # ################################################################################################################################

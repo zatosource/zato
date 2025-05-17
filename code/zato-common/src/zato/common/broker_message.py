@@ -114,13 +114,6 @@ class OUTGOING(Constants):
     SAP_DELETE = ValueConstant('')
     SAP_CHANGE_PASSWORD = ValueConstant('')
 
-    SFTP_CREATE = ValueConstant('')
-    SFTP_EDIT = ValueConstant('')
-    SFTP_DELETE = ValueConstant('')
-    SFTP_CHANGE_PASSWORD = ValueConstant('')
-    SFTP_EXECUTE = ValueConstant('')
-    SFTP_PING = ValueConstant('')
-
     REST_WRAPPER_CHANGE_PASSWORD = ValueConstant('')
 
 class CHANNEL(Constants):

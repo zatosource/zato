@@ -90,9 +90,6 @@ class Create(ZatoCommand):
 
             ping_service = self.add_ping_service(session, cluster)
 
-            # SFTP connections / connectors
-            self.add_sftp_credentials(session, cluster)
-
             # SSO
             self.add_sso_endpoints(session, cluster)
 
@@ -240,17 +237,6 @@ class Create(ZatoCommand):
         item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
         item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
         session.add(item)
-
-# ################################################################################################################################
-
-    def add_sftp_credentials(self, session, cluster):
-
-        from zato.common.api import IPC
-        from zato.common.odb.model import HTTPBasicAuth
-
-        username = IPC.CONNECTOR.USERNAME.SFTP
-        sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', self.generate_password(), cluster)
-        session.add(sec)
 
 # ################################################################################################################################
 
