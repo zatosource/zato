@@ -16,10 +16,9 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
+from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
-from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOPasswordReset, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
@@ -414,9 +413,6 @@ class HTTPSOAP(Base):
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
-    sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
-
     cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
     cache = relationship('Cache', backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -561,42 +557,11 @@ class Service(Base):
         self.plain_http_channels = [] # Not used by the database
         self.soap_channels = [] # Not used by the database
         self.amqp_channels = [] # Not used by the database
-        self.wmq_channels = [] # Not used by the database
-        self.zmq_channels = [] # Not used by the database
         self.scheduler_jobs = [] # Not used by the database
         self.deployment_info = [] # Not used by the database
         self.source_info = None # Not used by the database
         self.may_be_deleted = False # Not used by the database
 
-        self.sample_cid = None # Not used by the database
-        self.sample_req_timestamp = None # Not used by the database
-        self.sample_resp_timestamp = None # Not used by the database
-        self.sample_req = None # Not used by the database
-        self.sample_resp = None # Not used by the database
-        self.sample_req_resp_freq = None # Not used by the database
-        self.sample_req_html = None # Not used by the database
-        self.sample_resp_html = None # Not used by the database
-
-        self.usage = None # Not used by the database
-        self.time_last = None # Not used by the database
-
-        self.time_min_all_time = None # Not used by the database
-        self.time_max_all_time = None # Not used by the database
-        self.time_mean_all_time = None # Not used by the database
-
-        self.time_usage_1h = None # Not used by the database
-        self.time_min_1h = None # Not used by the database
-        self.time_max_1h = None # Not used by the database
-        self.time_trend_mean_1h = None # Not used by the database
-        self.time_trend_rate_1h = None # Not used by the database
-
-        self.docs_summary = None # Not used by the database
-        self.docs_description = None # Not used by the database
-        self.invokes = None # Not used by the database
-        self.invoked_by = None # Not used by the database
-
-        self.last_timestamp = None # Not used by the database
-        self.last_timestamp_utc = None # Not used by the database
 
 # ################################################################################################################################
 

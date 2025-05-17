@@ -147,18 +147,6 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_api_invoke(self, session, cluster, service, pubapi_sec):
-
-        from zato.common.api import APISPEC
-        from zato.common.odb.model import HTTPSOAP
-
-        for url_path in (APISPEC.GENERIC_INVOKE_PATH,):
-            channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http',
-                None, url_path, None, '', None, DATA_FORMAT.JSON, service=service, cluster=cluster)
-            session.add(channel)
-
-# ################################################################################################################################
-
     def add_ping_service(self, session, cluster):
         """ Adds a channel for the ping service.
         """

@@ -343,7 +343,7 @@ class Wrapper:
         self.should_reconnect = True
 
         # An optional list of all the connections that are currently trying to connect
-        # but which are not connected yet, e.g. this will apply to WebSockets.
+        # but which are not connected yet.
         self.conn_in_progress_list = []
 
         conn_type = self.config.get('type_') or ''

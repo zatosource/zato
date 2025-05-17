@@ -43,10 +43,7 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
-from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
-from zato.server.connection.sms import SMSAPI
-from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec

@@ -108,7 +108,7 @@ if PY3:
     from functools import cmp_to_key
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, MISC, \
      SECRET_SHADOW, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst

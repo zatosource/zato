@@ -195,7 +195,6 @@ zato_generic_connection_microsoft_365 = 'zato_generic_connection_' + ModuleCtx.I
 _enmasse_type_generic = (
     ModuleCtx.Include_Type.LDAP,
     ModuleCtx.Include_Type.Microsoft_365,
-    ModuleCtx.Include_Type.WebSockets,
 )
 
 ModuleCtx.Enmasse_Type = {
