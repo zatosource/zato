@@ -22,17 +22,14 @@ from cryptography.fernet import Fernet
 from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import loads
-from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import PoolStore
 from zato.common.util.api import new_cid
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.http_soap.channel import RequestHandler
-from zato.server.connection.vault import VaultConnAPI
 from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigStore
 from zato.server.service.store import ServiceStore
-from zato.testing.requests_ import RequestsAdapter
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring
@@ -40,7 +37,7 @@ from zato.common.py23_.past.builtins import basestring
 # ################################################################################################################################
 
 if 0:
-    from zato.common.odb.unittest_ import QueryCtx
+    from zato.common.odb.unittest_ import QueryCtx # type: ignore
     from zato.server.service import Service
 
     QueryCtx = QueryCtx
@@ -80,7 +77,6 @@ class ServiceTestCase(TestCase):
 
         self.server = ParallelServer()
         self.server.fs_server_config = self.fs_server_config
-        self.server.kvdb = KVDB()
         self.server.component_enabled.stats = False
         self.server.component_enabled.slow_response = False
         self.server.crypto_manager = self.crypto_manager

@@ -31,7 +31,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NotGiven, PARAMS_PRIORITY, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
@@ -92,7 +92,6 @@ if 0:
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
-    from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
@@ -321,7 +320,6 @@ class Service:
     definition = Definition()
     im = InstantMessaging()
     odb:'ODBManager'
-    kvdb:'KVDB'
     static_config:'Bunch'
 
     email:'EMailAPI | None' = None

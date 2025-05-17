@@ -108,7 +108,7 @@ if PY3:
     from functools import cmp_to_key
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, \
      SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
@@ -770,16 +770,6 @@ def grouper(n, iterable, fillvalue=None) -> 'any_':
     """
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
-
-# ################################################################################################################################
-
-def translation_name(system1, key1, value1, system2, key2):
-    return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
-
-# ################################################################################################################################
-
-def dict_item_name(system, key, value):
-    return KVDB.SEPARATOR.join((system, key, value))
 
 # ################################################################################################################################
 

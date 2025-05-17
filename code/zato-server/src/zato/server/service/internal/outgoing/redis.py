@@ -114,7 +114,7 @@ class Edit(AdminService):
         # Local alias
         input = self.request.input
 
-        # If provided, turn sentinels configuration into a format expected by the underlying KVDB object
+        # If provided, turn sentinels configuration into a format expected by the underlying Redis connection object
         redis_sentinels:'any_' = input.redis_sentinels or ''
         if redis_sentinels:
 
