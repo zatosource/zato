@@ -193,12 +193,6 @@ class WorkerStore(_WorkerStoreBase):
         self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
-        # Which services can be invoked
-        self.invoke_matcher = Matcher()
-
-        # Which targets this server supports
-        self.target_matcher = Matcher()
-
         # To expedite look-ups
         self._simple_types = simple_types
 
