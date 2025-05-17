@@ -31,7 +31,6 @@ from six import PY3
 from zato.common.api import BROKER, URLInfo, ZATO_NOT_GIVEN, ZATO_OK
 from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
-from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 from zato.common.util.config import get_url_protocol_from_config_item
 

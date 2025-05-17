@@ -393,8 +393,7 @@ class Create(ZatoCommand):
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
-             ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
+        from zato.cli import create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster
@@ -479,43 +478,11 @@ class Create(ZatoCommand):
             # 1 for the load-balancer
             total_steps -= 3
 
-# ################################################################################################################################
-
-        #
-        # 1) CA
-        #
-
-        if has_tls:
-
-            ca_path = os.path.join(args_path, 'ca')
-            os.mkdir(ca_path)
-
-            ca_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-            ca_args.path = ca_path
-
-            ca_create_ca.Create(ca_args).execute(ca_args, False)
-            ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
-            ca_create_web_admin.Create(ca_args).execute(ca_args, False)
-            ca_create_scheduler.Create(ca_args).execute(ca_args, False)
-
-            server_crypto_loc = {}
-
-            for name in server_names: # type: ignore
-                ca_args_server = deepcopy(ca_args)
-                ca_args_server.server_name = server_names[name]
-                ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
-                server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
-
-            lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
-            web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
-            scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
-
-        self.logger.info('[{}/{}] Certificate authority created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
         #
-        # 2) ODB
+        # 1) ODB
         #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
             self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
@@ -525,7 +492,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 3) ODB initial data
+        # 2) ODB initial data
         #
         create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
         create_cluster_args.lb_host = lb_host
@@ -539,7 +506,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 4) servers
+        # 3) servers
         #
 
         # This is populated below in order for the scheduler to use it.
@@ -574,7 +541,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 5) load-balancer
+        # 4) load-balancer
         #
 
         if create_components_other_than_scheduler:
@@ -605,7 +572,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 6) Dashboard
+        # 5) Dashboard
         #
 
         if create_components_other_than_scheduler:
@@ -636,7 +603,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 7) Scheduler
+        # 6) Scheduler
         #
 
         # Creation of a scheduler is optional
@@ -672,7 +639,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 8) Scripts
+        # 7) Scripts
         #
         zato_bin = 'zato.bat' if is_windows else 'zato'
 

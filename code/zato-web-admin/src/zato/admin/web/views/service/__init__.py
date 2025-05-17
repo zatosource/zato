@@ -189,9 +189,9 @@ def overview(req:'HttpRequest', service_name:'str') -> 'TemplateResponse':
 
                     setattr(service, 'time_{}_1h'.format(name), value)
 
-            for channel_type in('plain_http', 'amqp', 'jms-wmq', 'zmq'):
+            for channel_type in('plain_http', 'amqp'):
                 channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type) # type: ignore
-                getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
+                getattr(service, channel_type + '_channels').extend(channels)
 
             deployment_service = 'zato.service.get-deployment-info-list'
             deployment_request = {'id': service.id, 'needs_details':True}

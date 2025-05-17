@@ -42,7 +42,7 @@ has_debug = logger_zato.isEnabledFor(DEBUG)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
+_default_page_size = 20
 _max_page_size = _default_page_size * 5
 
 # All exceptions that can be raised when deadlocks occur

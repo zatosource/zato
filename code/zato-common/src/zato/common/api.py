@@ -9,9 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from collections import OrderedDict
 from dataclasses import dataclass
-from io import StringIO
 from numbers import Number
-from sys import maxsize
 
 # Bunch
 from bunch import Bunch

@@ -150,15 +150,6 @@ class HOT_DEPLOY(Constants):
     CREATE_USER_CONF = ValueConstant('')
     AFTER_DEPLOY = ValueConstant('')
 
-class NOTIF(Constants):
-    code_start = 104000
-
-    RUN_NOTIFIER = ValueConstant('')
-
-    SQL_CREATE = ValueConstant('')
-    SQL_EDIT = ValueConstant('')
-    SQL_DELETE = ValueConstant('')
-
 class SEARCH(Constants):
     code_start = 104200
     CREATE = ValueConstant('')
