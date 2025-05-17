@@ -512,6 +512,8 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
     NEW_INSTANCE = 'new-instance'
+    PARALLEL_EXEC_CALL = 'parallel-exec-call'
+    PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on_target'
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
