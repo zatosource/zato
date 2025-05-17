@@ -45,10 +45,8 @@ from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_tls_key_cert_full_path, get_tls_from_payload, \
-     fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, visit_py_source, wait_for_dict_key, \
-     wait_for_dict_key_by_get_func
-from zato.common.util.file_system import resolve_path
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, \
+    visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -414,12 +412,6 @@ class WorkerStore(_WorkerStoreBase):
             sec_config['password'] = _sec_config.get('password')
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
-
-            if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
-                tls = cast_('bunch_', self.request_dispatcher.url_data.tls_key_cert_get(security_name))
-                auth_data = self.server.decrypt(tls.config.auth_data)
-                sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
-                    self.server.tls_dir, get_tls_from_payload(auth_data, True))
 
         # .. otherwise, try to find it elsewhere ..
         else:
