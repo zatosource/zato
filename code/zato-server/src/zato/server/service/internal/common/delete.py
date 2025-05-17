@@ -377,15 +377,13 @@ class DeleteMany(Service):
     def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
-        from zato.common.odb.model import Cache, ChannelAMQP, ChannelWMQ, ConnDefAMQP, ConnDefWMQ, IMAP, OutgoingAMQP, \
-            OutgoingFTP, OutgoingOdoo, OutgoingSAP, OutgoingWMQ, RBACClientRole, RBACPermission, RBACRole, TLSCACert, \
-                Service, SMTP
+        from zato.common.odb.model import Cache, ChannelAMQP, ChannelWMQ, ConnDefWMQ, IMAP, OutgoingAMQP, \
+            OutgoingFTP, OutgoingOdoo, OutgoingSAP, OutgoingWMQ, Service, SMTP
 
         tables:'any_' = {
             Cache.__table__: [Cache.name],
             ChannelAMQP.__table__: [ChannelAMQP.name],
             ChannelWMQ.__table__: [ChannelWMQ.name],
-            ConnDefAMQP.__table__: [ConnDefAMQP.name],
             ConnDefWMQ.__table__: [ConnDefWMQ.name],
             IMAP.__table__: [IMAP.name],
             OutgoingAMQP.__table__: [OutgoingAMQP.name],
@@ -393,10 +391,6 @@ class DeleteMany(Service):
             OutgoingOdoo.__table__: [OutgoingOdoo.name],
             OutgoingSAP.__table__: [OutgoingSAP.name],
             OutgoingWMQ.__table__: [OutgoingWMQ.name],
-            RBACClientRole.__table__: [RBACClientRole.name],
-            RBACPermission.__table__: [RBACPermission.name],
-            RBACRole.__table__: [RBACRole.name],
-            TLSCACert.__table__: [TLSCACert.name],
             Service.__table__: [Service.name],
             SMTP.__table__: [SMTP.name],
         }

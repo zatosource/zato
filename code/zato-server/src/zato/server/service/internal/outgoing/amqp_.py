@@ -14,7 +14,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import ConnDefAMQP, OutgoingAMQP
+from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -70,8 +70,6 @@ class Create(AdminService):
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(OutgoingAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
-                filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
                 filter(OutgoingAMQP.name==input.name).\
                 first()
 
@@ -138,8 +136,6 @@ class Edit(AdminService):
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(OutgoingAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
-                filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
                 filter(OutgoingAMQP.name==input.name).\
                 filter(OutgoingAMQP.id!=input.id).\
                 first()

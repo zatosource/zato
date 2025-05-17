@@ -11,18 +11,17 @@ from datetime import datetime
 from ftplib import FTP_PORT
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, \
-    LargeBinary, Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, \
+    LargeBinary, Sequence, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
-     SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
+    URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOPasswordReset, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,47 +395,6 @@ class NTLM(SecurityBase):
 
 # ################################################################################################################################
 
-class AWSSecurity(SecurityBase):
-    """ Stores Amazon credentials.
-    """
-    __tablename__ = 'sec_aws'
-    __mapper_args__ = {'polymorphic_identity': 'aws'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.cluster = cluster
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
-class OpenStackSecurity(SecurityBase):
-    """ Stores OpenStack credentials.
-    """
-    __tablename__ = 'sec_openstack'
-    __mapper_args__ = {'polymorphic_identity': 'openstack'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.cluster = cluster
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
 class APIKeySecurity(SecurityBase):
     """ Stores API keys.
     """
@@ -456,96 +414,6 @@ class APIKeySecurity(SecurityBase):
 
     def to_json(self):
         return to_json(self)
-
-# ################################################################################################################################
-
-class XPathSecurity(SecurityBase):
-    """ Stores XPath-based credentials.
-    """
-    __tablename__ = 'sec_xpath'
-    __mapper_args__ = {'polymorphic_identity':'xpath_sec'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    username_expr = Column(String(200), nullable=False)
-    password_expr = Column(String(200), nullable=True)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, username_expr=None, password_expr=None,
-            cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.username_expr = username_expr
-        self.password_expr = password_expr
-        self.cluster = cluster
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
-class TLSKeyCertSecurity(SecurityBase):
-    """ Stores information regarding TLS key/cert pairs used in outgoing connections.
-    """
-    __tablename__ = 'sec_tls_key_cert'
-    __mapper_args__ = {'polymorphic_identity':'tls_key_cert'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    info = Column(LargeBinary(200000), nullable=False)
-    auth_data = Column(LargeBinary(200000), nullable=False)
-
-# ################################################################################################################################
-
-class TLSChannelSecurity(SecurityBase):
-    """ Stores information regarding TLS client certificate-based security definitions.
-    """
-    __tablename__ = 'sec_tls_channel'
-    __mapper_args__ = {'polymorphic_identity':'tls_channel_sec'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    value = Column(LargeBinary(200000), nullable=False)
-
-# ################################################################################################################################
-
-class VaultConnection(SecurityBase):
-    """ Stores information on how to connect to Vault and how to authenticate against it by default.
-    """
-    __tablename__ = 'sec_vault_conn'
-    __mapper_args__ = {'polymorphic_identity':'vault_conn_sec'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    url = Column(String(200), nullable=False)
-    token = Column(String(200), nullable=True)
-    default_auth_method = Column(String(200), nullable=True)
-    timeout = Column(Integer, nullable=False)
-    allow_redirects = Column(Boolean(), nullable=False)
-    tls_verify = Column(Boolean(), nullable=False)
-
-    tls_key_cert_id = Column(Integer, ForeignKey('sec_tls_key_cert.id', ondelete='CASCADE'), nullable=True)
-    tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
-    service = relationship('Service', backref=backref('vault_conn_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class TLSCACert(Base):
-    """ Stores information regarding CA certs.
-    """
-    __tablename__ = 'sec_tls_ca_cert'
-
-    id = Column(Integer, Sequence('sec_tls_ca_cert_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    value = Column(LargeBinary(200000), nullable=False)
-    info = Column(LargeBinary(200000), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('ca_cert_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -979,45 +847,6 @@ class CacheMemcached(Cache):
 
 # ################################################################################################################################
 
-class ConnDefAMQP(Base):
-    """ An AMQP connection definition.
-    """
-    __tablename__ = 'conn_def_amqp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('conn_def_amqp_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-
-    host = Column(String(200), nullable=False)
-    port = Column(Integer(), nullable=False)
-    vhost = Column(String(200), nullable=False)
-    username = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
-    frame_max = Column(Integer(), nullable=False)
-    heartbeat = Column(Integer(), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, host=None, port=None, vhost=None, username=None, password=None, frame_max=None,
-            heartbeat=None, cluster_id=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.host = host
-        self.port = port
-        self.vhost = vhost
-        self.username = username
-        self.password = password
-        self.frame_max = frame_max
-        self.heartbeat = heartbeat
-        self.cluster_id = cluster_id
-        self.cluster = cluster
-
-# ################################################################################################################################
-
 class ConnDefWMQ(Base):
     """ A IBM MQ connection definition.
     """
@@ -1086,6 +915,14 @@ class OutgoingAMQP(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
 
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False)
+    vhost = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    frame_max = Column(Integer(), nullable=False)
+    heartbeat = Column(Integer(), nullable=False)
+
     delivery_mode = Column(SmallInteger(), nullable=False)
     priority = Column(SmallInteger(), server_default=str(AMQP.DEFAULT.PRIORITY), nullable=False)
 
@@ -1099,11 +936,8 @@ class OutgoingAMQP(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
-
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None, priority=None, content_type=None,
-            content_encoding=None, expiration=None, user_id=None, app_id=None, def_id=None, delivery_mode_text=None,
+            content_encoding=None, expiration=None, user_id=None, app_id=None, delivery_mode_text=None,
             def_name=None):
         self.id = id
         self.name = name
@@ -1115,7 +949,6 @@ class OutgoingAMQP(Base):
         self.expiration = expiration
         self.user_id = user_id
         self.app_id = app_id
-        self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
 
@@ -1222,34 +1055,6 @@ class OutgoingSAP(Base):
 
 # ################################################################################################################################
 
-class OutgoingSTOMP(Base):
-    """ An outgoing STOMP connection.
-    """
-    __tablename__ = 'out_stomp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('out_stomp_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    username = Column(String(200), nullable=True, server_default=STOMP.DEFAULT.USERNAME)
-    password = Column(String(200), nullable=True)
-
-    address = Column(String(200), nullable=False, server_default=STOMP.DEFAULT.ADDRESS)
-    proto_version = Column(String(20), nullable=False, server_default=STOMP.DEFAULT.PROTOCOL)
-    timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_stomp', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, cluster=None):
-        self.cluster = cluster
-
-# ################################################################################################################################
-
 class OutgoingWMQ(Base):
     """ An outgoing IBM MQ connection.
     """
@@ -1286,37 +1091,6 @@ class OutgoingWMQ(Base):
 
 # ################################################################################################################################
 
-class OutgoingZMQ(Base):
-    """ An outgoing Zero MQ connection.
-    """
-    __tablename__ = 'out_zmq'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('out_zmq_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    address = Column(String(200), nullable=False)
-    socket_type = Column(String(20), nullable=False)
-    socket_method = Column(String(20), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, address=None, socket_type=None, cluster_id=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.socket_type = socket_type
-        self.address = address
-        self.cluster_id = cluster_id
-        self.cluster = cluster
-
-# ################################################################################################################################
-
 class ChannelAMQP(Base):
     """ An incoming AMQP connection.
     """
@@ -1326,6 +1100,15 @@ class ChannelAMQP(Base):
     id = Column(Integer, Sequence('channel_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False)
+    vhost = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    frame_max = Column(Integer(), nullable=False)
+    heartbeat = Column(Integer(), nullable=False)
+
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=False)
     pool_size = Column(Integer, nullable=False)
@@ -1339,49 +1122,15 @@ class ChannelAMQP(Base):
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_amqp', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, queue=None, consumer_tag_prefix=None, def_id=None, def_name=None,
+    def __init__(self, id=None, name=None, is_active=None, queue=None, consumer_tag_prefix=None,
             service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
-        self.def_id = def_id
-        self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
-
-# ################################################################################################################################
-
-class ChannelSTOMP(Base):
-    """ An incoming STOMP connection.
-    """
-    __tablename__ = 'channel_stomp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('channel_stomp_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    username = Column(String(200), nullable=True, server_default=STOMP.DEFAULT.USERNAME)
-    password = Column(String(200), nullable=True)
-
-    address = Column(String(200), nullable=False, server_default=STOMP.DEFAULT.ADDRESS)
-    proto_version = Column(String(20), nullable=False, server_default=STOMP.DEFAULT.PROTOCOL)
-    timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
-    sub_to = Column(Text, nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship(Service, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -1414,47 +1163,6 @@ class ChannelWMQ(Base):
         self.queue = queue
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
-        self.service_name = service_name # Not used by the DB
-        self.data_format = data_format
-
-# ################################################################################################################################
-
-class ChannelZMQ(Base):
-    """ An incoming Zero MQ connection.
-    """
-    __tablename__ = 'channel_zmq'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('channel_zmq_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    address = Column(String(200), nullable=False)
-    socket_type = Column(String(20), nullable=False)
-    sub_key = Column(String(200), nullable=True)
-    data_format = Column(String(20), nullable=True)
-    socket_method = Column(String(20), nullable=False)
-    pool_strategy = Column(String(20), nullable=False)
-    service_source = Column(String(20), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship(Service, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, address=None, socket_type=None, socket_type_text=None, sub_key=None,
-                 service_name=None, data_format=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.address = address
-        self.socket_type = socket_type
-        self.socket_type_text = socket_type_text # Not used by the DB
-        self.sub_key = sub_key
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
 
@@ -1522,167 +1230,6 @@ class DeploymentStatus(Base):
 
 # ################################################################################################################################
 
-class MsgNamespace(Base):
-    """ A message namespace, used in XPath, for instance.
-    """
-    __tablename__ = 'msg_ns'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('msg_ns_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    value = Column(String(500), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('namespaces', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, value=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.value = value
-        self.cluster_id = cluster_id
-
-# ################################################################################################################################
-
-class XPath(Base):
-    """ An XPath expression to run against XML messages.
-    """
-    __tablename__ = 'msg_xpath'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('msg_xpath_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    value = Column(String(1500), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('xpaths', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, value=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.value = value
-        self.cluster_id = cluster_id
-
-# ################################################################################################################################
-
-class JSONPointer(Base):
-    """ An XPath-list expression to run against JSON messages.
-    """
-    __tablename__ = 'msg_json_pointer'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('msg_json_pointer_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    value = Column(String(1500), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('json_pointers', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, value=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.value = value
-        self.cluster_id = cluster_id
-
-# ################################################################################################################################
-
-class OpenStackSwift(Base):
-    """ A connection to OpenStack's Swift (no longer used, to be removed).
-    """
-    __tablename__ = 'os_swift'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False)
-
-    auth_url = Column(String(200), nullable=False)
-    auth_version = Column(String(200), nullable=False)
-    user = Column(String(200), nullable=True)
-    secret_key = Column(String(200), nullable=True)
-    retries = Column(Integer, nullable=False)
-    is_snet = Column(Boolean(), nullable=False)
-    starting_backoff = Column(Integer, nullable=False)
-    max_backoff = Column(Integer, nullable=False)
-    tenant_name = Column(String(200), nullable=True)
-    should_validate_cert = Column(Boolean(), nullable=False)
-    cacert = Column(String(200), nullable=True)
-    should_retr_ratelimit = Column(Boolean(), nullable=False)
-    needs_tls_compr = Column(Boolean(), nullable=False)
-    custom_options = Column(String(2000), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('openstack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
-            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
-            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.auth_url = auth_url
-        self.auth_version = auth_version
-        self.user = user
-        self.key = key
-        self.retries = retries
-        self.is_snet = is_snet
-        self.starting_backoff = starting_backoff
-        self.max_backoff = max_backoff
-        self.tenant_name = tenant_name
-        self.should_validate_cert = should_validate_cert
-        self.cacert = cacert
-        self.should_retr_ratelimit = should_retr_ratelimit
-        self.needs_tls_compr = needs_tls_compr
-        self.custom_options = custom_options
-
-# ################################################################################################################################
-
-class AWSS3(Base):
-    """ An outgoing connection to AWS S3.
-    """
-    __tablename__ = 'aws_s3'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('aws_s3_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.POOL_SIZE)
-
-    address = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.ADDRESS)
-    debug_level = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.DEBUG_LEVEL)
-    suppr_cons_slashes = Column(Boolean(), nullable=False, default=True)
-    content_type = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.CONTENT_TYPE)
-    metadata_ = Column(String(2000), nullable=True) # Can't be 'metadata' because this is reserved to SQLAlchemy
-    bucket = Column(String(2000), nullable=True)
-    encrypt_at_rest = Column(Boolean(), nullable=False, default=False)
-    storage_class = Column(String(200), nullable=False, default=CLOUD.AWS.S3.STORAGE_CLASS.DEFAULT)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    security = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('aws_s3_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
 class Notification(Base):
     """ A base class for all notifications, be it cloud, FTP-based or others.
     """
@@ -1715,25 +1262,6 @@ class Notification(Base):
 
 # ################################################################################################################################
 
-class NotificationOpenStackSwift(Notification):
-    """ Stores OpenStack Swift notifications (no longer used).
-    """
-    __tablename__ = 'notif_os_swift'
-    __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
-
-    id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
-
-    containers = Column(String(16380), nullable=False)
-
-    def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
-    definition = relationship(
-        OpenStackSwift, backref=backref('notif_oss_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
 class NotificationSQL(Notification):
     """ Stores SQL notifications.
     """
@@ -1747,35 +1275,6 @@ class NotificationSQL(Notification):
     def_id = Column(Integer, ForeignKey('sql_pool.id'), primary_key=True)
     definition = relationship(
         SQLConnectionPool, backref=backref('notif_sql_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class CassandraConn(Base):
-    """ Connections to Cassandra.
-    """
-    __tablename__ = 'conn_def_cassandra'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('conn_def_cassandra_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS)
-    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT)
-    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE)
-    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION)
-    cql_version = Column(Integer, nullable=True)
-    default_keyspace = Column(String(400), nullable=False)
-    username = Column(String(200), nullable=True)
-    password = Column(String(200), nullable=True)
-    tls_ca_certs = Column(String(200), nullable=True)
-    tls_client_cert = Column(String(200), nullable=True)
-    tls_client_priv_key = Column(String(200), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -1795,49 +1294,6 @@ class ElasticSearch(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('search_es_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class Solr(Base):
-    __tablename__ = 'search_solr'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('search_solr_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False, default=True)
-    address = Column(String(400), nullable=False)
-    timeout = Column(Integer(), nullable=False)
-    ping_path = Column(String(40), nullable=False)
-    options = Column(String(800), nullable=True)
-    pool_size = Column(Integer(), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('search_solr_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class CassandraQuery(Base):
-    """ Cassandra query templates.
-    """
-    __tablename__ = 'query_cassandra'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('query_cassandra_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    value = Column(LargeBinary(40000), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def_id = Column(Integer, ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(CassandraConn, backref=backref('cassandra_queries', cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -1891,91 +1347,6 @@ class IMAP(Base):
 
 # ################################################################################################################################
 
-class RBACRole(Base):
-    """ All the roles known within a particular cluster.
-    """
-    __tablename__ = 'rbac_role'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('rbac_role_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    parent_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=True)
-    parent = relationship('RBACRole', backref=backref('children'), remote_side=[id])
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class RBACPermission(Base):
-    """ Permissions defined in a given cluster.
-    """
-    __tablename__ = 'rbac_perm'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('rbac_perm_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('rbac_permissions', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class RBACClientRole(Base):
-    """ Mappings between clients and roles they have.
-    """
-    __tablename__ = 'rbac_client_role'
-    __table_args__ = (UniqueConstraint('client_def', 'role_id', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('rbac_cli_rol_seq'), primary_key=True)
-    name = Column(String(400), nullable=False)
-    client_def = Column(String(200), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
-    role = relationship(RBACRole, backref=backref('rbac_client_roles', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('rbac_client_roles', order_by=client_def, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class RBACRolePermission(Base):
-    """ Mappings between roles and permissions they have on given services.
-    """
-    __tablename__ = 'rbac_role_perm'
-    __table_args__ = (UniqueConstraint('role_id', 'perm_id', 'service_id', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('rbac_role_perm_seq'), primary_key=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
-    role = relationship(RBACRole, backref=backref('rbac_role_perms', order_by=id, cascade='all, delete, delete-orphan'))
-
-    perm_id = Column(Integer, ForeignKey('rbac_perm.id', ondelete='CASCADE'), nullable=False)
-    perm = relationship(RBACPermission, backref=backref('rbac_role_perms', order_by=id, cascade='all, delete, delete-orphan'))
-
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship('Service', backref=backref('role_perm', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('rbac_role_permissions', order_by=id, cascade='all, delete, delete-orphan'))
-
-    def get_name(self):
-        return '{}/{}/{}/{}'.format(self.id, self.role_id, self.perm_id, self.service_id)
-
-# ################################################################################################################################
-
 class KVData(Base):
     """ Key/value data table.
     """
@@ -1994,690 +1365,6 @@ class KVData(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class ChannelWebSocket(Base):
-    """ A WebSocket connection definition.
-    """
-    __tablename__ = 'channel_web_socket'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'),
-                      UniqueConstraint('address', 'cluster_id'), {})
-
-    id = cast_('int', Column(Integer, Sequence('web_socket_chan_seq'), primary_key=True))
-    name = cast_('str', Column(String(200), nullable=False))
-    is_active = cast_('bool', Column(Boolean(), nullable=False))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False))
-    is_out = cast_('bool', Column(Boolean(), nullable=False, default=sa_false()))
-
-    address = cast_('str', Column(String(200), nullable=False))
-    data_format = cast_('str', Column(String(20), nullable=False))
-    new_token_wait_time = cast_('int', Column(Integer(), nullable=False))
-    token_ttl = cast_('int', Column(Integer(), nullable=False))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
-    service = relationship('Service', backref=backref('web_socket', order_by=name, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
-
-    def __init__(self, id=None, name=None, is_active=None, is_internal=None, address=None, data_format=None,
-            new_token_wait_time=None, token_ttl=None, service_id=None, service=None, cluster_id=None, cluster=None,
-            security_id=None, security=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.is_internal = is_internal
-        self.address = address
-        self.data_format = data_format
-        self.new_token_wait_time = new_token_wait_time
-        self.token_ttl = token_ttl
-        self.service_id = service_id
-        self.service = service
-        self.cluster_id = cluster_id
-        self.cluster = cluster
-        self.security_id = security_id
-        self.security = security
-        self.service_name = None # Not used by DB
-        self.sec_type = None # Not used by DB
-
-# ################################################################################################################################
-
-class WebSocketClient(Base):
-    """ An active WebSocket client - currently connected to a Zato server process.
-    """
-    __tablename__ = 'web_socket_client'
-    __table_args__ = (
-        Index('wscl_pub_client_idx', 'cluster_id', 'pub_client_id', unique=True),
-        Index('wscl_cli_ext_n_idx', 'cluster_id', 'ext_client_name', unique=False),
-        Index('wscl_cli_ext_i_idx', 'cluster_id', 'ext_client_id', unique=False),
-        Index('wscl_pr_addr_idx', 'cluster_id', 'peer_address', unique=False),
-        Index('wscl_pr_fqdn_idx', 'cluster_id', 'peer_fqdn', unique=False),
-    {})
-
-    # This ID is for SQL
-    id = cast_('int', Column(Integer, Sequence('web_socket_cli_seq'), primary_key=True))
-
-    is_internal = cast_('bool', Column(Boolean(), nullable=False))
-
-    # This one is assigned by Zato
-    pub_client_id = cast_('str', Column(String(200), nullable=False))
-
-    # These are assigned by clients themselves
-    ext_client_id = cast_('str', Column(String(200), nullable=False))
-    ext_client_name = cast_('strnone', Column(String(200), nullable=True))
-
-    local_address = cast_('str', Column(String(400), nullable=False))
-    peer_address = cast_('str', Column(String(400), nullable=False))
-    peer_fqdn = cast_('str', Column(String(400), nullable=False))
-
-    connection_time = cast_('datetime', Column(DateTime, nullable=False))
-    last_seen = cast_('datetime', Column(DateTime, nullable=False))
-
-    server_proc_pid = cast_('int', Column(Integer, nullable=False))
-    server_name = cast_('str', Column(String(200), nullable=False)) # References server.name
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    channel_id = cast_('int', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=False))
-    channel = relationship(
-        ChannelWebSocket, backref=backref('clients', order_by=local_address, cascade='all, delete, delete-orphan'))
-
-    server_id = cast_('int', Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False))
-    server = relationship(
-        Server, backref=backref('server_web_socket_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(
-        Cluster, backref=backref('web_socket_client_list', order_by=last_seen, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class WebSocketClientPubSubKeys(Base):
-    """ Associates currently active WebSocket clients with subscription keys.
-    """
-    __tablename__ = 'web_socket_cli_ps_keys'
-    __table_args__ = (
-        Index('wscl_psk_cli', 'cluster_id', 'client_id', unique=False),
-        Index('wscl_psk_sk', 'cluster_id', 'sub_key', unique=False),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True))
-
-    # The same as in web_socket_sub.sub_key
-    sub_key = cast_('str', Column(String(200), nullable=False))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    client_id = cast_('int', Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False))
-    client = relationship(
-        WebSocketClient, backref=backref('web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref(
-        'web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class WebSocketSubscription(Base):
-    """ Persistent subscriptions pertaining to a given long-running, possibly restartable, WebSocket connection.
-    """
-    __tablename__ = 'web_socket_sub'
-    __table_args__ = (
-        Index('wssub_channel_idx', 'cluster_id', 'channel_id', unique=False),
-        Index('wssub_subkey_idx', 'cluster_id', 'sub_key', unique=True),
-        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=False),
-        Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False))
-    ext_client_id = cast_('str', Column(String(200), nullable=False))
-
-    # Each transient, per-connection, web_socket_cli_ps_keys.sub_key will refer to this column
-    sub_key = cast_('str', Column(String(200), nullable=False))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
-    channel = relationship(
-        ChannelWebSocket, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    subscription_id = cast_('int', Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubEndpoint(Base):
-    """ An individual endpoint participating in publish/subscribe scenarios.
-    """
-    __tablename__ = 'pubsub_endpoint'
-    __table_args__ = (
-        Index('pubsb_endp_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_endp_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_endp_name_idx', 'cluster_id', 'name', unique=True),
-        UniqueConstraint('cluster_id', 'security_id'),
-        UniqueConstraint('cluster_id', 'service_id'),
-        UniqueConstraint('cluster_id', 'ws_channel_id'),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True))
-    name = cast_('str', Column(String(200), nullable=False))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
-    is_active = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true())) # Unusued for now
-    endpoint_type = cast_('str', Column(String(40), nullable=False)) # WSX, REST and other types
-
-    last_seen = cast_('intnone', Column(BigInteger(), nullable=True))
-    last_pub_time = cast_('intnone', Column(BigInteger(), nullable=True))
-    last_sub_time = cast_('intnone', Column(BigInteger(), nullable=True))
-    last_deliv_time = cast_('intnone', Column(BigInteger(), nullable=True))
-
-    # Endpoint's role, e.g. publisher, subscriber or both
-    role = cast_('str', Column(String(40), nullable=False))
-
-    # Tags describing this endpoint
-    tags = cast_('strnone', Column(Text, nullable=True)) # Unusued for now
-
-    # Patterns for topics that this endpoint may subscribe to
-    topic_patterns = cast_('strnone', Column(Text, nullable=True))
-
-    # Patterns for tags of publishers
-    pub_tag_patterns = cast_('strnone', Column(Text, nullable=True)) # Unused for now
-
-    # Patterns for tags of messages
-    message_tag_patterns = cast_('strnone', Column(Text, nullable=True)) # Unused for now
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    # Endpoint is a service
-    service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
-    service = relationship('Service', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-    # Identifies the endpoint through its security definition, e.g. a username/password combination.
-    security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
-    security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-    # Identifies the endpoint through a reference to a generic connection
-    gen_conn_id = cast_('intnone', Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True))
-    gen_conn = relationship('GenericConn', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-    # Identifies the endpoint through a long-running WebSockets channel
-    ws_channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
-    ws_channel = relationship(
-        ChannelWebSocket, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-    sec_type = None           # Not used by DB
-    sec_name = None           # Not used by DB
-    ws_channel_name = None    # Not used by DB
-    service_name = None       # Not used by DB
-    endpoint_type_human =None # Not used by DB
-
-# ################################################################################################################################
-
-class PubSubTopic(Base):
-    """ A topic in pub/sub.
-    """
-    __tablename__ = 'pubsub_topic'
-    __table_args__ = (
-        Index('pubsb_tp_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_tp_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_tp_name_idx', 'cluster_id', 'name', unique=True),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_topic_seq'), primary_key=True))
-    name = cast_('str', Column(String(200), nullable=False))
-    is_active = cast_('bool', Column(Boolean(), nullable=False))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False, default=False))
-    max_depth_gd = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD))
-    max_depth_non_gd = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD))
-    depth_check_freq = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ))
-    has_gd = cast_('bool', Column(Boolean(), nullable=False)) # Guaranteed delivery
-    is_api_sub_allowed = cast_('bool', Column(Boolean(), nullable=False))
-
-    # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
-    pub_buffer_size_gd = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)))
-
-    task_sync_interval = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL)))
-    task_delivery_interval = cast_('int',
-        Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    # A hook service invoked during publications to this specific topic
-    hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
-
-    # Not used by DB
-    ext_client_id = None
-    last_pub_time = None
-    pub_time = None
-    ext_pub_time = None
-    last_pub_time = None
-    last_pub_msg_id = None
-    last_endpoint_id = None
-    last_endpoint_name = None
-    last_pub_has_gd = None
-    last_pub_server_pid = None
-    last_pub_server_name = None
-
-# ################################################################################################################################
-
-class PubSubEndpointTopic(Base):
-    """ A list of topics to which a given endpoint has ever published along with metadata about the latest publication.
-    There is one row for each existing publisher and topic ever in use.
-    """
-    __tablename__ = 'pubsub_endp_topic'
-    __table_args__ = (
-        Index('pubsb_endpt_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_endpt_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_endpt_msgid_idx', 'cluster_id', 'pub_msg_id', unique=True),
-        Index('pubsb_endpt_clsendtp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True))
-
-    pub_pattern_matched = cast_('str', Column(Text, nullable=False))
-    last_pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False))
-    pub_msg_id = cast_('str', Column(String(200), nullable=False))
-    pub_correl_id = cast_('strnone', Column(String(200), nullable=True))
-    in_reply_to = cast_('strnone', Column(String(200), nullable=True))
-    ext_client_id = cast_('strnone', Column(Text(), nullable=True))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    endpoint_id = cast_('intnone', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True))
-    endpoint = relationship(
-        PubSubEndpoint, backref=backref('pubsub_endpoint_topics', order_by=endpoint_id, cascade='all, delete, delete-orphan'))
-
-    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
-    topic = relationship(
-        PubSubTopic, backref=backref('pubsub_endpoint_topics', order_by=topic_id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_topics', order_by=cluster_id,
-        cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubMessage(Base):
-    """ An individual message published to a topic.
-    """
-    __tablename__ = 'pubsub_message'
-    __table_args__ = (
-
-        # This index is needed for FKs from other tables,
-        # otherwise with MySQL we get error 1215 'Cannot add foreign key constraint'
-        Index('pubsb_msg_pubmsg_id_idx', 'pub_msg_id', unique=True),
-
-        Index('pubsb_msg_pubmsg_clu_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
-        Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
-        Index('pubsb_msg_correl_id_idx', 'cluster_id', 'pub_correl_id', unique=False),
-    {})
-
-    # For SQL joins
-    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
-
-    # Publicly visible message identifier
-    pub_msg_id = cast_('str', Column(String(200), nullable=False))
-
-    # Publicly visible correlation ID
-    pub_correl_id = cast_('strnone', Column(String(200), nullable=True))
-
-    # Publicly visible ID of the message current message is a response to
-    in_reply_to = cast_('strnone', Column(String(200), nullable=True))
-
-    # ID of an external client on whose behalf the endpoint published the message
-    ext_client_id = cast_('strnone', Column(Text(), nullable=True))
-
-    # Will group messages belonging logically to the same group, useful if multiple
-    # messages are published with the same timestamp by the same client but they still
-    # need to be correctly ordered.
-    group_id = cast_('strnone', Column(Text(), nullable=True))
-    position_in_group = cast_('intnone', Column(Integer, nullable=True))
-
-    # What matching pattern allowed an endpoint to publish this message
-    pub_pattern_matched = cast_('str', Column(Text, nullable=False))
-
-    # When the row was created
-    pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False))
-
-    # When the message was created by the endpoint publishing it
-    ext_pub_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-
-    expiration_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-    last_updated = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-
-    data = cast_('str', Column(Text(2 * 10 ** 9), nullable=False)) # 2 GB to prompt a promotion to LONGTEXT under MySQL
-
-    data_prefix = cast_('str', Column(Text(), nullable=False))
-    data_prefix_short = cast_('str', Column(String(200), nullable=False))
-    data_format = cast_('str', Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT))
-    mime_type = cast_('str', Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE))
-    size = cast_('int', Column(Integer, nullable=False))
-    priority = cast_('int', Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT)))
-    expiration = cast_('int', Column(BigInteger, nullable=False, server_default='0'))
-    has_gd = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true())) # Guaranteed delivery
-
-    # Is the message in at least one delivery queue, meaning that there is at least one
-    # subscriber to whom this message will be sent so the message is no longer considered
-    # to be available in the topic for other subscribers to receive it,
-    # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
-    is_in_sub_queue = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
-
-    # User-defined arbitrary context data
-    user_ctx = cast_('strnone', Column(_JSON(), nullable=True))
-
-    # Zato-defined arbitrary context data
-    zato_ctx = cast_('strnone', Column(_JSON(), nullable=True))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    published_by_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False))
-    published_by = relationship(
-        PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True))
-    topic = relationship(
-        PubSubTopic, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
-
-    pub_time_utc = None # Not used by DB
-
-# ################################################################################################################################
-
-class PubSubSubscription(Base):
-    """ Stores high-level information about topics an endpoint subscribes to.
-    """
-    __tablename__ = 'pubsub_sub'
-    __table_args__ = (
-        Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_sub_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_sub_clust_endpt_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
-        Index('pubsb_sub_clust_subk', 'sub_key', unique=True),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False, default=False))
-
-    creation_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=False))
-    sub_key = cast_('str', Column(String(200), nullable=False)) # Externally visible ID of this subscription
-    sub_pattern_matched = cast_('str', Column(Text, nullable=False))
-    deliver_by = cast_('strnone', Column(Text, nullable=True)) # Delivery order, e.g. by priority, date etc.
-    ext_client_id = cast_('strnone', Column(Text, nullable=True)) # Subscriber's ID as it is stored by that external system
-
-    is_durable = cast_('bool', Column(Boolean(), nullable=False, default=True)) # For now always True = survives cluster restarts
-    has_gd = cast_('bool', Column(Boolean(), nullable=False)) # Guaranteed delivery
-
-    active_status = cast_('str', Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id))
-    is_staging_enabled = cast_('bool', Column(Boolean(), nullable=False, default=False))
-
-    delivery_method = cast_('str', Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id))
-    delivery_data_format = cast_('str', Column(String(200), nullable=False, default=DATA_FORMAT.JSON))
-    delivery_endpoint = cast_('strnone', Column(Text, nullable=True))
-
-    # This is updated only periodically, e.g. once an hour, rather than each time the subscriber is seen,
-    # so the value is not an exact time of the last interaction with the subscriber but a time,
-    # within a certain range (default=60 minutes), when any action was last time carried out with the subscriber.
-    # For WSX subscribers, this value will never be less than their ping timeout.
-    last_interaction_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-
-    last_interaction_type = cast_('strnone', Column(String(200), nullable=True))
-    last_interaction_details = cast_('strnone', Column(Text, nullable=True))
-
-    # How many messages to deliver in a single batch for that endpoint
-    delivery_batch_size = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE))
-
-    # If delivery_batch_size is 1, whether such a single message delivered to endpoint
-    # should be sent as-is or wrapped in a single-element list.
-    wrap_one_msg_in_list = cast_('bool', Column(Boolean(), nullable=False))
-
-    # How many bytes to send at most in a single delivery
-    delivery_max_size = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)) # Unused for now
-
-    # How many times to retry delivery for a single message
-    delivery_max_retry = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY))
-
-    # Should a failed delivery of a single message block the entire delivery queue
-    # until that particular message has been successfully delivered.
-    delivery_err_should_block = cast_('bool', Column(Boolean(), nullable=False))
-
-    # How many seconds to wait on a TCP socket error
-    wait_sock_err = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR))
-
-    # How many seconds to wait on an error other than a TCP socket one
-    wait_non_sock_err = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR))
-
-    # A hook service invoked before messages are delivered for this specific subscription
-    hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
-
-    # REST/POST
-    out_http_method = cast_('strnone', Column(Text, nullable=True, default='POST')) # E.g. POST or PATCH
-
-    # AMQP
-    amqp_exchange = cast_('strnone', Column(Text, nullable=True))
-    amqp_routing_key = cast_('strnone', Column(Text, nullable=True))
-
-    # Flat files
-    files_directory_list = cast_('strnone', Column(Text, nullable=True))
-
-    # FTP
-    ftp_directory_list = cast_('strnone', Column(Text, nullable=True))
-
-    # SMS - Twilio
-    sms_twilio_from = cast_('strnone', Column(Text, nullable=True))
-    sms_twilio_to_list = cast_('strnone', Column(Text, nullable=True))
-
-    # SMTP
-    smtp_subject = cast_('strnone', Column(Text, nullable=True))
-    smtp_from = cast_('strnone', Column(Text, nullable=True))
-    smtp_to_list = cast_('strnone', Column(Text, nullable=True))
-    smtp_body = cast_('strnone', Column(Text, nullable=True))
-    smtp_is_html = cast_('boolnone', Column(Boolean(), nullable=True))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
-    topic = relationship(
-        PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    endpoint_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True))
-    endpoint = relationship(
-        PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    out_job_id = cast_('intnone', Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=True))
-    out_job = relationship(
-        Job, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    out_http_soap_id = cast_('intnone', Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True))
-    out_http_soap = relationship(
-        HTTPSOAP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    out_smtp_id = cast_('intnone', Column(Integer, ForeignKey('email_smtp.id', ondelete='CASCADE'), nullable=True))
-    out_smtp = relationship(
-        SMTP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    out_amqp_id = cast_('intnone', Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=True))
-    out_amqp = relationship(
-        OutgoingAMQP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    out_gen_conn_id = cast_('intnone', Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True))
-    out_gen_conn = relationship(
-        'GenericConn', backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    ws_channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
-    ws_channel = relationship(
-        ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
-
-    # Server that will run the delivery task for this subscription
-    server_id = cast_('intnone', Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True))
-    server = relationship(
-        Server, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('intnone', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True))
-    cluster = relationship(
-        Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    name = None # Not used by DB
-    topic_name = None # Not used by DB
-    total_depth = None # Not used by DB
-    current_depth_gd = None # Not used by DB
-    current_depth_non_gd = None # Not used by DB
-    sub_count = None # Not used by DB
-
-# ################################################################################################################################
-
-class PubSubEndpointEnqueuedMessage(Base):
-    """ A queue of messages for an individual endpoint subscribed to a topic.
-    """
-    __tablename__ = 'pubsub_endp_msg_queue'
-    __table_args__ = (
-        Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=False),
-        Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
-        Index('pubsb_enms_q_subs_idx', 'cluster_id', 'sub_key', unique=False),
-        Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
-    {})
-
-    __mapper_args__ = {
-        'confirm_deleted_rows': False
-    }
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
-    creation_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When was the message enqueued
-
-    delivery_count = cast_('int', Column(Integer, nullable=False, server_default='0'))
-    last_delivery_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-    is_in_staging = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
-    sub_pattern_matched = cast_('str', Column(Text, nullable=False))
-
-    # A flag indicating whether this message is deliverable at all - will be set to False
-    # after delivery_count reaches max retries for subscription or if a hook services decides so.
-    is_deliverable = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true()))
-
-    delivery_status = cast_('int', Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED)))
-    delivery_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    pub_msg_id = cast_('str', Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False))
-
-    endpoint_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False))
-    endpoint = relationship(PubSubEndpoint,
-        backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
-    topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    sub_key = cast_('str', Column(String(200), ForeignKey('pubsub_sub.sub_key', ondelete='CASCADE'), nullable=False))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
-
-    queue_name = None # Not used by DB
-
-# ################################################################################################################################
-
-class PubSubEndpointQueueInteraction(Base):
-    """ A series of interactions with a message queue's endpoint.
-    """
-    __tablename__ = 'pubsub_endp_msg_q_inter'
-    __table_args__ = (
-        Index('pubsb_enms_qi_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_enms_qi_endptp_idx', 'cluster_id', 'queue_id', unique=False),
-    {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
-    entry_timestamp = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When the row was created
-
-    inter_type = cast_('str', Column(String(200), nullable=False))
-    inter_details = cast_('strnone', Column(Text, nullable=True))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    queue_id = cast_('int', Column(Integer, ForeignKey('pubsub_endp_msg_queue.id', ondelete='CASCADE'), nullable=False))
-    queue = relationship(
-        PubSubEndpointEnqueuedMessage, backref=backref(
-            'pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(
-        Cluster, backref=backref('pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubChannel(Base):
-    """ An N:N mapping between arbitrary channels and topics to which their messages should be sent.
-    """
-    __tablename__ = 'pubsub_channel'
-    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'topic_id'), {})
-
-    id = cast_('int', Column(Integer, Sequence('pubsub_channel_seq'), primary_key=True))
-    is_active = cast_('bool', Column(Boolean(), nullable=False))
-    is_internal = cast_('bool', Column(Boolean(), nullable=False))
-
-    conn_id = cast_('str', Column(String(100), nullable=False))
-    conn_type = cast_('str', Column(String(100), nullable=False))
-
-    # JSON data is here
-    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
-
-    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
-    topic = relationship(
-        PubSubTopic, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
-    cluster = relationship(Cluster, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class SMSTwilio(Base):
-    """ Outgoing SMS connections with Twilio.
-    """
-    __tablename__ = 'sms_twilio'
-    __table_args__ = (
-        UniqueConstraint('name', 'cluster_id'),
-    {})
-
-    id = Column(Integer, Sequence('sms_twilio_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, default=False)
-
-    account_sid = Column(String(200), nullable=False)
-    auth_token = Column(String(200), nullable=False)
-
-    default_from = Column(String(200), nullable=True)
-    default_to = Column(String(200), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2935,34 +1622,5 @@ class GenericConnClient(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(
         Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class RateLimitState(Base):
-    """ Rate limiting persistent storage for exact definitions.
-    """
-    __tablename__ = 'rate_limit_state'
-    __table_args__ = (
-        Index('rate_lim_obj_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
-              mysql_length={'object_type':191, 'object_id':191, 'period':191, 'last_network':191}),
-    {})
-
-    id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
-
-    object_type = Column(Text(191), nullable=False)
-    object_id = Column(Text(191), nullable=False)
-
-    period = Column(Text(), nullable=False)
-    requests = Column(Integer(), nullable=False, server_default='0')
-    last_cid = Column(Text(), nullable=False)
-    last_request_time_utc = Column(DateTime(), nullable=False)
-    last_from = Column(Text(), nullable=False)
-    last_network = Column(Text(), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('rate_limit_state_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
