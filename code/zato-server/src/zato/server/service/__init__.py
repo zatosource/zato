@@ -47,7 +47,7 @@ from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7API, HL7RequestData, IBMMQRequestData, \
+from zato.server.service.reqresp import AMQPRequestData, Cloud, HL7API, HL7RequestData, IBMMQRequestData, \
      InstantMessaging, Outgoing, Request
 
 # Zato - Cython
@@ -314,7 +314,6 @@ class Service:
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     cloud = Cloud()
-    definition = Definition()
     im = InstantMessaging()
     odb:'ODBManager'
     static_config:'Bunch'
