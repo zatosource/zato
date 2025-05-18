@@ -114,7 +114,7 @@ class _CreateEditSIO(AdminSIO):
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
         'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
-        AsIs('client_id'), AsIs('security_id'), AsIs('sec_tls_ca_cert_id')) + extra_secret_keys + generic_attrs
+        AsIs('client_id'), AsIs('security_id')) + extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################

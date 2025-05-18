@@ -402,9 +402,6 @@ class HTTPSOAP(Base):
     url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
     params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
 
-    has_rbac = Column(Boolean, nullable=False, default=False)
-    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
-
     cache_expiry = Column(Integer, nullable=True, default=0)
 
     # JSON data is here
@@ -425,8 +422,8 @@ class HTTPSOAP(Base):
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
             url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
             pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
-            timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
-            cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
+            timeout=None, service_id=None, service=None, security=None, cluster_id=None,
+            cluster=None, service_name=None, security_id=None, security_name=None, content_type=None,
             cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, match_slash=None,
             http_accept=None, opaque=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
@@ -449,7 +446,6 @@ class HTTPSOAP(Base):
         self.params_pri = params_pri
         self.serialization_type = serialization_type
         self.timeout = timeout
-        self.sec_tls_ca_cert_id = sec_tls_ca_cert_id
         self.service_id = service_id
         self.service = service
         self.security = security
@@ -457,7 +453,6 @@ class HTTPSOAP(Base):
         self.cluster = cluster
         self.service_name = service_name # Not used by the DB
         self.security_id = security_id
-        self.has_rbac = has_rbac
         self.security_name = security_name
         self.content_type = content_type
         self.cache_id = cache_id

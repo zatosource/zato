@@ -31,7 +31,6 @@ def _get_edit_create_message(params, prefix=''):
         'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
-        'def_id': params[prefix + 'def_id'],
         'queue': params[prefix + 'queue'],
         'consumer_tag_prefix': params[prefix + 'consumer_tag_prefix'],
         'service': params[prefix + 'service'],
@@ -41,11 +40,9 @@ def _get_edit_create_message(params, prefix=''):
         'data_format': params.get(prefix + 'data_format'),
     }
 
-def _edit_create_response(client, verb, id, name, def_id, cluster_id):
-    response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
+def _edit_create_response(client, verb, id, name):
     return_data = {'id': id,
                    'message': 'Successfully {} the AMQP channel `{}`'.format(verb, name),
-                   'def_name': response.data.name
                 }
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
@@ -59,7 +56,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'def_name', 'def_id', 'service_name',
+        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'service_name',
             'pool_size', 'ack_mode','prefetch_count', 'data_format')
         output_repeated = True
 
@@ -79,8 +76,7 @@ class Index(_Index):
 def create(req):
     try:
         response = req.zato.client.invoke('zato.channel.amqp.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(req.zato.client, 'created', response.data.id,
-            req.POST['name'], req.POST['def_id'], req.POST['cluster_id'])
+        return _edit_create_response(req.zato.client, 'created', response.data.id, req.POST['name'])
     except Exception:
         msg = 'Could not create an AMQP channel, e:`{}`'.format(format_exc())
         logger.error(msg)
@@ -91,8 +87,7 @@ def create(req):
 def edit(req):
     try:
         req.zato.client.invoke('zato.channel.amqp.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
-            req.POST['edit-def_id'], req.POST['cluster_id'])
+        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'])
 
     except Exception:
         msg = 'Could not update the AMQP channel, e:`{}`'.format(format_exc())

@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from operator import itemgetter
 
@@ -33,13 +31,11 @@ class CreateForm(forms.Form):
         initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
     user_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     app_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    def_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['delivery_mode'].choices = []
-        self.fields['def_id'].choices = []
 
         # Sort modes by their friendly name.
         modes = sorted(iteritems(delivery_friendly_name), key=itemgetter(1))

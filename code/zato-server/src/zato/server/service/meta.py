@@ -443,10 +443,6 @@ class CreateEditMeta(AdminServiceMeta):
                     raise
                 else:
 
-                    if attrs.def_needed:
-                        def_ = session.query(attrs.def_needed).filter_by(id=input.def_id).one()
-                        input.def_name = def_.name
-
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper()).value
                     input.id = instance.id
                     input.action = action
