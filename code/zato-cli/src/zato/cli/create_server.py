@@ -168,7 +168,6 @@ user=./user.conf
 
 [component_enabled]
 email=True
-hl7=True
 search=True
 odoo=True
 patterns=True

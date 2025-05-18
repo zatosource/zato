@@ -623,9 +623,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if isinstance(pickup_from, list):
                 for project in pickup_from:
                     for item in project.pickup_from_path:
-                        logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
+                        if _needs_details:
+                            logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
             else:
-                logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
+                if _needs_details:
+                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
 
             # .. and do append it for later use ..
             self.service_sources.append(pickup_from)

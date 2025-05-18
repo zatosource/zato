@@ -117,7 +117,6 @@ class CommandStore:
              delete_odb          as delete_odb_mod,          \
              enmasse             as enmasse_mod,             \
              FromConfig,                                     \
-             hl7_                as hl7_mod,                 \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
              quickstart          as quickstart_mod,          \
@@ -331,16 +330,6 @@ class CommandStore:
         hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
         hash_get_rounds.set_defaults(command='hash_get_rounds')
         self.add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
-
-        #
-        # hl7
-        #
-        hl7 = subs.add_parser('hl7', description='HL7-related commands')
-        hl7_subs = hl7.add_subparsers()
-
-        hl7_mllp_send = hl7_subs.add_parser('mllp-send', description=hl7_mod.MLLPSend.__doc__, parents=[base_parser])
-        hl7_mllp_send.set_defaults(command='hl7_mllp_send')
-        self.add_opts(hl7_mllp_send, hl7_mod.MLLPSend.opts)
 
         #
         # IDE

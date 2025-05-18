@@ -39,16 +39,12 @@ if 0:
     # Arrow
     from arrow import Arrow
 
-    # hl7apy
-    from hl7apy.core import Message as hl7apy_Message
-
     # Kombu
     from kombu.message import Message as KombuAMQPMessage
 
     # Zato
     from zato.common.odb.api import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
-    from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
@@ -67,8 +63,6 @@ if 0:
     CySimpleIO = CySimpleIO
     EMailAPI = EMailAPI
     FTPStore = FTPStore
-    hl7apy_Message = hl7apy_Message
-    HL7ConnCtx = HL7ConnCtx
     KombuAMQPMessage = KombuAMQPMessage
     KVDBAPI = KVDBAPI
     Logger = Logger
@@ -138,18 +132,6 @@ class AMQPRequestData:
 
 # ################################################################################################################################
 
-class HL7RequestData:
-    """ Details of an individual HL7 request.
-    """
-    __slots__ = 'connection', 'data',
-
-    def __init__(self, connection, data):
-        # type: (HL7ConnCtx, hl7apy_Message) -> None
-        self.connection = connection
-        self.data = data
-
-# ################################################################################################################################
-
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
@@ -157,7 +139,7 @@ class Request:
 
     __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
+        'merge_channel_params', 'http', 'amqp', 'enforce_string_encoding')
 
     def __init__(
         self,
@@ -179,7 +161,6 @@ class Request:
         self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
-        self.hl7 = cast_('HL7RequestData', None)
         self.encrypt_func = None
         self.encrypt_secrets = True
         self.bytes_to_str_encoding = cast_('str', None)
@@ -270,10 +251,10 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'hl7', 'redis')
+    __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 
     def __init__(self, amqp=None, ftp=None, odoo=None, plain_http=None, soap=None, sql=None,
-            sap=None, ldap=None, mongodb=None, redis=None, hl7=None):
+            sap=None, ldap=None, mongodb=None, redis=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
         self.ftp  = cast_('FTPStore', ftp)
@@ -292,7 +273,6 @@ class Outgoing:
         self.mongodb = cast_('stranydict', mongodb)
 
         self.redis = cast_('KVDBAPI', redis)
-        self.hl7   = cast_('HL7API', hl7)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,27 +286,6 @@ class Cloud:
     jira: 'stranydict'
     salesforce: 'stranydict'
     ms365: 'stranydict'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MLLP:
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class HL7API:
-    """ A container for HL7 connections a service can establish.
-    """
-    __slots__ = 'fhir', 'mllp'
-
-    fhir: 'stranydict'
-    mllp: 'stranydict'
-
-    def __init__(self, fhir:'stranydict', mllp:'stranydict') -> None:
-        self.fhir = fhir
-        self.mllp = mllp
 
 # ################################################################################################################################
 # ################################################################################################################################

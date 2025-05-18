@@ -59,8 +59,6 @@ class CreateForm(DataFormatForm):
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
 
-    hl7_version = forms.CharField(widget=forms.HiddenInput())
-    json_path = forms.CharField(widget=forms.HiddenInput())
     data_encoding = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, security_list=None, sec_tls_ca_cert_list=None, cache_list=None, soap_versions=SOAP_VERSIONS,

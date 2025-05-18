@@ -18,8 +18,6 @@ from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.channel import amqp_ as channel_amqp
-from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
-from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
@@ -29,8 +27,6 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
-from zato.admin.web.views.outgoing.hl7 import fhir as outgoing_hl7_fhir
-from zato.admin.web.views.outgoing.hl7 import mllp as outgoing_hl7_mllp
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
@@ -260,55 +256,6 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. HL7 - FHIR
-
-    url(r'^zato/outgoing/hl7/fhir/$',
-        login_required(outgoing_hl7_fhir.Index()), name=outgoing_hl7_fhir.Index.url_name),
-    url(r'^zato/outgoing/hl7/fhir/create/$',
-        login_required(outgoing_hl7_fhir.Create()), name=outgoing_hl7_fhir.Create.url_name),
-    url(r'^zato/outgoing/hl7/fhir/edit/$',
-        login_required(outgoing_hl7_fhir.Edit()), name=outgoing_hl7_fhir.Edit.url_name),
-    url(r'^zato/outgoing/hl7/fhir/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(outgoing_hl7_fhir.Delete()), name=outgoing_hl7_fhir.Delete.url_name),
-    url(r'^zato/outgoing/hl7/fhir/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(outgoing_hl7_fhir.ping), name='outgoing-hl7-fhir-ping'),
-    url(r'^zato/outgoing/hl7/fhir/change-password/$',
-        login_required(outgoing_hl7_fhir.change_password), name='outgoing-hl7-fhir-change-password'),
-
-    url(r'^zato/outgoing/hl7/fhir/invoke/action/(?P<conn_name>.*)/$',
-        login_required(outgoing_hl7_fhir.invoke_action), name='outgoing-hl7-fhir-invoke-action'),
-    url(r'^zato/outgoing/hl7/fhir/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(outgoing_hl7_fhir.invoke), name='outgoing-hl7-fhir-invoke'),
-
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. HL7 - MLLP
-
-    url(r'^zato/outgoing/hl7/mllp/$',
-        login_required(outgoing_hl7_mllp.Index()), name=outgoing_hl7_mllp.Index.url_name),
-    url(r'^zato/outgoing/hl7/mllp/create/$',
-        login_required(outgoing_hl7_mllp.Create()), name=outgoing_hl7_mllp.Create.url_name),
-    url(r'^zato/outgoing/hl7/mllp/edit/$',
-        login_required(outgoing_hl7_mllp.Edit()), name=outgoing_hl7_mllp.Edit.url_name),
-    url(r'^zato/outgoing/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(outgoing_hl7_mllp.Delete()), name=outgoing_hl7_mllp.Delete.url_name),
-
-    url(r'^zato/outgoing/hl7/mllp/invoke/action/(?P<conn_name>.*)/$',
-        login_required(outgoing_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-invoke-action'),
-
-    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(outgoing_hl7_mllp.invoke), name='outgoing-hl7-mllp-invoke'),
-
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
     # .. LDAP
 
     url(r'^zato/outgoing/ldap/$',
@@ -425,36 +372,6 @@ urlpatterns += [
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
     ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. HL7 - MLLP
-    url(r'^zato/channel/hl7/mllp/$',
-        login_required(channel_hl7_mllp.Index()), name=channel_hl7_mllp.Index.url_name),
-    url(r'^zato/channel/hl7/mllp/create/$',
-        login_required(channel_hl7_mllp.Create()), name=channel_hl7_mllp.Create.url_name),
-    url(r'^zato/channel/hl7/mllp/edit/$',
-        login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
-    url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-# .. HL7 - REST
-url(r'^zato/channel/hl7/rest/$',
-    login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
-url(r'^zato/channel/hl7/rest/create/$',
-    login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
-url(r'^zato/channel/hl7/rest/edit/$',
-    login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
-url(r'^zato/channel/hl7/rest/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-    login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
-]
 
 # ################################################################################################################################
 

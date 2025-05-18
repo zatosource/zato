@@ -57,11 +57,6 @@ loggers:
         handlers: [connector]
         qualname: zato_connector
         propagate: false
-    zato_hl7:
-        level: INFO
-        handlers: [stdout, hl7]
-        qualname: zato_hl7
-        propagate: false
     zato_scheduler:
         level: INFO
         handlers: [stdout, scheduler]
@@ -108,14 +103,6 @@ handlers:
         formatter: default
         class: {log_handler_class}
         filename: './logs/connector.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
-    hl7:
-        formatter: default
-        class: {log_handler_class}
-        filename: './logs/hl7.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
