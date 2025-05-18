@@ -294,7 +294,7 @@ class PatternsFacade:
 # ################################################################################################################################
 
 class Service:
-    """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
+    """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, AMQP
     or any other, regardless whether they arere built-in or user-defined ones.
     """
     rest: 'RESTFacade'
@@ -646,7 +646,7 @@ class Service:
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
-            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'),
+            channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
@@ -1149,7 +1149,6 @@ class Service:
         in_reply_to='',        # type: str
         environ=None,          # type: dictnone
         init=True,             # type: bool
-        wmq_ctx=None,          # type: dictnone
         channel_info=None,     # type: ChannelInfo | None
         channel_item=None,     # type: dictnone
         _AMQP=CHANNEL.AMQP,            # type: str
