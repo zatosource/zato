@@ -42,6 +42,7 @@ from tempfile import gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
+from types import ModuleType
 from uuid import uuid4
 
 # Bunch
@@ -1871,20 +1872,11 @@ def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
 
 # ################################################################################################################################
 
-import inspect
-import os
-from types import ModuleType
-from typing import List, Set
-
-# ##############################################################################
-# Function to find internal modules
-# ##############################################################################
-
-def find_internal_modules(root: ModuleType) -> List[str]:
+def find_internal_modules(root:'ModuleType') -> 'strlist':
     """ Recursively finds all Python modules within the directory of the given
     root package that can be imported as submodules of the root.
     """
-    found_module_paths: Set[str] = set()
+    found_module_paths:'strset' = set()
 
     # A package module has a __path__ attribute (a list of paths).
     # A non-package module does not. This function expects a package.
@@ -1944,4 +1936,4 @@ def find_internal_modules(root: ModuleType) -> List[str]:
                 full_module_path = f'{root_module_name}.{module_suffix}'
                 found_module_paths.add(full_module_path)
 
-    return sorted(list(found_module_paths))
+    return sorted(found_module_paths)

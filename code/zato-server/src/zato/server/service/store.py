@@ -771,21 +771,9 @@ class ServiceStore:
     ) -> 'anylist':
         """ Imports and optionally caches locally internal services.
         """
-        cache_file_path = os.path.join(base_dir, 'config', 'repo', 'internal-cache.dat')
-
-        # It is possible that the cache file exists but it is of size zero.
-        # This will happen if the process of writing data out to the file
-        # was interrupted for any reason the last time the server was starting up.
-        # In that case, we need to delete the file altogether and let it recreate.
-
-        if os.path.exists(cache_file_path):
-            stat = os.stat(cache_file_path)
-
-            if stat.st_size == 0:
-                logger.info('Deleting empty `%s` file', cache_file_path)
-                os.remove(cache_file_path)
 
         sql_services = {}
+
         for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
             sql_services[item.impl_name] = { # type: ignore
                 'id': item.id,               # type: ignore
@@ -794,16 +782,7 @@ class ServiceStore:
                 'slow_threshold': item.slow_threshold, # type: ignore
             }
 
-        # Synchronizing internal modules means re-building the internal cache from scratch
-        # and re-deploying everything.
-
         service_info = []
-        internal_cache = {
-            'service_info': service_info
-        }
-
-        # This is currently unused
-        internal_cache = internal_cache
 
         logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
         info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
@@ -1268,7 +1247,6 @@ class ServiceStore:
 
         for py_path in visit_py_source(dir_name):
             out.extend(self.import_models_from_file(py_path, False, base_dir))
-            gevent_sleep(0.03) # type: ignore
 
         return out
 
@@ -1315,7 +1293,6 @@ class ServiceStore:
         for py_path in py_path_list:
             imported = self.import_services_from_file(py_path, False, base_dir)
             to_process.extend(imported)
-            gevent_sleep(0.03) # type: ignore
 
         return to_process
 
