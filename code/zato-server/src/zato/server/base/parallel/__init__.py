@@ -44,7 +44,7 @@ from zato.common.odb.post_process import ODBPostProcess
 from zato.common.rate_limiting import RateLimiting
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
-from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
+from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
     register_diag_handlers, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
