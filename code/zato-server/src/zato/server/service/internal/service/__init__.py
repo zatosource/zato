@@ -35,7 +35,6 @@ from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
 from zato.common.odb.query import service_deployment_list, service_list
-from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
@@ -70,8 +69,6 @@ class GetList(AdminService):
         input_required = 'cluster_id'
         input_optional = ('should_include_scheduler',) + GetListAdminSIO.input_optional
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Integer('usage'), Integer('usage'), Integer('slow_threshold')
         output_repeated = True
         default_value = ''
 
@@ -161,10 +158,6 @@ class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-        output_optional = Integer('usage'), Integer('slow_threshold'), 'last_duration', \
-            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
-            'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
-            'last_timestamp', 'usage_min', 'usage_max', 'usage_mean'
 
     def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
@@ -229,8 +222,6 @@ class Edit(AdminService):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
         input_required = 'id', 'is_active', Integer('slow_threshold')
-        input_optional = 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):
@@ -246,9 +237,6 @@ class Edit(AdminService):
                 service.slow_threshold = input.slow_threshold
 
                 set_instance_opaque_attrs(service, input)
-
-                # Set up rate-limiting each time an object was edited
-                self.server.service_store.set_up_rate_limiting(service.name)
 
                 session.add(service)
                 session.commit()

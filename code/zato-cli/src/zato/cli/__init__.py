@@ -176,17 +176,6 @@ command_imports = (
     ('service_invoke', 'zato.cli.service.Invoke'),
     ('set_ide_password', 'zato.cli.ide.SetIDEPassword'),
     ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
-    ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
-    ('sso_create_odb', 'zato.cli.sso.CreateODB'),
-    ('sso_create_user', 'zato.cli.sso.CreateUser'),
-    ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
-    ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
-    ('sso_login', 'zato.cli.sso.Login'),
-    ('sso_logout', 'zato.cli.sso.Logout'),
-    ('sso_lock_user', 'zato.cli.sso.LockUser'),
-    ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
-    ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
-    ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
     ('start', 'zato.cli.start.Start'),
     ('stop', 'zato.cli.stop.Stop'),
     ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
@@ -259,7 +248,6 @@ class ZatoCommand:
         FOUND_PIDFILE = 19
         USER_EXISTS = 20
         VALIDATION_ERROR = 21
-        NO_SUCH_SSO_USER = 22
         NOT_A_ZATO_SERVER = 23
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_SCHEDULER = 26

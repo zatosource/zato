@@ -122,7 +122,6 @@ class CommandStore:
              info                as info_mod,                \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
-             sso                 as sso_mod,                 \
              stop                as stop_mod,                \
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod
@@ -397,104 +396,6 @@ class CommandStore:
         service_invoke = service_subs.add_parser('invoke', description=service_mod.Invoke.__doc__, parents=[base_parser])
         service_invoke.set_defaults(command='service_invoke')
         self.add_opts(service_invoke, service_mod.Invoke.opts)
-
-        #
-        # sso
-        #
-        sso = subs.add_parser('sso', description='SSO management')
-        sso_subs = sso.add_subparsers()
-
-        #
-        # create-user
-        #
-        sso_create_user = sso_subs.add_parser('create-user', description=sso_mod.CreateUser.__doc__, parents=[base_parser])
-        sso_create_user.add_argument('path', help='Path to a Zato server')
-        sso_create_user.set_defaults(command='sso_create_user')
-        self.add_opts(sso_create_user, sso_mod.CreateUser.opts)
-
-        #
-        # create-super-user
-        #
-        sso_create_super_user = sso_subs.add_parser(
-            'create-super-user', description=sso_mod.CreateSuperUser.__doc__, parents=[base_parser])
-        sso_create_super_user.add_argument('path', help='Path to a Zato server')
-        sso_create_super_user.set_defaults(command='sso_create_super_user')
-        self.add_opts(sso_create_super_user, sso_mod.CreateSuperUser.opts)
-
-        #
-        # lock-user
-        #
-        sso_lock_user = sso_subs.add_parser('lock-user', description=sso_mod.LockUser.__doc__, parents=[base_parser])
-        sso_lock_user.add_argument('path', help='Path to a Zato server')
-        sso_lock_user.set_defaults(command='sso_lock_user')
-        self.add_opts(sso_lock_user, sso_mod.LockUser.opts)
-
-        #
-        # login
-        #
-        sso_login = sso_subs.add_parser('login', description=sso_mod.Login.__doc__, parents=[base_parser])
-        sso_login.add_argument('path', help='Path to a Zato server')
-        sso_login.set_defaults(command='sso_login')
-        self.add_opts(sso_login, sso_mod.Login.opts)
-
-        #
-        # logout
-        #
-        sso_logout = sso_subs.add_parser('logout', description=sso_mod.Logout.__doc__, parents=[base_parser])
-        sso_logout.add_argument('path', help='Path to a Zato server')
-        sso_logout.set_defaults(command='sso_logout')
-        self.add_opts(sso_logout, sso_mod.Logout.opts)
-
-        #
-        # unlock-user
-        #
-        sso_unlock_user = sso_subs.add_parser('unlock-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
-        sso_unlock_user.add_argument('path', help='Path to a Zato server')
-        sso_unlock_user.set_defaults(command='sso_unlock_user')
-        self.add_opts(sso_unlock_user, sso_mod.UnlockUser.opts)
-
-        #
-        # delete-user
-        #
-        sso_delete_user = sso_subs.add_parser('delete-user', description=sso_mod.DeleteUser.__doc__, parents=[base_parser])
-        sso_delete_user.add_argument('path', help='Path to a Zato server')
-        sso_delete_user.set_defaults(command='sso_delete_user')
-        self.add_opts(sso_delete_user, sso_mod.DeleteUser.opts)
-
-        #
-        # change-user-password
-        #
-        sso_change_user_password = sso_subs.add_parser(
-            'change-user-password', description=sso_mod.ChangeUserPassword.__doc__, parents=[base_parser])
-        sso_change_user_password.add_argument('path', help='Path to a Zato server')
-        sso_change_user_password.set_defaults(command='sso_change_user_password')
-        self.add_opts(sso_change_user_password, sso_mod.ChangeUserPassword.opts)
-
-        #
-        # reset-totp-key (sso)
-        #
-        sso_reset_totp_key_password = sso_subs.add_parser(
-            'reset-totp-key', description=sso_mod.ResetTOTPKey.__doc__, parents=[base_parser])
-        sso_reset_totp_key_password.add_argument('path', help='Path to a Zato server')
-        sso_reset_totp_key_password.set_defaults(command='sso_reset_totp_key')
-        self.add_opts(sso_reset_totp_key_password, sso_mod.ResetTOTPKey.opts)
-
-        #
-        # reset-user-password
-        #
-        sso_reset_user_password = sso_subs.add_parser(
-            'reset-user-password', description=sso_mod.ResetUserPassword.__doc__, parents=[base_parser])
-        sso_reset_user_password.add_argument('path', help='Path to a Zato server')
-        sso_reset_user_password.set_defaults(command='sso_reset_user_password')
-        self.add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
-
-        #
-        # create-odb
-        #
-        sso_create_odb = sso_subs.add_parser(
-            'create-odb', description=sso_mod.CreateODB.__doc__, parents=[base_parser])
-        sso_create_odb.set_defaults(command='sso_create_odb')
-        self.add_opts(sso_create_odb, sso_mod.CreateODB.opts)
 
         #
         # start

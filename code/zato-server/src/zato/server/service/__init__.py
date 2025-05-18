@@ -102,7 +102,6 @@ if 0:
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cassandra import CassandraAPI
     from zato.server.query import CassandraQueryAPI
-    from zato.sso.api import SSOAPI
     from zato.simpleio import CySimpleIO
     anydictnone = anydictnone
     callnone = callnone
@@ -122,7 +121,6 @@ if 0:
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
-    SSOAPI = SSOAPI # type: ignore
     timedelta = timedelta
     TimeUtil = TimeUtil
     WorkerStore = WorkerStore
@@ -335,12 +333,6 @@ class Service:
 
     # Cython based SimpleIO definition created by service store when the class is deployed
     _sio:'CySimpleIO'
-
-    # Rate limiting
-    _has_rate_limiting:'bool' = False
-
-    # User management and SSO
-    sso:'SSOAPI'
 
     # Crypto operations
     crypto:'ServerCryptoManager'
@@ -671,13 +663,6 @@ class Service:
             e, exc_formatted = None, None
 
             try:
-
-                # Check rate limiting first - note the usage of 'service' rather than 'self',
-                # in case self is a gateway service, in which case we are in fact interested in checking the target
-                # service's rate limit, not our own.
-                if service._has_rate_limiting:
-                    self.server.rate_limiting.check_limit(self.cid, ModuleCtx.Channel_Service, service.name,
-                        self.wsgi_environ['zato.http.remote_addr'])
 
                 service.invocation_time = _utcnow()
 

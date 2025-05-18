@@ -152,9 +152,6 @@ class URLData(CyURLData):
         if not auth_result:
             return False
 
-        if sec_def.get('is_rate_limit_active'):
-            self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
-
         enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
         return auth_result
@@ -471,10 +468,6 @@ class URLData(CyURLData):
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 
-        # For rate limiting
-        for name in('is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'):
-            channel_item[name] = msg.get(name)
-
         return channel_item
 
 # ################################################################################################################################
@@ -518,11 +511,6 @@ class URLData(CyURLData):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        # Set up rate limiting, if it is enabled
-        if channel_item.get('is_rate_limit_active'):
-            self.worker.server.set_up_object_rate_limiting(
-                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config_=channel_item)
-
 # ################################################################################################################################
 
     def _delete_channel(self, msg):
@@ -556,9 +544,6 @@ class URLData(CyURLData):
 
         # Re-sort all elements to match against
         self.sort_channel_data()
-
-        # Delete rate limiting configuration
-        self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
         return old_data
 

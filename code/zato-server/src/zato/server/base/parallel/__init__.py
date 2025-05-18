@@ -41,7 +41,6 @@ from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.rate_limiting import RateLimiting
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -62,7 +61,6 @@ from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_Config
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
-from zato.server.sso import SSOTool
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,14 +79,12 @@ if 0:
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
-    from zato.sso.api import SSOAPI
 
     bunch_ = bunch_
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SIOServerConfig = SIOServerConfig # type: ignore
-    SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
 
 # ################################################################################################################################
@@ -124,8 +120,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
-    sso_api: 'SSOAPI'
-    rate_limiting: 'RateLimiting'
     broker_client: 'BrokerClient'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
@@ -165,7 +159,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
         self.sio_config = cast_('SIOServerConfig', None)
-        self.sso_config = Bunch()
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
@@ -193,7 +186,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_first_worker = False
         self.process_idx = -1
         self.shmem_size = -1.0
-        self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
         self.env_file = ''
@@ -201,7 +193,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_method = ''
         self._hash_secret_rounds = -1
         self._hash_secret_salt_size = -1
-        self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower()
         self.user_config = Bunch()
         self.stderr_path = ''
@@ -602,9 +593,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Static config files
         self.static_config = StaticConfig(self.static_dir)
 
-        # SSO e-mail templates
-        self.static_config.read_directory(os.path.join(self.static_dir, 'sso', 'email'))
-
         # Whether to add X-Zato-CID to outgoing responses
         needs_x_zato_cid = self.fs_server_config.misc.get('needs_x_zato_cid') or False
         self.needs_x_zato_cid = needs_x_zato_cid
@@ -901,20 +889,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Finally, assign it to ServiceStore
         self.service_store.max_batch_size = max_batch_size
 
-        # Rate limiting
-        self.rate_limiting = RateLimiting()
-        self.rate_limiting.cluster_id = cast_('int', self.cluster_id)
-        self.rate_limiting.global_lock_func = self.zato_lock_manager
-        self.rate_limiting.sql_session_func = self.odb.session
-
-        # Set up rate limiting for ConfigDict-based objects, which includes everything except for:
-        # * services  - configured in ServiceStore
-        # * SSO       - configured in the next call
-        self.set_up_rate_limiting()
-
-        # Rate limiting for SSO
-        self.set_up_sso_rate_limiting()
-
         # API keys configuration
         self.set_up_api_key_config()
 
@@ -933,18 +907,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.init()
         self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
-        # Configure remaining parts of SSO
-        self.configure_sso()
-
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
 
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)
-
-        # Cannot be done in __init__ because self.sso_config is not available there yet
-        salt_size:'int' = self.sso_config.hash_secret.salt_size
-        self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
         # Support pre-3.x hot-deployment directories
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
@@ -1063,13 +1030,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_up_sso_rate_limiting(self) -> 'None':
-        for item in self.odb.get_sso_user_rate_limiting_info():
-            item = cast_('any_', item)
-            self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
-
-# ################################################################################################################################
-
     def set_up_api_key_config(self):
 
         # Prefer the value from environment variables ..
@@ -1084,54 +1044,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _create_sso_user_rate_limiting(
-        self,
-        user_id:'str',
-        is_active:'bool',
-        rate_limit_def:'str',
-    ) -> 'None':
-        self.rate_limiting.create({
-            'id': user_id,
-            'type_': RATE_LIMIT.OBJECT_TYPE.SSO_USER,
-            'name': user_id,
-            'is_active': is_active,
-            'parent_type': None,
-            'parent_name': None,
-        }, rate_limit_def, True)
-
-# ################################################################################################################################
-
-    def _get_sso_session(self) -> 'any_':
-        """ Returns a session function suitable for SSO operations.
-        """
-        pool_name:'str' = self.sso_config.sql.name
-        if pool_name:
-            try:
-                pool:'any_' = self.worker_store.sql_pool_store.get(pool_name)
-            except KeyError:
-                pool = None
-            if not pool:
-                raise Exception('SSO pool `{}` not found or inactive'.format(pool_name))
-            else:
-                session_func = pool.session
-        else:
-            session_func = self.odb.session
-
-        return session_func()
-
-# ################################################################################################################################
-
-    def configure_sso(self) -> 'None':
-        if self.is_sso_enabled:
-            self.sso_api.post_configure(self._get_sso_session, self.odb.is_sqlite)
-
-# ################################################################################################################################
-
     def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services_first_worker' if self.is_starting_first else 'startup_services_any_worker'
         _invoke_startup_services('Parallel', stanza,
-            self.fs_server_config, self.repo_location, self.broker_client, None,
-            is_sso_enabled=self.is_sso_enabled)
+            self.fs_server_config, self.repo_location, self.broker_client, None)
 
 # ################################################################################################################################
 

@@ -33,12 +33,6 @@
             '_delete',
             'id',
             'is_active',
-
-            'is_rate_limit_active',
-            'rate_limit_type',
-            'rate_limit_def',
-            'rate_limit_check_parent_def',
-
         ]
     }
     </script>
@@ -99,12 +93,6 @@
                         <td><a href="javascript:$.fn.zato.security.basic_auth.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-
-                        <td class='ignore'>{{ item.is_rate_limit_active }}</td>
-                        <td class='ignore'>{{ item.rate_limit_type }}</td>
-                        <td class='ignore'>{{ item.rate_limit_def }}</td>
-                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
-
                     </tr>
                 {% endfor %}
                 {% else %}

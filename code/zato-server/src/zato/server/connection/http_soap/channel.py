@@ -21,13 +21,12 @@ from regex import compile as regex_compile
 
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
-    SSO, TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
+    TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model, ModelValidationError
-from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
@@ -94,7 +93,6 @@ _data_format_hl7 = HL7.Const.Version.v2.id
 # ################################################################################################################################
 
 _basic_auth = SEC_DEF_TYPE.BASIC_AUTH
-_sso_ext_auth = _basic_auth,
 
 # ################################################################################################################################
 
@@ -108,7 +106,6 @@ class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
     No_URL_Match = (None, False)
     Rate_Limit_HTTP = RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP
-    Rate_Limit_SSO_User = RATE_LIMIT.OBJECT_TYPE.SSO_USER
     Exception_Separator = '*' * 80
     SIO_JSON = SIMPLE_IO.FORMAT.JSON
     SIO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
@@ -215,9 +212,6 @@ class RequestDispatcher:
 
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
-
-        # To reduce the number of attribute lookups
-        self._sso_api_user = getattr(self.server, 'sso_api', None)
 
 # ################################################################################################################################
 
@@ -369,32 +363,6 @@ class RequestDispatcher:
                 # If we are here, it means that credentials are correct or they were not required
                 #
 
-                # Check rate limiting now - this could not have been done earlier because we wanted
-                # for security checks to be made first. Otherwise, someone would be able to invoke
-                # our endpoint without credentials as many times as it is needed to exhaust the rate limit,
-                # denying in this manner access to genuine users.
-                if channel_item.get('is_rate_limit_active'):
-                    self.server.rate_limiting.check_limit(
-                        cid, ModuleCtx.Rate_Limit_HTTP, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
-
-                # Security definition-based checks went fine but it is still possible
-                # that this sec_def is linked to an SSO user whose rate limits we need to check.
-
-                # Check SSO-related limits only if SSO is enabled
-                if self._sso_api_user:
-
-                    # Not all sec_def types may have associated SSO users
-                    if sec.sec_def != ZATO_NONE:
-
-                        if sec.sec_def.sec_type in _sso_ext_auth:
-
-                            ext_session_id = None
-
-                            # Try to log in the user to SSO by that account's external credentials.
-                            self.server.sso_tool.on_external_auth(
-                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
-                                wsgi_environ, ext_session_id)
-
                 if channel_item['merge_url_params_req']:
                     channel_params = self.request_handler.create_channel_params(
                         url_match, # type: ignore
@@ -462,9 +430,8 @@ class RequestDispatcher:
                         if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
                             response = e.msg
                         else:
-                            # Note that SSO channels do not return details
                             url_path = channel_item['url_path'] # type: str
-                            needs_msg = e.needs_msg and (not url_path.startswith(SSO.Default.RESTPrefix))
+                            needs_msg = e.needs_msg
                             response = e.msg if needs_msg else 'Bad request'
 
                     elif isinstance(e, NotFound):
@@ -481,12 +448,8 @@ class RequestDispatcher:
 
                 else:
 
-                    # Rate limiting and whitelisting
-                    if isinstance(e, RateLimitingException):
-                        response, status_code, status = self._on_rate_limiting_exception(e)
-
                     # HL7
-                    elif channel_item['data_format'] == _data_format_hl7:
+                    if channel_item['data_format'] == _data_format_hl7:
                         response, status_code, status = self._on_hl7_exception(e, channel_item)
 
                     else:
@@ -606,24 +569,6 @@ class RequestDispatcher:
         # that will become self.channel.security for services.
         if sec_def:
             enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
-
-# ################################################################################################################################
-
-    def _on_rate_limiting_exception(self, e:'Exception') -> 'anytuple':
-
-        if isinstance(e, RateLimitReached):
-            status_code = TOO_MANY_REQUESTS
-            status = _status_too_many_requests
-
-        elif isinstance(e, AddressNotAllowed):
-            status_code = FORBIDDEN
-            status = _status_forbidden
-
-        else:
-            status_code = BAD_REQUEST
-            status = _status_bad_request
-
-        return 'Error {}'.format(status), status_code, status
 
 # ################################################################################################################################
 

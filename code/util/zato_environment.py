@@ -494,7 +494,6 @@ class EnvironmentManager:
             'zato-scheduler',
             'zato-server',
             'zato-web-admin',
-            'zato-sso',
             'zato-testing',
         ]
 

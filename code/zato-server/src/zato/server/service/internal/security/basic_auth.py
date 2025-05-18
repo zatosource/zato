@@ -16,7 +16,6 @@ from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
-from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -40,7 +39,6 @@ class GetList(AdminService):
         response_elem = 'zato_security_basic_auth_get_list_response'
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username', 'realm'
-        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session): # type: ignore
         data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
@@ -60,8 +58,7 @@ class Create(AdminService):
         request_elem = 'zato_security_basic_auth_create_request'
         response_elem = 'zato_security_basic_auth_create_response'
         input_required = 'name', 'is_active', 'username', 'realm'
-        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+        input_optional = 'cluster_id'
         output_required = 'id', 'name'
 
     def handle(self):
@@ -121,8 +118,7 @@ class Edit(AdminService):
         request_elem = 'zato_security_basic_auth_edit_request'
         response_elem = 'zato_security_basic_auth_edit_response'
         input_required = 'name', 'is_active', 'username', 'realm'
-        input_optional = 'id', 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+        input_optional = 'id', 'cluster_id'
         output_required = 'id', 'name'
 
     def handle(self):

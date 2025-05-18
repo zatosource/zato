@@ -247,16 +247,3 @@ class UploadForm(forms.Form):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-class WithRateLimiting(forms.Form):
-    rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
-    rate_limit_def = forms.CharField(widget=forms.Textarea(
-        attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
-
-    def __init__(self, *args, **kwargs):
-        super(WithRateLimiting, self).__init__(*args, **kwargs)
-
-        add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
