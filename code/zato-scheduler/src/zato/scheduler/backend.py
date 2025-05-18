@@ -71,7 +71,7 @@ class Interval:
 
 class Job:
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
-            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, service=None,
+            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, service=None,
             extra=None, old_name=None):
         self.id = id
         self.name = name
@@ -82,7 +82,6 @@ class Job:
         self.max_repeats = max_repeats
         self.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         self.is_active = is_active
-        self.cron_definition = cron_definition
         self.service = service
         self.extra = extra
 
@@ -96,10 +95,6 @@ class Job:
 
         if clone_start_time:
             self.start_time = start_time
-
-        elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            now = datetime.datetime.utcnow()
-            self.start_time = now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
 
         else:
             self.start_time = self.get_start_time(start_time if start_time is not None else datetime.datetime.utcnow())
@@ -213,10 +208,7 @@ class Job:
             'cb_kwargs': self.cb_kwargs
         }
 
-        if self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            ctx['cron_definition'] = self.cron_definition
-        else:
-            ctx['interval_in_seconds'] = self.interval.in_seconds
+        ctx['interval_in_seconds'] = self.interval.in_seconds
 
         for name in 'id', 'name', 'current_run', 'max_repeats_reached', 'max_repeats', 'type':
             ctx[name] = getattr(self, name)
@@ -227,13 +219,9 @@ class Job:
 
     def get_sleep_time(self, now):
         """ Returns a number of seconds the job should sleep for before the next run.
-        For interval-based jobs this is a constant value pre-computed well ahead by self.interval
-        but for cron-style jobs the value is obtained each time it's needed.
         """
         if self.type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
             return self.interval.in_seconds
-        elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            return self.interval.next(now)
         else:
             raise ValueError('Unsupported job type `{}` ({})'.format(self.type, self.name))
 

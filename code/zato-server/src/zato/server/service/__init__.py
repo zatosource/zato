@@ -159,8 +159,8 @@ _utcnow = datetime.utcnow
 
 # ################################################################################################################################
 
-before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job', 'before_cron_style_job')
-after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job', 'after_cron_style_job')
+before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job')
+after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job')
 before_handle_hooks = ('before_handle',)
 after_handle_hooks = ('after_handle', 'finalize_handle')
 
@@ -1027,11 +1027,6 @@ class Service:
         invocation target.
         """
 
-    def before_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked if the service has been defined as a cron-style job's
-        invocation target.
-        """
-
     def before_handle(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs): # type: ignore
         """ Invoked just before the actual service receives the request data.
         """
@@ -1048,11 +1043,6 @@ class Service:
 
     def after_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as an interval-based job's
-        invocation target.
-        """
-
-    def after_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
-        """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
 

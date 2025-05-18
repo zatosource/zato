@@ -473,7 +473,6 @@ class AuxServer:
                 response = self.handle_api_request(request, credentials)
 
             # If we are here, it means that there was no exception
-            status_text = Common_IPC.Status_OK
             status_code = StatusCode.OK
 
         except Exception:

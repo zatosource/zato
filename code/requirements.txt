@@ -8,7 +8,6 @@ cffi==1.17.1
 chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
-crontab==1.0.1
 cryptography==44.0.1
 dacite==1.6.0
 dateparser==0.7.6
