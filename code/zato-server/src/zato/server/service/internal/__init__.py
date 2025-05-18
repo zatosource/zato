@@ -188,10 +188,9 @@ class Ping(AdminService):
     """ A ping service, useful for API testing.
     """
     name = 'pub.zato.ping'
-    output = 'pong'
 
     def handle(self):
-        self.response.payload.pong = 'zato'
+        self.response.payload = '{"pong":"zato"}'
 
 # ################################################################################################################################
 
