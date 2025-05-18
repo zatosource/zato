@@ -343,11 +343,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 for module_name in deploy_internal:
                     internal_service_modules.append(module_name)
             else:
-
                 raise Exception('No internal modules found to be imported')
 
-            locally_deployed.extend(self.service_store.import_internal_services(
-                internal_service_modules, self.base_dir, self.sync_internal, cast_('bool', self.is_starting_first)))
+            internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
+            locally_deployed.extend(internal)
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
