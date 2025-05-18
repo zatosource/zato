@@ -327,7 +327,7 @@ class RequestDispatcher:
                 #
                 # This will check credentials based on a security definition attached to the channel
                 #
-                if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
+                if sec.sec_def != ZATO_NONE:
 
                     if _needs_details:
                         logger.info('*' * 60)
@@ -342,7 +342,7 @@ class RequestDispatcher:
                             logger.info('WSGI key=`%s` value=`%s`', key, value)
 
                     # Do check credentials based on a security definition
-                    auth_result = self.url_data.check_security(
+                    _ = self.url_data.check_security(
                         sec,
                         cid,
                         channel_item,

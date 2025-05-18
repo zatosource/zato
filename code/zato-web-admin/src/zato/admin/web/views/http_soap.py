@@ -241,10 +241,7 @@ def index(req): # type: ignore
                 security_link = f'<a href="{security_href}">{_security_name}</a>'
                 security_name = security_link
             else:
-                if item.sec_use_rbac:
-                    security_name = DELEGATED_TO_RBAC
-                else:
-                    security_name = '<span class="form_hint">---</span>'
+                security_name = '<span class="form_hint">---</span>'
 
             security_id = get_http_channel_security_id(item)
 

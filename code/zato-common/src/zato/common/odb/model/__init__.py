@@ -1173,9 +1173,6 @@ class GenericConnDef(Base):
     secret = Column(String(1000), nullable=True)
     secret_type = Column(String(45), nullable=True)
 
-    # Is RBAC enabled for the object
-    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
-
     cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
     cache = relationship('Cache', backref=backref('generic_conn_def_list', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1246,9 +1243,6 @@ class GenericConn(Base):
     username_type = Column(String(45), nullable=True)
     secret = Column(String(1000), nullable=True)
     secret_type = Column(String(45), nullable=True)
-
-    # Is RBAC enabled for the object
-    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
 
     # Some connections will have a connection definition assigned
     conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)

@@ -16,7 +16,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
+     ZATO_DEFAULT, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
@@ -350,8 +350,7 @@ class Create(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
-        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
+        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
         input.security_groups = self._preprocess_security_groups(input)
@@ -441,7 +440,6 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.content_type = input.content_type
-                item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
@@ -533,8 +531,7 @@ class Edit(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
-        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
+        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE,) else None
         input.soap_action  = input.soap_action if input.soap_action else ''
         input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
         input.security_groups = self._preprocess_security_groups(input)
@@ -637,7 +634,6 @@ class Edit(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.content_type = input.content_type
-                item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding

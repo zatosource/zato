@@ -775,7 +775,6 @@ class ODBManager(SessionWrapper):
                 result[target].is_active = item.is_active
                 result[target].transport = item.transport
                 result[target].data_format = item.data_format
-                result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
 

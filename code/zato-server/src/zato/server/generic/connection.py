@@ -45,8 +45,6 @@ class GenericConnection:
         self.secret = ''
         self.secret_type = None
 
-        self.sec_use_rbac = False
-
         self.conn_def_id = None
         self.cache_id = None
         self.cluster_id = None

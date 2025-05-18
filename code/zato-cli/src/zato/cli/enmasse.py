@@ -448,7 +448,6 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
         'is_internal': False,
         'is_outconn': True,
         'pool_size': 20,
-        'sec_use_rbac': False,
     }
 }
 
@@ -1067,9 +1066,6 @@ class DependencyScanner:
             if not test_item(item, dep_info.get('condition')):
                 continue
 
-            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
-                continue
-
             # Special-case HTTP connections
             if item_type in ('http_soap', 'web_socket'): # type: ignore
                 dep_key = resolve_security_field_name(item)
@@ -1251,18 +1247,7 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def should_skip_item(self, item_type, attrs, is_edit): # type: ignore
-
-        # Plain HTTP channels cannot create JSON-RPC ones
-        if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
-            return True
-
-        # Root RBAC role cannot be edited
-        elif item_type == 'rbac_role' and attrs.name == 'Root':
-            return True
-
-        # RBAC client roles cannot be edited
-        elif item_type == 'rbac_client_role' and is_edit:
-            return True
+        return False
 
 # ################################################################################################################################
 
@@ -1773,9 +1758,6 @@ class ObjectImporter:
 
         for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
-            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
-                continue
-
             if field_name in _security_fields:
                 field_name = resolve_security_field_name(item)
 
@@ -1904,14 +1886,6 @@ class ObjectManager:
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
-        if item_type in ('json_rpc', 'http_soap'):
-
-            if item['sec_use_rbac'] is True:
-                item['security_id'] = 'ZATO_SEC_USE_RBAC'
-
-            elif item_type == 'json_rpc' and item['security_id'] is None:
-                item['security_id'] = 'ZATO_NONE'
-
         for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
             if 'id_field' not in info:
@@ -1931,18 +1905,13 @@ class ObjectManager:
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_name' and dep is None):
+            if field_name != 'sec_name' and dep is None:
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
                     raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep,
                         item.toDict()))
                 else:
                     item[field_name] = dep[info['dependent_field']]
-
-            # JSON-RPC channels cannot have empty security definitions on exports
-            if item_type == 'http_soap' and item['name'].startswith('json.rpc.channel'):
-                if not item['security_id']:
-                    item['security_id'] = 'ZATO_NONE'
 
         return item # type: ignore
 
@@ -2527,9 +2496,6 @@ class InputParser:
                         if not 'sasl_mechanism' in value:
                             value['sasl_mechanism'] = ''
 
-                        if not 'sec_use_rbac' in value:
-                            value['sec_use_rbac'] = False
-
                         if not 'should_check_names' in value:
                             value['should_check_names'] = False
 
@@ -2538,18 +2504,6 @@ class InputParser:
 
                         if not 'should_return_empty_attrs' in value:
                             value['should_return_empty_attrs'] = True
-
-                        if not 'tls_ciphers' in value:
-                            value['tls_ciphers'] = COMMON_TLS.DEFAULT.CIPHERS
-
-                        if not 'tls_private_key_file' in value:
-                            value['tls_private_key_file'] = ''
-
-                        if not 'tls_validate' in value:
-                            value['tls_validate'] = COMMON_TLS.CERT_VALIDATE.CERT_REQUIRED.id
-
-                        if not 'tls_version' in value:
-                            value['tls_version'] = COMMON_TLS.DEFAULT.VERSION
 
                         if not 'use_auto_range' in value:
                             value['use_auto_range'] = True

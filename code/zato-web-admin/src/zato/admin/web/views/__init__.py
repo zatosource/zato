@@ -33,7 +33,7 @@ except ImportError:
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.util import get_template_response
-from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import get_lb_client as _get_lb_client, validate_python_syntax
@@ -235,9 +235,6 @@ def get_security_id_from_select(params, prefix, field_name='security'):
 
     if security == ZATO_NONE:
         security_id = ZATO_NONE
-
-    elif security == ZATO_SEC_USE_RBAC:
-        security_id = ZATO_SEC_USE_RBAC
 
     else:
         _, security_id = security.split('/')
@@ -931,10 +928,7 @@ def get_http_channel_security_id(item):
     if _security_id:
         security_id = '{}/{}'.format(item.sec_type, _security_id)
     else:
-        if item.sec_use_rbac:
-            security_id = ZATO_SEC_USE_RBAC
-        else:
-            security_id = ZATO_NONE
+        security_id = ZATO_NONE
 
     return security_id
 
