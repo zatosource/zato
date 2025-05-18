@@ -134,6 +134,16 @@ relative import to an absolute import.
 
 
 def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", section="zato.server.ext.zunicorn.workers"):
+
+    print()
+    print(111, uri)
+    print(222, default)
+    print(333, section)
+    print()
+
+    if uri == 'sync':
+        uri = 'gevent'
+
     if inspect.isclass(uri):
         return uri
     if uri.startswith("egg:"):
@@ -163,8 +173,7 @@ def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", 
                     break
 
                 try:
-                    return pkg_resources.load_entry_point("gunicorn",
-                                section, uri)
+                    return pkg_resources.load_entry_point("gunicorn", section, uri)
                 except:
                     exc = traceback.format_exc()
                     msg = "class uri %r invalid or not found: \n\n[%s]"
