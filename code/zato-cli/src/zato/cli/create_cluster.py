@@ -161,7 +161,7 @@ class Create(ZatoCommand):
 
 
         ping_impl_name = 'zato.server.service.internal.Ping'
-        ping_service_name = 'zato.ping'
+        ping_service_name = 'pub.zato.ping'
         ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
         session.add(ping_service)
 
