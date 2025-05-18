@@ -125,7 +125,7 @@ class Edit(CreateEdit):
     service_name = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'is_active', 'slow_threshold', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def',
+        input_required = 'id', 'is_active', 'slow_threshold', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             'rate_limit_check_parent_def'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 

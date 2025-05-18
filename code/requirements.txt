@@ -73,6 +73,7 @@ parse-type==0.6.4
 parse==1.20.2
 passlib==1.7.1
 Paste==3.5.2
+pipdeptree==2.26.1
 pbr==5.11.1
 pg8000==1.13.1
 prettytable==3.5.0
