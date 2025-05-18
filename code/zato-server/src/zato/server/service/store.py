@@ -1607,16 +1607,6 @@ class ServiceStore:
                         if 'zato.sso' in service_name:
                             return False
 
-                    # We may be embedded in a test server from zato-testing
-                    # in which case we deploy every service found.
-                    if self.is_testing:
-                        return True
-                    else:
-                        if self.patterns_matcher.is_allowed(service_name):
-                            return True
-                        else:
-                            logger.info('Skipped disallowed `%s`', service_name)
-
         # If we are here, it means that we should deploy that item
         return False
 

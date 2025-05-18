@@ -326,21 +326,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
         def import_initial_services_jobs() -> 'anyset':
 
+            # Zato
+            from zato.common.util.api import find_internal_modules
+            from zato.server.service import internal
+
             # All non-internal services that we have deployed
             locally_deployed = []
 
-            # Internal modules with that are potentially to be deployed
-            internal_service_modules = []
 
-            # TODO: Auto-populate this list instead of reading it from [deploy_internal] in server.conf
-            deploy_internal = []
+            # Internal modules with that are potentially to be deployed
+            deploy_internal = find_internal_modules(internal)
+            internal_service_modules = []
 
             # All internal modules were found, now we can build a list of what is to be enabled.
             if deploy_internal:
-                for module_name, is_enabled in deploy_internal.items():
-                    if is_enabled:
-                        internal_service_modules.append(module_name)
+                for module_name in deploy_internal:
+                    internal_service_modules.append(module_name)
             else:
+
                 raise Exception('No internal modules found to be imported')
 
             locally_deployed.extend(self.service_store.import_internal_services(

@@ -1928,3 +1928,78 @@ def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
     return out
 
 # ################################################################################################################################
+
+import inspect
+import os
+from types import ModuleType
+from typing import List, Set
+
+# ##############################################################################
+# Function to find internal modules
+# ##############################################################################
+
+def find_internal_modules(root: ModuleType) -> List[str]:
+    """ Recursively finds all Python modules within the directory of the given
+    root package that can be imported as submodules of the root.
+    """
+    found_module_paths: Set[str] = set()
+
+    # A package module has a __path__ attribute (a list of paths).
+    # A non-package module does not. This function expects a package.
+    if not hasattr(root, '__path__') or not root.__path__:
+        # Root is not a package (e.g., a single .py file module) or its __path__ is empty.
+        # It cannot have submodules in the standard way this function discovers them.
+        return []
+
+    # Use the first path in __path__. For namespace packages, __path__ can have multiple entries.
+    # This function will only search the first one. For standard packages, there's one entry.
+    root_package_dir = root.__path__[0]
+
+    # Ensure the path is an actual directory on the filesystem.
+    if not os.path.isdir(root_package_dir):
+        # Path might be part of a zip archive or non-standard.
+        # os.walk requires a directory.
+        return []
+
+    root_module_name = root.__name__
+
+    for dir_path, dir_names, file_names in os.walk(root_package_dir):
+        # Modify dir_names in-place to exclude directories like .git, __pycache__, etc.
+        # This prevents os.walk from traversing into them.
+        dir_names[:] = [d for d in dir_names if not d.startswith('.') and d != '__pycache__']
+
+        for file_name in file_names:
+            if file_name.endswith('.py'):
+                full_file_path = os.path.join(dir_path, file_name)
+
+                # Calculate path relative to the root package directory
+                # e.g., 'sub_pkg/my_module.py' or 'sub_pkg/__init__.py'
+                relative_file_path = os.path.relpath(full_file_path, root_package_dir)
+
+                # Avoid processing the root package's own __init__.py if it's directly listed
+                # (os.walk might list it if root_package_dir is '.' and walk is called from its parent)
+                # However, given we start walk from root_package_dir, relative_file_path for root's
+                # __init__.py would be simply '__init__.py'.
+                if relative_file_path == '__init__.py':
+                    continue
+
+                # Convert file path to module suffix parts
+                # e.g., 'sub_pkg/my_module.py' -> ['sub_pkg', 'my_module']
+                # e.g., 'sub_pkg/__init__.py' -> ['sub_pkg']
+                module_suffix_parts = relative_file_path.split(os.sep)
+
+                if module_suffix_parts[-1] == '__init__.py':
+                    module_suffix_parts.pop()  # Represents the package itself
+                    if not module_suffix_parts:
+                        # This should not happen due to the `if relative_file_path == '__init__.py': continue` check,
+                        # but as a safeguard: if somehow it results in empty parts here, skip.
+                        continue
+                else:
+                    # Remove '.py' extension for regular module files
+                    module_suffix_parts[-1] = module_suffix_parts[-1][:-3]
+
+                module_suffix = '.'.join(module_suffix_parts)
+                full_module_path = f'{root_module_name}.{module_suffix}'
+                found_module_paths.add(full_module_path)
+
+    return sorted(list(found_module_paths))
