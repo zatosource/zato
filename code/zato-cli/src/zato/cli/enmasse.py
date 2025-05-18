@@ -3145,9 +3145,6 @@ class Enmasse(ManageCommand):
         has_type = not has_all_types
         has_name = not has_all_names
 
-        # Certain internal objects should never be exported ..
-        if item_type == 'def_sec':
-
         # .. do not write internal definitions ..
         if has_name_zato_prefix(name):
             return False

@@ -17,8 +17,7 @@ from bunch import Bunch
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, lb_tls_verify, \
-     lb_use_tls, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
@@ -91,7 +90,6 @@ class HeadersEnrichedException(Exception):
 
 class Client(AnyServiceInvoker):
     def __init__(self, req, *args, **kwargs):
-        kwargs['tls_verify'] = lb_tls_verify
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
         super(Client, self).__init__(*args, **kwargs)
 
@@ -153,10 +151,6 @@ class ZatoMiddleware:
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
 
-        # Whether communication with load-balancer should go over TLS
-        req.zato.lb_use_tls = lb_use_tls
-        req.zato.lb_tls_verify = lb_tls_verify
-
         try:
             resolved_kwargs = resolve(req.path).kwargs
             req.zato.id = resolved_kwargs.get('id')
@@ -173,14 +167,7 @@ class ZatoMiddleware:
                     filter_by(id=req.zato.cluster_id).\
                     one()
 
-                # .. on Windows, we communicate with servers directly so we can just use a direct address ..
-                if is_windows:
-                    url = 'http://127.0.0.1:17010'
-
-                # .. but on other systems we go through the load balancer.
-                else:
-                    url = 'http{}://{}:{}'.format(
-                        's' if req.zato.lb_use_tls else '', req.zato.cluster.lb_host, req.zato.cluster.lb_port)
+                url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
                 req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)

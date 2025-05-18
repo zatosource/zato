@@ -64,7 +64,7 @@ class Create(ZatoCommand):
             cluster.name = args.cluster_name
             cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
 
-            for name in( 'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name', 'lb_host', 'lb_port', 'lb_agent_port'):
+            for name in( 'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
                 setattr(cluster, name, getattr(args, name))
             session.add(cluster)
 

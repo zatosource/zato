@@ -983,10 +983,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.set_broker_client(self.broker_client)
 
         self._after_init_accepted(locally_deployed)
-        self.odb.server_up_down(
-            server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
-
-        logger.info('PID of `%s` is %s', self.name, self.pid)
+        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
             'server': self,
