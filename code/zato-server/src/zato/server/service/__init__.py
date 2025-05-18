@@ -97,7 +97,6 @@ if 0:
     from zato.server.connection.connector import Connector
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
-    from zato.server.connection.web_socket import ChannelWebSocket, WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
@@ -126,7 +125,6 @@ if 0:
     SSOAPI = SSOAPI # type: ignore
     timedelta = timedelta
     TimeUtil = TimeUtil
-    WebSocket = WebSocket
     WorkerStore = WorkerStore
 
 # ################################################################################################################################
@@ -524,7 +522,7 @@ class Service:
 
         if self.component_enabled_search:
             if not Service.search:
-                Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
+                Service.search = SearchAPI(self._worker_store.search_es_api)
 
         if self.component_enabled_patterns:
             self.patterns = PatternsFacade(self, self.server.internal_cache_patterns, self.server.internal_cache_lock_patterns)
@@ -680,9 +678,6 @@ class Service:
                 if service._has_rate_limiting:
                     self.server.rate_limiting.check_limit(self.cid, ModuleCtx.Channel_Service, service.name,
                         self.wsgi_environ['zato.http.remote_addr'])
-
-                if service.server.component_enabled.stats:
-                    _ = service.server.current_usage.incr(service.name)
 
                 service.invocation_time = _utcnow()
 
@@ -1193,7 +1188,6 @@ class Service:
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
-        service.translate = server.kvdb.translate # type: ignore
         service.config = server.user_config
         service.user_config = server.user_config
         service.static_config = server.static_config

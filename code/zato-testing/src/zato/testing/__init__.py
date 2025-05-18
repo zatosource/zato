@@ -77,8 +77,6 @@ class ServiceTestCase(TestCase):
 
         self.server = ParallelServer()
         self.server.fs_server_config = self.fs_server_config
-        self.server.component_enabled.stats = False
-        self.server.component_enabled.slow_response = False
         self.server.crypto_manager = self.crypto_manager
 
         self.service_store = ServiceStore(is_testing=True)

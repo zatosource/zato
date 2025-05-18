@@ -229,10 +229,7 @@ def enrich_with_static_config(object_):
 
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
     object_._worker_store = Bunch(
-        sql_pool_store=None, outgoing_web_sockets=None, cassandra_api=None,
-        cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
-        target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed),
-        vault_conn_api=None, sms_twilio_api=None)
+        sql_pool_store=None, cassandra_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -376,7 +373,6 @@ class TestServer:
         self.static_config = Bunch()
         self.time_util = Bunch()
         self.servers = []
-        self.ipc_api = None
         self.component_enabled = Bunch()
 
         self.cluster_id = 1
