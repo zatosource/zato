@@ -158,7 +158,7 @@ class LDAPClient:
             'auto_range': self.config.use_auto_range,
             'client_strategy': SYNC,
             'check_names': self.config.should_check_names,
-            'collect_usage': self.config.is_stats_enabled,
+            'collect_usage': False,
             'read_only': self.config.is_read_only,
             'pool_name': self.config.pool_name or encode(self.config.name),
             'pool_size': 1,

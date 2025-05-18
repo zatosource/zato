@@ -526,7 +526,7 @@ class Scheduler:
     def _init_jobs_by_odb(self):
 
         cluster_conf = self.config.main.cluster
-        add_startup_jobs_to_odb_by_odb(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        add_startup_jobs_to_odb_by_odb(cluster_conf.id, self.odb, self.startup_jobs)
 
         # Actually start jobs now, including any added above
         if self._add_scheduler_jobs:
@@ -537,7 +537,7 @@ class Scheduler:
     def _init_jobs_by_api(self):
 
         cluster_conf = self.config.main.cluster
-        add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs)
 
         # Actually start jobs now, including any added above
         if self._add_scheduler_jobs:
@@ -574,10 +574,6 @@ class Scheduler:
 
             with self.lock:
                 for job in sorted(itervalues(self.jobs)):
-
-                    # Ignore pre-3.2 Redis-based jobs
-                    if job.name.startswith('zato.stats'):
-                        continue
 
                     if job.max_repeats_reached:
                         logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)

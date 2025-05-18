@@ -105,15 +105,12 @@ def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', sourc
 
 # ################################################################################################################################
 
-def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_enabled:'bool') -> 'None':
+def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') -> 'None':
     """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
         now = datetime.utcnow()
         for item in jobs:
-
-            if item['name'].startswith('zato.stats'):
-                continue
 
             try:
                 extra = item.get('extra', '')
@@ -195,7 +192,7 @@ def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int',
 
 # ################################################################################################################################
 
-def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]', stats_enabled:'bool') -> 'None':
+def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> 'None':
     """ Uses server API calls to add initial startup jobs to the ODB.
     """
 

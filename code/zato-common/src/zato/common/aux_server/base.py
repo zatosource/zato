@@ -76,7 +76,6 @@ class AuxServerConfig:
 
     def __init__(self) -> 'None':
         self.main = Bunch()
-        self.stats_enabled = None
         self.component_dir = 'not-set-component_dir'
 
 # ################################################################################################################################
