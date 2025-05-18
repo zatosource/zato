@@ -58,7 +58,6 @@ function pip_install() {
         -e $CURDIR/zato-scheduler   \
         -e $CURDIR/zato-server      \
         -e $CURDIR/zato-web-admin   \
-        -e $CURDIR/zato-sso         \
         -e $CURDIR/zato-testing
 
     # Delete packages no longer needed

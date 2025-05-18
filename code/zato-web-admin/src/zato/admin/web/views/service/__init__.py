@@ -92,8 +92,6 @@ class Index(_Index):
         input_required = 'cluster_id',
         input_optional = 'query',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
-        output_optional = 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_repeated = True
 
     def handle(self):
@@ -117,8 +115,7 @@ class Edit(CreateEdit):
     service_name = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'is_active', 'slow_threshold', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            'rate_limit_check_parent_def'
+        input_required = 'id', 'is_active', 'slow_threshold'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item:'any_') -> 'str':

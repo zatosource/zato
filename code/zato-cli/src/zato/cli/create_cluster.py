@@ -15,7 +15,6 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
-from zato.common.api import SSO
 from zato.common.const import ServiceConst
 
 # ################################################################################################################################
@@ -97,9 +96,6 @@ class Create(ZatoCommand):
             self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
 
             ping_service = self.add_ping_service(session, cluster)
-
-            # SSO
-            self.add_sso_endpoints(session, cluster)
 
             # Rule Engine Security Group
             self.add_rule_engine_configuration(session, cluster, ping_service)
@@ -233,59 +229,6 @@ class Create(ZatoCommand):
         item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
         item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
         session.add(item)
-
-# ################################################################################################################################
-
-    def add_sso_endpoints(self, session, cluster):
-
-        from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP, Service
-
-        prefix = SSO.Default.RESTPrefix
-
-        data = [
-
-            # Users
-            ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', f'{prefix}/user/create'],
-            ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', f'{prefix}/user/signup'],
-            ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', f'{prefix}/user/approve'],
-            ['zato.sso.user.reject', 'zato.server.service.internal.sso.user.Reject', f'{prefix}/user/reject'],
-            ['zato.sso.user.login', 'zato.server.service.internal.sso.user.Login', f'{prefix}/user/login'],
-            ['zato.sso.user.logout', 'zato.server.service.internal.sso.user.Logout', f'{prefix}/user/logout'],
-            ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', f'{prefix}/user'],
-            ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', f'{prefix}/user/password'],
-            ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', f'{prefix}/user/search'],
-            ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', f'{prefix}/user/totp'],
-            ['zato.sso.user.lock', 'zato.server.service.internal.sso.user.Lock', f'{prefix}/user/lock'],
-
-            # Linked accounts
-            ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', f'{prefix}/user/linked'],
-
-            # User sessions
-            ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', f'{prefix}/user/session'],
-            ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', f'{prefix}/user/session/list'],
-
-            # User attributes
-            ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', f'{prefix}/user/attr'],
-            ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', f'{prefix}/user/attr/exists'],
-            ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', f'{prefix}/user/attr/names'],
-
-            # Session attributes
-            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', f'{prefix}/session/attr'],
-            ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', f'{prefix}/session/attr/exists'],
-            ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', f'{prefix}/session/attr/names'],
-
-            # Password reset
-            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password_reset.PasswordReset', f'{prefix}/password/reset'],
-        ]
-
-        for name, impl_name, url_path in data:
-            service = Service(None, name, True, impl_name, True, cluster)
-            channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None,
-                DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
-
-            session.add(service)
-            session.add(channel)
 
 # ################################################################################################################################
 

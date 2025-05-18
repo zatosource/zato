@@ -13,8 +13,7 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, Default_Service_File_Data, NotGiven, SCHEDULER, \
-     SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util.api import as_bool, get_demo_py_fs_locations
@@ -158,7 +157,6 @@ log_connection_info_sleep_time=5 # In seconds
 [startup_services_first_worker]
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
-zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 
 [startup_services_any_worker]
@@ -172,11 +170,8 @@ user=./user.conf
 email=True
 hl7=True
 search=True
-ibm_mq=False
 odoo=True
 patterns=True
-sms=True
-sso=True
 
 [content_type]
 json = {JSON}
@@ -311,184 +306,6 @@ list_key=sample,list
 
 # ################################################################################################################################
 
-sso_conf_contents = '''[main]
-encrypt_email=True
-encrypt_password=True
-email_service=
-smtp_conn=
-site_name=
-
-[backend]
-default=sql
-
-[sql]
-name=
-
-[hash_secret]
-rounds=120000
-salt_size=64 # In bytes = 512 bits
-
-[apps]
-all=CRM
-default=CRM
-http_header=X-Zato-SSO-Current-App
-signup_allowed=
-login_allowed=CRM
-login_metadata_allowed=
-inform_if_app_invalid=True
-
-[login]
-reject_if_not_listed=False
-inform_if_locked=True
-inform_if_not_confirmed=True
-inform_if_not_approved=True
-inform_if_totp_missing=True
-
-[password_reset]
-valid_for=1440 # In minutes = 1 day
-password_change_session_duration=1800 # In seconds = 30 minutes
-user_search_by=username
-email_title_en_GB=Password reset
-email_title_en_US=Password reset
-email_from=hello@example.com
-
-[user_address_list]
-
-[session]
-expiry=60 # In minutes
-expiry_hook= # Name of a service that will return expiry value each time it is needed
-
-[password]
-expiry=730 # In days, 365 days * 2 years = 730 days
-inform_if_expired=False
-inform_if_about_to_expire=True
-inform_if_must_be_changed=True
-inform_if_invalid=True
-about_to_expire_threshold=30 # In days
-log_in_if_about_to_expire=True
-min_length=8
-max_length=256
-min_complexity=0
-min_complexity_algorithm=zxcvbn
-reject_list = """
-  111111
-  123123
-  123321
-  123456
-  123qwe
-  1q2w3e
-  1q2w3e4r
-  1q2w3e4r5t
-  222222
-  333333
-  444444
-  555555
-  654321
-  666666
-  777777
-  888888
-  999999
-  987654321
-  google
-  letmein
-  mynoob
-  password
-  qwerty
-  zxcvbnm
-"""
-
-[signup]
-inform_if_user_exists=False
-inform_if_user_invalid=False
-inform_if_email_exists=False
-inform_if_email_invalid=False
-email_required=True
-max_length_username=128
-max_length_email=128
-password_allow_whitespace=True
-always_return_confirm_token=True
-is_email_required=True
-is_approval_needed=True
-callback_service_list=
-
-email_confirm_enabled=True
-email_confirm_from=confirm@example.com
-email_confirm_cc=
-email_confirm_bcc=
-email_confirm_template=sso-confirm.txt
-
-email_welcome_enabled=True
-email_welcome_from=welcome@example.com
-email_welcome_cc=
-email_welcome_bcc=
-email_welcome_template=sso-welcome.txt
-
-[user_validation]
-service=zato.sso.signup.validate
-reject_username=zato, admin, root, system, sso
-reject_email=zato, admin, root, system, sso
-
-[search]
-default_page_size=50
-max_page_size=100
-'''
-
-# ################################################################################################################################
-
-sso_confirm_template = """
-Hello {username},
-
-your account is almost ready - all we need to do is make sure that this is your email.
-
-Use this link to confirm your address:
-
-https://example.com/signup-confirm/{token}
-
-If you did not want to create the account, just delete this email and everything will go back to the way it was.
-
-ZATO_FOOTER_MARKER
-Your Zato SSO team.
-""".strip()
-
-# ################################################################################################################################
-
-sso_welcome_template = """
-Hello {username},
-
-thanks for joining us. Here are a couple great ways to get started:
-
-* https://example.com/link/1
-* https://example.com/link/2
-* https://example.com/link/3
-
-ZATO_FOOTER_MARKER
-Your Zato SSO team.
-""".strip()
-
-sso_password_reset_template = """
-Hello {username},
-
-a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
-
-https://example.com/reset-password/{token}
-
-This link will expire in {expiration_time_hours} hours.
-
-If you do not want to reset your password, please ignore this message and the password will not be changed.
-
-ZATO_FOOTER_MARKER
-Your Zato SSO team.
-""".strip()
-
-# ################################################################################################################################
-
-# We need to do it because otherwise IDEs may replace '-- ' with '--' (stripping the whitespace)
-sso_confirm_template = sso_confirm_template.replace('ZATO_FOOTER_MARKER', '-- ')
-sso_welcome_template = sso_welcome_template.replace('ZATO_FOOTER_MARKER', '-- ')
-sso_password_reset_template = sso_password_reset_template.replace('ZATO_FOOTER_MARKER', '-- ')
-
-# ################################################################################################################################
-
 secrets_conf_template = """
 [secret_keys]
 key1={keys_key1}
@@ -500,7 +317,6 @@ server_conf.main.token={zato_main_token}
 server_conf.odb.password={zato_odb_password}
 """
 
-
 # ################################################################################################################################
 
 default_odb_pool_size = 60
@@ -511,10 +327,6 @@ directories = (
     'config',
     'config/repo',
     'config/repo/static',
-    'config/repo/static/sso',
-    'config/repo/static/sso/email',
-    'config/repo/static/sso/email/en_GB',
-    'config/repo/static/sso/email/en_US',
     'logs',
     'pickup',
     'pickup/incoming',
@@ -706,14 +518,6 @@ class Create(ZatoCommand):
         files = {
             'config/repo/logging.conf': logging_conf_contents,
             'config/repo/sql.conf': sql_conf_contents,
-
-            'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
-            'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
-            'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
-
-            'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
-            'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
-            'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
         }
 
         default_http_port = default_http_port or http_plain_server_port
@@ -823,11 +627,6 @@ class Create(ZatoCommand):
             user_conf = open_w(user_conf_loc)
             _ = user_conf.write(user_conf_contents)
             user_conf.close()
-
-            sso_conf_loc = os.path.join(self.target_dir, 'config/repo/sso.conf')
-            sso_conf = open_w(sso_conf_loc)
-            _ = sso_conf.write(sso_conf_contents)
-            sso_conf.close()
 
             # On systems other than Windows, where symlinks are not fully supported,
             # for convenience and backward compatibility,

@@ -35,7 +35,6 @@ if exist %workdir%\zato-hl7\build       (rmdir /s /q %workdir%\zato-hl7\build)
 if exist %workdir%\zato-lib\build       (rmdir /s /q %workdir%\zato-lib\build)
 if exist %workdir%\zato-scheduler\build (rmdir /s /q %workdir%\zato-scheduler\build)
 if exist %workdir%\zato-server\build    (rmdir /s /q %workdir%\zato-server\build)
-if exist %workdir%\zato-sso\build       (rmdir /s /q %workdir%\zato-sso\build)
 if exist %workdir%\zato-testing\build   (rmdir /s /q %workdir%\zato-testing\build)
 if exist %workdir%\zato-web-admin\build (rmdir /s /q %workdir%\zato-web-admin\build)
 
@@ -50,7 +49,6 @@ del /s /q %workdir%\zato-hl7\*.pyc
 del /s /q %workdir%\zato-lib\*.pyc
 del /s /q %workdir%\zato-scheduler\*.pyc
 del /s /q %workdir%\zato-server\*.pyc
-del /s /q %workdir%\zato-sso\*.pyc
 del /s /q %workdir%\zato-testing\*.pyc
 del /s /q %workdir%\zato-web-admin\*.pyc
 
@@ -65,7 +63,6 @@ del /s /q %workdir%\zato-hl7\*.pyd
 del /s /q %workdir%\zato-lib\*.pyd
 del /s /q %workdir%\zato-scheduler\*.pyd
 del /s /q %workdir%\zato-server\*.pyd
-del /s /q %workdir%\zato-sso\*.pyd
 del /s /q %workdir%\zato-testing\*.pyd
 del /s /q %workdir%\zato-web-admin\*.pyd
 

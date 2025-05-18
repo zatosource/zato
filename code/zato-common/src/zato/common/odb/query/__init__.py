@@ -469,7 +469,6 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
         q = q.filter(
             not_(
                 HTTPSOAP.name.startswith('zato') |
-                HTTPSOAP.name.startswith('/zato/sso/') |
                 HTTPSOAP.name.startswith('pub.zato.service.service-invoker')
             )
         )

@@ -105,11 +105,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'hl7_version': params.get(prefix + 'hl7_version'),
         'json_path': params.get(prefix + 'json_path'),
         'data_encoding': params.get(prefix + 'data_encoding'),
-
-        'is_rate_limit_active': params.get(prefix + 'is_rate_limit_active'),
-        'rate_limit_type': params.get(prefix + 'rate_limit_type'),
-        'rate_limit_def': params.get(prefix + 'rate_limit_def'),
-        'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
     }
 
     return message

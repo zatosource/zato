@@ -218,12 +218,6 @@ class GENERIC(Constants):
     CONNECTION_DELETE = ValueConstant('')
     CONNECTION_CHANGE_PASSWORD = ValueConstant('')
 
-class SSO(Constants):
-    code_start = 107200
-
-    USER_CREATE = ValueConstant('')
-    USER_EDIT   = ValueConstant('')
-
 class Common(Constants):
     code_start = 107800
     Sync_Objects = ValueConstant('')

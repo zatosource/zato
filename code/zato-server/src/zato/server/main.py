@@ -68,8 +68,6 @@ from zato.server.ext import zunicorn
 from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
-from zato.sso.api import SSOAPI
-from zato.sso.util import new_user_id, normalize_sso_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -358,9 +356,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
     sio_config = get_sio_server_config(sio_config)
 
-    sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
-    normalize_sso_config(sso_config) # type: ignore
-
     server_config.main.token = server_config.main.token.encode('utf8')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
@@ -382,7 +377,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'server_config': server_config,
         'pickup_config': pickup_config,
         'sio_config': sio_config,
-        'sso_config': sso_config,
         'base_dir': base_dir,
     })
 
@@ -449,17 +443,12 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.sio_config = sio_config
-    server.sso_config = sso_config
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
-    server.is_sso_enabled = server.fs_server_config.component_enabled.sso
-    if server.is_sso_enabled:
-        server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), crypto_manager.encrypt, server.decrypt,
-            crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
         if is_encrypted(scheduler_api_password):

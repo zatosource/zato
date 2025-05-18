@@ -809,12 +809,9 @@ class WorkerStore(_WorkerStoreBase):
         # .. extract the newest information  ..
         sec_def = self.basic_auth_get_by_id(msg.id)
 
-        # .. update security groups ..
+        # .. update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
-
-        # .. and update rate limiters.
-        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
 
 # ################################################################################################################################
 
@@ -824,12 +821,9 @@ class WorkerStore(_WorkerStoreBase):
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_delete)
 
-        # .. update security groups ..
+        # .. update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.on_basic_auth_deleted(msg.id)
-
-        # .. and update rate limiters.
-        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
 # ################################################################################################################################
 
@@ -879,11 +873,8 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing API key security definition.
         """
-        # Update channels and outgoing connections ..
+        # Update channels and outgoing connections.
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
-
-        # .. and update rate limiters.
-        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
 
 # ################################################################################################################################
 
@@ -893,12 +884,9 @@ class WorkerStore(_WorkerStoreBase):
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_delete)
 
-        # .. update security groups ..
+        # .. update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.on_apikey_deleted(msg.id)
-
-        # .. and update rate limiters.
-        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
 # ################################################################################################################################
 
@@ -1316,9 +1304,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # Delete it from the service store
         self.server.service_store.delete_service_data(msg.name)
-
-        # Remove rate limiting configuration
-        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SERVICE, msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore

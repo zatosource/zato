@@ -16,7 +16,6 @@ from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
-from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -41,8 +40,7 @@ class GetList(AdminService):
         response_elem = 'zato_security_apikey_get_list_response'
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username'
-        output_optional:'anytuple' = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), 'header'
+        output_optional:'anytuple' = 'header'
 
     def get_data(self, session:'SASession') -> 'any_':
         search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
@@ -63,8 +61,7 @@ class Create(AdminService):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
         input_required = 'name', 'is_active'
-        input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), 'header'
+        input_optional:'anytuple' = 'cluster_id', 'header'
         output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
@@ -126,8 +123,7 @@ class Edit(AdminService):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
         input_required = 'id', 'name', 'is_active'
-        input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), 'header'
+        input_optional:'anytuple' = 'cluster_id', 'header'
         output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
