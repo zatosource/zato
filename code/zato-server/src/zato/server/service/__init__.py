@@ -159,10 +159,8 @@ _utcnow = datetime.utcnow
 
 # ################################################################################################################################
 
-before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job')
-after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job')
 before_handle_hooks = ('before_handle',)
-after_handle_hooks = ('after_handle', 'finalize_handle')
+after_handle_hooks = ('after_handle',)
 
 # The almost identical methods below are defined separately because they are used in critical paths
 # where every if counts.
@@ -389,8 +387,6 @@ class Service:
         self.environ = Bunch()
         self.request = Request(self) # type: Request
         self.response = Response(self.logger) # type: ignore
-        self.has_validate_input = False
-        self.has_validate_output = False
 
         # This is where user configuration is kept
         self.config = Bunch()
@@ -659,40 +655,16 @@ class Service:
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
-                # Call before job hooks if any are defined and we are called from the scheduler
-                if service.call_hooks and service._has_before_job_hooks and self.channel.type == ModuleCtx.Channel_Scheduler:
-                    for elem in service._before_job_hooks:
-                        if elem:
-                            call_hook_with_service(elem, service)
-
                 # Called before .handle - catches exceptions
                 if service.call_hooks and service.before_handle: # type: ignore
                     call_hook_no_service(service.before_handle)
 
-                # Called before .handle - does not catch exceptions
-                if service.validate_input: # type: ignore
-                    service.validate_input()
-
                 # This is the place where the service is invoked
                 self._invoke(service, channel)
-
-                # Called after .handle - does not catch exceptions
-                if service.validate_output: # type: ignore
-                    service.validate_output()
 
                 # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle: # type: ignore
                     call_hook_no_service(service.after_handle)
-
-                # Call after job hooks if any are defined and we are called from the scheduler
-                if service._has_after_job_hooks and self.channel.type == ModuleCtx.Channel_Scheduler:
-                    for elem in service._after_job_hooks:
-                        if elem:
-                            call_hook_with_service(elem, service)
-
-                # Optional, almost never overridden.
-                if service.finalize_handle: # type: ignore
-                    call_hook_no_service(service.finalize_handle)
 
             except Exception as ex:
                 e = ex
