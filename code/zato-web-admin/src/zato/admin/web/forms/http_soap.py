@@ -61,11 +61,10 @@ class CreateForm(DataFormatForm):
 
     data_encoding = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=None, sec_tls_ca_cert_list=None, cache_list=None, soap_versions=SOAP_VERSIONS,
+    def __init__(self, security_list=None, cache_list=None, soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
 
         security_list = security_list or []
-        sec_tls_ca_cert_list = sec_tls_ca_cert_list or {}
         cache_list = cache_list or []
 
         super(CreateForm, self).__init__(post_data, prefix=prefix)
