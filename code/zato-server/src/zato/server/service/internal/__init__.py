@@ -20,7 +20,7 @@ from zato.common.py23_.past.builtins import basestring
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
-from zato.common.util.api import get_response_value, replace_private_key
+from zato.common.util.api import get_response_value
 from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Bool, Int, Service
 
@@ -120,7 +120,6 @@ class AdminService(Service):
                 data = deepcopy(to_copy)
 
             for k, v in data.items():
-                v = replace_private_key(v)
                 if 'password' in k:
                     data[k] = SECRET_SHADOW
 
