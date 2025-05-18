@@ -145,9 +145,6 @@ class URLData(CyURLData):
         enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         """ Authenticates and authorizes a given request. Returns None on success
         """
-        if sec.sec_use_rbac:
-            return self.check_rbac_delegated_security(
-                sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
 
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
@@ -491,7 +488,6 @@ class URLData(CyURLData):
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
-        sec_info.sec_use_rbac = msg.sec_use_rbac
 
         if msg.get('security_name'):
             sec_info.sec_def = Bunch()

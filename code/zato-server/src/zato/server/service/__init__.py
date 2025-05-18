@@ -675,9 +675,8 @@ class Service:
             try:
 
                 # Check rate limiting first - note the usage of 'service' rather than 'self',
-                # in case self is a gateway service such as an JSON-RPC one in which case
-                # we are in fact interested in checking the target service's rate limit,
-                # not our own.
+                # in case self is a gateway service, in which case we are in fact interested in checking the target
+                # service's rate limit, not our own.
                 if service._has_rate_limiting:
                     self.server.rate_limiting.check_limit(self.cid, ModuleCtx.Channel_Service, service.name,
                         self.wsgi_environ['zato.http.remote_addr'])

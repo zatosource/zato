@@ -55,7 +55,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
         initial_input_dict['is_outconn'] = False
-        initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['pool_size'] = 1
         initial_input_dict['should_validate'] = True
         initial_input_dict['should_parse_on_input'] = True
