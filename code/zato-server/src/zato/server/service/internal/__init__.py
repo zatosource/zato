@@ -187,36 +187,11 @@ class AdminService(Service):
 class Ping(AdminService):
     """ A ping service, useful for API testing.
     """
-    class SimpleIO(AdminSIO):
-        output_required = ('pong',)
-        response_elem = 'zato_ping_response'
+    name = 'pub.zato.ping'
+    output = 'pong'
 
     def handle(self):
         self.response.payload.pong = 'zato'
-
-    def after_handle(self):
-        """ A no-op method because zato.ping can be used in benchmarks and the parent's .before/after_handle
-        would constitute about 10-15% of the overhead each. With typical admin services it is fine because
-        they are rarely used but in benchmarking, this is unnecessary and misleading seeing as they do things
-        that user-defined services don't do.
-        """
-
-    before_handle = after_handle
-
-# ################################################################################################################################
-
-class PubPing(Ping):
-    """ Just like zato.ping but available by default in web-admin (because of its prefix).
-    """
-    name = 'pub.zato.ping'
-
-# ################################################################################################################################
-
-class Ping2(Ping):
-    """ Works exactly the same as zato.ping, added to have another service for API testing.
-    """
-    class SimpleIO(Ping.SimpleIO):
-        response_elem = 'zato_ping2_response'
 
 # ################################################################################################################################
 
