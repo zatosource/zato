@@ -40,17 +40,8 @@ logger = getLogger(__name__)
 class Connector_Type:
     """ All types of ZeroMQ connections that we support.
     """
-    class channel:
-        zmq = 'ZeroMQ channel'
-
-    class out:
-        vault_conn = 'Vault connection'
-        zmq = 'ZeroMQ outgoing'
-
     class duplex:
         amqp = 'AMQP'
-        web_socket = 'WebSocket'
-        zmq_v01 = 'ZeroMQ MDP v0.1'
 
 class Inactive(Exception):
     pass

@@ -32,7 +32,7 @@ class CreateForm(forms.Form):
     def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
         security_list = security_list or []
 
-        add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
+        add_security_select(self, security_list, field_name='security_id')
         add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)
         add_services(self, req)
 
