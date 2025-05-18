@@ -804,7 +804,6 @@ class ServiceStore:
         items,         # type: stroriter
         base_dir,      # type: str
         sync_internal, # type: bool
-        is_first       # type: bool
     ) -> 'anylist':
         """ Imports and optionally caches locally internal services.
         """
@@ -831,12 +830,6 @@ class ServiceStore:
                 'slow_threshold': item.slow_threshold, # type: ignore
             }
 
-        # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
-        # we need to create it anyway and sync_internal becomes True then. However, the should be created only by the very first
-        # worker in a group of workers - the rest can simply assume that the cache is ready to read.
-        # if is_first and not os.path.exists(cache_file_path):
-        sync_internal = True
-
         if sync_internal:
 
             # Synchronizing internal modules means re-building the internal cache from scratch
@@ -851,7 +844,7 @@ class ServiceStore:
             internal_cache = internal_cache
 
             logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
-            info = self.import_services_from_anywhere(items, base_dir)
+            info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
 
             for service in info.to_process: # type: InRAMService
 
@@ -1607,7 +1600,10 @@ class ServiceStore:
                         if 'zato.sso' in service_name:
                             return False
 
-        # If we are here, it means that we should deploy that item
+                    # OK, we want to deploy that service
+                    return True
+
+        # If we are here, it means that we don't want to deploy that
         return False
 
 # ################################################################################################################################
