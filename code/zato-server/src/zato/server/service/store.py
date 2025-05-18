@@ -52,8 +52,7 @@ from zato.common.util.api import deployment_info, import_module_from_path, is_fu
 from zato.common.util.platform_ import is_non_windows
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
-    SchedulerFacade, Service
+from zato.server.service import SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -103,19 +102,11 @@ _utcnow=datetime.utcnow
 # For backward compatibility we ignore certain modules
 internal_to_ignore = []
 
-# STOMP was removed in 3.2
-internal_to_ignore.append('stomp')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
 data_class_model_class_name = 'zato.server.service.Model'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -613,28 +604,6 @@ class ServiceStore:
             # Audit log
             class_.audit_pii = service_store.server.audit_pii
 
-        class_._before_job_hooks = []
-        class_._after_job_hooks = []
-
-        # Override hook methods that have not been implemented by user
-        for func_name in hook_methods:
-            func = getattr(class_, func_name, None)
-            if func:
-                # Replace with None or use as-is depending on whether the hook was overridden by user.
-                impl = func if is_func_overridden(func) else None
-
-                # Assign to class either the replaced value or the original one.
-                setattr(class_, func_name, impl)
-
-                if impl and func_name in before_job_hooks:
-                    class_._before_job_hooks.append(impl)
-
-                if impl and func_name in after_job_hooks:
-                    class_._after_job_hooks.append(impl)
-
-        class_._has_before_job_hooks = bool(class_._before_job_hooks)
-        class_._has_after_job_hooks = bool(class_._after_job_hooks)
-
 # ################################################################################################################################
 
     def has_sio(self, service_name:'str') -> 'bool':
@@ -687,17 +656,6 @@ class ServiceStore:
 
     def has_service(self, service_name:'str') -> 'bool':
         return service_name in self.name_to_impl_name
-
-# ################################################################################################################################
-
-    def _invoke_hook(self, service:'Service', hook_name:'str') -> 'None':
-        """ A utility method for invoking various service's hooks.
-        """
-        try:
-            hook = getattr(service, hook_name)
-            hook()
-        except Exception:
-            logger.error('Error while invoking `%s` on service `%s` e:`%s`', hook_name, service, format_exc())
 
 # ################################################################################################################################
 
@@ -855,9 +813,6 @@ class ServiceStore:
                 self.id_to_impl_name[service_id] = item.impl_name
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
-
-                hook_arg = self.server
-                item.service_class.after_add_to_store(hook_arg)
 
 # ################################################################################################################################
 
