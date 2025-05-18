@@ -46,7 +46,6 @@ port={scheduler_bind_port}
 
 [cluster]
 id=1
-stats_enabled=False
 
 [server]
 server_path={server_path}
