@@ -952,9 +952,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
 
-        # Configure the store to obtain OAuth tokens through
-        self.set_up_oauth_store()
-
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)
 
@@ -982,8 +979,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        self.broker_client = BrokerClient(
-            server_rpc=self.rpc, zato_client=None, scheduler_config=self.fs_server_config.scheduler)
+        self.broker_client = BrokerClient(zato_client=None, scheduler_config=self.fs_server_config.scheduler)
         self.worker_store.set_broker_client(self.broker_client)
 
         self._after_init_accepted(locally_deployed)

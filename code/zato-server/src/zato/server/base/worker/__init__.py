@@ -291,7 +291,6 @@ class WorkerStore(_WorkerStoreBase):
         # Create all the expected connections and objects
         self.init_sql()
         self.init_http_soap()
-        self.init_cloud()
 
         # AMQP
         self.init_amqp()
@@ -343,7 +342,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
-        self.after_broker_client_set()
 
 # ################################################################################################################################
 

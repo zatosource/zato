@@ -33,8 +33,7 @@ from zato.common.ext.validate_ import is_boolean
 from zato.common.json_ import dumps as json_dumps
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
-from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, \
-    Service as ODBService
+from zato.common.odb.model import Cluster, ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
 from zato.common.odb.query import service_deployment_list, service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services

@@ -76,9 +76,6 @@ class BrokerClient:
         zato_client:      'AnyServiceInvoker | None' = None,
         ) -> 'None':
 
-        # This is used to invoke services
-        self.server_rpc = server_rpc
-
         self.zato_client = zato_client
         self.scheduler_address = ''
         self.scheduler_auth = None
@@ -225,12 +222,6 @@ class BrokerClient:
             code_name = code_to_name[action]
             if has_debug:
                 logger.info('Invoking %s %s', code_name, msg)
-
-            if self.server_rpc:
-                return self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
-            else:
-                logger.warning('Server-to-server RPC invocation failure -> self.server_rpc is not configured (%r) (%d:%r)',
-                    self.server_rpc, from_server, action)
 
         except Exception:
             logger.warning(format_exc())
