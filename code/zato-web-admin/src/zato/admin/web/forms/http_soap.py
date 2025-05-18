@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_sec_tls_ca_cert_id_select, add_security_select, add_select, add_services, \
+from zato.admin.web.forms import add_security_select, add_select, add_services, \
     SearchForm as _ChooseClusterForm, DataFormatForm
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
@@ -98,7 +98,6 @@ class CreateForm(DataFormatForm):
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
 
         add_security_select(self, security_list)
-        add_sec_tls_ca_cert_id_select(req, self)
 
         add_services(self, req)
         add_select(self, 'cache_id', cache_list)
