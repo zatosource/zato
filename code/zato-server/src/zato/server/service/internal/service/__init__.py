@@ -59,25 +59,6 @@ Service = Service
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _store_stats(suffix:'str') -> 'None':
-    try:
-        address = f'https://zato.io/stats/{suffix}'
-        _ = requests_get(address)
-    except Exception:
-        pass
-
-stats_enabled = is_boolean(os.environ.get('Zato_Stats_Enabled', False))
-
-stats_ignore = {
-    'demo.my-service',
-    'pub.zato.ping',
-    'zato.service.is-deployed',
-    'zato.outgoing.sql.auto-ping',
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetList(AdminService):
     """ Returns a list of services.
     """
@@ -159,42 +140,6 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _GetStatsTable(AdminService):
-
-    def handle(self):
-
-        table = None # self.server.stats_client.get_table()
-        if table:
-            self.response.payload = table
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetStatsTable(AdminService):
-
-    class SimpleIO(AdminSIO):
-        output_optional = ('name', Float('item_max'), Float('item_min'), Float('item_mean'), Float('item_total_time'), \
-            Float('item_usage_share'), Float('item_time_share'), Integer('item_total_usage'),
-            'item_total_time_human', 'item_total_usage_human')
-        response_elem = None
-
-    def handle(self):
-
-        self.response.payload[:] = []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetServiceStats(AdminService):
-
-    def handle(self):
-        usage = self.server.current_usage.get(self.request.raw_request['name'])
-        if usage:
-            self.response.payload = usage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -653,37 +598,6 @@ class Invoke(AdminService):
         data_format = self.request.input.get('data_format')
         transport = self.request.input.get('transport')
         expiration = self.request.input.get('expiration') or BROKER.DEFAULT_EXPIRATION
-
-        # Extract the details, if required.
-        if stats_enabled:
-
-            suffix = name.replace('zato.', '', 1)
-
-            if name not in stats_ignore:
-                if 'zato' in name:
-                    if name == 'zato.generic.connection.get-list':
-                        conn_type = 'init'
-                        try:
-                            conn_type = payload.get('type_', 'notype') # type: ignore
-                        except Exception:
-                            conn_type = 'noget'
-                        finally:
-                            suffix += f'/{conn_type}'
-
-                    elif name == 'zato.http-soap.get-list':
-                        connection = 'init'
-                        transport = 'init'
-                        try:
-                            connection = payload.get('connection', 'noconn') # type: ignore
-                            transport = payload.get('transport', 'notransport') # type: ignore
-                        except Exception:
-                            connection = 'noget'
-                            transport = 'noget'
-                        finally:
-                            suffix += f'/{connection}/{transport}'
-
-                    # Store statistics
-                    _ = spawn(_store_stats, suffix)
 
         if name and id:
             raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))

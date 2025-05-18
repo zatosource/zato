@@ -83,12 +83,6 @@ def format_float(value, digits=5): # type: ignore
 # ################################################################################################################################
 
 @register.filter
-def stats_float(value): # type: ignore
-    return value if value else '< 0.01'
-
-# ################################################################################################################################
-
-@register.filter
 def get_item(elems, idx): # type: ignore
     try:
         value = elems[idx]

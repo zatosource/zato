@@ -745,12 +745,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _run_stats_client(self, events_tcp_port:'int') -> 'None':
-        self.stats_client.init('127.0.0.1', events_tcp_port)
-        self.stats_client.run()
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato

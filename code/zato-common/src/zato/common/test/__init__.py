@@ -461,7 +461,6 @@ class ServiceTestCase(TestCase):
         instance = class_()
 
         server = MagicMock()
-        server.component_enabled.stats = False
 
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock

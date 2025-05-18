@@ -41,6 +41,7 @@ from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
+from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.vendors import keysight_vision
 
 urlpatterns = [

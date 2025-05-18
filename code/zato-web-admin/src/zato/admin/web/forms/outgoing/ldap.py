@@ -43,7 +43,6 @@ class CreateForm(forms.Form):
     sasl_mechanism = forms.ChoiceField(widget=forms.Select())
 
     is_read_only = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    is_stats_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_check_names = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     use_auto_range = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_return_empty_attrs = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
