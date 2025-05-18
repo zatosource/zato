@@ -340,7 +340,6 @@ class CACHE:
 
     class TYPE:
         BUILTIN = 'builtin'
-        MEMCACHED = 'memcached'
 
     class BUILTIN_KV_DATA_TYPE:
         STR = NameId('String', 'str')

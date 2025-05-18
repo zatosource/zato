@@ -52,7 +52,6 @@ TRANSPORT = {
 
 CACHE_TYPE = {
     CACHE.TYPE.BUILTIN: 'Built-in',
-    CACHE.TYPE.MEMCACHED: 'Memcached',
 }
 
 _rest_security_type_supported = {
@@ -204,7 +203,7 @@ def index(req): # type: ignore
 
         cache_list = []
 
-        for cache_type in (CACHE.TYPE.BUILTIN, CACHE.TYPE.MEMCACHED):
+        for cache_type in [CACHE.TYPE.BUILTIN]:
             service_name = 'zato.cache.{}.get-list'.format(cache_type)
             response = req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster.id})
 

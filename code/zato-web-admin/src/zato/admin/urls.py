@@ -17,7 +17,6 @@ from zato.admin.web.views import account, http_soap, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
-from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -526,19 +525,6 @@ urlpatterns += [
 
     url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
-
-    # .. Memcached
-
-    url(r'^zato/cache/memcached/$',
-        login_required(cache_memcached.Index()), name=cache_memcached.Index.url_name),
-    url(r'^zato/cache/memcached/create/$',
-        login_required(cache_memcached.Create()), name=cache_memcached.Create.url_name),
-    url(r'^zato/cache/memcached/edit/$',
-        login_required(cache_memcached.Edit()), name=cache_memcached.Edit.url_name),
-    url(r'^zato/cache/memcached/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_memcached.Delete()), name=cache_memcached.Delete.url_name),
-    url(r'^zato/cache/memcached/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_memcached.DetailsIndex()), name=cache_memcached.DetailsIndex.url_name),
 
     ]
 

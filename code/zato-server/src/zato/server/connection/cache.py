@@ -15,9 +15,6 @@ from traceback import format_exc
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
-# python-memcached
-from memcache import Client as _MemcachedClient
-
 # Paste
 from paste.util.converters import asbool
 
@@ -838,11 +835,9 @@ class CacheAPI:
         self.default = cast_('Cache', _NotConfiguredAPI())
         self.caches = {
             CACHE.TYPE.BUILTIN:{},
-            CACHE.TYPE.MEMCACHED:{},
         }
 
         self.builtin = self.caches[CACHE.TYPE.BUILTIN]
-        self.memcached = self.caches[CACHE.TYPE.MEMCACHED]
 
     def _maybe_set_default(self, config, cache):
         if config.is_default:
@@ -895,21 +890,6 @@ class CacheAPI:
 
 # ################################################################################################################################
 
-    def _create_memcached(self, config):
-        """ A low-level method building a Memcached-based cache connections.
-        """
-        def impl():
-            try:
-                servers = [elem.strip() for elem in config.servers.splitlines()]
-                cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
-                self._add_cache(config, cache)
-            except Exception:
-                logger.warning(format_exc())
-
-        spawn(impl)
-
-# ################################################################################################################################
-
     def _add_cache(self, config, cache):
 
         # Add it to caches
@@ -944,15 +924,9 @@ class CacheAPI:
     def _edit(self, config):
         """ A low-level method for updating configuration of a given cache. Must be called with self.lock held.
         """
-        if config.cache_type == CACHE.TYPE.BUILTIN:
-            cache = self.caches[config.cache_type].pop(config.old_name)
-            cache.update_config(config)
-            self._add_cache(config, cache)
-        else:
-            cache = self.caches[config.cache_type][config.old_name]
-            cache.disconnect_all()
-            self._delete(config.cache_type, config.old_name)
-            self._create_memcached(config)
+        cache = self.caches[config.cache_type].pop(config.old_name)
+        cache.update_config(config)
+        self._add_cache(config, cache)
 
 # ################################################################################################################################
 
@@ -1021,14 +995,6 @@ class CacheAPI:
         """
         with self.lock:
             return self._get_cache(CACHE.TYPE.BUILTIN, name)
-
-# ################################################################################################################################
-
-    def get_memcached_cache(self, name):
-        """ Returns a Memcached cache by its name.
-        """
-        with self.lock:
-            return self._get_cache(CACHE.TYPE.MEMCACHED, name)
 
 # ################################################################################################################################
 

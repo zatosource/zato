@@ -11,7 +11,7 @@ fi
 
 sudo zypper install -y \
     curl cyrus-sasl-devel gcc gcc-c++ haproxy libbz2-devel libev-devel libev4 \
-    libffi-devel keyutils-devel libmemcached-devel libpqxx-devel              \
+    libffi-devel keyutils-devel libpqxx-devel              \
     openldap2-devel libxml2-devel libxslt-devel libyaml-devel openssl         \
     patch uuid-devel wget zlib-devel $PYTHON_DEPENDENCIES
 
