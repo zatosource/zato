@@ -21,7 +21,7 @@ from sqlalchemy.sql.expression import case
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
-from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, CacheMemcached, ChannelAMQP, Cluster, CronStyleJob, \
+from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, ChannelAMQP, Cluster, CronStyleJob, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
     OutgoingSAP
@@ -747,33 +747,6 @@ def cache_builtin_list(session, cluster_id, needs_columns=False):
     """ A list of built-in cache definitions.
     """
     return _cache_builtin(session, cluster_id)
-
-# ################################################################################################################################
-
-def _cache_memcached(session, cluster_id):
-    return session.query(
-        CacheMemcached.cache_id, CacheMemcached.name, CacheMemcached.is_active,
-        CacheMemcached.is_default, CacheMemcached.is_debug,
-        CacheMemcached.servers, CacheMemcached.extra,
-        CacheMemcached.cache_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==CacheMemcached.cluster_id).\
-        filter(Cache.id==CacheMemcached.cache_id).\
-        filter(Cache.cache_type==CACHE.TYPE.MEMCACHED).\
-        order_by(CacheMemcached.name)
-
-def cache_memcached(session, cluster_id, id):
-    """ An individual Memcached cache definition.
-    """
-    return _cache_builtin(session, cluster_id).\
-        filter(CacheMemcached.id==id).\
-        one()
-
-@query_wrapper
-def cache_memcached_list(session, cluster_id, needs_columns=False):
-    """ A list of Memcached cache definitions.
-    """
-    return _cache_memcached(session, cluster_id)
 
 # ################################################################################################################################
 

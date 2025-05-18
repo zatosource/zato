@@ -730,22 +730,6 @@ class CacheBuiltin(Cache):
 
 # ################################################################################################################################
 
-class CacheMemcached(Cache):
-    """ Cache definitions using Memcached.
-    """
-    __tablename__ = 'cache_memcached'
-    __mapper_args__ = {'polymorphic_identity':'memcached'}
-
-    cache_id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
-    servers = Column(Text, nullable=False)
-    is_debug = Column(Boolean(), nullable=False)
-    extra = Column(LargeBinary(20000), nullable=True)
-
-    def __init__(self, cluster=None):
-        self.cluster = cluster
-
-# ################################################################################################################################
-
 class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
     """

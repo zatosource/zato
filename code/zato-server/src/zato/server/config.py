@@ -289,7 +289,6 @@ class ConfigStore:
         self.service = None   # type: ConfigDict
         self.search_es = None   # type: ConfigDict
         self.cache_builtin = None   # type: ConfigDict
-        self.cache_memcached = None   # type: ConfigDict
 
         # Local on-disk configuraion repository
         self.repo_location = None # type: str
