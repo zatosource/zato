@@ -35,15 +35,8 @@
             'id',
             'is_active',
             'is_internal',
-            'slow_threshold',
 
-            'is_json_schema_enabled',
-            'needs_json_schema_err_details',
 
-            'is_rate_limit_active',
-            'rate_limit_type',
-            'rate_limit_def',
-            'rate_limit_check_parent_def',
         ]
     }
 
@@ -111,19 +104,6 @@
                         <th><a href="#">Implementation</a></th>
                         <th><a href="#">Internal</a></th>
 
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -141,28 +121,10 @@
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
 
-                        <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
-                        <td>
-                            {% if item.may_be_deleted %}
-                                <a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
-
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.slow_threshold }}</td>
-
-                        <td class='ignore'>{{ item.is_json_schema_enabled }}</td>
-                        <td class='ignore'>{{ item.needs_json_schema_err_details }}</td>
-
-                        <td class='ignore'>{{ item.is_rate_limit_active }}</td>
-                        <td class='ignore'>{{ item.rate_limit_type }}</td>
-                        <td class='ignore'>{{ item.rate_limit_def }}</td>
-                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
 
                     </tr>
                 {% endfor %}
