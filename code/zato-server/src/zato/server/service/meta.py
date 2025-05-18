@@ -76,7 +76,6 @@ def get_columns_to_visit(columns, is_required):
     out = []
 
     # Models with inheritance may have multiple attributes of the same name,
-    # e.g. VaultConnection.id will have SecBase.id and we need to make sure only one of them is returned.
     names_seen = set()
 
     for elem in columns:

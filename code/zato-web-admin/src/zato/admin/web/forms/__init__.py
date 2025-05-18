@@ -72,7 +72,7 @@ def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
 
 # ################################################################################################################################
 
-def add_security_select(form, security_list, needs_no_security=True, field_name='security', needs_rbac=True):
+def add_security_select(form, security_list, needs_no_security=True, field_name='security'):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
 

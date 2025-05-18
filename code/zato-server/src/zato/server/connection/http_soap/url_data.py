@@ -68,7 +68,6 @@ class URLData(CyURLData):
         self._target_separator = MISC.SEPARATOR
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
-        dispatcher.listen_for_updates(VAULT_BROKER_MSG, self.dispatcher_callback)
 
         # Needs always to be sorted by name in case of conflicts in paths resolution
         self.sort_channel_data()
