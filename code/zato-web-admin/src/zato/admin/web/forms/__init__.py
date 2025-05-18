@@ -16,7 +16,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import RATE_LIMIT, SIMPLE_IO, TLS, ZATO_DEFAULT, ZATO_NONE
+from zato.common.api import RATE_LIMIT, SIMPLE_IO, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -244,28 +244,6 @@ class DataFormatForm(forms.Form):
 
 class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WithTLSForm(forms.Form):
-
-    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_crl_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT.VERSION)
-    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
-    tls_pem_passphrase = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
-    is_tls_match_hostname_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=TLS.DEFAULT.CIPHERS)
-
-    def __init__(self, prefix=None, post_data=None):
-        super(WithTLSForm, self).__init__(post_data, prefix=prefix)
-
-        add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
-        add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

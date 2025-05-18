@@ -51,8 +51,7 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # This is the last git commit ID.
 #
 # Make sure to use -C to specify the git directory instead of navigating to it directly;
-# the latter may result in spurious pip errors, such as:
-# "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
+# the latter may result in spurious pip errors.
 #
 git_command_date = ['git', 'log', '-1', '--pretty=%cd', '--date=format:%Y.%m.%d']
 git_command_revision = ['git', 'rev-parse', '--short', 'HEAD']
