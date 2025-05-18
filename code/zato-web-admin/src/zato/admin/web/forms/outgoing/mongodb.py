@@ -12,13 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, WithTLSForm
+from zato.admin.web.forms import add_select
 from zato.common.api import MONGODB
 
 default = MONGODB.DEFAULT
 timeout = default.TIMEOUT
 
-class CreateForm(WithTLSForm):
+class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
