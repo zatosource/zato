@@ -37,7 +37,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     NTLM, Server, Service
+     NTLM, SecurityBase, Server, Service
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
@@ -1184,13 +1184,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_notif_sql_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of SQL notification definitions.
-        """
-        return query.notif_sql_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_search_es_list(self, cluster_id, needs_columns=False):
         """ Returns a list of ElasticSearch connections.
         """
@@ -1224,5 +1217,22 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return get_sso_user_rate_limiting_info(session)
+
+# ################################################################################################################################
+
+    def encrypt_sec_base(self, session, id, attr_name, encrypted_value):
+        """ Sets an encrypted value of a named attribute in a security definition.
+        """
+        item = session.query(SecurityBase).\
+            filter(SecurityBase.id==id).\
+            one()
+
+        setattr(item, attr_name, encrypted_value)
+        session.add(item)
+
+    encrypt_sec_apikey             = encrypt_sec_base
+    encrypt_sec_basic_auth         = encrypt_sec_base
+    encrypt_sec_ntlm               = encrypt_sec_base
+    encrypt_sec_oauth              = encrypt_sec_base
 
 # ################################################################################################################################

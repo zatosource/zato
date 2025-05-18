@@ -16,14 +16,13 @@ from paste.util.converters import asbool
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_DEFAULT, ZATO_NONE, ZatoNotGiven, ZATO_SEC_USE_RBAC
+     ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.exception import ServiceMissingException, ZatoException
+from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
+from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
