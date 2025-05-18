@@ -174,12 +174,36 @@ class ZatoGunicornApplication(Application):
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
         self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
 
-        self.zato_config['deployment_lock_expires'] = 1073741824 # 2 ** 30 seconds = +/- 34 years
-        self.zato_config['deployment_lock_timeout'] =180
+        for k, v in self.config_main.items():
+            if k.startswith('gunicorn') and v:
+                k = k.replace('gunicorn_', '')
+                if k == 'bind':
+                    if not ':' in v:
+                        raise ValueError('No port found in main.gunicorn_bind')
+                    else:
+                        host, port = v.split(':')
+                        self.zato_host = host
+                        self.zato_port = port
+                self.cfg.set(k, v)
+            else:
+                if 'deployment_lock' in k:
+                    v = int(v)
+
+                self.zato_config[k] = v
+
+        # Override pre-3.2 names with non-gunicorn specific ones ..
 
         # .. number of processes / threads ..
         if num_threads := self.get_config_value('num_threads'):
             self.cfg.set('workers', num_threads)
+
+        # .. what interface to bind to ..
+        if bind_host := self.get_config_value('bind_host'): # type: ignore
+            self.zato_host = bind_host
+
+        # .. what is our main TCP port ..
+        if bind_port := self.get_config_value('bind_port'): # type: ignore
+            self.zato_port = bind_port
 
         # .. now, set the bind config value once more in self.cfg  ..
         # .. because it could have been overwritten via bind_host or bind_port ..
@@ -189,7 +213,16 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        self.zato_wsgi_app.has_gevent = True
+        if asbool(self.crypto_config.use_tls):
+            self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
+            self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
+            self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
+            self.cfg.set('ca_certs', absjoin(self.repo_location, self.crypto_config.ca_certs_location))
+            self.cfg.set('keyfile', absjoin(self.repo_location, self.crypto_config.priv_key_location))
+            self.cfg.set('certfile', absjoin(self.repo_location, self.crypto_config.cert_location))
+            self.cfg.set('do_handshake_on_connect', True)
+
+        self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
 
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request

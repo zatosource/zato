@@ -87,21 +87,6 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
-def add_sec_tls_ca_cert_id_select(req, form):
-
-    from zato.admin.web.views import get_tls_ca_cert_list
-
-    tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
-
-    form.fields['sec_tls_ca_cert_id'].choices = []
-    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
-    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
-
-    for value, label in tls_ca_cert_list.items():
-        form.fields['sec_tls_ca_cert_id'].choices.append([value, label])
-
-# ################################################################################################################################
-
 def add_http_soap_select(form, field_name, req, connection, transport, needs_initial_select=True, skip=None):
 
     skip = skip or []

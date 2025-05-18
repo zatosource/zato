@@ -156,15 +156,6 @@ class URLData(CyURLData):
         if not auth_result:
             return False
 
-        # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
-        if channel_item.get('has_rbac'):
-            is_allowed = worker_store.rbac.is_http_client_allowed(
-                'sec_def:::{}:::{}'.format(sec.sec_def['sec_type'], sec.sec_def['name']), wsgi_environ['REQUEST_METHOD'],
-                channel_item.service_id)
-
-            if not is_allowed:
-                raise Forbidden(cid, 'You are not allowed to access this URL\n')
-
         if sec_def.get('is_rate_limit_active'):
             self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
 

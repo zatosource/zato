@@ -35,8 +35,6 @@ class CreateForm(forms.Form):
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     security_id = forms.ChoiceField(widget=forms.Select())
-    sec_tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
-
     extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}))
 
     def __init__(self, req, security_list, prefix=None):

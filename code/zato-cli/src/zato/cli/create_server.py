@@ -43,7 +43,14 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
-num_threads={{gunicorn_workers}}
+gunicorn_worker_class=gevent
+gunicorn_workers={{gunicorn_workers}}
+gunicorn_timeout=1234567890
+gunicorn_user=
+gunicorn_group=
+gunicorn_proc_name=
+gunicorn_logger_class=
+gunicorn_graceful_timeout=1
 
 work_dir=../../work
 

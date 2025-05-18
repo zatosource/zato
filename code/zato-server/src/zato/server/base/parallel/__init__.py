@@ -942,15 +942,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
-        # Set up SQL-based key/value API
-        self.kv_data_api = KVDataAPI(cast_('int', self.cluster_id), self.odb)
-
-        # Looked up upfront here and assigned to services in their store
-        self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
-
-        # For server-to-server RPC
-        self.rpc = self.build_server_rpc()
-
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
             self.name, self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address, self.port)

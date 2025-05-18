@@ -21,7 +21,6 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     host = forms.CharField(initial='https://', widget=forms.TextInput(attrs={'style':'width:100%'}))
-    sec_tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
