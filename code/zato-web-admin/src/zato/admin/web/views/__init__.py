@@ -25,12 +25,6 @@ from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServer
 from pytz import UTC
 
 # Zato
-try:
-    from zato.admin.settings import lb_agent_use_tls
-except ImportError:
-    lb_agent_use_tls = True
-
-from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE

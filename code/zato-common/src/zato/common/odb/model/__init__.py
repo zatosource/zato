@@ -136,9 +136,6 @@ class Cluster(Base):
     odb_schema = Column(String(200), nullable=True)
     broker_host = Column(String(200), nullable=False, default='broker-host-unused')
     broker_port = Column(Integer(), nullable=False, default=998877)
-    lb_host = Column(String(200), nullable=False)
-    lb_port = Column(Integer(), nullable=False)
-    lb_agent_port = Column(Integer(), nullable=False)
     cw_srv_id = Column(Integer(), nullable=True)
     cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
 
@@ -146,8 +143,7 @@ class Cluster(Base):
     opaque1 = Column(_JSON(), nullable=True)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None, odb_host=None, odb_port=None, odb_user=None,
-            odb_db_name=None, odb_schema=None, broker_host=None, broker_port=None, lb_host=None, lb_port=None,
-            lb_agent_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
+            odb_db_name=None, odb_schema=None, broker_host=None, broker_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
         self.description = description
@@ -159,9 +155,6 @@ class Cluster(Base):
         self.odb_schema = odb_schema
         self.broker_host = broker_host
         self.broker_port = broker_port
-        self.lb_host = lb_host
-        self.lb_agent_port = lb_agent_port
-        self.lb_port = lb_port
         self.cw_srv_id = cw_srv_id
         self.cw_srv_keep_alive_dt = cw_srv_keep_alive_dt
 

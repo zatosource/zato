@@ -172,12 +172,6 @@ if 'DATABASES' in globals():
 
     db_data['db_type'] = db_type
 
-    # Crypto
-    if config_dir:
-        ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
-        ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
-        ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
-
     # ODB SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
 
@@ -207,10 +201,6 @@ else:
     ssl_key_file = 'dummy'
     ssl_cert_file = 'dummy'
     ssl_ca_certs = 'dummy'
-
-    lb_agent_use_tls = False
-    lb_use_tls = False
-    lb_tls_verify = True
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 

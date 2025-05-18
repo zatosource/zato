@@ -18,14 +18,6 @@ from zato.common.crypto.secret_key import resolve_secret_key
 
 # ################################################################################################################################
 
-SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
-SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
-SSL_CA_CERTS = './config/repo/web-admin-ca-certs.pem'
-
-LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
-
-# ################################################################################################################################
-
 def update_globals(config, base_dir='.', needs_crypto=True):
 
     # Zato

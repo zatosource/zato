@@ -210,7 +210,7 @@ class SearchForm(forms.Form):
 
         self.fields['cluster'].choices = [INITIAL_CHOICES]
         for cluster in clusters:
-            server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)
+            server_info = '{0} - http://127.0.0.1:17010'
             self.fields['cluster'].choices.append([cluster.id, server_info])
 
         self.initial['cluster'] = (data.get('cluster') or [''])[0]

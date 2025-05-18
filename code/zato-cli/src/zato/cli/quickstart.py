@@ -426,10 +426,6 @@ class Create(ZatoCommand):
         except Exception:
             threads_per_server = 1
 
-        lb_host = '127.0.0.1'
-        lb_port = 11223
-        lb_agent_port = 20151
-
         # This could've been set to True by user in the command-line so we'd want
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
@@ -446,7 +442,7 @@ class Create(ZatoCommand):
         create_components_other_than_scheduler = not scheduler_only
 
         # Under Windows, even if the load balancer is created, we do not log this information.
-        total_non_servers_steps = 5 if is_windows else 7
+        total_non_servers_steps = 3 if is_windows else 5
         total_steps = total_non_servers_steps + servers
 
         # Take the scheduler into account
@@ -457,7 +453,6 @@ class Create(ZatoCommand):
             # 1 for Dashboard
             # 1 for the load-balancer
             total_steps -= 3
-
 
 # ################################################################################################################################
 
@@ -475,9 +470,6 @@ class Create(ZatoCommand):
         # 2) ODB initial data
         #
         create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-        create_cluster_args.lb_host = lb_host
-        create_cluster_args.lb_port = lb_port
-        create_cluster_args.lb_agent_port = lb_agent_port
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 

@@ -65,25 +65,6 @@ class Stop(ManageCommand):
 
 # ################################################################################################################################
 
-    def stop_haproxy(self, component_dir):
-
-        # stdlib
-        import os
-        import signal
-
-        # Zato
-        from zato.common.util.api import get_haproxy_agent_pidfile
-
-        # We much check whether the pidfile for agent exists, it won't if --fg was given on input in which case
-        # Ctrl-C must have closed the agent thus we cannot send any signal.
-        lb_agent_pidfile = get_haproxy_agent_pidfile(component_dir)
-        if os.path.exists(lb_agent_pidfile):
-            self.signal('Load-balancer\'s agent', 'SIGTERM', signal.SIGTERM, lb_agent_pidfile, component_dir)
-
-        self.signal('Load-balancer', 'SIGTERM', signal.SIGTERM, None, component_dir)
-
-# ################################################################################################################################
-
     def _on_web_admin(self, *ignored):
 
         # stdlib

@@ -134,7 +134,7 @@ class CheckConfig(ManageCommand):
                 raise Exception('Could not parse pid value `{}` as an integer ({})'.format(pid, pidfile))
             else:
                 try:
-                    get_info(self.component_dir, INFO_FORMAT.DICT)
+                    _ = get_info(self.component_dir, INFO_FORMAT.DICT)
                 except AccessDenied:
                     # This could be another process /or/ it can be our own component started by another user,
                     # so to be on the safe side, indicate an error instead of deleting the pidfile
@@ -147,15 +147,6 @@ class CheckConfig(ManageCommand):
                         os.remove(pidfile)
                     except Exception:
                         pass
-
-                    # .. but, if the component is load-balancer, we also need to delete its agent's pidfile.
-                    # The assumption is that if the load-balancer is not running then so isn't its agent.
-                    if log_file_marker == 'lb-agent':
-                        lb_agent_pidfile = abspath(join(self.component_dir, 'zato-lb-agent.pid'))
-                        try:
-                            os.remove(lb_agent_pidfile)
-                        except Exception:
-                            pass
 
                 else:
                     #
@@ -189,15 +180,6 @@ class CheckConfig(ManageCommand):
                         os.remove(pidfile)
                     except Exception:
                         pass
-
-                    # .. again, if the component is load-balancer, we also need to delete its agent's pidfile.
-                    # The assumption is that if the load-balancer is not running then so isn't its agent.
-                    if log_file_marker == 'lb-agent':
-                        lb_agent_pidfile = abspath(join(self.component_dir, 'zato-lb-agent.pid'))
-                        try:
-                            os.remove(lb_agent_pidfile)
-                        except Exception:
-                            pass
 
         if self.show_output:
             self.logger.info('No such pidfile `%s`, OK', pidfile)
