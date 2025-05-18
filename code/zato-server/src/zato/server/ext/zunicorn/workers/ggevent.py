@@ -224,8 +224,6 @@ class GeventWorker(AsyncWorker):
         gevent.spawn(super(GeventWorker, self).handle_usr1, sig, frame)
 
     def init_process(self):
-        # monkey patch here
-        self.patch()
 
         # reinit the hub
         from gevent import hub
