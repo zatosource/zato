@@ -13,7 +13,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
@@ -65,7 +64,7 @@
             debug: true,
             template: '<div class="qq-uploader" style="width:150px">' +
                     '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
-                    '<div class="qq-upload-button" style="width:100px">Upload services</div>' +
+                    '<div class="qq-upload-button" style="width:100px; z-index:-1">Upload services</div>' +
                     '<ul class="qq-upload-list" style="width:500px"></ul>' +
                  '</div>'
         });
