@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class URLData(CyURLData, OAuthDataStore):
+class URLData(CyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \

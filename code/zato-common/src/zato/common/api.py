@@ -1120,6 +1120,40 @@ class IDEDeploy:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SMTPMessage:
+
+    from_: 'any_'
+    to: 'any_'
+    subject: 'any_'
+    body: 'any_'
+    attachments: 'any_'
+    cc: 'any_'
+    bcc: 'any_'
+    is_html: 'any_'
+    headers: 'any_'
+    charset: 'any_'
+    is_rfc2231: 'any_'
+
+    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
+            charset='utf8', is_rfc2231=True):
+        self.from_ = from_
+        self.to = to
+        self.subject = subject
+        self.body = body
+        self.attachments = attachments or []
+        self.cc = cc
+        self.bcc = bcc
+        self.is_html = is_html
+        self.headers = headers or {}
+        self.charset = charset
+        self.is_rfc2231 = is_rfc2231
+
+    def attach(self, name, contents):
+        self.attachments.append({'name':name, 'contents':contents})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IMAPMessage:
     def __init__(self, uid, conn, data):
         self.uid = uid   # type: str

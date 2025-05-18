@@ -11,7 +11,7 @@ import logging
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
-from logging import DEBUG, INFO, WARN
+from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
 from random import seed as random_seed
@@ -46,8 +46,9 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
-    register_diag_handlers, save_ipc_pid_port, spawn_greenlet, StaticConfig
+    register_diag_handlers, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
+from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
@@ -1366,7 +1367,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         service,    # type: str
         request,    # type: any_
         target_pid, # type: int
-        timeout=_ipc_timeout, # type: int
         **kwargs    # type:any_
     ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
