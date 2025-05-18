@@ -13,7 +13,6 @@ configparser==7.1.0
 crontab==1.0.1
 cryptography==44.0.1
 dacite==1.6.0
-dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
 decorator==5.1.0
 dill==0.2.5
@@ -44,7 +43,6 @@ ipaddress==1.0.16
 iso8601==0.1.10
 jsonpatch==1.23
 jsonpointer==2.0
-jsonschema==4.21.1
 keyring==23.0.0
 kombu==5.5.0rc2
 ldap3==2.8.1
@@ -82,7 +80,6 @@ pycparser==2.21
 pycryptodome==3.19.1
 pyflakes==3.2.0
 pyftpdlib==1.5.7
-PyJWT==2.5.0
 pymongo==4.6.3
 PyMySQL==1.1.1
 pyOpenSSL==25.0.0
