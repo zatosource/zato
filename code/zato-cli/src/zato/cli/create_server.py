@@ -58,7 +58,6 @@ deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
 token=zato+secret://zato.server_conf.main.token
-service_sources=./service-sources.txt
 
 [http_response]
 code_400_message=400 Bad Request
@@ -246,17 +245,6 @@ delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
 """
-
-# ################################################################################################################################
-
-service_sources_contents = """
-#
-# This file is kept for backward compatibility with previous versions of Zato.
-# Do not modify it and do not use it in new deployments.
-#
-
-./work/hot-deploy/current
-""".strip()
 
 # ################################################################################################################################
 
@@ -717,7 +705,6 @@ class Create(ZatoCommand):
 
         files = {
             'config/repo/logging.conf': logging_conf_contents,
-            'config/repo/service-sources.txt': service_sources_contents,
             'config/repo/sql.conf': sql_conf_contents,
 
             'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,

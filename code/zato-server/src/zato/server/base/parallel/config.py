@@ -170,20 +170,6 @@ class ConfigLoader:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         #
-        # Notifications - start
-        #
-
-        # SQL
-        query = self.odb.get_notif_sql_list(server.cluster.id, True)
-        self.config.notif_sql = ConfigDict.from_query('notif_sql', query, decrypt_func=self.decrypt)
-
-        #
-        # Notifications - end
-        #
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        #
         # Security - start
         #
 
@@ -413,7 +399,7 @@ class ConfigLoader:
                         # Continue to encryption only if needed and not already encrypted
                         if config.get('_encryption_needed'):
                             if not config['_encrypted_in_odb']:
-                                odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
+                                odb_func = getattr(self.odb, 'encrypt_sec_{}'.format(sec_config_dict_type))
 
                                 # Encrypt all params that are applicable
                                 for secret_param in SECRETS.PARAMS:
