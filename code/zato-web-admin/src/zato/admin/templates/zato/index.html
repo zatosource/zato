@@ -111,58 +111,19 @@
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>
-
-                                    {% if False %}
-                                    <li class="child"><a class="menu-link" href="{% url "security-aws" %}?cluster={{ cluster_id|default:"1" }}">AWS</a></li>
-                                    {% endif %}
-
                                     <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}?cluster={{ cluster_id|default:"1" }}">Bearer tokens</a></li>
-                                    {% if False %}
-                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-org" %}?cluster={{ cluster_id|default:"1" }}">Organizations</a></li>
-                                    {% endif %}
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">Groups</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">HTTP Basic Auth</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-jwt" %}?cluster={{ cluster_id|default:"1" }}">JWT</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">SSL/TLS &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "security-tls-channel" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                            <li class="child">
-                                                <a class="menu-link" href="#">Outgoing &rarr;</a>
-                                                <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "security-tls-ca-cert" %}?cluster={{ cluster_id|default:"1" }}">CA certs</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "security-tls-key-cert" %}?cluster={{ cluster_id|default:"1" }}">Keys and certs</a></li>
-                                                </ul>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    {% if False %}
-                                    <li>
-                                        <a class="menu-link" href="#">Vault &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "security-vault-conn" %}?cluster={{ cluster_id|default:"1" }}">Connections</a></li>
-                                        </ul>
-                                    </li>
-                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level">
                                 <a class="menu-link" href="#">Connections &darr;</a>
                                 <ul>
                                     <li class="child">
-                                        <a class="menu-link" href="#">Definitions &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "def-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            {% if False %}<li class="child"><a class="menu-link" href="{% url "definition-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=def-kafka">AMQP</a></li>{% endif %}
-                                            <li class="child"><a class="menu-link" href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:"1" }}">IBM MQ</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="child">
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-file-transfer" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-file-transfer">File transfer</a></li>
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
@@ -170,10 +131,7 @@
                                                     <li class="child"><a class="menu-link" href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:"1" }}">REST</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:"1" }}">IBM MQ</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-json-rpc" %}?cluster={{ cluster_id|default:"1" }}">JSON-RPC</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:"1" }}">WebSockets</a></li>
                                         </ul>
                                     </li>
                                     <li>
@@ -190,17 +148,13 @@
                                                     <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:"1" }}">IBM MQ</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "kvdb" %}?cluster={{ cluster_id|default:"1" }}">Redis</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP RFC</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-wsx" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-wsx">WebSockets</a></li>
                                         </ul>
                                     </li>
                                     <li>
@@ -214,21 +168,6 @@
                                         <a class="menu-link" href="#">Search &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "search-es" %}?cluster={{ cluster_id|default:"1" }}">ElasticSearch</a></li>
-                                            {% if False %}<li class="child"><a class="menu-link" href="{% url "search-solr" %}?cluster={{ cluster_id|default:"1" }}">Solr</a></li>{% endif %}
-                                        </ul>
-                                    </li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">Notifications &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "notif-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
-                                            {% if False %}<li class="child"><a class="menu-link" href="{% url "notif-sql" %}?cluster={{ cluster_id|default:"1" }}">Microsoft 365 E-mail</a></li>{% endif %}
-                                        </ul>
-                                    </li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">IM &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-im-slack" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-im-slack">Slack</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-im-telegram" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-im-telegram">Telegram</a></li>
                                         </ul>
                                     </li>
                                     <li class="child">
@@ -236,17 +175,8 @@
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">SMTP</a></li>
-                                            {% if False %}<li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">Microsoft 365 Notifications</a></li>{% endif %}
                                         </ul>
                                     </li>
-                                    {% if False %}
-                                    <li class="child">
-                                        <a class="menu-link" href="#">SMS &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "sms-twilio" %}?cluster={{ cluster_id|default:"1" }}">Twilio</a></li>
-                                        </ul>
-                                    </li>
-                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level">
@@ -263,17 +193,6 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child">
-                                        {% if False %}
-                                        <a class="menu-link" href="#">AWS &rarr;</a>
-                                        <ul>
-                                            <li class="child">
-                                                <a class="menu-link" href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:"1" }}">S3</a>
-                                            </li>
-                                        </ul>
-                                        {% endif %}
-                                    </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-dropbox">Dropbox</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
@@ -296,20 +215,6 @@
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-confluence">Confluence</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-jira">Jira</a></li>
-                                        </ul>
-                                    </li>
-                                    <li><a class="menu-link" href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-dropbox">Dropbox</a></li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">IBM &rarr;</a>
-                                        <ul>
-                                            <li class="child">
-                                                <a class="menu-link" href="#">MQ &rarr;</a>
-                                                <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:"1" }}">Definitions</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
-                                                </ul>
-                                            </li>
                                         </ul>
                                     </li>
                                     <li class="child">
@@ -342,14 +247,6 @@
                                     <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP</a></li>
                                 </ul>
                             </li>
-                            <li class="first-level">
-                                <a class="menu-link" href="#">Pub/sub &darr;</a>
-                                <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:"1" }}">Endpoints</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
-                                </ul>
-                            </li>
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
 
                             {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}
@@ -360,16 +257,6 @@
                                     <li class="child"><a class="menu-link" href="{% url "stats-user" %}?cluster={{ cluster_id|default:"1" }}">Custom</a></li>
                                 </ul>
                             </li>
-                            {% endif %}
-                            {% if False %}
-                            <!-- <li><a href="{% url "config-file" %}?cluster={{ cluster_id|default:"1" }}">Config files</a></li> -->
-                            <!--<li><span class="like-a">Import/export &darr;</span>
-                                <ul>
-                                    <li><a href="#">Import from file</a></li>
-                                    <li><a href="#">Export selected</a></li>
-                                </ul>
-                            </li>
-                            -->
                             {% endif %}
                         </ul>
                         <ul class="first-level right">
