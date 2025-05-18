@@ -31,7 +31,6 @@ from sqlalchemy import create_engine
 from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
-from zato.common.log_message import CID_LENGTH
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
@@ -62,6 +61,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+CID_LENGTH = 24
 test_class_name = '<my-test-class>'
 
 # ################################################################################################################################
