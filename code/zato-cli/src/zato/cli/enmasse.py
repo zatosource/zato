@@ -817,12 +817,6 @@ SERVICES = [
     ServiceInfo(
         name='channel_amqp',
         prefix='zato.channel.amqp',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_amqp',
-                'dependent_field': 'name',
-            },
-        },
         service_dependencies={
             'service_name': {}
         },
@@ -884,12 +878,6 @@ SERVICES = [
     ServiceInfo(
         name='outconn_amqp',
         prefix='zato.outgoing.amqp',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_amqp',
-                'dependent_field': 'name',
-            },
-        },
     ),
     ServiceInfo(
         name='outconn_redis',
