@@ -210,10 +210,6 @@ class CACHE(Constants):
     BUILTIN_STATE_CHANGED_SET_CONTAINS_ALL = ValueConstant('')
     BUILTIN_STATE_CHANGED_SET_CONTAINS_ANY = ValueConstant('')
 
-    MEMCACHED_CREATE = ValueConstant('')
-    MEMCACHED_EDIT = ValueConstant('')
-    MEMCACHED_DELETE = ValueConstant('')
-
 class GENERIC(Constants):
     code_start = 107000
 

@@ -581,7 +581,7 @@ class WorkerStore(_WorkerStoreBase):
 
     def init_caches(self) -> 'None':
 
-        for name in 'builtin', 'memcached':
+        for name in ['builtin']:
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))

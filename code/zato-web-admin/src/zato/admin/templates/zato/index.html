@@ -158,11 +158,7 @@
                                         </ul>
                                     </li>
                                     <li>
-                                        <a class="menu-link" href="#">Cache &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:"1" }}">Built-in</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "cache-memcached" %}?cluster={{ cluster_id|default:"1" }}">Memcached</a></li>
-                                        </ul>
+                                        <a class="menu-link" href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:"1" }}">Cache</a>
                                     </li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Search &rarr;</a>
