@@ -297,14 +297,9 @@ class ServiceStore:
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
         self.needs_post_deploy_attr = 'needs_post_deploy'
-        self.has_internal_cache = is_non_windows
 
-        if self.has_internal_cache:
-            self.action_internal_doing = 'Deploying and caching'
-            self.action_internal_done  = 'Deployed and cached'
-        else:
-            self.action_internal_doing = 'Deploying'
-            self.action_internal_done  = 'Deployed'
+        self.action_internal_doing = 'Deploying'
+        self.action_internal_done  = 'Deployed'
 
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
@@ -802,99 +797,40 @@ class ServiceStore:
                 'slow_threshold': item.slow_threshold, # type: ignore
             }
 
-        if sync_internal:
+        # Synchronizing internal modules means re-building the internal cache from scratch
+        # and re-deploying everything.
 
-            # Synchronizing internal modules means re-building the internal cache from scratch
-            # and re-deploying everything.
+        service_info = []
+        internal_cache = {
+            'service_info': service_info
+        }
 
-            service_info = []
-            internal_cache = {
-                'service_info': service_info
-            }
+        # This is currently unused
+        internal_cache = internal_cache
 
-            # This is currently unused
-            internal_cache = internal_cache
+        logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
+        info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
 
-            logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
-            info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
+        for service in info.to_process: # type: InRAMService
 
-            for service in info.to_process: # type: InRAMService
+            class_ = service.service_class
+            impl_name = service.impl_name
 
-                class_ = service.service_class
-                impl_name = service.impl_name
+            service_info.append({
+                'service_class': class_,
+                'mod': inspect.getmodule(class_),
+                'impl_name': impl_name,
+                'service_id': self.impl_name_to_id[impl_name],
+                'is_active': self.services[impl_name]['is_active'],
+                'slow_threshold': self.services[impl_name]['slow_threshold'],
+                'fs_location': inspect.getfile(class_),
+                'deployment_info': 'no-deployment-info'
+            })
 
-                service_info.append({
-                    'service_class': class_,
-                    'mod': inspect.getmodule(class_),
-                    'impl_name': impl_name,
-                    'service_id': self.impl_name_to_id[impl_name],
-                    'is_active': self.services[impl_name]['is_active'],
-                    'slow_threshold': self.services[impl_name]['slow_threshold'],
-                    'fs_location': inspect.getfile(class_),
-                    'deployment_info': 'no-deployment-info'
-                })
+        logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
+            len(info.to_process), info.total_size_human, self.server.name)
 
-            # All set, write out the cache file, assuming that we can do it.
-            # We cannot on Windows or under a debugger (as indicated by the environment variable).
-            if self.has_internal_cache:
-
-                if not os.environ.get('ZATO_SERVER_BASE_DIR'):
-                    f = open(cache_file_path, 'wb')
-                    # f.write(dill_dumps(internal_cache))
-                    f.close()
-
-                logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
-                    len(info.to_process), info.total_size_human, self.server.name)
-
-            return info.to_process
-
-        else:
-            logger.info('Deploying cached internal services (%s)', self.server.name)
-            to_process = []
-
-            # Declare it upfront because we need to assume  that opening the path can fail.
-            f = None
-
-            try:
-                f = open(cache_file_path, 'rb')
-                dill_items = dill_load(f)
-            except ValueError as e:
-                msg = e.args[0]
-                if _unsupported_pickle_protocol_msg in msg:
-                    msg = msg.replace(_unsupported_pickle_protocol_msg, '').strip()
-                    protocol_found = int(msg)
-
-                    # If the protocol found is higher than our own, it means that the cache
-                    # was built a Python version higher than our own, we are on Python 2.7
-                    # and cache was created under Python 3.4. In such a case, we need to
-                    # recreate the cache anew.
-                    if protocol_found > highest_pickle_protocol:
-                        logger.info('Cache pickle protocol found `%d` > current highest `%d`, forcing sync_internal',
-                            protocol_found, highest_pickle_protocol)
-                        return self.import_internal_services(items, base_dir, True, is_first)
-
-                    # A different reason, re-raise the erorr then
-                    else:
-                        raise
-
-                # Must be a different kind of a ValueError, propagate it then
-                else:
-                    raise
-            finally:
-                if f:
-                    f.close()
-
-            len_si = len(dill_items['service_info'])
-
-            for _, item in enumerate(dill_items['service_info'], 1):
-                class_ = self._visit_class_for_service(item['mod'], item['service_class'], item['fs_location'], True)
-                to_process.append(class_)
-
-            self._store_in_ram(None, to_process)
-
-            logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
-
-            return to_process
+        return info.to_process
 
 # ################################################################################################################################
 
