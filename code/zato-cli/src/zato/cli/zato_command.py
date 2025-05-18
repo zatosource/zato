@@ -573,12 +573,6 @@ def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
     sys_argv.append('--odb_type')
     sys_argv.append(odb_type)
 
-    sys_argv.append('--kvdb_host')
-    sys_argv.append(redis_host)
-
-    sys_argv.append('--kvdb_port')
-    sys_argv.append(redis_port)
-
 # ################################################################################################################################
 
 def pre_process_server(sys_argv, opts_idx, opts):

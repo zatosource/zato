@@ -85,7 +85,6 @@ class AdminService(Service):
     def _init(self, is_http):
         if self._filter_by:
             self._search_tool = SearchTool(self._filter_by)
-        self.ipc_api = self.server.ipc_api
         super(AdminService, self)._init(is_http)
 
 # ################################################################################################################################
@@ -97,9 +96,6 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
-
-            # Zato
-            from zato.server.connection.web_socket import WebSocket
 
             # Prefer that first because it may be a generic connection
             # in which case we want to access its opaque attributes
@@ -113,8 +109,6 @@ class AdminService(Service):
             finally:
                 to_copy = {}
                 for k, v in data.items():
-                    if isinstance(v, WebSocket):
-                        v = 'WebSocket id:{}'.format(hex(id(v)))
                     to_copy[k] = v
 
                 data = deepcopy(to_copy)
@@ -155,7 +149,7 @@ class AdminService(Service):
 
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
-                self.name, replace_private_key(get_response_value(self.response)), self.cid)
+                self.name, get_response_value(self.response), self.cid)
 
         payload = self.response.payload
         is_text = isinstance(payload, basestring)
