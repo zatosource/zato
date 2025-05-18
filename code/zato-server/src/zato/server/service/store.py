@@ -295,7 +295,6 @@ class ServiceStore:
         self.name_to_impl_name = {} # type: stranydict
         self.deployment_info = {}   # type: stranydict
         self.update_lock = RLock()
-        self.patterns_matcher = Matcher()
         self.needs_post_deploy_attr = 'needs_post_deploy'
 
         self.action_internal_doing = 'Deploying'

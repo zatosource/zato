@@ -113,13 +113,6 @@ current_work_dir=./hot-deploy/current
 backup_work_dir=./hot-deploy/backup
 last_backup_work_dir=./hot-deploy/backup/last
 
-[deploy_patterns_allowed]
-order=true_false
-*=True
-
-[spring]
-context_class=zato.server.spring_context.ZatoContext
-
 [misc]
 return_internal_objects=False
 internal_services_may_be_deleted=False
@@ -170,7 +163,6 @@ user=./user.conf
 email=True
 search=True
 odoo=True
-patterns=True
 
 [content_type]
 json = {JSON}
@@ -196,48 +188,6 @@ sample_key=sample_value
 
 pickup_conf = """#[hot-deploy.user.local-dev]
 #pickup_from=/uncomment/this/stanza/to/enable/a/custom/location
-
-[json]
-pickup_from=./pickup/incoming/json
-move_processed_to=./pickup/processed/json
-patterns=*.json
-parse_with=py:json.loads
-services=zato.pickup.log-json
-topics=
-
-[xml]
-pickup_from=./pickup/incoming/xml
-move_processed_to=./pickup/processed/xml
-patterns=*.xml
-parse_with=py:lxml.objectify.fromstring
-services=zato.pickup.log-xml
-topics=
-
-[csv]
-pickup_from=./pickup/incoming/csv
-move_processed_to=./pickup/processed/csv
-patterns=*.csv
-read_on_pickup=False
-parse_on_pickup=False
-delete_after_pickup=False
-services=zato.pickup.log-csv
-topics=
-
-[user_conf]
-pickup_from=./pickup/incoming/user-conf
-patterns=*.ini, *.conf
-parse_on_pickup=False
-delete_after_pickup=False
-services=zato.pickup.update-user-conf
-topics=
-
-[static]
-pickup_from=./pickup/incoming/static
-patterns=*
-parse_on_pickup=False
-delete_after_pickup=False
-services=zato.pickup.update-static
-topics=
 """
 
 # ################################################################################################################################
