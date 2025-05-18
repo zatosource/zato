@@ -139,9 +139,6 @@ class ServerRPCTestCase(TestCase):
             cluster.odb_type = 'sqlite' # type: ignore
             cluster.broker_host = 'localhost-test-broker-host' # type: ignore
             cluster.broker_port = 123456 # type: ignore
-            cluster.lb_host = 'localhost-test-lb-host' # type: ignore
-            cluster.lb_port = 1234561 # type: ignore
-            cluster.lb_agent_port = 1234562 # type: ignore
 
             server1 = ServerModel()
             server1.cluster = cluster

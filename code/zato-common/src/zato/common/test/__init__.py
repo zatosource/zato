@@ -621,9 +621,6 @@ class ODBTestCase(TestCase):
         cluster.odb_type = 'sqlite'
         cluster.broker_host = 'my.broker.host'
         cluster.broker_port = 1234
-        cluster.lb_host = 'my.lb.host'
-        cluster.lb_port = 5678
-        cluster.lb_agent_port = 9012
 
         es = self.ODBTestModelClass()
         es.name = test_odb_data.name

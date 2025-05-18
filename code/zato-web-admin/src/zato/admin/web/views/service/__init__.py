@@ -50,14 +50,6 @@ DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type
 
 # ################################################################################################################################
 
-def get_public_wsdl_url(cluster:'any_', service_name:'str') -> 'str':
-    """ Returns an address under which a service's WSDL is publically available.
-    """
-    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
-        cluster.lb_port, service_name, cluster.id)
-
-# ################################################################################################################################
-
 def _get_channels(client:'any_', cluster:'any_', id:'str', channel_type:'str') -> 'anylist':
     """ Returns a list of channels of a given type for the given service.
     """
