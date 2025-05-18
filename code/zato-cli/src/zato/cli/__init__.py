@@ -152,7 +152,6 @@ command_imports = (
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
     ('create_basic_auth', 'zato.cli.security.basic_auth.CreateDefinition'),
     ('create_cluster', 'zato.cli.create_cluster.Create'),
-    ('create_lb', 'zato.cli.create_lb.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
     ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
     ('create_scheduler', 'zato.cli.create_scheduler.Create'),
@@ -263,7 +262,6 @@ class ZatoCommand:
         NO_SUCH_SSO_USER = 22
         NOT_A_ZATO_SERVER = 23
         NOT_A_ZATO_WEB_ADMIN = 24
-        NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
         CACHE_KEY_NOT_FOUND = 27
         SERVER_TIMEOUT = 28
@@ -280,7 +278,6 @@ class ZatoCommand:
                 self.code = code
                 self.name = name
 
-        LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SCHEDULER = _ComponentName('SCHEDULER', 'Scheduler')
         SERVER = _ComponentName('SERVER', 'Server')
         WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Dashboard')
@@ -716,12 +713,7 @@ class ZatoCommand:
             if source_path:
                 source_path = os.path.abspath(source_path)
                 if os.path.exists(source_path):
-                    shutil.copyfile(source_path, target_path)
-
-# ################################################################################################################################
-
-    def copy_lb_crypto(self, repo_dir, args):
-        self._copy_crypto(repo_dir, args, 'lba')
+                    _ = shutil.copyfile(source_path, target_path)
 
 # ################################################################################################################################
 
@@ -972,7 +964,6 @@ class ManageCommand(ZatoCommand):
 
     def _get_dispatch(self):
         return {
-            self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
             self.COMPONENTS.WEB_ADMIN.code: self._on_web_admin,
             self.COMPONENTS.SCHEDULER.code: self._on_scheduler,
@@ -982,12 +973,12 @@ class ManageCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _on_lb(self, *ignored_args, **ignored_kwargs):
+    def _on_scheduler(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
 
 # ################################################################################################################################
 
-    _on_web_admin = _on_server = _on_scheduler = _on_lb
+    _on_web_admin = _on_server = _on_scheduler
 
 # ################################################################################################################################
 

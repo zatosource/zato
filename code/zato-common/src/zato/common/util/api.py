@@ -290,7 +290,7 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
     for attr in attrs:
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
-            buff.write('; %s:%r' % (attr, attr_obj))
+            _ = buff.write('; %s:%r' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
@@ -311,38 +311,6 @@ def to_form(_object):
         out[attr] = getattr(_object, attr)
 
     return out
-
-# ################################################################################################################################
-
-def get_lb_client(is_tls_enabled, lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
-    """ Returns an SSL XML-RPC client to the load-balancer.
-    """
-    from zato.agent.load_balancer.client import LoadBalancerAgentClient, TLSLoadBalancerAgentClient
-
-    http_proto = 'https' if is_tls_enabled else 'http'
-    agent_uri = '{}://{}:{}/RPC2'.format(http_proto, lb_host, lb_agent_port)
-
-    if is_tls_enabled:
-        if sys.version_info >= (2, 7):
-            class Python27CompatTransport(SSLClientTransport):
-                def make_connection(self, host):
-                    return CAValidatingHTTPSConnection(
-                        host, strict=self.strict, ca_certs=self.ca_certs,
-                        keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
-                        ssl_version=self.ssl_version, timeout=self.timeout)
-            transport = Python27CompatTransport
-        else:
-            transport = None
-
-        return TLSLoadBalancerAgentClient(
-            agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
-    else:
-        return LoadBalancerAgentClient(agent_uri)
-
-# ################################################################################################################################
-
-def tech_account_password(password_clear, salt):
-    return sha256(password_clear+ ':' + salt).hexdigest()
 
 # ################################################################################################################################
 
@@ -1591,11 +1559,6 @@ def get_response_value(response):
     """ Extracts the actual response string from a response object produced by services.
     """
     return (response.payload.getvalue() if hasattr(response.payload, 'getvalue') else response.payload) or ''
-
-# ################################################################################################################################
-
-def get_lb_agent_json_config(repo_dir):
-    return loads(open(os.path.join(repo_dir, 'lb-agent.conf'), encoding='utf8').read())
 
 # ################################################################################################################################
 
