@@ -15,7 +15,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
-from zato.common.api import DATA_FORMAT, SSO
+from zato.common.api import SSO
 from zato.common.const import ServiceConst
 
 # ################################################################################################################################
@@ -52,7 +52,7 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import IDEDeploy
-        from zato.common.odb.model import Cluster, HTTPBasicAuth
+        from zato.common.odb.model import Cluster, HTTPBasicAuth, Service
         from zato.common.odb.post_process import ODBPostProcess
 
         engine = self._get_engine(args)
@@ -87,6 +87,14 @@ class Create(ZatoCommand):
 
             session.add(admin_invoke_sec)
             session.add(ide_publisher_sec)
+
+            session.flush()
+
+            admin_invoke_name = 'zato.service.invoke'
+            admin_invoke_name = 'zato.server.service.internal.service.Invoke'
+            admin_invoke_service = Service(None, admin_invoke_name, True, admin_invoke_name, True, cluster)
+
+            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
 
             ping_service = self.add_ping_service(session, cluster)
 
