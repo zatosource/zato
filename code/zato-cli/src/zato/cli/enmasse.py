@@ -2420,9 +2420,6 @@ class InputParser:
                         if not 'is_read_only' in value:
                             value['is_read_only'] = False
 
-                        if not 'is_stats_enabled' in value:
-                            value['is_stats_enabled'] = False
-
                         if not 'is_tls_enabled' in value:
                             value['is_tls_enabled'] = False
 

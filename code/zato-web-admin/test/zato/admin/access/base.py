@@ -195,9 +195,7 @@ class BaseTestCase(TestCase):
     def check_response_statuses(self):
         for item in self.client.requests:
             if item.url.startswith(Config.web_admin_address):
-                if 'zato/stats/user/' in item.url:
-                    continue
-                elif 'zato/groups/' in item.url:
+                if 'zato/groups/' in item.url:
                     continue
                 if item.response:
                     if item.response.status_code not in Config.status_ok: # type: ignore

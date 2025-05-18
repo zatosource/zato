@@ -165,22 +165,6 @@ def overview(req:'HttpRequest', service_name:'str') -> 'TemplateResponse':
 
                 setattr(service, name, value)
 
-            now = datetime.utcnow()
-            start = now+relativedelta(minutes=-60)
-
-            response = req.zato.client.invoke( # type: ignore
-                'zato.stats.get-by-service',
-                {'service_id':service.id, 'start':start, 'stop':now}
-            )
-
-            if response.has_data:
-                for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
-                    value = getattr(response.data, name, ZATO_NONE)
-                    if not value or value == ZATO_NONE:
-                        value = ''
-
-                    setattr(service, 'time_{}_1h'.format(name), value)
-
             for channel_type in('plain_http', 'amqp'):
                 channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type) # type: ignore
                 getattr(service, channel_type + '_channels').extend(channels)

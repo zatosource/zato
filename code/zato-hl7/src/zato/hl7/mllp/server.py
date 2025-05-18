@@ -85,7 +85,6 @@ class ConnCtx:
     local_port: 'int'
     local_fqdn: 'str'
 
-    stats_per_msg_type: 'anydict'
     total_message_packets_received: 'int'
     total_messages_received: 'int'
 
@@ -102,9 +101,6 @@ class ConnCtx:
         self.socket = socket
         self.peer_ip = peer_address[0]
         self.peer_port = peer_address[1]
-
-        # Statistics broken down by each message type, e.g. ADT
-        self.stats_per_msg_type = {}
 
         # Total message packets received
         self.total_message_packets_received = 0
