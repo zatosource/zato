@@ -15,7 +15,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
@@ -87,7 +87,7 @@ class _BaseGet(AdminService):
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
             'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', \
-                'hl7_version', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
+                'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
                 'security_group_member_count', 'needs_security_group_names'
 
@@ -331,7 +331,7 @@ class Create(_CreateEdit):
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            'hl7_version', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
@@ -358,9 +358,7 @@ class Create(_CreateEdit):
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
         input.data_format = input.get('data_format') or ''
 
-        # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
-        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         # Remove extra whitespace
         input_name = input.name
@@ -511,7 +509,6 @@ class Edit(_CreateEdit):
             'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
             'params_pri', 'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            'hl7_version', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
@@ -538,9 +535,7 @@ class Edit(_CreateEdit):
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
         input.data_format = input.get('data_format') or ''
 
-        # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
-        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         # Remove extra whitespace
         input_name = input.name

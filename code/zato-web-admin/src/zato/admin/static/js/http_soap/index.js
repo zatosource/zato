@@ -174,9 +174,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var merge_url_params_req_tr = '';
     var url_params_pri_tr = '';
     var params_pri_tr = '';
-    var audit_object_type_label = '';
 
-    var hl7_version = '';
     var json_path = '';
     var data_encoding = '';
 
@@ -319,8 +317,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_received);
 
     /* 38a, 38b, 38c */
-    row += String.format("<td class='ignore'>{0}</td>", data.hl7_version || hl7_version);
-    row += String.format("<td class='ignore'>{0}</td>", data.json_path || json_path);
     row += String.format("<td class='ignore'>{0}</td>", data.data_encoding || data_encoding);
 
     if(include_tr) {

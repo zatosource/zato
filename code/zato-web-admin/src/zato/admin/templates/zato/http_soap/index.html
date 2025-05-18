@@ -138,7 +138,6 @@
             {% comment %}Empty{% endcomment %}
 
             // 38a, 38b, 38c
-            'hl7_version',
             'data_encoding',
 
         ]
@@ -406,7 +405,6 @@
                         {% comment %}Empty{% endcomment %}
 
                         <!-- 38 -->
-                        <td class='ignore'>{{ item.hl7_version|default:"" }}</td>
                         <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
 
                     </tr>
@@ -652,8 +650,6 @@
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
-                    {{ create_form.hl7_version }}
-                    {{ create_form.json_path }}
                     {{ create_form.data_encoding }}
 
                 </form>
@@ -869,8 +865,6 @@
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
-                    {{ edit_form.hl7_version }}
-                    {{ edit_form.json_path }}
                     {{ edit_form.data_encoding }}
 
                 </form>

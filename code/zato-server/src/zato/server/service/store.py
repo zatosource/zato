@@ -584,7 +584,6 @@ class ServiceStore:
                 class_._worker_config = self._testing_worker_store.worker_config
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
-                class_.component_enabled_hl7 = True
                 class_.component_enabled_odoo = True
                 class_.component_enabled_zeromq = True
                 class_.component_enabled_patterns = True
@@ -613,7 +612,6 @@ class ServiceStore:
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
-                class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager

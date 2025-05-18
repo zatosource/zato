@@ -102,8 +102,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
 
-        'hl7_version': params.get(prefix + 'hl7_version'),
-        'json_path': params.get(prefix + 'json_path'),
         'data_encoding': params.get(prefix + 'data_encoding'),
     }
 

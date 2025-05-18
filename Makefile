@@ -19,7 +19,6 @@ pylint:
 	cd $(CURDIR)/code/zato-common    && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
@@ -39,7 +38,6 @@ flake8:
 	cd $(CURDIR)/code/zato-common    && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-hl7       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-server    && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) flake8
@@ -55,7 +53,6 @@ static-check:
 	cd $(CURDIR)/code/zato-common    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-hl7       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check

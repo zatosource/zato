@@ -20,7 +20,7 @@
         <tr>
             <td class='inline_header'>
             Publish messages to AMQP outgoing connection
-            <a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-hl7-mllp&amp;query={{ conn_name }}">{{ conn_name }}</a>
+            <a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}&amp;query={{ conn_name }}">{{ conn_name }}</a>
             </td>
         </tr>
         <tr>

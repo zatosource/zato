@@ -99,7 +99,7 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 
 generic_attrs = (
-    'hl7_version', 'json_path', 'data_encoding',
+    'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
     'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout',
     'security_group_count', 'security_group_member_count',
@@ -294,14 +294,13 @@ class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
     FORM_DATA = 'form'
-    HL7  = 'hl7'
     JSON = 'json'
     POST = 'post'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.JSON, self.CSV, self.POST, self.HL7))
+        return iter((self.JSON, self.CSV, self.POST))
 
 Data_Format = DATA_FORMAT
 
@@ -757,13 +756,10 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
-            CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
-            OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
-            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
@@ -955,81 +951,6 @@ class OAuth:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7:
-
-    class Default:
-        """ Default values for HL7 objects.
-        """
-        # Default address for FHIR connections
-        address_fhir = 'https://fhir.simplifier.net/zato'
-
-        # Default address and port for MLLP connections
-        channel_host = '0.0.0.0'
-        channel_port = 30901
-
-        # Assume that UTF-8 is sent in by default
-        data_encoding = 'utf-8'
-
-        # Each message may be of at most that many bytes
-        max_msg_size = '1_000_000'
-
-        # How many seconds to wait for HL7 MLLP responses when invoking a remote end
-        max_wait_time = 60
-
-        # At most that many bytes will be read from a socket at a time
-        read_buffer_size = 2048
-
-        # We wait at most that many milliseconds for data from a socket in each iteration of the main loop
-        recv_timeout = 250
-
-        # At what level to log messages (Python logging)
-        logging_level = 'INFO'
-
-        # Should we store the contents of messages in logs (Python logging)
-        should_log_messages = False
-
-        # How many concurrent outgoing connections we allow
-        pool_size = 10
-
-        # An MLLP message may begin with these bytes ..
-        start_seq = '0b'
-
-        # .. and end with these below.
-        end_seq = '1c 0d'
-
-    class Const:
-        """ Various HL7-related constants.
-        """
-
-        class Version:
-
-            # A generic v2 message, without an indication of a specific release.
-            v2 = NameId('HL7 v2', 'hl7-v2')
-
-            def __iter__(self):
-                return iter((self.v2,))
-
-        class LoggingLevel:
-            Info  = NameId('INFO',  'INFO')
-            Debug = NameId('DEBUG', 'DEBUG')
-
-            def __iter__(self):
-                return iter((self.Info, self.Debug))
-
-        class ImplClass:
-            hl7apy = 'hl7apy'
-            zato   = 'Zato'
-
-        class FHIR_Auth_Type:
-            Basic_Auth = NameId('Basic Auth', 'basic-auth')
-            OAuth = NameId('OAuth', 'oauth')
-
-            def __iter__(self):
-                return iter((self.Basic_Auth, self.OAuth))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # TODO: SIMPLE_IO.FORMAT should be removed in favour of plain DATA_FORMAT
 class SIMPLE_IO:
 
@@ -1042,7 +963,6 @@ class SIMPLE_IO:
 
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
     HTTP_SOAP_FORMAT[DATA_FORMAT.FORM_DATA] = 'Form data'
 
     Bearer_Token_Format = [
