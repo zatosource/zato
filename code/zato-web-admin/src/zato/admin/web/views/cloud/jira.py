@@ -58,7 +58,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
         initial_input_dict['is_outconn'] = False
-        initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
         initial_input_dict['pool_size'] = 20
 

@@ -70,7 +70,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
-        initial_input_dict['sec_use_rbac'] = False
 
     def success_message(self, item):
         return 'Successfully {} outgoing LDAP connection `{}`'.format(self.verb, item.name)
