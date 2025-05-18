@@ -29,11 +29,11 @@ from pytz import UTC
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete, parse_response_data
 from zato.admin.settings import job_type_friendly_names
-from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
+from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
+from zato.common.odb.model import IntervalBasedJob, Job
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
@@ -49,10 +49,8 @@ logger = logging.getLogger(__name__)
 
 create_one_time_prefix = 'create-one_time'
 create_interval_based_prefix = 'create-interval_based'
-create_cron_style_prefix = 'create-cron_style'
 edit_one_time_prefix = 'edit-one_time'
 edit_interval_based_prefix = 'edit-interval_based'
-edit_cron_style_prefix = 'edit-cron_style'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -135,20 +133,6 @@ def _get_success_message(action, job_type, job_name):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _cron_style_job_def(user_profile, start_date, cron_definition):
-    start_date = _get_start_date(start_date)
-
-    buf = StringIO()
-    buf.write('Start on {} at {}.'.format(
-        from_utc_to_user(start_date, user_profile, 'date'),
-        from_utc_to_user(start_date, user_profile, 'time')))
-    buf.write('<br/>{}'.format(cron_definition))
-
-    return buf.getvalue()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
@@ -200,19 +184,6 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_create_edit_cron_style_message(user_profile, cluster, params, form_prefix=''):
-    """ A dictionary of core data which can be used by both 'edit' and 'create'
-    actions. Used when creating cron_style jobs.
-    """
-    input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
-    input_dict['job_type'] = SCHEDULER.JOB_TYPE.CRON_STYLE
-    input_dict['cron_definition'] = params[form_prefix + 'cron_definition']
-
-    return input_dict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _create_one_time(client, user_profile, cluster, params):
     """ Creates a one_time scheduler job.
     """
@@ -257,28 +228,6 @@ def _create_interval_based(client, user_profile, cluster, params):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_cron_style(client, user_profile, cluster, params):
-    """ Creates a cron_style scheduler job.
-    """
-    logger.debug('About to create a cron_style job, cluster.id:`%s`, params:`%s`', cluster.id, params)
-
-    input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, create_cron_style_prefix+'-')
-    response = client.invoke('zato.scheduler.job.create', input_dict)
-
-    if response.ok:
-        cron_definition = response.data.cron_definition
-        logger.debug('Successfully created a cron_style job, cluster.id:`%s`, params:`%s`', cluster.id, params)
-
-        return {'id': response.data.id,
-                'definition_text':_cron_style_job_def(user_profile,
-                    input_dict['start_date'], cron_definition),
-                'cron_definition': cron_definition}
-    else:
-        raise Exception(response.details)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _edit_one_time(client, user_profile, cluster, params):
     """ Updates a one_time scheduler job.
     """
@@ -318,28 +267,6 @@ def _edit_interval_based(client, user_profile, cluster, params):
     definition = _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
 
     return {'definition_text':definition, 'id':params['edit-interval_based-id']}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _edit_cron_style(client, user_profile, cluster, params):
-    """ Creates an cron_style scheduler job.
-    """
-    logger.debug('About to change a cron_style job, cluster.id:`%s`, params:`%s`', cluster.id, params)
-
-    input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, edit_cron_style_prefix+'-')
-    response = client.invoke('zato.scheduler.job.edit', input_dict)
-
-    if response.ok:
-        cron_definition = response.data.cron_definition
-        logger.debug('Successfully updated a cron_style job, cluster.id:`%s`, params:`%s`', cluster.id, params)
-
-        start_date = _get_start_date(input_dict.get('start_date'))
-        definition = _cron_style_job_def(user_profile, start_date, cron_definition)
-
-        return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
-    else:
-        raise Exception(response.details)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -398,13 +325,6 @@ def index(req):
 
                     ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes, seconds, repeats)
                     job.interval_based = ib_job
-
-                elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-                    cron_definition = job_elem.cron_definition or ''
-                    definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
-
-                    cs_job = CronStyleJob(None, None, cron_definition)
-                    job.cron_style = cs_job
 
                 else:
                     msg = 'Unrecognized job type, name:`{}`, type:`{}`'.format(name, job_type)
@@ -467,10 +387,8 @@ def index(req):
             'friendly_names':job_type_friendly_names.items(),
             'create_one_time_form':OneTimeSchedulerJobForm(create_one_time_prefix, req),
             'create_interval_based_form':IntervalBasedSchedulerJobForm(create_interval_based_prefix, req),
-            'create_cron_style_form':CronStyleSchedulerJobForm(create_cron_style_prefix, req),
             'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
-            'edit_cron_style_form':CronStyleSchedulerJobForm(edit_cron_style_prefix, req),
             'paginate':True,
             'meta': meta,
             'req': req,

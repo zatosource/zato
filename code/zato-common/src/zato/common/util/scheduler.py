@@ -175,7 +175,7 @@ def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int',
 
     # .. go through each of them ..
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
-        _, weeks, days, hours, minutes, seconds, repeats, cron_definition) in job_list:
+        _, weeks, days, hours, minutes, seconds, repeats) in job_list:
 
         # .. build its business representation ..
         job_data = Bunch({
@@ -184,7 +184,6 @@ def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int',
             'extra':extra, 'service':service_name, 'weeks':weeks,
             'days':days, 'hours':hours, 'minutes':minutes,
             'seconds':seconds, 'repeats':repeats,
-            'cron_definition':cron_definition
         })
 
         # .. and invoke a common function to add it to the scheduler.

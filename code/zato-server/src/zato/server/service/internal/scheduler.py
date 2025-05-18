@@ -16,14 +16,11 @@ try:
 except ImportError:
     from dateutil.parser import parse as parse_datetime
 
-# crontab
-from crontab import CronTab
-
 # Zato
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
-from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob, Service as ODBService
+from zato.common.odb.model import Cluster, Job, IntervalBasedJob, Service as ODBService
 from zato.common.odb.query import job_by_id, job_by_name, job_list
 from zato.common.util.config import get_config_object, parse_url_address, update_config_file
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO, Service
@@ -56,7 +53,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         filter(Cluster.id==cluster_id).\
         one()
 
-    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, SCHEDULER.JOB_TYPE.CRON_STYLE):
+    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
         raise ZatoException(cid, msg)
@@ -94,7 +91,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         raise ServiceMissingException(cid, msg)
 
     # We can create/edit a base Job object now and - optionally - another one
-    # if the job type's is either interval-based or Cron-style. The base
+    # if the job type's is an interval-based one. The base
     # instance will be enough if it's a one-time job.
 
     extra = (input.extra or u'').encode('utf-8')
@@ -139,20 +136,6 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
             session.add(ib_job)
 
-        elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            cron_definition = input.cron_definition.strip()
-
-            # Just to make sure it's syntactically correct
-            CronTab(cron_definition).next(default_utc=False)
-
-            if action == 'create':
-                cs_job = CronStyleJob(None, job)
-            else:
-                cs_job = session.query(CronStyleJob).filter_by(id=job.cron_style.id).one()
-
-            cs_job.cron_definition = cron_definition
-            session.add(cs_job)
-
         # We can commit it all now.
         session.commit()
 
@@ -173,9 +156,6 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 value = input[param]
                 msg[param] = int(value) if value else 0
 
-        elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            msg['cron_definition'] = cron_definition
-
         broker_client.publish(msg)
 
     except Exception:
@@ -185,11 +165,6 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     else:
         response.payload.id = job.id
         response.payload.name = input.name
-
-        if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            # Needs to be returned because we might've been performing
-            # a substitution like changing '@hourly' into '0 * * * *'.
-            response.payload.cron_definition = cs_job.cron_definition
 
 # ################################################################################################################################
 # ################################################################################################################################

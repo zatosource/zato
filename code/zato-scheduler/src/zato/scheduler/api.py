@@ -16,9 +16,6 @@ try:
 except ImportError:
     from dateutil.parser import parse as parse_datetime
 
-# crontab
-from crontab import CronTab
-
 # gevent
 from gevent import sleep
 
@@ -184,7 +181,7 @@ class SchedulerAPI:
 # ################################################################################################################################
 
     def create_edit_job(self, id, name, old_name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0,
-            minutes=0, seconds=0, extra=None, cron_definition=None, is_active=None, **kwargs):
+            minutes=0, seconds=0, extra=None, is_active=None, **kwargs):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
@@ -192,13 +189,10 @@ class SchedulerAPI:
             'extra': extra,
         }
 
-        if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            interval = CronTab(cron_definition)
-        else:
-            interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
+        interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
-            is_active=is_active, cron_definition=cron_definition, service=service, extra=extra, old_name=old_name)
+            is_active=is_active, service=service, extra=extra, old_name=old_name)
 
         func = self.scheduler.create if is_create else self.scheduler.edit
         func(job, **kwargs)
@@ -258,27 +252,6 @@ class SchedulerAPI:
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_interval_based(job_data, False, **kwargs)
-
-# ################################################################################################################################
-
-    def create_edit_cron_style(self, job_data,  is_create=True, **kwargs):
-        """ Re-/schedules the execution of a cron-style job.
-        """
-        start_date = _start_date(job_data)
-        self.create_edit_job(job_data.id, job_data.name, job_data.get('old_name'), start_date, SCHEDULER.JOB_TYPE.CRON_STYLE,
-            job_data.service, is_create, max_repeats=None, extra=job_data.extra, is_active=job_data.is_active,
-            cron_definition=job_data.cron_definition, **kwargs)
-
-    def create_cron_style(self, job_data,  **kwargs):
-        """ Schedules the execution of a cron-style job.
-        """
-        self.create_edit_cron_style(job_data,  **kwargs)
-
-    def edit_cron_style(self, job_data,  **kwargs):
-        """ First unschedules a cron-style job and then schedules its execution.
-        The operations aren't parts of an atomic transaction.
-        """
-        self.create_edit_cron_style(job_data, False, **kwargs)
 
 # ################################################################################################################################
 
