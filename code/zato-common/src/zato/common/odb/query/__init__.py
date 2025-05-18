@@ -359,7 +359,6 @@ def _channel_amqp(session, cluster_id):
     return session.query(
         ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active,
         ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix,
-        ChannelAMQP.def_id,
         ChannelAMQP.pool_size, ChannelAMQP.ack_mode, ChannelAMQP.prefetch_count,
         ChannelAMQP.data_format,
         Service.name.label('service_name'),
@@ -397,7 +396,6 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.soap_version,
         HTTPSOAP.data_format,
         HTTPSOAP.security_id,
-        HTTPSOAP.has_rbac,
         HTTPSOAP.connection,
         HTTPSOAP.content_type,
         case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
@@ -409,8 +407,6 @@ def _http_soap(session, cluster_id):
             HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.timeout,
-        HTTPSOAP.sec_tls_ca_cert_id,
-        HTTPSOAP.sec_use_rbac,
         HTTPSOAP.cache_id,
         HTTPSOAP.cache_expiry,
         HTTPSOAP.content_encoding,
@@ -428,7 +424,6 @@ def _http_soap(session, cluster_id):
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
         outerjoin(Cache, Cache.id==HTTPSOAP.cache_id).\
-        outerjoin(TLSCACert, TLSCACert.id==HTTPSOAP.sec_tls_ca_cert_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Cluster.id==cluster_id).\

@@ -42,7 +42,6 @@ class CreateForm(DataFormatForm):
     url_params_pri = forms.ChoiceField(widget=forms.Select())
     params_pri = forms.ChoiceField(widget=forms.Select())
     serialization_type = forms.ChoiceField(widget=forms.Select())
-    sec_tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
@@ -51,7 +50,6 @@ class CreateForm(DataFormatForm):
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
@@ -113,7 +111,6 @@ class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     match_slash = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -86,8 +86,8 @@ class _BaseGet(AdminService):
         output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
         output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), \
-            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
+            'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
@@ -98,16 +98,12 @@ class _BaseGet(AdminService):
 
     def _get_sec_tls_ca_cert_id_from_item(self, item):
 
-        sec_tls_ca_cert_id = item.get('sec_tls_ca_cert_id')
         sec_tls_ca_cert_verify_strategy = item.get('sec_tls_ca_cert_verify_strategy')
 
-        if sec_tls_ca_cert_id is None:
-            if sec_tls_ca_cert_verify_strategy is False:
-                out = ZATO_NONE
-            else:
-                out = ZATO_DEFAULT
+        if sec_tls_ca_cert_verify_strategy is False:
+            out = ZATO_NONE
         else:
-            out = sec_tls_ca_cert_id
+            out = ZATO_DEFAULT
 
         return out
 
@@ -146,7 +142,6 @@ class Get(_BaseGet):
             self.request.input.require_any('id', 'name')
             item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
-            out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
 
 # ################################################################################################################################
@@ -212,9 +207,6 @@ class GetList(_BaseGet):
                                 break
                     item['security_groups'] = sorted(new_security_groups)
 
-            # .. this needs to be extracted ..
-            item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
-
             # .. ignore wrapper elements if told do ..
             if should_ignore_wrapper and item.get('is_wrapper'):
                 continue
@@ -234,12 +226,6 @@ class GetList(_BaseGet):
 # ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
-
-    def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
-        with closing(self.odb.session()) as session:
-            input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
-                filter(TLSCACert.id==sec_tls_ca_cert_id).\
-                one()[0]
 
 # ################################################################################################################################
 
@@ -276,44 +262,6 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                 if item_http_accept == http_accept:
                     if item.method == http_method:
                         self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
-
-# ################################################################################################################################
-
-    def _set_sec_tls_ca_cert_id(self, item, input):
-
-        # This can be used by enmasse to simplify its configuration ..
-        tls_verify = input.pop('tls_verify', ZatoNotGiven)
-
-        # .. this can be used by both enmasse and any other client.
-        sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
-
-        # If we have a simplified value on input, it will take priority ..
-        if tls_verify is not ZatoNotGiven:
-            tls_verify = as_bool(tls_verify)
-            if tls_verify:
-                sec_tls_ca_cert_id = ZATO_DEFAULT
-            else:
-                sec_tls_ca_cert_id = ZATO_NONE
-
-        if sec_tls_ca_cert_id:
-
-            # Skip validation
-            if sec_tls_ca_cert_id == ZATO_NONE:
-                item.sec_tls_ca_cert_id = None
-                input['sec_tls_ca_cert_verify_strategy'] = False
-
-            # Use the default CA certs bundle
-            elif sec_tls_ca_cert_id == ZATO_DEFAULT:
-                item.sec_tls_ca_cert_id = None
-                input['sec_tls_ca_cert_verify_strategy'] = True
-
-            # A user-defined bundle
-            else:
-                item.sec_tls_ca_cert_id = sec_tls_ca_cert_id
-                input['sec_tls_ca_cert_verify_strategy'] = None
-        else:
-            item.sec_tls_ca_cert_id = None
-            input['sec_tls_ca_cert_verify_strategy'] = True # By default, verify using the built-in bundle
 
 # ################################################################################################################################
 
@@ -384,10 +332,10 @@ class Create(_CreateEdit):
         input_required = 'name', 'url_path', 'connection'
         input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
+            'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
+            Boolean('rate_limit_check_parent_def'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
@@ -493,7 +441,6 @@ class Create(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
-                item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
@@ -539,9 +486,6 @@ class Create(_CreateEdit):
                         input.cache_type = None
                         input.cache_name = None
 
-                if item.sec_tls_ca_cert_id:
-                    self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
-
                 input.id = item.id
                 input.update(sec_info)
 
@@ -572,10 +516,10 @@ class Edit(_CreateEdit):
         input_required = 'id', 'name', 'url_path', 'connection'
         input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
             'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
-            'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
+            'params_pri', 'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
+            Boolean('rate_limit_check_parent_def'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
@@ -693,7 +637,6 @@ class Edit(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
-                item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
@@ -748,9 +691,6 @@ class Edit(_CreateEdit):
                 input.old_http_method = old_http_method
                 input.old_http_accept = old_http_accept
                 input.update(sec_info)
-
-                if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
-                    self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
 
                 if input.connection == CONNECTION.CHANNEL:
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
