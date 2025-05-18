@@ -8,8 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import ast
-import copy
-import errno
 import gc
 import importlib.util
 import inspect
@@ -40,7 +38,7 @@ from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from string import Template
 from subprocess import Popen, PIPE
-from tempfile import NamedTemporaryFile, gettempdir
+from tempfile import gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
@@ -66,24 +64,11 @@ from gevent import sleep as gevent_sleep, spawn, Timeout
 from gevent.greenlet import Greenlet
 from gevent.hub import Hub
 
-# lxml
-from lxml import etree
-
 # OpenSSL
 from OpenSSL import crypto
 
-# portalocker
-try:
-    import portalocker
-    has_portalocker = True
-except ImportError:
-    has_portalocker = False
-
 # pytz
 import pytz
-
-# requests
-import requests
 
 # SQLAlchemy
 import sqlalchemy as sa
@@ -109,7 +94,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1085,14 +1070,6 @@ class LoggerWriter:
 
 # ################################################################################################################################
 
-def validate_xpath(expr):
-    """ Evaluates an XPath expression thus confirming it is correct.
-    """
-    etree.XPath(expr)
-    return True
-
-# ################################################################################################################################
-
 def get_haproxy_agent_pidfile(component_dir):
     json_config = loads(
         open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf'), encoding='utf8').read()
@@ -1101,20 +1078,6 @@ def get_haproxy_agent_pidfile(component_dir):
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
     open(os.path.join(component_dir, pidfile), 'w', encoding='utf8').write('{}'.format(os.getpid()))
-
-# ################################################################################################################################
-
-def get_kvdb_config_for_log(config):
-    config = copy.deepcopy(config)
-    if config.shadow_password_in_logs:
-        config.password = SECRET_SHADOW
-    return config
-
-# ################################################################################################################################
-
-def ping_solr(config):
-    result = urlparse(config.address)
-    requests.get('{}://{}{}'.format(result.scheme, result.netloc, config.ping_path))
 
 # ################################################################################################################################
 
@@ -1201,37 +1164,6 @@ def get_basic_auth_credentials(auth):
     auth = b64decode(auth.strip())
 
     return auth.split(':', 1)
-
-# ################################################################################################################################
-
-def parse_tls_channel_security_definition(value):
-    # type: (bytes) -> iterable(str, str)
-    if not value:
-        raise ValueError('No definition given `{}`'.format(repr(value)))
-    else:
-        if isinstance(value, bytes):
-            value = value.decode('utf8')
-
-    for line in value.splitlines():
-        line = line.strip()
-
-        if not line:
-            continue
-
-        if not '=' in line:
-            raise ValueError("Line `{}` has no '=' key/value separator".format(line))
-
-        # It's possible we will have multiple '=' symbols.
-        sep_index = line.find('=')
-        key, value = line[:sep_index], line[sep_index+1:]
-
-        if not key:
-            raise ValueError('Key missing in line `{}`'.format(line))
-
-        if not value:
-            raise ValueError('Value missing in line `{}`'.format(line))
-
-        yield 'HTTP_X_ZATO_TLS_{}'.format(key.upper()), value
 
 # ################################################################################################################################
 
@@ -1687,7 +1619,7 @@ def is_func_overridden(func):
     it means that it is an internal function from parent class, not a user-defined one.
     """
     if func and is_method(func):
-        func_defaults = func.__defaults__ if PY3 else func.im_func.func_defaults
+        func_defaults = func.__defaults__
 
         # Only internally defined methods will fulfill conditions that they have default arguments
         # and one of them is our no-op marker, hence if we negate it and the result is True,
