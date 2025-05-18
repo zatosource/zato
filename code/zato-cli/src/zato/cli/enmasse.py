@@ -644,7 +644,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
         # Ignore prefixes lacking 'get-list', 'create' and 'edit' methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
 
-            # RBAC client roles cannot be edited so it is fine that they lack the 'edit' method.
+            # Some objects cannot be edited so it is fine that they lack the 'edit' method.
             if prefix not in allow_incomplete_methods:
                 continue
 
@@ -1330,21 +1330,6 @@ class ObjectImporter:
         elif item_type == 'security_groups':
             attrs['group_type'] = Common_Groups.Type.API_Clients
 
-        # RBAC objects cannot refer to other objects by their IDs
-        elif item_type == 'rbac_role_permission':
-            _= attrs_dict.pop('id', None)
-            _= attrs_dict.pop('perm_id', None)
-            _= attrs_dict.pop('role_id', None)
-            _= attrs_dict.pop('service_id', None)
-
-        elif item_type == 'rbac_client_role':
-            _= attrs_dict.pop('id', None)
-            _= attrs_dict.pop('role_id', None)
-
-        elif item_type == 'rbac_role':
-            _= attrs_dict.pop('id', None)
-            _= attrs_dict.pop('parent_id', None)
-
         elif item_type == 'oauth':
 
             if not 'data_format' in attrs:
@@ -1511,9 +1496,6 @@ class ObjectImporter:
     def _build_existing_objects_to_edit_during_import(self, already_existing:'any_') -> 'any_':
 
         existing_defs = []
-        existing_rbac_role = []
-        existing_rbac_role_permission = []
-        existing_rbac_client_role = []
         existing_other = []
 
         for w in already_existing.warnings: # type: ignore
@@ -1522,18 +1504,11 @@ class ObjectImporter:
 
             if 'def' in item_type:
                 existing = existing_defs
-            elif item_type == 'rbac_role':
-                existing = existing_rbac_role
-            elif item_type == 'rbac_role_permission':
-                existing = existing_rbac_role_permission
-            elif item_type == 'rbac_client_role':
-                existing = existing_rbac_client_role
             else:
                 existing = existing_other
             existing.append(w)
 
-        existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
-            existing_rbac_client_role + existing_other
+        existing_combined:'any_' = existing_defs + existing_other
 
         return existing_combined
 
@@ -1545,9 +1520,6 @@ class ObjectImporter:
         from collections import OrderedDict
 
         new_defs = []
-        new_rbac_role = []
-        new_rbac_role_permission = []
-        new_rbac_client_role = []
         new_other = []
 
         # Use an ordered dict to iterate over the data with dependencies first
@@ -1590,7 +1562,7 @@ class ObjectImporter:
             append_to.append({item_type: items})
 
         # This is everything new that we know about ..
-        new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+        new_combined:'any_' = new_defs + new_other
 
         # .. now, go through it once more and filter out elements that we know should be actually edited, not created ..
         to_remove = []
@@ -1631,9 +1603,6 @@ class ObjectImporter:
 
         # stdlib
         from time import sleep
-
-        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
-        rbac_sleep = float(rbac_sleep)
 
         existing_combined = self._build_existing_objects_to_edit_during_import(already_existing)
         new_combined = self._build_new_objects_to_create_during_import(existing_combined)
@@ -1686,9 +1655,6 @@ class ObjectImporter:
                         continue
 
                     results = self._import(item_type, attrs, False)
-
-                    if 'rbac' in item_type:
-                        sleep(rbac_sleep)
 
                     if results:
                         return results
@@ -2660,7 +2626,6 @@ class Enmasse(ManageCommand):
         {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':ModuleCtx.Initial_Wait_Time},
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':ModuleCtx.Missing_Wait_Time},
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
-        {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
         {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
@@ -3183,10 +3148,6 @@ class Enmasse(ManageCommand):
         # Certain internal objects should never be exported ..
         if item_type == 'def_sec':
 
-            # .. do not write RBAC definitions ..
-            if 'rbac' in item['type']:
-                return False
-
         # .. do not write internal definitions ..
         if has_name_zato_prefix(name):
             return False
@@ -3646,7 +3607,6 @@ if __name__ == '__main__':
     args.clean_odb = False
     args.ignore_missing_defs = False
     args.output = None
-    args.rbac_sleep = 1
 
     # args['replace'] = True
     # args['import'] = True

@@ -41,7 +41,7 @@ class CreateForm(forms.Form):
         super(CreateForm, self).__init__(prefix=prefix)
         add_select(self, 'auth_type', _const.FHIR_Auth_Type(), needs_initial_select=True)
 
-        add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
+        add_security_select(self, security_list, field_name='security_id')
         add_sec_tls_ca_cert_id_select(req, self)
 
 # ################################################################################################################################
