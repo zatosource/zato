@@ -111,13 +111,6 @@ def get_outconn_rest_list(req, name_to_id=False):
 
 # ################################################################################################################################
 
-def get_tls_ca_cert_list(client, cluster):
-    """ Returns all TLS CA certs on a given cluster.
-    """
-    return invoke_list_service(client, cluster, 'zato.security.tls.ca-cert.get-list')
-
-# ################################################################################################################################
-
 def get_sample_dt(user_profile):
     """ A sample date and time an hour in the future serving as a hint as to what
     format to use when entering date and time manually in the user-provided format.
