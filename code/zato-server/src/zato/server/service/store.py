@@ -24,9 +24,6 @@ from shutil import copy as shutil_copy
 from traceback import format_exc
 from typing import Any, List
 
-# dill
-from dill import load as dill_load
-
 # gevent
 from gevent import sleep as gevent_sleep
 from gevent.lock import RLock
@@ -585,7 +582,6 @@ class ServiceStore:
                 class_.component_enabled_search = True
                 class_.component_enabled_odoo = True
                 class_.component_enabled_zeromq = True
-                class_.component_enabled_patterns = True
 
             else:
 
@@ -610,7 +606,6 @@ class ServiceStore:
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-                class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager

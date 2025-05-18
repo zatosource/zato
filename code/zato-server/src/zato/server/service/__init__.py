@@ -369,7 +369,6 @@ class Service:
     component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
     component_enabled_search: 'bool'
-    component_enabled_patterns: 'bool'
 
     cache: 'CacheAPI'
 
@@ -510,9 +509,6 @@ class Service:
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api)
-
-        if self.component_enabled_patterns:
-            self.patterns = PatternsFacade(self, self.server.internal_cache_patterns, self.server.internal_cache_lock_patterns)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
