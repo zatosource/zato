@@ -18,7 +18,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
-    get_security_id_from_select, get_security_groups_from_checkbox_list, get_tls_ca_cert_list, id_only_service, \
+    get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, parse_response_data, SecurityList
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
@@ -192,8 +192,6 @@ def index(req): # type: ignore
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
-
         cache_list = []
 
         for cache_type in [CACHE.TYPE.BUILTIN]:
@@ -203,8 +201,8 @@ def index(req): # type: ignore
             for item in sorted(response, key=itemgetter('name')):
                 cache_list.append({'id':item.id, 'name':'{}/{}'.format(CACHE_TYPE[cache_type], item.name)})
 
-        create_form = CreateForm(_security, tls_ca_cert_list, cache_list, _soap_versions, req=req)
-        edit_form = EditForm(_security, tls_ca_cert_list, cache_list, _soap_versions, prefix='edit', req=req)
+        create_form = CreateForm(_security, cache_list, _soap_versions, req=req)
+        edit_form = EditForm(_security, cache_list, _soap_versions, prefix='edit', req=req)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -280,8 +278,6 @@ def index(req): # type: ignore
         'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
-        'audit_max_len_messages': _max_len_messages,
-        'audit_max_data_stored_per_message': _max_data_stored_per_message,
         'paginate':True,
         'meta': meta,
         'req':req

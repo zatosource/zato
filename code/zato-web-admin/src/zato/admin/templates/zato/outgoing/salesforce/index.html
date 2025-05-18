@@ -134,9 +134,6 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.pool_size }}</td>
                         <td>
-                            <a href="{% url "audit-log" "outconn-salesforce" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Salesforce&nbsp;outgoing&nbsp;connection">View</a>
-                        </td>
-                        <td>
                             <a href="{% url "outgoing-salesforce-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
 
@@ -268,8 +265,6 @@
                             </td>
                         </tr>
 
-                        {% include "zato/include/audit-log/create.html" %}
-
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -379,8 +374,6 @@
 
                             </td>
                         </tr>
-
-                        {% include "zato/include/audit-log/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

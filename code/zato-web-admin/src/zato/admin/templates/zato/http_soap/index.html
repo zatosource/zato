@@ -336,9 +336,6 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <td class='ignore'>
-                                <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% if transport == 'soap' %}SOAP{% else %}REST{% endif %} {% if connection == 'channel' %}channel{% else %}outgoing connection{% endif %}">View</a>
-                            </td>
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endif %}
@@ -566,11 +563,6 @@
                             </td>
                         </tr>
 
-                        {% include "zato/include/rate-limiting/create.html" %}
-                        {% endif %}
-
-                        {% if False  %}
-                            {% include "zato/include/audit-log/create.html" %}
                         {% endif %}
 
                         {% if connection == 'channel' %}
@@ -776,16 +768,6 @@
                             </tr>
                         {% endif %}
 
-
-                        {% endif %}
-
-                        {% if connection == 'channel' %}
-
-                        {% include "zato/include/rate-limiting/edit.html" %}
-                        {% endif %}
-
-                        {% if False %}
-                            {% include "zato/include/audit-log/edit.html" %}
                         {% endif %}
 
                         {% if connection == 'outgoing' %}
