@@ -442,7 +442,7 @@ class URLData(CyURLData):
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
-            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash',
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
             'security_groups', 'security_groups_ctx'):
 

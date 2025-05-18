@@ -545,10 +545,7 @@ class Invoke(AdminService):
         response = None
 
         # Maps all known connection types to their implementation ..
-        conn_type_to_container = {
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.out.hl7.fhir,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.out.hl7.mllp
-        }
+        conn_type_to_container = {}
 
         # .. get the actual implementation ..
         container = conn_type_to_container[self.request.input.conn_type]

@@ -124,13 +124,6 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child">
-                                                <a class="menu-link" href="#">HL7 &rarr;</a>
-                                                <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:"1" }}">REST</a></li>
-                                                </ul>
-                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                         </ul>
                                     </li>
@@ -141,13 +134,6 @@
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
-                                            <li class="child">
-                                                <a class="menu-link" href="#">HL7 &rarr;</a>
-                                                <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-fhir">FHIR</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
-                                                </ul>
-                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>

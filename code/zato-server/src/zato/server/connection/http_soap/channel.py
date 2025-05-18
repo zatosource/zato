@@ -20,11 +20,10 @@ from traceback import format_exc
 from regex import compile as regex_compile
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
     TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
-from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.typing_ import cast_
@@ -88,10 +87,6 @@ _utcnow=datetime.utcnow
 
 # ################################################################################################################################
 
-_data_format_hl7 = HL7.Const.Version.v2.id
-
-# ################################################################################################################################
-
 _basic_auth = SEC_DEF_TYPE.BASIC_AUTH
 
 # ################################################################################################################################
@@ -143,7 +138,6 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
 
 client_error_wrapper = {
     DATA_FORMAT.JSON: client_json_error,
-    HL7.Const.Version.v2.id: client_json_error,
 }
 
 # ################################################################################################################################
@@ -448,19 +442,14 @@ class RequestDispatcher:
 
                 else:
 
-                    # HL7
-                    if channel_item['data_format'] == _data_format_hl7:
-                        response, status_code, status = self._on_hl7_exception(e, channel_item)
+                    status_code = INTERNAL_SERVER_ERROR
 
+                    # Same comment as in BadRequest, ModelValidationError above
+                    if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                        wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
+                        response = pretty_format_exception(e, cid)
                     else:
-                        status_code = INTERNAL_SERVER_ERROR
-
-                        # Same comment as in BadRequest, ModelValidationError above
-                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
-                            wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
-                            response = pretty_format_exception(e, cid)
-                        else:
-                            response = e.args if self.return_tracebacks else self.default_error_message
+                        response = e.args if self.return_tracebacks else self.default_error_message
 
                 # Check whether this was a JSON-based channel, in which case our response should
                 # have a JSON data format on ouput too.
@@ -569,17 +558,6 @@ class RequestDispatcher:
         # that will become self.channel.security for services.
         if sec_def:
             enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
-
-# ################################################################################################################################
-
-    def _on_hl7_exception(self, e:'Exception', channel_item:'stranydict') -> 'anytuple':
-
-        if channel_item['should_return_errors'] and isinstance(e, HL7Exception):
-            details = '`{}`; data:`{}`'.format(e.args[0], e.data)
-        else:
-            details = ''
-
-        return details, BAD_REQUEST, _status_bad_request
 
 # ################################################################################################################################
 

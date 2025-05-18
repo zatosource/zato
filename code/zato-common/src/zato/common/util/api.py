@@ -93,7 +93,7 @@ if PY3:
     from functools import cmp_to_key
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, MISC, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
      SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
@@ -109,7 +109,6 @@ from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
 from zato.common.util.logging_ import ColorFormatter
 from zato.common.util.open_ import open_r, open_w
-from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
 # ################################################################################################################################
 
@@ -154,7 +153,6 @@ aslist = as_list
 
 _data_format_json      = DATA_FORMAT.JSON
 _data_format_json_like = DATA_FORMAT.JSON, DATA_FORMAT.DICT
-_data_format_hl7_v2    = HL7.Const.Version.v2.id
 
 # ################################################################################################################################
 
@@ -520,20 +518,6 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     raise
             else:
                 payload = request
-
-        #
-        # HL7 v2
-        #
-        elif data_format == _data_format_hl7_v2:
-
-            payload = hl7_get_payload_from_request(
-                request,
-                channel_item['data_encoding'],
-                channel_item['hl7_version'],
-                channel_item['json_path'],
-                channel_item['should_parse_on_input'],
-                channel_item['should_validate']
-            )
 
         #
         # Other data formats

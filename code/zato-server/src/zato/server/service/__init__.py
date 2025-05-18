@@ -31,7 +31,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, NotGiven, PARAMS_PRIORITY, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
@@ -47,7 +47,7 @@ from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, HL7API, HL7RequestData, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
 # Zato - Cython
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -366,7 +366,6 @@ class Service:
     # Rule engine
     rules: 'RulesManager'
 
-    component_enabled_hl7: 'bool'
     component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
     component_enabled_search: 'bool'
@@ -418,10 +417,6 @@ class Service:
 
         # REST facade for outgoing connections
         self.rest = RESTFacade()
-
-        if self.component_enabled_hl7:
-            hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
-            self.out.hl7 = hl7_api
 
 # ################################################################################################################################
 
@@ -1158,7 +1153,6 @@ class Service:
         channel_info=None,     # type: ChannelInfo | None
         channel_item=None,     # type: dictnone
         _AMQP=CHANNEL.AMQP,            # type: str
-        _HL7v2=HL7.Const.Version.v2.id # type: str
     ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
         """
@@ -1192,9 +1186,6 @@ class Service:
 
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
-
-        elif data_format == _HL7v2:
-            service.request.hl7 = HL7RequestData(channel_item['hl7_mllp_conn_ctx'], payload)
 
         chan_sec_info = ChannelSecurityInfo(
             sec_def_info.get('id'),
