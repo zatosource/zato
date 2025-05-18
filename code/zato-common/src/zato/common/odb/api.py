@@ -43,7 +43,6 @@ from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
-from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
 
 # ################################################################################################################################
 
@@ -59,8 +58,6 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
-
-rate_limit_keys = 'is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'
 
 unittest_fs_sql_config = {
     UNITTEST.SQL_ENGINE: {
@@ -732,12 +729,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def _copy_rate_limiting_config(self, copy_from, copy_to, _keys=rate_limit_keys):
-        for key in _keys:
-            copy_to[key] = copy_from.get(key)
-
-# ################################################################################################################################
-
     def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
@@ -812,11 +803,9 @@ class ODBManager(SessionWrapper):
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.realm = sec_def.realm
-                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.header = 'HTTP_{}'.format(sec_def.header.upper().replace('-', '_'))
-                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
@@ -1192,14 +1181,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of generic connections.
         """
         return query_generic.connection_list(self._session, cluster_id, needs_columns=needs_columns)
-
-# ################################################################################################################################
-
-    def get_sso_user_rate_limiting_info(self):
-        """ Returns a list of SSO users that have rate limiting enabled.
-        """
-        with closing(self.session()) as session:
-            return get_sso_user_rate_limiting_info(session)
 
 # ################################################################################################################################
 

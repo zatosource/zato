@@ -14,7 +14,6 @@ python310.zip
 ..\..\..\zato-hl7\src\
 ..\..\..\zato-scheduler\src\
 ..\..\..\zato-server\src\
-..\..\..\zato-sso\src\
 ..\..\..\zato-testing\src\
 ..\..\..\zato-web-admin\src\
 .

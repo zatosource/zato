@@ -99,8 +99,7 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 
 generic_attrs = (
-    'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def', 'hl7_version', 'json_path',
-    'data_encoding',
+    'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
     'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout',
     'security_group_count', 'security_group_member_count',
@@ -512,7 +511,6 @@ class CHANNEL(Attrs):
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     SERVICE = 'service'
-    SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
 
@@ -657,7 +655,6 @@ class RATE_LIMIT:
         HTTP_SOAP = 'http_soap'
         SERVICE   = 'service'
         SEC_DEF   = 'sec_def'
-        SSO_USER  = 'sso_user'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1070,19 +1067,6 @@ class HotDeploy:
 
     class Env:
         Pickup_Patterns = 'Zato_Hot_Deploy_Pickup_Patterns'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SSO:
-
-    class Default:
-        RESTPrefix = '/zato/sso'
-
-    class EmailTemplate:
-        SignupConfirm = 'signup-confirm.txt'
-        SignupWelcome = 'signup-welcome.txt'
-        PasswordResetLink = 'password-reset-link.txt'
 
 # ################################################################################################################################
 # ################################################################################################################################

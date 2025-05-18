@@ -59,12 +59,6 @@ class CreateForm(DataFormatForm):
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
 
-    is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
-    rate_limit_def = forms.CharField(widget=forms.Textarea(
-        attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
-
     hl7_version = forms.CharField(widget=forms.HiddenInput())
     json_path = forms.CharField(widget=forms.HiddenInput())
     data_encoding = forms.CharField(widget=forms.HiddenInput())
@@ -101,7 +95,6 @@ class CreateForm(DataFormatForm):
 
         add_services(self, req)
         add_select(self, 'cache_id', cache_list)
-        add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

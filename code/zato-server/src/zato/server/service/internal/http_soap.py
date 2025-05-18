@@ -22,7 +22,6 @@ from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
-from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
@@ -87,9 +86,8 @@ class _BaseGet(AdminService):
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
             'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
-            'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
-                'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
-                'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
+            'content_encoding', Boolean('match_slash'), 'http_accept', \
+                'hl7_version', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
                 'security_group_member_count', 'needs_security_group_names'
 
@@ -333,9 +331,7 @@ class Create(_CreateEdit):
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'hl7_version', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
@@ -515,8 +511,7 @@ class Edit(_CreateEdit):
             'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
             'params_pri', 'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), 'hl7_version', 'json_path', \
+            'hl7_version', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
             'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')

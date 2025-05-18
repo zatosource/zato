@@ -22,7 +22,6 @@ pylint:
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-sso       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint || true
 
@@ -31,9 +30,6 @@ server-tests:
 
 cli-tests:
 	cd $(CURDIR)/code/zato-cli && make run-tests
-
-sso-tests:
-	cd $(CURDIR)/code/zato-sso && make run-tests
 
 flake8:
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) flake8
@@ -46,7 +42,6 @@ flake8:
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-server    && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-sso       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) flake8
 	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
@@ -63,7 +58,6 @@ static-check:
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-sso       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	echo "Static checks OK"
@@ -109,7 +103,6 @@ functional-tests:
 	$(MAKE) cli-tests
 	$(MAKE) scheduler-tests
 	$(MAKE) cy-tests
-	@if [ "$(ZATO_TEST_SSO)" = "true" ]; then $(MAKE) sso-tests; fi
 
 run-tests:
 	$(MAKE) install-qa-reqs

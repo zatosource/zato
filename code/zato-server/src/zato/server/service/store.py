@@ -318,9 +318,6 @@ class ServiceStore:
         config_dict = self.server.config.service[config['name']] # type: ConfigDict
         config_dict['config'].update(config)
 
-        # Recreate the rate limiting configuration
-        self.set_up_rate_limiting(config['name'])
-
 # ################################################################################################################################
 
     def _delete_service_from_odb(self, service_id:'int') -> 'None':
@@ -418,27 +415,6 @@ class ServiceStore:
 
     def post_deploy(self, class_:'type[Service]') -> 'None':
         pass
-
-# ################################################################################################################################
-
-    def set_up_rate_limiting(
-        self,
-        name,       # type: str
-        class_=None # type: type[Service] | None
-    ) -> 'None':
-
-        if not class_:
-            service_id = self.get_service_id_by_name(name) # type: int
-            info = self.get_service_info_by_id(service_id) # type: anydict
-            _class = info['service_class'] # type: type[Service]
-        else:
-            _class = class_
-
-        # Will set up rate limiting for service if it needs to be done, returning in such a case or False otherwise.
-        is_rate_limit_active = self.server.set_up_object_rate_limiting(ModuleCtx.Rate_Limit_Service, name, 'service')
-
-        # Set a flag to signal that this service has rate limiting enabled or not
-        _class._has_rate_limiting = is_rate_limit_active
 
 # ################################################################################################################################
 
@@ -643,10 +619,6 @@ class ServiceStore:
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
                 class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
-
-            # User management and SSO
-            if service_store.server.is_sso_enabled:
-                class_.sso = service_store.server.sso_api
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
@@ -1311,10 +1283,6 @@ class ServiceStore:
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
 
-        # Rate limiting
-        for item in info.to_process: # type: InRAMService
-            self.set_up_rate_limiting(item.name, item.service_class)
-
 # ################################################################################################################################
 
     def _should_ignore_file(self, file_name:'str', base_dir:'str') -> 'bool':
@@ -1591,14 +1559,6 @@ class ServiceStore:
 
                     # Make sure the service has its full module's name populated ..
                     item.zato_set_module_name(fs_location)
-
-                    # .. now, we can access its name.
-                    service_name = item.get_name()
-
-                    # Don't deploy SSO services if SSO as such is not enabled
-                    if not self.server.is_sso_enabled:
-                        if 'zato.sso' in service_name:
-                            return False
 
                     # OK, we want to deploy that service
                     return True
