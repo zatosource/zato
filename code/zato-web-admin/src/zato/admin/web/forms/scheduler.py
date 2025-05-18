@@ -36,6 +36,3 @@ class IntervalBasedSchedulerJobForm(_Base):
     seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
     repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
-
-class CronStyleSchedulerJobForm(_Base):
-    cron_definition = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))

@@ -68,7 +68,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
 
     var actions = ['create', 'edit'];
-    var job_types = ['one_time', 'interval_based', 'cron_style'];
+    var job_types = ['one_time', 'interval_based'];
 
     /* Dynamically prepare pop-up windows and date-time pickers.
     */
@@ -99,12 +99,10 @@ $(document).ready(function() {
 
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
-    var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
 
     var job_types_dict = {
         'one_time':one_time_attrs,
         'interval_based':interval_based_attrs,
-        'cron_style':cron_style_attrs
     };
 
     var field_id = null;
@@ -137,7 +135,6 @@ $(document).ready(function() {
 $.fn.zato.scheduler.titles = {
     'one_time': 'a one-time',
     'interval_based': 'an interval-based',
-    'cron_style': 'a cron-style',
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -246,7 +243,6 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     minutes = job.minutes ? 'minutes' in job : '';
     seconds = job.seconds ? 'seconds' in job : '';
     repeats = job.repeats ? 'repeats' in job : '';
-    cron_definition = job.cron_definition ? 'cron_definition' in job : '';
 
     row += String.format("<td class='ignore'>{0}</td>", weeks);
     row += String.format("<td class='ignore'>{0}</td>", days);
@@ -254,7 +250,6 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", minutes);
     row += String.format("<td class='ignore'>{0}</td>", seconds);
     row += String.format("<td class='ignore'>{0}</td>", repeats);
-    row += String.format("<td class='ignore'>{0}</td>", cron_definition);
 
     if(include_tr) {
         row += '</tr>';

@@ -557,8 +557,7 @@ class Job(Base):
     id = Column(Integer, Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    job_type = Column(Enum(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-                           SCHEDULER.JOB_TYPE.CRON_STYLE, name='job_type'), nullable=False)
+    job_type = Column(Enum(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(500000), nullable=True)
 
@@ -572,7 +571,7 @@ class Job(Base):
     service = relationship(Service, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, job_type=None, start_date=None, extra=None, cluster=None,
-            cluster_id=None, service=None, service_id=None, service_name=None, interval_based=None, cron_style=None,
+            cluster_id=None, service=None, service_id=None, service_name=None, interval_based=None,
             definition_text=None, job_type_friendly=None):
         self.id = id
         self.name = name
@@ -586,14 +585,13 @@ class Job(Base):
         self.service_id = service_id
         self.service_name = service_name # Not used by the database
         self.interval_based = interval_based
-        self.cron_style = cron_style
         self.definition_text = definition_text # Not used by the database
         self.job_type_friendly = job_type_friendly # Not used by the database
 
 # ################################################################################################################################
 
 class IntervalBasedJob(Base):
-    """ A Cron-style scheduler's job.
+    """ An interval-based scheduler's job.
     """
     __tablename__ = 'job_interval_based'
     __table_args__ = (UniqueConstraint('job_id'), {})
@@ -625,29 +623,6 @@ class IntervalBasedJob(Base):
         self.seconds = seconds
         self.repeats = repeats
         self.definition_text = definition_text # Not used by the database
-
-# ################################################################################################################################
-
-class CronStyleJob(Base):
-    """ A Cron-style scheduler's job.
-    """
-    __tablename__ = 'job_cron_style'
-    __table_args__ = (UniqueConstraint('job_id'), {})
-
-    id = Column(Integer, Sequence('job_cron_seq'), primary_key=True)
-    cron_definition = Column(String(4000), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
-    job = relationship(
-        Job, backref=backref('cron_style', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
-
-    def __init__(self, id=None, job=None, cron_definition=None):
-        self.id = id
-        self.job = job
-        self.cron_definition = cron_definition
 
 # ################################################################################################################################
 

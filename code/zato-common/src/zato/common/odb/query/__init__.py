@@ -21,7 +21,7 @@ from sqlalchemy.sql.expression import case
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
-from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, ChannelAMQP, Cluster, CronStyleJob, \
+from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
     OutgoingSAP
@@ -189,10 +189,8 @@ def _job(session, cluster_id):
         IntervalBasedJob.minutes,
         IntervalBasedJob.seconds,
         IntervalBasedJob.repeats,
-        CronStyleJob.cron_definition
         ).\
         outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
-        outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
         filter(Job.cluster_id==Cluster.id).\
         filter(Job.service_id==Service.id).\
         filter(Cluster.id==cluster_id)

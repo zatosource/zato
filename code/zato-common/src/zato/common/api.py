@@ -483,7 +483,6 @@ class SCHEDULER:
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'
-        CRON_STYLE = 'cron_style'
 
     class ON_MAX_RUNS_REACHED:
         DELETE = 'delete'

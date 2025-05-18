@@ -77,7 +77,6 @@ django_sqlalchemy_engine = {
 job_type_friendly_names = {
     SCHEDULER.JOB_TYPE.ONE_TIME: 'one-time',
     SCHEDULER.JOB_TYPE.INTERVAL_BASED: 'interval-based',
-    SCHEDULER.JOB_TYPE.CRON_STYLE: 'cron-style',
 }
 
 # ################################################################################################################################
