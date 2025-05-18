@@ -264,42 +264,6 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def _on_lb(self, args, *ignored_args, **ignored_kwargs):
-
-        # stdlib
-        from os.path import join
-
-        # Zato
-        from zato.common.haproxy import validate_haproxy_config
-
-        self.ensure_no_pidfile('lb-agent')
-        repo_dir = join(self.config_dir, 'repo')
-
-        lba_conf = self.get_json_conf('lb-agent.conf')
-        lb_conf_string = open_r(join(repo_dir, 'zato.config')).read()
-
-        # Load-balancer's agent
-        self.ensure_json_config_port_free('Load balancer\'s agent', None, lba_conf)
-
-        # Load balancer itself
-        lb_address = None
-        marker = 'ZATO frontend front_http_plain:bind'
-        lb_conf = lb_conf_string.splitlines()
-        for line in lb_conf:
-            if marker in line:
-                lb_address = line.split(marker)[0].strip().split()[1]
-                break
-
-        if not lb_address:
-            raise Exception('Load balancer check failed. Marker line not found `{}`.'.format(marker))
-
-        _, port = lb_address.split(':')
-        self.ensure_port_free('Load balancer', int(port), lb_address)
-
-        validate_haproxy_config(lb_conf_string, lba_conf['haproxy_command'])
-
-# ################################################################################################################################
-
     def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
 
         # stdlib

@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, cluster, http_soap, load_balancer, main, scheduler, service
+from zato.admin.web.views import account, http_soap, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -71,53 +71,6 @@ urlpatterns += [
         login_required(account.settings_basic_save), name='account-settings-basic-save'),
     url(r'^account/settings/basic/generate-totp-key$',
         login_required(account.generate_totp_key), name='account-settings-basic-generate-totp-key'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # Clusters
-
-    url(r'^zato/cluster/$',
-        login_required(cluster.index), name='cluster'),
-    url(r'^zato/cluster/edit/$',
-        login_required(cluster.edit), name='cluster-edit'),
-    url(r'^zato/cluster/delete/(?P<id>.*)/$',
-        login_required(cluster.delete), name='cluster-delete'),
-    url(r'^zato/cluster/servers-state/(?P<cluster_id>.*)$',
-        login_required(cluster.get_servers_state), name='cluster-servers-state'),
-    url(r'^zato/cluster/get/by-id/(?P<cluster_id>.*)$',
-        login_required(cluster.get_by_id), name='cluster-get-by-id'),
-    url(r'^zato/cluster/get/by-name/(?P<cluster_name>.*)/$',
-        login_required(cluster.get_by_name), name='cluster-get-by-name'),
-    url(r'^zato/cluster/servers/$',
-        login_required(cluster.servers), name='cluster-servers'),
-    url(r'^zato/cluster/servers/edit/$',
-        login_required(cluster.servers_edit), name='cluster-servers-edit'),
-    url(r'^zato/cluster/servers/load-balancer/(?P<action>.*)/(?P<server_id>.*)/$',
-        login_required(cluster.servers_add_remove_lb), name='cluster-servers-add-remove-lb'),
-    url(r'^zato/cluster/servers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cluster.ServerDelete()), name=cluster.ServerDelete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # Load balancer
-
-    url(r'^zato/load-balancer/get-addresses/cluster/(?P<cluster_id>.*)/$',
-        login_required(load_balancer.get_addresses), name='lb-get-addresses'),
-    url(r'^zato/load-balancer/manage/cluster/(?P<cluster_id>\d+)/validate-save/$',
-        login_required(load_balancer.validate_save), name='lb-manage-validate-save'),
-    url(r'^zato/load-balancer/manage/cluster/(?P<cluster_id>.*)/$', login_required(load_balancer.manage), name='lb-manage'),
-    url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/validate-save$',
-        login_required(load_balancer.validate_save_source_code), name='lb-manage-source-code-validate-save'),
-    url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/$',
-        login_required(load_balancer.manage_source_code), name='lb-manage-source-code'),
-    url(r'^zato/load-balancer/remote-command/(?P<cluster_id>.*)/$',
-        login_required(load_balancer.remote_command), name='lb-remote-command'),
     ]
 
 # ################################################################################################################################

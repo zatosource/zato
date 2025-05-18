@@ -109,7 +109,6 @@ class CommandStore:
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
-             create_lb           as create_lb_mod,           \
              create_odb          as create_odb_mod,          \
              create_scheduler    as create_scheduler_mod,    \
              create_server       as create_server_mod,       \
@@ -211,11 +210,6 @@ class CommandStore:
             'cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
         create_cluster.set_defaults(command='create_cluster')
         self.add_opts(create_cluster, create_cluster_mod.Create.opts)
-
-        create_lb = create_subs.add_parser('load-balancer', description=create_lb_mod.Create.__doc__, parents=[base_parser])
-        create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
-        create_lb.set_defaults(command='create_lb')
-        self.add_opts(create_lb, create_lb_mod.Create.opts)
 
         create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
         create_odb.set_defaults(command='create_odb')
