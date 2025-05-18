@@ -248,12 +248,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_ipc_password(self, password:'str') -> 'None':
-        password = self.decrypt(password)
-        self.ipc_api.password = password
-
-# ################################################################################################################################
-
     def deploy_missing_services(self, locally_deployed:'anylist') -> 'None':
         """ Deploys services that exist on other servers but not on ours.
         """
@@ -1265,20 +1259,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.warning('PID invocation error `%s`', format_exc())
         finally:
             return out
-
-# ################################################################################################################################
-
-    def invoke_by_pid(
-        self,
-        service,    # type: str
-        request,    # type: any_
-        target_pid, # type: int
-        **kwargs    # type:any_
-    ) -> 'IPCResponse':
-        """ Invokes a service in a worker process by the latter's PID.
-        """
-        response = self.ipc_api.invoke_by_pid(self.use_tls, service, request, self.cluster_name, self.name, target_pid, timeout)
-        return response
 
 # ################################################################################################################################
 
