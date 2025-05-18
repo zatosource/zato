@@ -413,7 +413,6 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.opaque1,
         Cache.name.label('cache_name'),
         Cache.cache_type,
-        TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),

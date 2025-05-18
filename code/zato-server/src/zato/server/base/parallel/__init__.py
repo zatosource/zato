@@ -368,49 +368,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             return set(locally_deployed)
 
-        lock_name = '{}{}:{}'.format(
-            CommonKVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
+        # Remove all the deployed services from the DB ..
+        self.odb.drop_deployed_services(server.id)
 
-        already_deployed_flag = '{}{}:{}'.format(
-            CommonKVDB.LOCK_SERVER_ALREADY_DEPLOYED, self.fs_server_config.main.token, self.deployment_key)
+        # .. deploy them back including any missing ones found on other servers.
+        locally_deployed = import_initial_services_jobs()
 
-        logger.debug('Using lock_name: `%s`', lock_name)
-
-        with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
-            if self.kv_data_api.get(already_deployed_flag):
-                # There has been already the first worker who's done everything there is to be done so we may just return.
-                self.is_starting_first = False
-                logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
-
-                # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
-                locally_deployed = import_initial_services_jobs()
-
-                return locally_deployed
-
-            else:
-                # We are this server's first worker so we need to re-populate
-                # the database and create the flag indicating we're done.
-                self.is_starting_first = True
-                logger.debug('Got lock_name:`%s`, ttl:`%s`', lock_name, self.deployment_lock_expires)
-
-                # .. Remove all the deployed services from the DB ..
-                self.odb.drop_deployed_services(server.id)
-
-                # .. deploy them back including any missing ones found on other servers.
-                locally_deployed = import_initial_services_jobs()
-
-                # Add the flag to Redis indicating that this server has already
-                # deployed its services. Note that by default the expiration
-                # time is more than a century in the future. It will be cleared out
-                # next time the server will be started.
-
-                self.kv_data_api.set(
-                    already_deployed_flag,
-                    dumps({'create_time_utc':datetime.utcnow().isoformat()}),
-                    self.deployment_lock_expires,
-                )
-
-                return locally_deployed
+        return locally_deployed
 
 # ################################################################################################################################
 
@@ -640,13 +604,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalize_service_source_path(name:'str') -> 'str':
-            if not os.path.isabs(name):
-                name = os.path.normpath(os.path.join(self.base_dir, name))
-            return name
-
-        # Patterns to match during deployment
-        self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
         # Static config files
         self.static_config = StaticConfig(self.static_dir)
@@ -654,33 +611,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # SSO e-mail templates
         self.static_config.read_directory(os.path.join(self.static_dir, 'sso', 'email'))
 
-        # Key-value DB
-        kvdb_config:'bunch_' = get_kvdb_config_for_log(self.fs_server_config.kvdb)
-        kvdb_logger.info('Worker config `%s`', kvdb_config)
-
-        self.kvdb.config = self.fs_server_config.kvdb
-        self.kvdb.server = self
-        self.kvdb.decrypt_func = self.crypto_manager.decrypt
-
-        kvdb_logger.info('Worker config `%s`', kvdb_config)
-
-        if self.fs_server_config.kvdb.host:
-            self.kvdb.init()
-
         # Whether to add X-Zato-CID to outgoing responses
         needs_x_zato_cid = self.fs_server_config.misc.get('needs_x_zato_cid') or False
         self.needs_x_zato_cid = needs_x_zato_cid
-
-        allow_internal:'listorstr' = self.fs_server_config.misc.get.service_invoker_allow_internal
-        allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
-        self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
-
-        # Service sources from server.conf
-        for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
-            name = name.strip()
-            if name and not name.startswith('#'):
-                name = _normalize_service_source_path(name)
-                self.service_sources.append(name)
 
         # Look up pickup configuration among environment variables
         # and add anything found to self.pickup_config.
@@ -717,9 +650,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Read all the user config files that are already available on startup
         self.read_user_config()
-
-        # Convert size of FIFO response buffers to megabytes
-        self.fifo_response_buffer_size = int(float(self.fs_server_config.misc.fifo_response_buffer_size) * megabyte)
 
         locally_deployed = self.maybe_on_first_worker(server)
 
@@ -1083,11 +1013,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'server': self,
         })
 
-        # The server is started so we can deploy what we were told to handle on startup,
-        # assuming that we are the first process in this server.
-        if self.is_starting_first:
-            if self.deploy_auto_from:
-                self.handle_enmasse_auto_from()
+        # The server is started so we can deploy what we were told to handle on startup.
+        if self.deploy_auto_from:
+            self.handle_enmasse_auto_from()
 
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
