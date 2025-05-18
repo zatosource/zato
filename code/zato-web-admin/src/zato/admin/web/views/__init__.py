@@ -36,7 +36,7 @@ from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.util.api import get_lb_client as _get_lb_client, validate_python_syntax
+from zato.common.util.api import validate_python_syntax
 
 # ################################################################################################################################
 
@@ -140,16 +140,6 @@ def get_js_dt_format(user_profile):
         'js_time_format':'h:mm.ss TT' if user_profile.time_format == '12' else 'hh:mm:ss',
         'js_ampm':user_profile.time_format == '12',
     }
-
-# ################################################################################################################################
-
-def get_lb_client(cluster):
-    """ A convenience wrapper over the function for creating a load-balancer client
-    which may use web admin's SSL material (the client from zato.common can't use
-    it because it would make it dependent on the zato.admin package).
-    """
-    return _get_lb_client(lb_agent_use_tls, cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
-                          ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
 
 # ################################################################################################################################
 

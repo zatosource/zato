@@ -43,4 +43,4 @@ class Info(ManageCommand):
         info = get_info(os.path.abspath(args.path), args.format)
         self.logger.info(format_info(info, args.format, args.cols_width if args.cols_width else DEFAULT_COLS_WIDTH, _Dumper))
 
-    _on_scheduler = _on_lb = _on_web_admin = _on_server
+    _on_scheduler = _on_web_admin = _on_server

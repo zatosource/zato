@@ -315,34 +315,6 @@ Examples:
 
 # ################################################################################################################################
 
-    def _on_lb(self, *ignored:'any_') -> 'None':
-
-        # stdlib
-        import os
-        import sys
-
-        # Zato
-        from zato.cli.stop import Stop
-        from zato.common.util.api import get_haproxy_agent_pidfile
-
-        self.run_check_config()
-
-        def stop_haproxy():
-            Stop(self.args).stop_haproxy(self.component_dir)
-
-        found_pidfile = self.check_pidfile()
-        if not found_pidfile:
-            found_agent_pidfile = self.check_pidfile(get_haproxy_agent_pidfile(self.component_dir))
-            if not found_agent_pidfile:
-                _ = self.start_component(
-                    'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
-                return
-
-        # Will be returned if either of pidfiles was found
-        sys.exit(self.SYS_ERROR.FOUND_PIDFILE)
-
-# ################################################################################################################################
-
     def _on_web_admin(self, *ignored:'any_') -> 'None':
         self.run_check_config()
         _ = self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)

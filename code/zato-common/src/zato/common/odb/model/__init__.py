@@ -212,10 +212,6 @@ class Server(Base):
         self.last_join_status = last_join_status
         self.last_join_mod_date = last_join_mod_date
         self.last_join_mod_by = last_join_mod_by
-        self.has_lb_config = False # Not used by the database
-        self.in_lb = False # Not used by the database
-        self.lb_state = None # Not used by the database
-        self.lb_address = None # Not used by the database
         self.may_be_deleted = None # Not used by the database
         self.up_mod_date_user = None # Not used by the database
 

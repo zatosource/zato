@@ -138,9 +138,6 @@ UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'
 
 $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 
-# .. load-balancer ..
-{start_lb}
-
 # .. scheduler ..
 {start_scheduler}
 
@@ -154,17 +151,6 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 zato_qs_check_config_extra = """
 echo [1/$STEPS] Redis connection OK
 echo [2/$STEPS] SQL ODB connection OK
-"""
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-zato_qs_start_lb_windows = 'echo "[4/%STEPS%] (Skipped starting load balancer)"'
-
-zato_qs_start_lb_non_windows = """
-# Start the load balancer first ..
-$ZATO_BIN start $BASE_DIR/load-balancer --verbose
-echo [4/$STEPS] Load-balancer started
 """
 
 # ################################################################################################################################
@@ -368,11 +354,10 @@ class Create(ZatoCommand):
         """ Quickly creates Zato components
         1) ODB
         2) ODB initial data
-        3) Servers
-        4) Load-balancer
-        5) Dashboard
-        6) Scheduler
-        7) Scripts
+        3) Server
+        4) Dashboard
+        5) Scheduler
+        6) Scripts
         """
 
         # stdlib
@@ -391,7 +376,7 @@ class Create(ZatoCommand):
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
+        from zato.cli import create_cluster, create_odb, create_scheduler, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster
@@ -449,9 +434,6 @@ class Create(ZatoCommand):
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
         args.store_config = False
-
-        # We use TLS only on systems other than Windows
-        has_tls = is_non_windows
 
         # This will be True if the scheduler does not have to be created
         no_scheduler:'bool' = self.get_arg('no_scheduler', False)
@@ -529,31 +511,6 @@ class Create(ZatoCommand):
                     create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
                 self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
-
-# ################################################################################################################################
-
-        #
-        # 4) load-balancer
-        #
-
-        if create_components_other_than_scheduler:
-
-            lb_path = os.path.join(args_path, 'load-balancer')
-            os.mkdir(lb_path)
-
-            create_lb_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-            create_lb_args.path = lb_path
-
-            # Need to substract 1 because we've already called .next() twice
-            # when creating servers above.
-            servers_port = next(next_port) - 1
-
-            create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
-
-            # Under Windows, we create the directory for the load-balancer
-            # but we do not advertise it because we do not start it.
-            if is_non_windows:
-                self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -648,7 +605,6 @@ class Create(ZatoCommand):
 
         if scheduler_only:
             start_servers = '# No servers to start'
-            start_lb = '# No load-balancer to start'
             check_config_extra = ''
             check_tcp_ports_suffix = 'scheduler-only'
             cluster_starting = ''
@@ -663,7 +619,6 @@ class Create(ZatoCommand):
             stop_scheduler = zato_qs_stop_scheduler
 
         else:
-            start_lb = zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows
             check_config_extra = zato_qs_check_config_extra
             check_tcp_ports_suffix = ''
             cluster_starting = zato_qs_cluster_started
@@ -701,7 +656,6 @@ class Create(ZatoCommand):
             check_config=check_config,
             check_config_extra=check_config_extra,
             check_tcp_ports_suffix=check_tcp_ports_suffix,
-            start_lb=start_lb,
             scheduler_step_count=scheduler_step_count,
             start_servers=start_servers,
             check_config_step_number=check_config_step_number,
