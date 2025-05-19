@@ -34,12 +34,6 @@ run-tests:
 	$(MAKE) simpleio-tests
 	echo
 
-pylint:
-	echo Running pylint in $(Zato_Package_Name)
-	$(Zato_Python_Dir)/pylint --verbose \
-		--rcfile $(CURDIR)/../pylint.ini \
-				 $(CURDIR)/../zato-cy/src/zato/cy
-
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

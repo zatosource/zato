@@ -3,13 +3,16 @@
 
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-client
+PYTHON_BIN = python3
 
 default: upload
-upload2: PYTHON_BIN = python2
-upload3: PYTHON_BIN = python3
+
+upload3:
+	$(MAKE) clean
+	$(PYTHON_BIN) setup.py clean && $(PYTHON_BIN) setup.py bdist_wheel
+	$(MAKE) twine
 
 upload:
-	$(MAKE) upload2
 	$(MAKE) upload3
 
 clean:
@@ -17,17 +20,6 @@ clean:
 
 twine:
 	twine upload $(CURDIR)/dist/*
-
-upload2 upload3:
-	$(MAKE) clean
-	$(PYTHON_BIN) setup.py clean && $(PYTHON_BIN) setup.py bdist_wheel
-	$(MAKE) twine
-
-pylint:
-	echo Running pylint in $(Zato_Package_Name)
-	$(Zato_Python_Dir)/pylint --verbose \
-		--rcfile $(CURDIR)/../pylint.ini \
-				 $(CURDIR)/../zato-client/src/zato/client
 
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
