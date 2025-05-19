@@ -5,15 +5,11 @@
 Script to generate performance test rule files with varying numbers of rules and conditions.
 """
 
+# type: ignore
+
 # stdlib
 import os
 from pathlib import Path
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -199,30 +195,30 @@ ACTIONS = [
 
 def generate_rule_file(num_rules:'int', total_conditions:'int', common_conditions_count:'int', output_file:'str') -> 'None':
     """Generate a rule file with the specified parameters."""
-    
+
     # Validate inputs
     if common_conditions_count > total_conditions:
         raise ValueError('Number of common conditions cannot exceed total conditions')
-    
+
     if common_conditions_count > len(COMMON_CONDITIONS):
         raise ValueError(f'Not enough common conditions defined. Need {common_conditions_count}, have {len(COMMON_CONDITIONS)}')
-    
+
     unique_conditions_count = total_conditions - common_conditions_count
-    
+
     # Create the file content
     content = '# ################################################################################################################################'
-    
+
     for rule_num in range(1, num_rules + 1):
         # Select conditions for this rule
         rule_common_conditions = COMMON_CONDITIONS[:common_conditions_count]
-        
+
         # Calculate the starting index for unique conditions to ensure they don't overlap between rules
         unique_start_idx = (rule_num - 1) * unique_conditions_count % (len(UNIQUE_CONDITIONS) - unique_conditions_count)
         rule_unique_conditions = UNIQUE_CONDITIONS[unique_start_idx:unique_start_idx + unique_conditions_count]
-        
+
         # Combine all conditions
         all_conditions = rule_common_conditions + rule_unique_conditions
-        
+
         # Format the conditions with proper comments
         conditions_text = ''
         for i, cond in enumerate(all_conditions):
@@ -234,19 +230,19 @@ def generate_rule_file(num_rules:'int', total_conditions:'int', common_condition
                 # For unique conditions, use the original index + 101 (to start at 101)
                 unique_idx = unique_start_idx + (i - common_conditions_count)
                 condition_num = unique_idx + 101
-            
+
             if i == len(all_conditions) - 1:
                 # Last condition should not have 'and'
                 conditions_text += f'    {cond}                            # Condition {condition_num:03d}'
             else:
                 conditions_text += f'    {cond} and                      # Condition {condition_num:03d}\n'
-        
+
         # Select description, purpose, defaults, and actions
         description = RULE_DESCRIPTIONS[rule_num % len(RULE_DESCRIPTIONS)]
         purpose = RULE_PURPOSES[rule_num % len(RULE_PURPOSES)]
         defaults = DEFAULT_VALUES[rule_num % len(DEFAULT_VALUES)]
         action = ACTIONS[rule_num % len(ACTIONS)]
-        
+
         # Format the rule
         rule = RULE_TEMPLATE.format(
             rule_num=rule_num,
@@ -256,19 +252,19 @@ def generate_rule_file(num_rules:'int', total_conditions:'int', common_condition
             conditions=conditions_text,
             actions=action
         )
-        
+
         content += rule
         content += '\n# ################################################################################################################################'
-    
+
     # Write the file
     with open(output_file, 'w') as f:
-        f.write(content)
-    
+        _ = f.write(content)
+
     print(f'Generated {output_file} with {num_rules} rules, {total_conditions} conditions per rule, {common_conditions_count} common')
 
 def main() -> 'None':
     """Generate all the requested rule files."""
-    
+
     # Define the configurations for the files to generate
     configs = [
         # 10 rules files with 10 conditions
@@ -277,66 +273,66 @@ def main() -> 'None':
         (10, 10, 5, 'perf_010_rules_010_conditions_005_common.zrules'),
         (10, 10, 7, 'perf_010_rules_010_conditions_007_common.zrules'),
         (10, 10, 9, 'perf_010_rules_010_conditions_009_common.zrules'),
-        
+
         # 10 rules files with 5 conditions
         (10, 5, 1, 'perf_010_rules_005_conditions_001_common.zrules'),
         (10, 5, 3, 'perf_010_rules_005_conditions_003_common.zrules'),
-        
+
         # 30 rules files with 10 conditions
         (30, 10, 1, 'perf_030_rules_010_conditions_001_common.zrules'),
         (30, 10, 3, 'perf_030_rules_010_conditions_003_common.zrules'),
         (30, 10, 5, 'perf_030_rules_010_conditions_005_common.zrules'),
         (30, 10, 7, 'perf_030_rules_010_conditions_007_common.zrules'),
         (30, 10, 9, 'perf_030_rules_010_conditions_009_common.zrules'),
-        
+
         # 30 rules files with 5 conditions
         (30, 5, 1, 'perf_030_rules_005_conditions_001_common.zrules'),
         (30, 5, 3, 'perf_030_rules_005_conditions_003_common.zrules'),
-        
+
         # 60 rules files with 10 conditions
         (60, 10, 1, 'perf_060_rules_010_conditions_001_common.zrules'),
         (60, 10, 3, 'perf_060_rules_010_conditions_003_common.zrules'),
         (60, 10, 5, 'perf_060_rules_010_conditions_005_common.zrules'),
         (60, 10, 7, 'perf_060_rules_010_conditions_007_common.zrules'),
         (60, 10, 9, 'perf_060_rules_010_conditions_009_common.zrules'),
-        
+
         # 60 rules files with 5 conditions
         (60, 5, 1, 'perf_060_rules_005_conditions_001_common.zrules'),
         (60, 5, 3, 'perf_060_rules_005_conditions_003_common.zrules'),
         (60, 5, 5, 'perf_060_rules_005_conditions_005_common.zrules'),
-        
+
         # 100 rules files with 10 conditions
         (100, 10, 1, 'perf_100_rules_010_conditions_001_common.zrules'),
         (100, 10, 3, 'perf_100_rules_010_conditions_003_common.zrules'),
         (100, 10, 5, 'perf_100_rules_010_conditions_005_common.zrules'),
         (100, 10, 7, 'perf_100_rules_010_conditions_007_common.zrules'),
         (100, 10, 9, 'perf_100_rules_010_conditions_009_common.zrules'),
-        
+
         # 100 rules files with 5 conditions
         (100, 5, 1, 'perf_100_rules_005_conditions_001_common.zrules'),
         (100, 5, 3, 'perf_100_rules_005_conditions_003_common.zrules'),
         (100, 5, 5, 'perf_100_rules_005_conditions_005_common.zrules'),
-        
+
         # 500 rules files with 10 conditions
         (500, 10, 1, 'perf_500_rules_010_conditions_001_common.zrules'),
         (500, 10, 3, 'perf_500_rules_010_conditions_003_common.zrules'),
         (500, 10, 5, 'perf_500_rules_010_conditions_005_common.zrules'),
         (500, 10, 7, 'perf_500_rules_010_conditions_007_common.zrules'),
         (500, 10, 9, 'perf_500_rules_010_conditions_009_common.zrules'),
-        
+
         # 500 rules files with 5 conditions
         (500, 5, 1, 'perf_500_rules_005_conditions_001_common.zrules'),
         (500, 5, 3, 'perf_500_rules_005_conditions_003_common.zrules'),
         (500, 5, 5, 'perf_500_rules_005_conditions_005_common.zrules'),
     ]
-    
+
     # Get the current directory
     current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Create the perf directory if it doesn't exist
     perf_dir = current_dir / 'perf'
     perf_dir.mkdir(exist_ok=True)
-    
+
     # Generate each file
     for num_rules, total_conditions, common_conditions_count, filename in configs:
         output_path = perf_dir / filename

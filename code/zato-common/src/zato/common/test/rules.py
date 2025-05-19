@@ -18,7 +18,7 @@ from zato.common.rules.api import RulesManager
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dict_, strdict, strlist
+    from zato.common.typing_ import any_, anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,13 +51,13 @@ class RuleTestHelper:
         if zrules_dir.exists() and zrules_dir.is_dir():
             load_dir = zrules_dir
             logger.info(f'Loading rules from zrules subdirectory: {load_dir}')
-            
+
             # Load rule files based on the include_perf_files flag
             self._load_rules(load_dir)
         else:
             load_dir = self.current_dir
             logger.info(f'Loading rules from current directory: {load_dir}')
-            
+
             # Load rule files based on the include_perf_files flag
             self._load_rules(load_dir)
 
@@ -73,24 +73,24 @@ class RuleTestHelper:
         for rule_name, rule in self.rules_manager._all_rules.items():
             self.rule_conditions[rule_name] = rule.when
             logger.info(f'Rule {rule_name} conditions: {rule.when}')
-            
+
     def _load_rules(self, directory:'Path') -> 'None':
         """Load rule files from the directory, optionally including performance test files."""
         # Find all .zrules files in the directory
         all_files = list(directory.glob('*.zrules'))
-        
+
         # Check if there's a perf subdirectory
         perf_dir = directory / 'perf'
         perf_files = []
-        
+
         if perf_dir.exists() and perf_dir.is_dir() and self.include_perf_files:
             # Find all .zrules files in the perf subdirectory
             perf_files = list(perf_dir.glob('*.zrules'))
             logger.info(f'Found {len(perf_files)} performance test files in {perf_dir}')
-        
+
         # Filter out performance test files from the main directory
         non_perf_files = [f for f in all_files if not f.name.startswith('perf_')]
-        
+
         if self.include_perf_files:
             # Include all files from the main directory and perf subdirectory
             files_to_load = non_perf_files + perf_files
@@ -99,7 +99,7 @@ class RuleTestHelper:
             # Only include non-performance files from the main directory
             files_to_load = non_perf_files
             logger.info(f'Loading {len(non_perf_files)} regular files (excluding performance files)')
-        
+
         # Load each file individually
         for rule_file in files_to_load:
             self.rules_manager.load_rules_from_file(rule_file)
