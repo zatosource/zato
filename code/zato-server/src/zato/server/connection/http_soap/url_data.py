@@ -20,7 +20,7 @@ from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import CHANNEL, CONNECTION, MISC, RATE_LIMIT, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.dispatch import dispatcher
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
@@ -141,7 +141,7 @@ class URLData(CyURLData):
 # ################################################################################################################################
 
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
-        enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
+        enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         """
 

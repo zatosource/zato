@@ -38,7 +38,7 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common.api import DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
@@ -101,15 +101,7 @@ internal_to_ignore = []
 # ################################################################################################################################
 # ################################################################################################################################
 
-_unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
 data_class_model_class_name = 'zato.server.service.Model'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ModuleCtx:
-    Rate_Limit_Exact   = RATE_LIMIT.TYPE.EXACT.id,
-    Rate_Limit_Service = RATE_LIMIT.OBJECT_TYPE.SERVICE
 
 # ################################################################################################################################
 # ################################################################################################################################
