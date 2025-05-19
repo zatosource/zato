@@ -63,7 +63,7 @@ class Create(ZatoCommand):
             cluster.name = args.cluster_name
             cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
 
-            for name in( 'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
+            for name in('odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
                 setattr(cluster, name, getattr(args, name))
             session.add(cluster)
 
@@ -81,8 +81,12 @@ class Create(ZatoCommand):
             if not admin_invoke_password:
                 admin_invoke_password = self.generate_password()
 
-            admin_invoke_sec = HTTPBasicAuth(None, ServiceConst.API_Admin_Invoke_Username, True, ServiceConst.API_Admin_Invoke_Username, 'Zato admin invoke', admin_invoke_password, cluster)
-            ide_publisher_sec = HTTPBasicAuth(None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password(), cluster)
+            admin_invoke_sec = HTTPBasicAuth(
+                None, ServiceConst.API_Admin_Invoke_Username, True, ServiceConst.API_Admin_Invoke_Username,
+                'Zato admin invoke', admin_invoke_password, cluster)
+
+            ide_publisher_sec = HTTPBasicAuth(
+                None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password(), cluster)
 
             session.add(admin_invoke_sec)
             session.add(ide_publisher_sec)
