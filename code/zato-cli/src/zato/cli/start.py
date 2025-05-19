@@ -137,6 +137,7 @@ Examples:
         on_keyboard_interrupt:'callnone'=None,
         *,
         extra_options: 'dictnone' = None,
+        env_vars: 'dictnone' = None,
     ) -> 'int':
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
@@ -170,7 +171,9 @@ Examples:
         exit_code = start_python_process(
             name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, options,
             stderr_path=self.args.stderr_path,
-            stdin_data=self.stdin_data)
+            stdin_data=self.stdin_data,
+            env_vars=env_vars
+        )
 
         if self.show_output:
             if not self.args.fg and self.verbose:
@@ -297,25 +300,6 @@ Examples:
 
 # ################################################################################################################################
 
-    def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
-
-        # Potentially sets up the deployment of any assets given on input
-        extra_options = self._maybe_set_up_deploy()
-
-        # Check basic configuration
-        self.run_check_config()
-
-        # Start the server now
-        return self.start_component(
-            'zato.server.main',
-            'server',
-            self.component_dir,
-            self.delete_pidfile,
-            extra_options=extra_options
-        )
-
-# ################################################################################################################################
-
     def _on_web_admin(self, *ignored:'any_') -> 'None':
         # Zato
         from zato.common.json_internal import loads
@@ -325,6 +309,35 @@ Examples:
         import os
 
         self.run_check_config() # Keep this: checks basic config and ensures no existing pidfile (important)
+
+        # --- Determine Zato code paths for PYTHONPATH ---
+        # __file__ for start.py is e.g., /path/to/zato/code/zato-cli/src/zato/cli/start.py
+        # We want to get to /path/to/zato/code/
+        script_dir = os.path.dirname(__file__)  # .../zato-cli/src/zato/cli
+        zato_cli_src_zato_dir = os.path.dirname(script_dir) # .../zato-cli/src/zato
+        zato_cli_src_dir = os.path.dirname(zato_cli_src_zato_dir) # .../zato-cli/src
+        zato_cli_code_dir = os.path.dirname(zato_cli_src_dir) # .../zato-cli
+        zato_base_code_dir = os.path.dirname(zato_cli_code_dir) # .../code - This is the root for component src dirs
+
+        zato_src_paths_to_add = [
+            os.path.join(zato_base_code_dir, 'zato-common', 'src'),
+            os.path.join(zato_base_code_dir, 'zato-web-admin', 'src'),
+            # Add other Zato src directories if they become necessary for wsgi.py or its imports
+            # e.g., os.path.join(zato_base_code_dir, 'zato-server', 'src'),
+        ]
+
+        current_pythonpath = os.environ.get('PYTHONPATH', '')
+        # Prepend our paths to ensure they take precedence and handle existing paths
+        new_pythonpath_parts = list(zato_src_paths_to_add) # Start with our new paths
+        if current_pythonpath:
+            new_pythonpath_parts.extend(current_pythonpath.split(os.pathsep))
+        
+        # Create a clean, unique list of paths
+        unique_paths = []
+        for p_item in new_pythonpath_parts:
+            if p_item and p_item not in unique_paths:
+                unique_paths.append(p_item)
+        final_pythonpath = os.pathsep.join(unique_paths)
 
         # --- Configuration for Gunicorn ---
         component_path = self.component_dir # This is ZATO_DASHBOARD_BASE_DIR for the wsgi.py script
@@ -370,12 +383,18 @@ Examples:
              gunicorn_args.append('--daemon')
 
         # Environment variables for Gunicorn process
-        gunicorn_env_vars = os.environ.copy()
+        gunicorn_env_vars = os.environ.copy() # Start with a copy of current environment
         gunicorn_env_vars['Zato_Dashboard_Base_Dir'] = component_path
-        # PYTHONPATH should be inherited from the `zato start` environment
+        gunicorn_env_vars['PYTHONPATH'] = final_pythonpath # Set the carefully constructed PYTHONPATH
 
         # For `proc.start_process`, `extra_cli_options` is a string.
         gunicorn_extra_cli_options = ' '.join(gunicorn_args)
+
+        self.logger.debug(f'Gunicorn executable: {gunicorn_executable}')
+        self.logger.debug(f'Gunicorn CLI options: {gunicorn_extra_cli_options}')
+        self.logger.debug(f'Gunicorn working directory (implied by component_path for logs/pid): {component_path}')
+        self.logger.debug(f'Gunicorn Zato_Dashboard_Base_Dir: {gunicorn_env_vars.get("Zato_Dashboard_Base_Dir")}')
+        self.logger.debug(f'Gunicorn PYTHONPATH (inherited): {gunicorn_env_vars.get("PYTHONPATH", "Not explicitly set, inherited")}')
 
         # `stderr_path` for `proc.start_process` captures Gunicorn's initial bootstrap errors.
         # Gunicorn's own `--error-logfile` handles its operational errors.
@@ -396,7 +415,7 @@ Examples:
             extra_cli_options=gunicorn_extra_cli_options, # Gunicorn's own arguments
             on_keyboard_interrupt=on_interrupt_handler,
             failed_to_start_err=self.SYS_ERROR.FAILED_TO_START,
-            extra_options={'env': gunicorn_env_vars}, # Pass environment to Gunicorn
+            env_vars=gunicorn_env_vars, # Pass environment to Gunicorn via the new parameter
             stderr_path=gunicorn_bootstrap_stderr,    # For initial Gunicorn errors
             stdin_data=self.stdin_data # Pass through stdin configuration
         )
@@ -407,13 +426,26 @@ Examples:
                 if exit_code == 0: # Sarge returns 0 for async success immediately
                     self.logger.debug('Zato Dashboard `{}` starting in background'.format(component_path))
                 else:
-                    self.logger.error('Zato Dashboard `{}` failed to start in background (exit code: {}). Check logs.'.format(component_path, exit_code))
+                    self.logger.error(
+                        'Zato Dashboard `{}` failed to start in background (sarge exit code: {}). Check logs.'.format(
+                            component_path, exit_code
+                        )
+                    )
             # If in foreground, sarge blocks, and OK/error is determined by Gunicorn's actual exit code.
             # `proc.start_process` already handles logging errors from stderr if `wait_for_error` finds something.
             # If it's foreground and `proc.start_process` returns, Gunicorn has exited.
             # An explicit 'OK' might only be for successful daemonization or clean foreground exit.
             elif exit_code == 0: # Gunicorn exited cleanly in foreground
                  self.logger.info('OK')
+            else: # Gunicorn exited with an error in foreground
+                log_msg_parts = [
+                    f'Zato Dashboard `{component_path}` (Gunicorn) running in foreground exited with code {exit_code}.',
+                    'To check logs, run:',
+                    f'  Error log:         cat {error_log}',
+                    f'  Access log:        cat {access_log}',
+                    f'  Bootstrap log:     cat {gunicorn_bootstrap_stderr}',
+                ]
+                self.logger.error('\n'.join(log_msg_parts))
 
         # Original code was `_ = self.start_component(...)`, so no explicit return needed here.
 
