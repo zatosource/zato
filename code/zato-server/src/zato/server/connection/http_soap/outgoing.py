@@ -197,16 +197,6 @@ class BaseHTTPSOAPWrapper:
             self.requests_auth = _requests_auth
             self.username = _username
 
-        # #######################################
-        #
-        # WS-Security
-        #
-        # #######################################
-        elif self.sec_type == _WSS:
-            self.soap[self.config['soap_version']]['header'] = \
-                self.soap[self.config['soap_version']]['header_template'].format(
-                    Username=self.config['username'], Password=self.config['password'])
-
 # ################################################################################################################################
 
     def _get_auth(self) -> 'any_':
@@ -322,7 +312,7 @@ class BaseHTTPSOAPWrapper:
             # .. do send it ..
             response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
-                cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
+                verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
 
             # .. log what we received ..
             msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'

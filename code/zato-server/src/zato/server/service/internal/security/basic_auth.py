@@ -17,7 +17,6 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -62,9 +61,6 @@ class Create(AdminService):
         output_required = 'id', 'name'
 
     def handle(self):
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
         input.password = uuid4().hex
@@ -122,9 +118,6 @@ class Edit(AdminService):
         output_required = 'id', 'name'
 
     def handle(self):
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(self.request.input)
 
         # Local aliases
         input = self.request.input

@@ -6,20 +6,28 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
 import os
-import sys
 import logging
 
+# Django
 from django.core.wsgi import get_wsgi_application
 
-# Basic logging for WSGI setup process
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-logger = logging.getLogger(__name__)
-logger.info('Zato Dashboard: Initializing...')
+# ################################################################################################################################
+# ################################################################################################################################
 
 from zato.admin.zato_settings import update_globals
 from zato.common.json_internal import loads
 from zato.common.util.open_ import open_r
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 Zato_Dashboard_Base_Dir = os.environ.get('Zato_Dashboard_Base_Dir')
 if not Zato_Dashboard_Base_Dir:
@@ -39,7 +47,6 @@ config = loads(config_content)
 
 config['config_dir'] = base_dir_abs # settings.py uses this
 
-# If log_config in web-admin.conf is relative, it's relative to Zato_Dashboard_Base_Dir.
 original_log_config = config.get('log_config')
 if original_log_config:
     if not os.path.isabs(original_log_config):
@@ -49,8 +56,10 @@ if original_log_config:
 # where zato.admin.settings can access them.
 update_globals(config)
 
-# Set the DJANGO_SETTINGS_MODULE environment variable
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.admin.settings')
+_ = os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.admin.settings')
 
 # This will implicitly call django.setup() if not already done
 application = get_wsgi_application()
+
+# ################################################################################################################################
+# ################################################################################################################################

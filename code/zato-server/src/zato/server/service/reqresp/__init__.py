@@ -64,7 +64,6 @@ if 0:
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
-    KVDBAPI = KVDBAPI
     Logger = Logger
     PoolStore = PoolStore
     SearchAPI = SearchAPI

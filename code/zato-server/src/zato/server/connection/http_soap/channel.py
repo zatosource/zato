@@ -265,9 +265,6 @@ class RequestDispatcher:
         # Store for later use prior to any kind of parsing
         wsgi_environ['zato.http.raw_request'] = payload
 
-        # Assume that by default we are not authenticated / authorized
-        auth_result = None
-
         # This dictionary may be populated by a service with HTTP headers,
         # which the headers will be still in the dictionary even if the service
         # raises an exception. In this way we can return both the headers
@@ -424,7 +421,6 @@ class RequestDispatcher:
                         if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
                             response = e.msg
                         else:
-                            url_path = channel_item['url_path'] # type: str
                             needs_msg = e.needs_msg
                             response = e.msg if needs_msg else 'Bad request'
 
