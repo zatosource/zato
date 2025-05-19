@@ -231,7 +231,8 @@ class TestMatchSpecialOperators(unittest.TestCase):
             data = {
                 'incident_severity': 7,
                 'population_affected': 50,
-                'critical_infrastructure_involved': 'power_plant'
+                'critical_infrastructure_involved': 'power_plant',
+                'allowed_types': ['power_plant', 'water_treatment', 'government', 'hospital']
             }
 
             result = self.helper.match_rule(rule_name, data)
@@ -241,7 +242,8 @@ class TestMatchSpecialOperators(unittest.TestCase):
             data = {
                 'incident_severity': 7,
                 'population_affected': 50,
-                'critical_infrastructure_involved': 'shopping_mall'
+                'critical_infrastructure_involved': 'shopping_mall',
+                'allowed_types': ['power_plant', 'water_treatment', 'government', 'hospital']
             }
 
             result = self.helper.match_rule(rule_name, data)
@@ -251,7 +253,8 @@ class TestMatchSpecialOperators(unittest.TestCase):
             data = {
                 'incident_severity': 7,
                 'population_affected': 50,
-                'critical_infrastructure_involved': 'POWER_PLANT'  
+                'critical_infrastructure_involved': 'POWER_PLANT',
+                'allowed_types': ['power_plant', 'water_treatment', 'government', 'hospital']
             }
 
             # This tests if the in operator is case-sensitive
