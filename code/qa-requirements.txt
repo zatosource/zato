@@ -4,6 +4,7 @@ flake8-bugbear
 flake8-coding
 flake8-comprehensions
 flake8-quotes
+mock==5.2.0
 mypy
 mypy-extensions>=1.0.0,<2.0.0
 openapi-spec-validator
