@@ -30,7 +30,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
+    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
         strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
@@ -1589,9 +1589,6 @@ class ObjectImporter:
 
     def import_objects(self, already_existing) -> 'Results': # type: ignore
 
-        # stdlib
-        from time import sleep
-
         existing_combined = self._build_existing_objects_to_edit_during_import(already_existing)
         new_combined = self._build_new_objects_to_create_during_import(existing_combined)
 
@@ -1625,7 +1622,6 @@ class ObjectImporter:
         #
         # Create new objects, again, definitions come first ..
         #
-
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         self._trigger_sync_server_objects()
@@ -1747,9 +1743,6 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def _maybe_change_password(self, object_id, item_type, attrs): # type: ignore
-
-        # stdlib
-        from time import sleep
 
         service_info = SERVICE_BY_NAME[item_type]
         service_name:'any_' = service_info.get_service_name('change-password')
