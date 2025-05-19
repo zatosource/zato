@@ -37,7 +37,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, SEC_DEF_TYPE, simple_types, \
      URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS

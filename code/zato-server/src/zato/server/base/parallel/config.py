@@ -12,7 +12,6 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import RATE_LIMIT
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
@@ -38,9 +37,6 @@ logger = getLogger(__name__)
 
 class ModuleCtx:
     Config_Store = ('apikey', 'basic_auth',)
-    Rate_Limit_Exact = RATE_LIMIT.TYPE.EXACT.id
-    Rate_Limit_Sec_Def = RATE_LIMIT.OBJECT_TYPE.SEC_DEF
-    Rate_Limit_HTTP_SOAP = RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
