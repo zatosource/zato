@@ -17,7 +17,6 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -25,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, anytuple
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +39,7 @@ class GetList(AdminService):
         response_elem = 'zato_security_apikey_get_list_response'
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username'
-        output_optional:'anytuple' = 'header'
+        output_optional:'any_' = 'header'
 
     def get_data(self, session:'SASession') -> 'any_':
         search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
@@ -61,13 +60,10 @@ class Create(AdminService):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
         input_required = 'name', 'is_active'
-        input_optional:'anytuple' = 'cluster_id', 'header'
+        input_optional:'any_' = 'cluster_id', 'header'
         output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
         input.username = 'Zato-Not-Used-' + uuid4().hex
@@ -123,7 +119,7 @@ class Edit(AdminService):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
         input_required = 'id', 'name', 'is_active'
-        input_optional:'anytuple' = 'cluster_id', 'header'
+        input_optional:'any_' = 'cluster_id', 'header'
         output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
@@ -131,9 +127,6 @@ class Edit(AdminService):
         input = self.request.input
         input.header = input.header or self.server.api_key_header
         cluster_id = input.get('cluster_id') or self.server.cluster_id
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(input)
 
         with closing(self.odb.session()) as session:
             try:

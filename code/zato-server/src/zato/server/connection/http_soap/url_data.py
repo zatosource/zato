@@ -494,10 +494,6 @@ class URLData(CyURLData):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
-
-        # If we are editing an object, old_data will be populated, otherwise, it is an empty dict
-        is_edit = bool(old_data)
-
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)

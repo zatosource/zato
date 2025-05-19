@@ -113,7 +113,7 @@ class AdminService(Service):
 
                 data = deepcopy(to_copy)
 
-            for k, v in data.items():
+            for k in data:
                 if 'password' in k:
                     data[k] = SECRET_SHADOW
 

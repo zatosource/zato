@@ -9,13 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from collections import namedtuple
-from datetime import datetime
 from http import HTTPStatus
 from json import dumps, loads
 from traceback import format_exc
-
-# dateutil
-from dateutil.relativedelta import relativedelta
 
 # Django
 from django.http import HttpRequest, HttpResponse
@@ -27,7 +23,6 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.admin.middleware import HeadersEnrichedException
-from zato.common.api import ZATO_NONE
 from zato.common.ext.validate_ import is_boolean
 from zato.common.odb.model import Service
 

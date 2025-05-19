@@ -11,7 +11,6 @@ import logging
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
-from json import loads
 from re import findall
 from traceback import format_exc
 
@@ -69,6 +68,7 @@ Date = Date
 DateTime = DateTime
 Decimal = Decimal
 Bool = Bool
+DataverseClient = DataverseClient
 Dict = Dict
 DictList = DictList
 Float = Float
@@ -94,7 +94,6 @@ if 0:
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
-    from zato.server.connection.connector import Connector
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.base.worker import WorkerStore
@@ -117,7 +116,6 @@ if 0:
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO # type: ignore
     FTPStore = FTPStore
-    KVDBAPI = KVDBAPI # type: ignore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager

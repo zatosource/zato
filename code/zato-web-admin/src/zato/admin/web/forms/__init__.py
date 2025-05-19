@@ -16,7 +16,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import RATE_LIMIT, SIMPLE_IO, ZATO_NONE
+from zato.common.api import SIMPLE_IO, ZATO_NONE
 
 # ################################################################################################################################
 
