@@ -26,8 +26,13 @@
     <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
 
+
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    {% if items %}
+        {% include "zato/css-titlebar-padding.html" %}
+    {% endif %}
 
     <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
 
