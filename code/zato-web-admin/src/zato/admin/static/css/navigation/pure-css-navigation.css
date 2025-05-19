@@ -426,7 +426,15 @@ ul {
  @media (min-width:1200px) {
 }
  .pure-css-nav a:not([href]), .pure-css-nav a[href='']:hover,
- .pure-css-nav a[href='#']:hover, .pure-css-nav a[href='']:active,
- .pure-css-nav a[href='#']:active {
+ .pure-css-nav a[href='']:active,
+ .pure-css-nav a[href='']:active {
     pointer-events:none;
+}
+
+/* Ensure menu links with # href have pointer events and cursor */
+.pure-css-nav a[href='#'],
+.pure-css-nav a[href='#']:hover,
+.pure-css-nav a[href='#']:active {
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
