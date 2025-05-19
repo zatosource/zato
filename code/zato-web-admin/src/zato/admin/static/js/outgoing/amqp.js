@@ -7,7 +7,6 @@ $.fn.zato.data_table.OutgoingAMQP = new Class({
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
-                                this.def_id ? this.def_id : '(none)',
                                 this.content_encoding ? this.content_encoding : '(none)');
     }
 });
@@ -47,7 +46,6 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     // 2
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.def_name);
 
     // 3
     row += String.format('<td>{0}</td>', data.delivery_mode_text || $.fn.zato.empty_value);
@@ -70,7 +68,6 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 
     // 7
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_mode || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.def_id || '');
     row += String.format("<td class='ignore'>{0}</td>", item.priority || '');
 
     // 8
