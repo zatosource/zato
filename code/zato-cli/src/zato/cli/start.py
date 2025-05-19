@@ -372,8 +372,8 @@ Examples:
             # Consider exiting with self.SYS_ERROR.CONFIG_ERROR if critical
             return
 
-        bind_address = f"{host}:{port}"
-        workers = 3  # TODO: Make this configurable later if needed
+        bind_address = f'{host}:{port}'
+        workers = 3
 
         # Gunicorn PID file must match what `zato stop` expects: component_dir/pidfile
         pid_file = os.path.join(component_path, 'pidfile')
