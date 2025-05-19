@@ -222,11 +222,6 @@ def enrich_with_static_config(object_):
     object_.component_enabled_sms = True
     object_.get_name()
 
-    def target_match(*args, **kwargs):
-        return True
-
-    is_allowed = target_match
-
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
     object_._worker_store = Bunch(
         sql_pool_store=None, cassandra_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None)

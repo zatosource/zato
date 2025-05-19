@@ -27,7 +27,6 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from getpass import getuser as getpass_getuser
 from glob import glob
-from hashlib import sha256
 from inspect import isfunction, ismethod
 from itertools import tee, zip_longest
 from io import StringIO
@@ -88,7 +87,6 @@ from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
 from six import PY3
 from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
-from zato.common.py23_.spring_ import CAValidatingHTTPSConnection, SSLClientTransport
 
 if PY3:
     from functools import cmp_to_key
@@ -1510,7 +1508,7 @@ def update_bind_port(data, idx):
 
 def start_connectors(worker_store, service_name, data):
 
-    for idx, pid in enumerate(get_worker_pids()):
+    for pid in get_worker_pids():
         worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
@@ -1891,7 +1889,7 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
     if not hasattr(root, '__path__') or not root.__path__:
         # Root is not a package (e.g., a single .py file module) or its __path__ is empty.
         # No submodules to find through filesystem scan.
-        return sorted(list(found_module_paths))
+        return sorted(found_module_paths)
 
     # Use the first path in __path__. For namespace packages, __path__ can have multiple entries.
     # This function will only search the first one. For standard packages, there's usually one entry.
@@ -1900,7 +1898,7 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
     # Ensure the path is an actual directory on the filesystem.
     if not os.path.isdir(root_package_dir):
         # Path might be part of a zip archive or other non-standard location not scannable by os.walk.
-        return sorted(list(found_module_paths))
+        return sorted(found_module_paths)
 
     # root_module_name is already defined and added
 
@@ -1945,6 +1943,6 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
                 full_module_path = f'{root_module_name}.{module_suffix}'
                 found_module_paths.add(full_module_path)
 
-    return sorted(list(found_module_paths))
+    return sorted(found_module_paths)
 
 # ################################################################################################################################

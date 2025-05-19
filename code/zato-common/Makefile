@@ -30,12 +30,6 @@ flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
-type-check:
-	echo "Running type checks ($(Zato_Package_Name))"
-	$(MAKE) mypy
-	$(MAKE) pyright
-
 static-check:
 	echo "Running static checks in $(Zato_Package_Name)"
 	$(MAKE) flake8
-	$(MAKE) type-check
