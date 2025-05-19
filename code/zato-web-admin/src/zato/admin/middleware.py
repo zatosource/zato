@@ -24,7 +24,6 @@ from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
-from zato.common.util.platform_ import is_windows
 from zato.common.version import get_version
 
 # ################################################################################################################################

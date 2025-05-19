@@ -14,12 +14,6 @@ from operator import attrgetter
 from traceback import format_exc
 from uuid import uuid4
 
-# gevent
-from gevent import spawn
-
-# requests
-from requests import get as requests_get
-
 # Python 2/3 compatibility
 from builtins import bytes
 from zato.common.ext.future.utils import iterkeys
@@ -39,7 +33,7 @@ from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean, Float, Integer, Service
+from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -226,9 +220,6 @@ class Edit(AdminService):
 
     def handle(self):
         input = self.request.input
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(input)
 
         with closing(self.odb.session()) as session:
             try:

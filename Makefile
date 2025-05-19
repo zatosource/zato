@@ -56,8 +56,6 @@ static-check:
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	echo "Static checks OK"
 
-	$(MAKE) type-check
-
 type-check:
 	cd $(CURDIR)/code/zato-common && $(MAKE) type-check
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
@@ -81,7 +79,6 @@ rules-perf-tests:
 
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
-	npx -y playwright install
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 

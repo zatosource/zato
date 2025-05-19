@@ -23,7 +23,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import AsIs, Bool, Int
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta

@@ -25,7 +25,7 @@ from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
-from zato.server.service import AsIs, Boolean, Integer, List
+from zato.server.service import AsIs, Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -342,9 +342,6 @@ class Create(_CreateEdit):
         # For later use
         skip_opaque = []
 
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(self.request.input)
-
         input = self.request.input
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ) else None
         input.soap_action = input.soap_action if input.soap_action else ''
@@ -518,9 +515,6 @@ class Edit(_CreateEdit):
 
         # For later use
         skip_opaque = []
-
-        # If we have a rate limiting definition, let's check it upfront
-        DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
         input.security_id  = input.security_id if input.security_id not in (ZATO_NONE,) else None

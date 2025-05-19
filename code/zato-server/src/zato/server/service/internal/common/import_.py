@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from copy import deepcopy
 from dataclasses import dataclass
-from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import insert

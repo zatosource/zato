@@ -211,15 +211,6 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        if asbool(self.crypto_config.use_tls):
-            self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
-            self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
-            self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
-            self.cfg.set('ca_certs', absjoin(self.repo_location, self.crypto_config.ca_certs_location))
-            self.cfg.set('keyfile', absjoin(self.repo_location, self.crypto_config.priv_key_location))
-            self.cfg.set('certfile', absjoin(self.repo_location, self.crypto_config.cert_location))
-            self.cfg.set('do_handshake_on_connect', True)
-
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
 
     def load(self):
@@ -338,20 +329,11 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
-    kvdb_logger = logging.getLogger('zato_kvdb')
 
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
-
-    if server_config.main.get('debugger_enabled'):
-        import debugpy
-        debugger_host = server_config.main.debugger_host
-        debugger_port = server_config.main.debugger_port
-        logger.info('Debugger waiting for connections on %s:%s', debugger_host, debugger_port)
-        _ = debugpy.listen((debugger_host, debugger_port))
-        debugpy.wait_for_client()
 
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
     sio_config = get_sio_server_config(sio_config)

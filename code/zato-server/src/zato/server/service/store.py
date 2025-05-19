@@ -18,14 +18,12 @@ from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
 from inspect import getmodule, getmro, getsourcefile, isclass
-from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from random import randint
 from shutil import copy as shutil_copy
 from traceback import format_exc
 from typing import Any, List
 
 # gevent
-from gevent import sleep as gevent_sleep
 from gevent.lock import RLock
 
 # humanize
@@ -40,16 +38,14 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.api import DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.match import Matcher
 from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
-from zato.common.util.platform_ import is_non_windows
+from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import SchedulerFacade, Service
@@ -65,7 +61,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, module_, stranydict, \
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
         strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
