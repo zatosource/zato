@@ -20,7 +20,7 @@ from traceback import format_exc
 from regex import compile as regex_compile
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, SIMPLE_IO, \
     TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
@@ -100,7 +100,6 @@ for code, response in HTTP_RESPONSES.items():
 class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
     No_URL_Match = (None, False)
-    Rate_Limit_HTTP = RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP
     Exception_Separator = '*' * 80
     SIO_JSON = SIMPLE_IO.FORMAT.JSON
     SIO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
