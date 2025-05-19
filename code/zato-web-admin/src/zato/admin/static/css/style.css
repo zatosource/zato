@@ -764,3 +764,7 @@ input[data-zato-validator-required="required"]::placeholder {
 .options-expanded td.to-ignore {
     background-color: #ccc;
 }
+
+.menu-link {
+    cursor: pointer;
+}
