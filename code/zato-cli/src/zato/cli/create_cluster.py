@@ -163,7 +163,6 @@ class Create(ZatoCommand):
         from zato.common.api import SIMPLE_IO
         from zato.common.odb.model import HTTPSOAP, Service
 
-
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'pub.zato.ping'
         ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
