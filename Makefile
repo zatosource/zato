@@ -11,37 +11,11 @@ common-tests:
 cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
-pylint:
-	cd $(CURDIR)/code/zato-broker    && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-cli       && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-client    && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-common    && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-distlock  && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-cy        && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
-	cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint || true
-
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
 
 cli-tests:
 	cd $(CURDIR)/code/zato-cli && make run-tests
-
-flake8:
-	cd $(CURDIR)/code/zato-broker    && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-cli       && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-client    && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-common    && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-distlock  && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-cy        && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-scheduler && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-server    && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-testing   && $(MAKE) flake8
-	cd $(CURDIR)/code/zato-web-admin && $(MAKE) flake8
-	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
-	echo "Flake8 checks OK"
 
 static-check:
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
@@ -79,6 +53,7 @@ rules-perf-tests:
 
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
+	npx playwright install
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
