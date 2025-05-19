@@ -349,7 +349,7 @@ Examples:
         new_pythonpath_parts = list(zato_src_paths_to_add) # Start with our new paths
         if current_pythonpath:
             new_pythonpath_parts.extend(current_pythonpath.split(os.pathsep))
-        
+
         # Create a clean, unique list of paths
         unique_paths = []
         for p_item in new_pythonpath_parts:
