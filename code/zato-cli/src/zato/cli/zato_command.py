@@ -449,8 +449,6 @@ def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
 
     # Extract the options ..
     odb_type   = opts[0]
-    redis_host = opts[1]
-    redis_port = opts[2]
 
     # .. remove them from their pre-3.2 non-optional positions,
     # .. note that we need to do it once for each of odb_type, redis_host and redis_port

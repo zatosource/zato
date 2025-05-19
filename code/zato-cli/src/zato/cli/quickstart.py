@@ -14,7 +14,7 @@ from copy import deepcopy
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
-from zato.common.util.platform_ import is_windows, is_non_windows
+from zato.common.util.platform_ import is_windows
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -486,7 +486,7 @@ class Create(ZatoCommand):
 
         if create_components_other_than_scheduler:
 
-            for idx, name in enumerate(server_names): # type: ignore
+            for name in server_names: # type: ignore
                 server_path = os.path.join(args_path, server_names[name])
                 os.mkdir(server_path)
 

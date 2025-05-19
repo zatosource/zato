@@ -26,13 +26,6 @@ pylint:
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-common/src/zato/common/
 
-pyright:
-	$(Zato_Python_Dir)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py
-	$(Zato_Python_Dir)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/util/pubsub.py
-
-mypy:
-	$(Zato_Python_Dir)/mypy --show-error-codes --ignore-missing-imports $(CURDIR)/src/zato/common/pubsub.py
-
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

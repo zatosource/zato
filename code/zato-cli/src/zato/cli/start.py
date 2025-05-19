@@ -394,11 +394,11 @@ Examples:
             '--pid', pid_file,
             '--access-logfile', access_log,
             '--error-logfile', error_log,
-            '--name', f'zato-web-admin-{os.path.basename(component_path)}', # Set process name if possible
+            '--name', 'zato-dashboard', # Set desired process name
         ]
 
         if not self.args.fg:
-             gunicorn_args.append('--daemon')
+            gunicorn_args.append('--daemon')
 
         # Environment variables for Gunicorn process
         gunicorn_env_vars = os.environ.copy() # Start with a copy of current environment
@@ -457,7 +457,7 @@ Examples:
             # If it's foreground and `proc.start_process` returns, Gunicorn has exited.
             # An explicit 'OK' might only be for successful daemonization or clean foreground exit.
             elif exit_code == 0: # Gunicorn exited cleanly in foreground
-                 self.logger.info('OK')
+                self.logger.info('OK')
             else: # Gunicorn exited with an error in foreground
                 log_msg_parts = [
                     f'Zato Dashboard `{component_path}` (Gunicorn) running in foreground exited with code {exit_code}.',

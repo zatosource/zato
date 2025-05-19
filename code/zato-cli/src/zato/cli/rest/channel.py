@@ -140,10 +140,6 @@ class CreateChannel(SecurityAwareCommand):
         channel_service = getattr(args, 'service', None) or Config.ServiceName
         basic_auth = getattr(args, 'basic_auth', '')
         api_key = getattr(args, 'api_key', '')
-        store_requests = getattr(args, 'store_requests', 0)
-        store_responses = getattr(args, 'store_responses', 0)
-        max_bytes_requests = getattr(args, 'max_bytes_requests', None) or Config.MaxBytesRequests
-        max_bytes_responses = getattr(args, 'max_bytes_requests', None) or Config.MaxBytesResponses
 
         # For later use
         now = fs_safe_now()
