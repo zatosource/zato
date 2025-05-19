@@ -12,7 +12,6 @@ cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
 pylint:
-	cd $(CURDIR)/code/zato-agent     && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-client    && $(MAKE) pylint || true
@@ -31,7 +30,6 @@ cli-tests:
 	cd $(CURDIR)/code/zato-cli && make run-tests
 
 flake8:
-	cd $(CURDIR)/code/zato-agent     && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) flake8
 	cd $(CURDIR)/code/zato-client    && $(MAKE) flake8
@@ -46,7 +44,6 @@ flake8:
 	echo "Flake8 checks OK"
 
 static-check:
-	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-client    && $(MAKE) static-check
