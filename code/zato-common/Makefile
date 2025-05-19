@@ -4,7 +4,7 @@ Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-common
 
 rules-tests:
-	cd $(CURDIR) && python -m pytest test/zato/common/rules -v -W ignore::DeprecationWarning
+	$(Zato_Python_Dir)/pytest test/zato/common/rules -v -W ignore::DeprecationWarning
 
 rules-perf-tests:
 	cd $(CURDIR) && PYTHONPATH=$(CURDIR)/.. python test/zato/common/rules/test_perf.py
