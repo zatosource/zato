@@ -25,6 +25,7 @@ google-api-python-client==2.52.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.5.2
 greenlet==3.0.0
+gunicorn==23.0.0
 hiredis==3.1.0
 httplib2==0.19.0
 humanize==3.0.1
