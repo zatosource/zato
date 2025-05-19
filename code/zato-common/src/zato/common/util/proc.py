@@ -129,7 +129,8 @@ def start_process(
         extra_options:'strdict | None'=None,
         stderr_path:'str | None'=None,
         stdin_data:'str | None'=None,
-        async_keyword:'str'=async_keyword
+        async_keyword:'str'=async_keyword,
+        env_vars:'strdict | None'=None
     ) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
@@ -161,6 +162,9 @@ def start_process(
         # Do not send input if it does not really exist because it prevents pdb from attaching to a service's stdin
         if stdin_data:
             run_kwargs['input'] = stdin_data
+        
+        if env_vars:
+            run_kwargs['env'] = env_vars
 
         p = sarge_run(program, **run_kwargs)
 
@@ -199,9 +203,10 @@ def start_python_process(
         failed_to_start_err:'int'=-100,
         extra_options:'strdict | None'=None,
         stderr_path:'str | None'=None,
-        stdin_data:'str | None'=None
+        stdin_data:'str | None'=None,
+        env_vars:'strdict | None'=None
     ) -> 'int':
-    """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
+    """ Starts a Python program in background or foreground, depending on the 'fg' flag.
     """
     options:'strdict' = {
         'fg': run_in_fg,
@@ -222,6 +227,6 @@ def start_python_process(
     extra_cli_options += '{}'.format(options)
 
     return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
-        failed_to_start_err, extra_options, stderr_path, stdin_data)
+        failed_to_start_err, extra_options, stderr_path, stdin_data, env_vars=env_vars)
 
 # ################################################################################################################################
