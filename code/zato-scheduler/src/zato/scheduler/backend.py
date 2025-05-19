@@ -26,7 +26,7 @@ from zato.common.ext.future.utils import iterkeys, itervalues
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.util.api import asbool, make_repr, new_cid, spawn_greenlet
+from zato.common.util.api import make_repr, new_cid, spawn_greenlet
 from zato.common.util.scheduler import load_scheduler_jobs_by_api, load_scheduler_jobs_by_odb, add_startup_jobs_to_odb_by_api, \
     add_startup_jobs_to_odb_by_odb
 
@@ -524,7 +524,6 @@ class Scheduler:
 
     def _init_jobs_by_api(self):
 
-        cluster_conf = self.config.main.cluster
         add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs)
 
         # Actually start jobs now, including any added above
@@ -544,7 +543,7 @@ class Scheduler:
 
         # .. otherwise, we are initializing jobs via API calls to a remote server.
         else:
-            spawn_greenlet(self._init_jobs_by_api)
+            _ = spawn_greenlet(self._init_jobs_by_api)
 
 # ################################################################################################################################
 

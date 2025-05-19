@@ -453,7 +453,7 @@ class RulePerformanceTester:
                 group_time = time.time() - group_start_time
                 self.group_times[rule_count] = group_time
                 print(f"  {Fore.CYAN}Completed {len(group_results)} tests with {rule_count} rules in {group_time:.2f} seconds{Style.RESET_ALL}")
-                
+
                 # Display results for this group
                 self._display_group_results(rule_count)
 

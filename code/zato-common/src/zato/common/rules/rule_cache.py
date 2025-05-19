@@ -20,7 +20,6 @@ from zato.common.rules.api import MatchResult, Rule
 # ################################################################################################################################
 
 if 0:
-    from rule_engine.ast import ExpressionBase
     from zato.common.typing_ import any_, anydict, bool_, dict_
 
 # ################################################################################################################################

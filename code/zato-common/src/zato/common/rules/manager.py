@@ -11,7 +11,7 @@ from logging import getLogger
 from pathlib import Path
 
 # Zato
-from zato.common.rules.cache import CachedRule, build_field_index
+from zato.common.rules.cache import build_field_index
 from zato.common.rules.evaluation import RuleEvaluator
 from zato.common.rules.loader import RuleLoader
 from zato.common.rules.models import Container, MatchResult, Rule
@@ -20,7 +20,9 @@ from zato.common.rules.models import Container, MatchResult, Rule
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dict_, set_, strdict, strlist
+    from zato.common.rules.cache import CachedRule
+    from zato.common.typing_ import any_, dict_, strdict, strlist
+    CachedRule = CachedRule
 
 # ################################################################################################################################
 # ################################################################################################################################
