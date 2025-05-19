@@ -408,11 +408,14 @@ Examples:
         # For `proc.start_process`, `extra_cli_options` is a string.
         gunicorn_extra_cli_options = ' '.join(gunicorn_args)
 
-        self.logger.debug(f'Gunicorn executable: {gunicorn_executable}')
-        self.logger.debug(f'Gunicorn CLI options: {gunicorn_extra_cli_options}')
-        self.logger.debug(f'Gunicorn working directory (implied by component_path for logs/pid): {component_path}')
-        self.logger.debug(f'Gunicorn Zato_Dashboard_Base_Dir: {gunicorn_env_vars.get("Zato_Dashboard_Base_Dir")}')
-        self.logger.debug(f'Gunicorn PYTHONPATH (inherited): {gunicorn_env_vars.get("PYTHONPATH", "Not explicitly set, inherited")}')
+        if 0:
+            self.logger.debug(f'Gunicorn executable: {gunicorn_executable}')
+            self.logger.debug(f'Gunicorn CLI options: {gunicorn_extra_cli_options}')
+            self.logger.debug(f'Gunicorn working directory (implied by component_path for logs/pid): {component_path}')
+            self.logger.debug(f'Gunicorn Zato_Dashboard_Base_Dir: {gunicorn_env_vars.get("Zato_Dashboard_Base_Dir")}')
+            self.logger.debug(f'Gunicorn PYTHONPATH (inherited): {gunicorn_env_vars.get("PYTHONPATH", "Not explicitly set, inherited")}')
+
+        self.logger.info(f'Dashboard started at {bind_address}')
 
         # `stderr_path` for `proc.start_process` captures Gunicorn's initial bootstrap errors.
         # Gunicorn's own `--error-logfile` handles its operational errors.
