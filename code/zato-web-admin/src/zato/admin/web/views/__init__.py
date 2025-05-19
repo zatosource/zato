@@ -79,13 +79,6 @@ def invoke_list_service(client, cluster, service, extra=None):
 
 # ################################################################################################################################
 
-def get_definition_list(client, cluster, def_type):
-    """ Returns all definitions of a given type existing on a given cluster.
-    """
-    return invoke_list_service(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
-
-# ################################################################################################################################
-
 def get_outconn_rest_list(req, name_to_id=False):
     """ Returns a list of all outgoing REST connections.
     """

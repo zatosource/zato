@@ -19,7 +19,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, invoke_action_handler, method_allowed
+from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingAMQP
 
@@ -79,9 +79,6 @@ class Index(_Index):
     def handle(self):
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
-
-        if self.req.zato.cluster_id:
-            def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')
 
         for item in self.items:
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]

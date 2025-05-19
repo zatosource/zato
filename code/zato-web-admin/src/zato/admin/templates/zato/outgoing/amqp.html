@@ -29,7 +29,6 @@
             {% comment %} 2 {% endcomment %}
             'name',
             '_is_active',
-            '_def_name',
 
             {% comment %} 3 {% endcomment %}
             '_delivery_mode',
@@ -51,7 +50,6 @@
 
             {% comment %} 7 {% endcomment %}
             'delivery_mode',
-            'def_id',
             'priority',
 
             {% comment %} 8 {% endcomment %}
@@ -99,7 +97,6 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Definition</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th><a href="#">Delivery mode</a></th>
@@ -120,7 +117,6 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 7 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -147,7 +143,6 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.def_name }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.delivery_mode_text|no_value_indicator }}</td>
@@ -171,7 +166,6 @@
 
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.delivery_mode }}</td>
-                        <td class='ignore'>{{ item.def_id }}</td>
                         <td class='ignore'>{{ item.priority|default_if_none:'' }}</td>
 
                         {% comment %} 8 {% endcomment %}

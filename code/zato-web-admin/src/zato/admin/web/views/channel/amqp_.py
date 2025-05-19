@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
+from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelAMQP
 
@@ -63,9 +63,6 @@ class Index(_Index):
     def handle(self):
         create_form = CreateForm(req=self.req)
         edit_form = EditForm(prefix='edit', req=self.req)
-
-        if self.req.zato.cluster_id:
-            def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')
 
         return {
             'create_form': create_form,
