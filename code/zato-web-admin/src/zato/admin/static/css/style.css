@@ -300,7 +300,8 @@ span.like-a {
 
 #data-table tr:hover a,
 #data-table tr:hover td,
-#data-table tr:hover span {
+#data-table tr:hover span,
+#data-table tr:hover td.numbering:before {
     color: #fff !important;
 }
 
