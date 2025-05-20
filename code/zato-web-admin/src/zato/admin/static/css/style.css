@@ -371,7 +371,7 @@ span.like-a {
 }
 
 .form-data {
-    width: 100%;
+    width: 50%;
     border: 1px solid #666;
     padding: 10px;
     font-size: 12px;
@@ -386,7 +386,18 @@ span.like-a {
 }
 
 .form-data td[colspan="2"] {
-    text-align: right
+    text-align: right;
+    padding-right: 0
+}
+
+.form-data td:first-child {
+    width: 30%;
+    text-align: right;
+    padding-right: 15px
+}
+
+.form-data td:nth-child(2) {
+    width: 70%
 }
 
 .ui-dialog-titlebar {
