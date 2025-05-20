@@ -134,13 +134,13 @@ ul {
 }
  .pure-css-nav > nav ul > li {
     position:relative;
-    filter: drop-shadow(1px 1px 0.06rem #363636);
 }
 
 .pure-css-nav > nav ul > li.child {
    width: 9rem;
 }
- .pure-css-nav > nav ul li a {
+
+.pure-css-nav > nav ul li a {
     display:block;
      height:100%;
 }
@@ -151,6 +151,7 @@ ul {
      position:absolute;
      z-index:1;
      display:block;
+     filter: drop-shadow(1px 1px 0.06rem #363636);
 }
  .pure-css-nav > nav ul li:hover > ul {
     visibility:visible;
