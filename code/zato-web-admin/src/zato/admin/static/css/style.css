@@ -278,12 +278,11 @@ span.like-a {
     text-decoration: none;
     transition: color 0.2s ease;
     font-weight: 500;
-    font-size: 0.85rem
-}
-
-#data-table a:hover {
-    color: #ffcc00;
-    text-decoration: underline
+    font-size: 0.8rem;
+    font-family: monospace;
+    letter-spacing: 0.02rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
 }
 
 #data-table tr.odd {
@@ -295,7 +294,7 @@ span.like-a {
 }
 
 #data-table tr:hover {
-    background-color: rgba(1, 40, 69, 0.05)
+    bxackground-color: rgba(1, 40, 69, 0.05)
 }
 
 #data-table tr.updated {
@@ -541,7 +540,7 @@ a:not(.menu-link) {
 }
 
 a:hover {
-    background-color: #e0e030;
+    bxackground-color: #e0e030;
     color: #000033;
     text-decoration: none
 }
@@ -804,7 +803,9 @@ div.page_prompt a.current {
 #data-table * tr.even:hover,
 table.multi-select-table tr:hover
 {
-    background-color: #ff8;
+    background-color: rgb(211, 229, 238);
+    border-top:1px solid #222 !important;
+    border-bottom:1px solid #222 !important;
 }
 
 .ui-icon {
