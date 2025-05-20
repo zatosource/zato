@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.Service = new Class({
     toString: function() {
-        var s = '<Service id:{0} name:{1} is_active:{2}>';
+        var s = '<Service id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.is_active ? this.is_active : '(none)'
+                                this.name ? this.name : '(none)'
                                 );
     }
 });
@@ -52,7 +51,6 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     var instance = $.fn.zato.data_table.data[item.id];
     instance.name = data.name;
 
-    var is_active = $.fn.zato.to_bool(item.is_active);
     var is_internal = $.fn.zato.to_bool(data.is_internal);
 
     var cluster_id = $(document).getUrlParam('cluster');
@@ -60,7 +58,6 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += '<td class="impexp"><input type="checkbox" /></td>';
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(data.name, cluster_id));
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
 
@@ -74,7 +71,6 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
 
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.slow_threshold);
 

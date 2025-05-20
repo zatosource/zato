@@ -319,7 +319,7 @@ $.fn.zato.scheduler.edit = function(job_type, id) {
 $.fn.zato.scheduler.delete_ = function(id) {
 
     $.fn.zato.data_table.delete_(id, 'td.job_id_',
-        'Job [{0}] deleted', 'Are you sure you want to delete the job [{0}]?',
+        'Job [{0}] deleted', 'Are you sure you want to delete job [{0}]?',
         true);
 }
 
