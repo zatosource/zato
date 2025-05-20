@@ -380,7 +380,7 @@ span.like-a {
 }
 
 #login-form .form-data {
-    max-width: 400px;
+    max-width: 480px;
     margin: 0 auto;
     background-color: var(--zato-seablue);
     color: white;
@@ -411,14 +411,14 @@ span.like-a {
 #login-form .form-data td:first-child {
     width: 30%;
     text-align: right;
-    padding-right: 15px;
+    padding-right: 23px;
     padding-left: 15px
 }
 
 #login-form .form-data td:nth-child(2) {
-    width: 70%;
-    padding-left: 8px;
-    padding-right: 15px
+    width: 80%;
+    padding-left: 0px;
+    padding-right: 70px
 }
 
 /* Override any inline styling that might interfere with button positioning */
@@ -433,7 +433,6 @@ span.like-a {
     border: 1px solid #666;
     border-bottom: none;
     text-align: left;
-    text-shadow-QQQ: 1px 1px 0 #aaa;
 }
 
 .form_hint {
