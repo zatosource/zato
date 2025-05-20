@@ -44,6 +44,55 @@
     }
     </script>
 
+    <script nonce="{{ CSP_NONCE }}">
+    function populateDatabaseDefaults(formPrefix) {
+        const engineSelect = document.getElementById(`id_${formPrefix}engine`);
+        const dbNameInput = document.getElementById(`id_${formPrefix}db_name`);
+        const portInput = document.getElementById(`id_${formPrefix}port`);
+        const hostInput = document.getElementById(`id_${formPrefix}host`);
+
+        // Database defaults mapping
+        const defaults = {
+            "zato+mssql1": {
+                dbName: "master",
+                port: "1433"
+            },
+            "mysql+pymysql": {
+                dbName: "mysql",
+                port: "3306"
+            },
+            "postgresql+pg8000": {
+                dbName: "postgres",
+                port: "5432"
+            },
+            "oracle": {
+                dbName: "FREEPDB1",
+                port: "1521"
+            }
+        };
+
+        engineSelect.addEventListener("change", function() {
+            const selectedEngine = this.value;
+
+            if (selectedEngine in defaults) {
+                const engineDefaults = defaults[selectedEngine];
+                dbNameInput.value = engineDefaults.dbName;
+                portInput.value = engineDefaults.port;
+            } else {
+                // Clear fields if no engine is selected
+                dbNameInput.value = "";
+                portInput.value = "";
+            }
+            hostInput.value = "localhost";
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        populateDatabaseDefaults("");
+        populateDatabaseDefaults("edit-");
+    });
+    </script>
+
 {% endblock %}
 
 {% block "content" %}
