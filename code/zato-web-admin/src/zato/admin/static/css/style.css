@@ -261,64 +261,136 @@ span.like-a {
 
 #data-table {
     width: 100%;
-    margin-top: 8px;
-    margin-left: 2%;
-    border: 1px solid #ccc;
-    font-size: 12px;
+    margin-top: 12px;
+    margin-left: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    font-size: 0.85rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+    border: none;
     counter-reset: data_table_counter
 }
 
 #data-table a {
-    font-size: 12px
+    color: #037ac7;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    font-weight: 500;
+    font-size: 0.85rem
+}
+
+#data-table a:hover {
+    color: #025d96;
+    text-decoration: underline
 }
 
 #data-table tr.odd {
-    background-color: #fff
+    background-color: #f8f9fa
 }
 
 #data-table tr.even {
-    background-color: #e8e8e8
+    background-color: #fff
+}
+
+#data-table tr:hover {
+    background-color: rgba(1, 40, 69, 0.05)
 }
 
 #data-table tr.updated {
-    background-color: #f7f089
+    background-color: rgba(255, 243, 205, 0.7)
 }
 
 #data-table tr.attention td,
 #data-table tr.updated td {
-    border-bottom: 1px solid #a9a244
+    border-bottom: 1px solid rgba(169, 162, 68, 0.5)
 }
 
 #data-table td,
 #data-table th {
-    padding: 6px
+    padding: 10px;
+    border-bottom: 1px solid rgba(6, 60, 101, 0.12)
 }
 
 #data-table th {
-    background: #ddd;
-    font-size: 11px
+    background: var(--zato-seablue);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    position: relative;
+    transition: background-color 0.2s ease
+}
+
+#data-table th.header:not(.ignore):hover {
+    background: var(--zato-seablue-light1);
+    cursor: pointer
+}
+
+#data-table th a {
+    color: white;
+    display: block;
+    position: relative;
+    padding-right: 15px
+}
+
+#data-table th a:after {
+    content: '\21f5';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.6;
+    font-size: 0.8rem
 }
 
 #data-table td {
-    vertical-align:middle !important
+    vertical-align: middle !important
 }
 
 #data-table td.inline_header {
-    background: #ddd
+    background: rgba(6, 60, 101, 0.05)
 }
 
 #data-table td.numbering:before {
     content: counter(data_table_counter);
-    counter-increment: data_table_counter
+    counter-increment: data_table_counter;
+    color: #777;
+    font-size: 0.8rem
 }
 
 #data-table td.impexp {
-    width: 1px
+    width: 30px
 }
 
 #data-table td.impexp input {
-    display: none;
-    width: 1px
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(6, 60, 101, 0.3);
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+    display: inline-block
+}
+
+#data-table td.impexp input:checked {
+    background-color: var(--zato-seablue-light1);
+    border-color: var(--zato-seablue-light1)
+}
+
+#data-table td.impexp input:checked:after {
+    content: '\2713';
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%)
 }
 
 .form-data {
