@@ -93,7 +93,7 @@ class _BaseGet(AdminService):
 
 # ################################################################################################################################
 
-    def _get_sec_tls_ca_cert_id_from_item(self, item):
+    def _get_validate_tls_from_item(self, item):
 
         sec_tls_ca_cert_verify_strategy = item.get('sec_tls_ca_cert_verify_strategy')
 
@@ -448,7 +448,7 @@ class Create(_CreateEdit):
                     skip_opaque.append('password')
 
                 # Configure CA certs
-                self._set_sec_tls_ca_cert_id(item, input)
+                self._set_validate_tls(item, input)
 
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
@@ -635,7 +635,7 @@ class Edit(_CreateEdit):
                     skip_opaque.append('password')
 
                 # Configure CA certs
-                self._set_sec_tls_ca_cert_id(item, input)
+                self._set_validate_tls(item, input)
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input, skip=skip_opaque)

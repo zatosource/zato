@@ -224,7 +224,7 @@
 
                         <!-- 22, 23a, 23b, 23c -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} sec_tls_ca_cert_id {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} validate_tls {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
 
@@ -356,7 +356,7 @@
 
                         <!-- 22, 23a, 23b -->
                         <td class='ignore'>{{ item.timeout }}</td>
-                        <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
+                        <td class='ignore'>{{ item.validate_tls }}</td>
                         <td class='ignore'>{{ item.match_slash }}</td>
                         <td class='ignore'>{{ item.http_accept|default:"" }}</td>
 
@@ -624,8 +624,8 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">TLS CA certs</td>
-                            <td>{{ create_form.sec_tls_ca_cert_id }}</td>
+                            <td style="vertical-align:middle">Validate SSL/TLS</td>
+                            <td>{{ create_form.validate_tls }}</td>
                         </tr>
                         {% endif %}
 
@@ -772,8 +772,8 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">TLS CA certs</td>
-                            <td>{{ edit_form.sec_tls_ca_cert_id }}</td>
+                            <td style="vertical-align:middle">Validate SSL/TLS</td>
+                            <td>{{ edit_form.validate_tls }}</td>
                         </tr>
                         {% endif %}
 
