@@ -1,6 +1,7 @@
 :root {
     --zato-seablue: #012845;
     --zato-seablue-light1: #063c65;
+    --zato-seablue-light2: #14578a;
 }
 
 html,
@@ -276,7 +277,6 @@ span.like-a {
 #data-table a {
     color: #037ac7;
     text-decoration: none;
-    transition: color 0.2s ease;
     font-weight: 500;
     font-size: 0.8rem;
     font-family: monospace;
@@ -294,7 +294,7 @@ span.like-a {
 }
 
 #data-table tr:hover {
-    background-color: var(--zato-seablue-light1) !important;
+    background-color: var(--zato-seablue-light2) !important;
     color: #fff !important;
 }
 
@@ -321,12 +321,11 @@ span.like-a {
 
 #data-table th {
     background: var(--zato-seablue);
-    color: white;
+    color: #fff;
     font-size: 0.85rem;
     font-weight: 500;
     white-space: nowrap;
-    position: relative;
-    transition: background-color 0.2s ease
+    position: relative
 }
 
 #data-table th.header:not(.ignore):nth-child(n+3):hover {
