@@ -294,7 +294,7 @@ span.like-a {
 }
 
 #data-table tr:hover {
-    bxackground-color: rgba(1, 40, 69, 0.05)
+    background-color: var(--zato-seablue-light1) !important;
 }
 
 #data-table tr.updated {
