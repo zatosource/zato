@@ -372,11 +372,16 @@ span.like-a {
 
 .form-data {
     width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
     border: 1px solid #666;
     padding: 10px;
     font-size: 12px;
+    background-color: #ccc;
+    color: #000;
+}
+
+#login-form .form-data {
+    max-width: 400px;
+    margin: 0 auto;
     background-color: var(--zato-seablue);
     color: white;
 }
@@ -387,30 +392,37 @@ span.like-a {
     padding-right: 0px
 }
 
-.form-data td[colspan="2"] {
+#login-form .form-data td {
+    padding: 8px
+}
+
+#login-form .form-data td[colspan="2"] {
     text-align: right !important;
     padding: 15px 0 0 0
 }
 
 /* Position the login button */
-#login {
+#login-form #login {
     float: right;
     margin-right: 0;
     margin-top: 0
 }
 
-.form-data td:first-child {
+#login-form .form-data td:first-child {
     width: 30%;
     text-align: right;
+    padding-right: 15px;
+    padding-left: 15px
+}
+
+#login-form .form-data td:nth-child(2) {
+    width: 70%;
+    padding-left: 8px;
     padding-right: 15px
 }
 
-.form-data td:nth-child(2) {
-    width: 70%
-}
-
 /* Override any inline styling that might interfere with button positioning */
-.form-data tr:last-child td[style*="text-align:left"] {
+#login-form .form-data tr:last-child td[style*="text-align:left"] {
     text-align: right !important
 }
 
