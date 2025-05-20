@@ -1,5 +1,6 @@
 :root {
     --zato-seablue: #012845;
+    --zato-seablue-light1: #063c65;
 }
 
 html,
@@ -155,7 +156,7 @@ span.like-a {
 }
 
 #console-header {
-    background-color: #0e0e0e;
+    background-color: var(--zato-seablue);
     box-shadow: 0px 0px 4px #333
 }
 
