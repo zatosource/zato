@@ -365,13 +365,9 @@ span.like-a {
     font-weight: 500
 }
 
-#data-table td.impexp {
-    width: 30px
-}
-
-#data-table td.impexp input {
-    display: none;
-    width: 1px
+#data-table td.impexp,
+#data-table th:nth-child(2) {
+    display: none
 }
 
 .form-data {
