@@ -24,15 +24,10 @@
         return [
             '_numbering',
             '_selection',
+
             'name',
             'impl_name',
-            '_is_internal',
-
-            '_edit',
-            '_delete',
-
             'id',
-            'is_internal',
 
 
         ]
@@ -97,12 +92,9 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Name</a></th>
-                        <th><a href="#">Implementation</a></th>
-                        <th><a href="#">Internal</a></th>
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Python class</a></th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -115,11 +107,8 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "service-ide" "service" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
                         <td>{{ item.impl_name }}</td>
-                        <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_internal }}</td>
-                        <td class='ignore'>{{ item.slow_threshold }}</td>
 
                     </tr>
                 {% endfor %}
