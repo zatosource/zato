@@ -568,7 +568,11 @@ def service_list(session, cluster_id, return_internal=True, include_list=None, n
         q = q.filter(or_(Service.name.in_(include_list)))
     else:
         if not return_internal:
-            q = q.filter(not_(Service.name.startswith('zato')))
+            q = q.filter(not_(or_(
+                Service.name.startswith('zato'),
+                Service.name.startswith('helpers'),
+                Service.name.startswith('pub.zato'),
+            )))
 
     return q
 
