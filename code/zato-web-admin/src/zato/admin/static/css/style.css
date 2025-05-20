@@ -375,14 +375,18 @@ span.like-a {
     border: 1px solid #666;
     padding: 10px;
     font-size: 12px;
-    background-color: #ccc;
-    color: #000;
+    background-color: var(--zato-seablue);
+    color: white;
 }
 
 .form-data td {
     border: none;
     padding: 4px;
     padding-right: 0px
+}
+
+.form-data td[colspan="2"] {
+    text-align: right
 }
 
 .ui-dialog-titlebar {
