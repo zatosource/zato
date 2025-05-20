@@ -380,7 +380,7 @@ span.like-a {
 }
 
 #login-form .form-data {
-    max-width: 480px;
+    max-width: 540px;
     margin: 0 auto;
     background-color: var(--zato-seablue);
     color: white;
@@ -787,7 +787,7 @@ div.page_prompt a.current {
 }
 
 #logo-link:hover {
-    background-color: #161616;
+    background-color: var(--zato-seablue);
 }
 
 .form-data tr td a {
