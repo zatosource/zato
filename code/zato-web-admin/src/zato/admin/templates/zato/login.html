@@ -38,7 +38,7 @@
 <img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
 
 <div style="width:45%;margin: 0px auto -1px auto;padding-top:20px">
-    <form novalidate method="post" action="{% url "login" %}" style="width:100%">
+    <form id="login-form" novalidate method="post" action="{% url "login" %}" style="width:100%">
         {% csrf_token %}
         <table class="form-data" border="">
             <tr>
