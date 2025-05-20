@@ -79,28 +79,34 @@
         $(document).ready(function() {
             $('input[type="password"]').hidePassword(true);
 
-            const centerAlignColumnNames = [
-                'Active',
-                'Internal',
-                'Members',
-            ];
+const centerAlignColumnNames = [
+    'Active',
+    'Internal'
+];
 
-            const table = $('#data-table');
-            const headerRow = table.find('thead tr').first();
+const table = $('#data-table');
+const headerRow = table.find('thead tr').first();
 
-            headerRow.find('th').each(function(colIndex) {
-                const headerCell = $(this);
-                const headerText = headerCell.find('a').text().trim();
+headerRow.find('th').each(function(colIndex) {
+    const headerCell = $(this);
+    const headerText = headerCell.find('a').text().trim();
 
-                if(centerAlignColumnNames.includes(headerText)) {
-                    headerCell.css('text-align', 'center');
-                    headerCell.find('a').css('text-align', 'center');
+    if(centerAlignColumnNames.includes(headerText)) {
+        headerCell.css('text-align', 'center');
 
-                    table.find('tbody tr').each(function() {
-                        $(this).find('td').eq(colIndex).css('text-align', 'center');
-                    });
-                }
-            });
+        // Adjust the header link to be properly centered
+        const headerLink = headerCell.find('a');
+        headerLink.css({
+            'text-align': 'center',
+            'display': 'block',
+            'padding-right': '0'
+        });
+
+        table.find('tbody tr').each(function() {
+            $(this).find('td').eq(colIndex).css('text-align', 'center');
+        });
+    }
+});
 
         });
 
