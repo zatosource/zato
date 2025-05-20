@@ -323,7 +323,7 @@ span.like-a {
     transition: background-color 0.2s ease
 }
 
-#data-table th.header:not(.ignore):hover {
+#data-table th.header:not(.ignore):nth-child(n+3):hover {
     background: var(--zato-seablue-light1);
     cursor: pointer
 }
@@ -336,14 +336,8 @@ span.like-a {
 }
 
 #data-table th a:after {
-    content: '\21f5';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 1;
-    color: white;
-    font-size: 0.8rem
+    content: '';
+    display: none
 }
 
 #data-table td {
@@ -354,11 +348,21 @@ span.like-a {
     background: rgba(6, 60, 101, 0.05)
 }
 
+#data-table td.numbering {
+    position: relative;
+    text-align: center
+}
+
 #data-table td.numbering:before {
     content: counter(data_table_counter);
     counter-increment: data_table_counter;
-    color: #777;
-    font-size: 0.8rem
+    color: #333;
+    font-size: 0.85rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 500
 }
 
 #data-table td.impexp {
