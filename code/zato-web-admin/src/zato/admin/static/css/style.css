@@ -295,6 +295,13 @@ span.like-a {
 
 #data-table tr:hover {
     background-color: var(--zato-seablue-light1) !important;
+    color: #fff !important;
+}
+
+#data-table tr:hover a,
+#data-table tr:hover td,
+#data-table tr:hover span {
+    color: #fff !important;
 }
 
 #data-table tr.updated {
