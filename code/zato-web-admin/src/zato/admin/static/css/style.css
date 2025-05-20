@@ -565,22 +565,17 @@ a:not(.menu-link) {
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: underline;
     padding: 3px;
-    QQQ-padding-left: 0px
 }
 
 a:hover {
-    bxackground-color: #e0e030;
     color: #000033;
     text-decoration: none
 }
 
-a.top {
-    color: #fff;
-    text-shadow-QQQ: none
-}
-
+a.top,
 a.top:hover {
-    color: #000
+    color: #fff;
+    text-decoration: none;
 }
 
 a.hint {

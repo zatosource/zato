@@ -37,7 +37,7 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
-            'sec_tls_ca_cert_id',
+            'validate_tls',
 
             {% comment %} 3 {% endcomment %}
             '_change_password',
@@ -113,7 +113,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-                        <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
+                        <td class='ignore'>{{ item.validate_tls }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
@@ -162,8 +162,8 @@
                                 |
 
                                 <label>
-                                SSL/TLS
-                                {{ create_form.sec_tls_ca_cert_id }}
+                                Validate SSL/TLS
+                                {{ create_form.validate_tls }}
                                 </label>
                             </td>
                         </tr>
@@ -232,8 +232,8 @@
                                 |
 
                                 <label>
-                                SSL/TLS
-                                {{ edit_form.sec_tls_ca_cert_id }}
+                                Validate SSL/TLS
+                                {{ edit_form.validate_tls }}
                                 </label>
                             </td>
                         </tr>

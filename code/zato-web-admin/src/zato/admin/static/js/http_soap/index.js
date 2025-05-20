@@ -21,7 +21,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'sec_tls_ca_cert_id']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
 
     $.each(['', 'edit-'], function(ignored, suffix) {
@@ -30,7 +30,7 @@ $(document).ready(function() {
         elem.ready(function() {
             console.log(elem);
             console.log(elem.val());
-            $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
+            $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
             elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
         });
     });
@@ -41,7 +41,7 @@ $(document).ready(function() {
 $.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
         var elem = $(String.format('#id_{0}serialization_type', suffix));
-        $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
+        $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
     });
 }
 
@@ -263,7 +263,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     /* 22, 23a, 23b */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
-    row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
     row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
     row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
 
@@ -352,8 +352,8 @@ $.fn.zato.http_soap.reload_wsdl = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id = function(suffix, is_suds) {
-    $(String.format('#id_{0}sec_tls_ca_cert_id', suffix)).prop('disabled', is_suds);
+$.fn.zato.http_soap.data_table.toggle_validate_tls = function(suffix, is_suds) {
+    $(String.format('#id_{0}validate_tls', suffix)).prop('disabled', is_suds);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -362,7 +362,7 @@ $.fn.zato.http_soap.data_table.on_serialization_change = function() {
 
     var is_edit = this.id.indexOf('edit') > 1;
     var suffix = is_edit ? 'edit-' : '';
-    $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, this.value == 'suds');
+    $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, this.value == 'suds');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

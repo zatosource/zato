@@ -22,7 +22,7 @@ $(document).ready(function() {
         'host',
         'username',
         'password',
-        'sec_tls_ca_cert_id',
+        'validate_tls',
     ]);
 })
 
@@ -59,7 +59,7 @@ $.fn.zato.vendors.keysight.vision.data_table.new_row = function(item, data, incl
 
     // 2
     row += String.format("<td>{0}</td>", item.username);
-    row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
 
     // 3
     row += String.format('<td>{0}</td>',
