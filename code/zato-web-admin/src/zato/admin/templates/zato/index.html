@@ -81,14 +81,24 @@
 
             const centerAlignColumnNames = [
                 'Active',
+                'Auth type',
+                'Client',
+                'Client ID field',
+                'Client secret field',
                 'Current size',
                 'Default',
                 'Extend exp. on get',
                 'Extend exp. on set',
+                'Grant type',
+                'Instance',
                 'Internal',
                 'Max size',
                 'Max item size',
                 'Members',
+                'SAP router string',
+                'System ID',
+                'User',
+                'Use TLS',
             ];
 
             const table = $('#data-table');
@@ -182,7 +192,9 @@
                                             {% endif %}
                                             <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
+                                            {% if 0 %}
                                             <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP RFC</a></li>
+                                            {% endif %}
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
                                         </ul>
@@ -219,6 +231,8 @@
                                             </li>
                                         </ul>
                                     </li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">Google</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
@@ -270,7 +284,9 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
+                                    {% if 0 %}
                                     <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP</a></li>
+                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>

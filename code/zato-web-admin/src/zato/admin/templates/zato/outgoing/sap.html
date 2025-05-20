@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}SAP RFC outconns{% endblock %}
 
@@ -103,7 +104,7 @@
                         <td>{{ item.sysid }}</td>
                         <td>{{ item.user }}</td>
                         <td>{{ item.client }}</td>
-                        <td>{{ item.router|default:'' }}</td>
+                        <td>{{ item.router|no_value_indicator }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sap.delete_('{{ item.id }}')">Delete</a></td>
