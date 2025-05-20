@@ -371,7 +371,9 @@ span.like-a {
 }
 
 .form-data {
-    width: 50%;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
     border: 1px solid #666;
     padding: 10px;
     font-size: 12px;
@@ -386,8 +388,15 @@ span.like-a {
 }
 
 .form-data td[colspan="2"] {
-    text-align: right;
-    padding-right: 0
+    text-align: right !important;
+    padding: 15px 0 0 0
+}
+
+/* Position the login button */
+#login {
+    float: right;
+    margin-right: 0;
+    margin-top: 0
 }
 
 .form-data td:first-child {
@@ -398,6 +407,11 @@ span.like-a {
 
 .form-data td:nth-child(2) {
     width: 70%
+}
+
+/* Override any inline styling that might interfere with button positioning */
+.form-data tr:last-child td[style*="text-align:left"] {
+    text-align: right !important
 }
 
 .ui-dialog-titlebar {
