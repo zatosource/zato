@@ -350,6 +350,28 @@ span.like-a {
     vertical-align: middle !important
 }
 
+/* Center cells in columns whose headers contain specific text */
+
+/* Align columns by thead header text */
+#data-table tr th:has(a[href='#']:contains('Active')) ~ td:nth-child(4),
+#data-table tr td:nth-child(4) {
+    text-align: center;
+}
+
+#data-table tr th:has(a[href='#']:contains('Internal')) ~ td:nth-child(6),
+#data-table tr td:nth-child(6) {
+    text-align: center;
+}
+
+/* This is the flexible approach that works with any header text */
+/* Add more rules following this pattern for other headers */
+
+/* Helper attribute to store aligned column info */
+#data-table[data-center-columns="Active,Internal"] tr td:nth-child(4),
+#data-table[data-center-columns="Active,Internal"] tr td:nth-child(6) {
+    text-align: center;
+}
+
 #data-table td.inline_header {
     background: rgba(6, 60, 101, 0.05)
 }
