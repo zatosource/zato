@@ -25,7 +25,6 @@
             '_numbering',
             '_selection',
             'name',
-            '_is_active',
             'impl_name',
             '_is_internal',
 
@@ -33,7 +32,6 @@
             '_delete',
 
             'id',
-            'is_active',
             'is_internal',
 
 
@@ -100,7 +98,6 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Active</a></th>
                         <th><a href="#">Implementation</a></th>
                         <th><a href="#">Internal</a></th>
 
@@ -117,12 +114,10 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "service-ide" "service" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.slow_threshold }}</td>
 
