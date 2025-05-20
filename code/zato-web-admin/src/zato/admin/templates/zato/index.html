@@ -78,6 +78,30 @@
         // Let users reveal password fields
         $(document).ready(function() {
             $('input[type="password"]').hidePassword(true);
+
+            const centerAlignColumnNames = [
+                'Active',
+                'Internal',
+                'Members',
+            ];
+
+            const table = $('#data-table');
+            const headerRow = table.find('thead tr').first();
+
+            headerRow.find('th').each(function(colIndex) {
+                const headerCell = $(this);
+                const headerText = headerCell.find('a').text().trim();
+
+                if(centerAlignColumnNames.includes(headerText)) {
+                    headerCell.css('text-align', 'center');
+                    headerCell.find('a').css('text-align', 'center');
+
+                    table.find('tbody tr').each(function() {
+                        $(this).find('td').eq(colIndex).css('text-align', 'center');
+                    });
+                }
+            });
+
         });
 
     </script>
