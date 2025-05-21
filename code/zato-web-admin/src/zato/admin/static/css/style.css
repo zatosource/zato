@@ -900,3 +900,19 @@ input[data-zato-validator-required="required"]::placeholder {
 .menu-link {
     cursor: pointer;
 }
+
+div.action-panel {
+    text-align:center;
+    padding: 10px;
+    padding-top: 14px;
+    padding-right: 30px;
+    font-size: 1rem;
+    float: right;
+    z-index: 5300
+}
+
+div.action-panel span.previous-next {
+     color: #666;
+     font-size: 0.9rem;
+     padding: 3px 3px 3px 1px
+}
