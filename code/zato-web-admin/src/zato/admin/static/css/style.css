@@ -911,8 +911,26 @@ div.action-panel {
     z-index: 5300
 }
 
+div.action-panel span.form_hint {
+    vertical-align: middle;
+    display: inline-block
+}
+
 div.action-panel span.previous-next {
-     color: #666;
-     font-size: 0.9rem;
-     padding: 3px 3px 3px 1px
+    color: #666;
+    font-size: 0.85rem;
+    padding: 3px;
+    vertical-align: middle;
+    display: inline-block;
+    position: relative;
+    top: 0px
+}
+
+div.action-panel a {
+    font-size: 0.85rem;
+    vertical-align: middle;
+    display: inline-block;
+    padding: 3px;
+    position: relative;
+    top: 0px
 }
