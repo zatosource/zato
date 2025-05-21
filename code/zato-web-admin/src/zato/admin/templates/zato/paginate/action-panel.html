@@ -1,7 +1,7 @@
 
 {% if meta.total %}
 
-<div style="text-align:center;padding:10px;padding-top:14px;padding-right:30px;font-size:small;float:right;z-index:5300">
+<div class="action-panel">
 
   <form novalidate action="." method="get" style="display:inline-block;">
     <span class="form_hint">{{ meta.total }}</span>
@@ -15,13 +15,13 @@
   {% if meta.has_prev_page%}
     {% include "zato/paginate/prev-page.html" %}
   {% else %}
-    <span style="color:#666;font-size:12px;padding:3px 3px 3px 1px" class="form_hint" >Previous</span>
+    <span class="previous-next form_hint" >Previous</span>
   {% endif %}
 
   {% if meta.has_next_page %}
     {% include "zato/paginate/next-page.html" %}
   {% else %}
-    <span style="color:#666;font-size:12px;padding: 3px 3px 3px 1px" class="form_hint">Next</span>
+    <span class="previous-next">Next</span>
   {% endif %}
 
   </span>
