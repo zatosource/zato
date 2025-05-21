@@ -13,7 +13,7 @@
 }
 
 div.nav-container {
-   background-color: #363636;
+   background-color: var(--zato-seablue-light1);
    height:2.5rem;
    z-index: 9999;
 }
@@ -38,7 +38,6 @@ li.right {
 
 nav.menu ul.left,
 nav.menu ul.right {
-   background-color:#363636;
 }
 
 .pure-css-nav > nav ul li a {
@@ -52,7 +51,7 @@ ul {
 
 /* Level 1 */
  .pure-css-nav > nav ul li {
-    background-color:#363636;
+    background-color: var(--zato-seablue-light1);
 }
 
 .pure-css-nav > nav ul li.first-level {
@@ -85,7 +84,7 @@ ul {
  .pure-css-nav > nav ul li:hover,
  .pure-css-nav > nav ul li li:hover > a:first-child:nth-last-child(2),
  .pure-css-nav > nav > ul > li:hover > a:first-child:nth-last-child(2) {
-    background-color:#494949;
+    background-color: var(--zato-seablue);
 }
 /* Font icon arrow colors */
  .pure-css-nav > nav > ul > li > a:first-child:nth-last-child(2):after {
@@ -135,13 +134,13 @@ ul {
 }
  .pure-css-nav > nav ul > li {
     position:relative;
-    filter: drop-shadow(0 0 0.06rem #363636);
 }
 
 .pure-css-nav > nav ul > li.child {
    width: 9rem;
 }
- .pure-css-nav > nav ul li a {
+
+.pure-css-nav > nav ul li a {
     display:block;
      height:100%;
 }
@@ -152,6 +151,7 @@ ul {
      position:absolute;
      z-index:1;
      display:block;
+     filter: drop-shadow(1px 1px 0.06rem #363636);
 }
  .pure-css-nav > nav ul li:hover > ul {
     visibility:visible;
@@ -426,7 +426,15 @@ ul {
  @media (min-width:1200px) {
 }
  .pure-css-nav a:not([href]), .pure-css-nav a[href='']:hover,
- .pure-css-nav a[href='#']:hover, .pure-css-nav a[href='']:active,
- .pure-css-nav a[href='#']:active {
+ .pure-css-nav a[href='']:active,
+ .pure-css-nav a[href='']:active {
     pointer-events:none;
+}
+
+/* Ensure menu links with # href have pointer events and cursor */
+.pure-css-nav a[href='#'],
+.pure-css-nav a[href='#']:hover,
+.pure-css-nav a[href='#']:active {
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }

@@ -1,3 +1,10 @@
+:root {
+    --zato-seablue: #012845;
+    --zato-seablue-light1: #063c65;
+    --zato-seablue-light2: #14578a;
+    --zato-seablue-light3: #2f81bf;
+}
+
 html,
 body,
 applet,
@@ -122,7 +129,6 @@ td {
     border-left: 1px solid #fff;
     border-top: 1px solid #CFDEFF;
     padding: .75em 1em;
-    text-shadow-QQQ-QQQ: -1px -1px 0 red;
     text-decoration: none;
     display: block;
     position: relative
@@ -130,11 +136,6 @@ td {
 
 span.like-a {
     color: #fff
-}
-
-.sf-menu a,
-span.like-a {
-    text-shadow-QQQ-QQQ: 1px 1px 0 #000
 }
 
 .sf-menu a,
@@ -151,7 +152,7 @@ span.like-a {
 }
 
 #console-header {
-    background-color: #0e0e0e;
+    background-color: var(--zato-seablue);
     box-shadow: 0px 0px 4px #333
 }
 
@@ -162,14 +163,13 @@ span.like-a {
     color: #999;
     font-weight: 600;
     font-family: sans-serif;
-    text-shadow-QQQ: 2px 2px 0 #333;
     vertical-align: middle
 }
 
 #logout {
     color: #fff;
     float: right;
-    font-size: 11px;
+    font-size: 0.77rem;
     padding-top: 6px;
     padding-right: 7.5px
 }
@@ -255,65 +255,141 @@ span.like-a {
 }
 
 #data-table {
-    width: 100%;
-    margin-top: 8px;
+    width: 96%;
+    margin-top: 12px;
     margin-left: 2%;
-    border: 1px solid #ccc;
-    font-size: 12px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    font-size: 0.85rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+    border: none;
     counter-reset: data_table_counter
 }
 
 #data-table a {
-    font-size: 12px
+    color: #037ac7;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.8rem;
+    font-family: monospace;
+    letter-spacing: 0.02rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
 }
 
 #data-table tr.odd {
-    background-color: #fff
+    background-color: #f8f9fa
 }
 
 #data-table tr.even {
-    background-color: #e8e8e8
+    background-color: #fff
+}
+
+#data-table tr:hover {
+    background-color: var(--zato-seablue-light2) !important;
+    color: #fff !important;
+}
+
+#data-table tr:hover a,
+#data-table tr:hover td,
+#data-table tr:hover span,
+#data-table tr:hover td.numbering:before {
+    color: #fff !important;
 }
 
 #data-table tr.updated {
-    background-color: #f7f089
+    background-color: rgba(255, 243, 205, 0.7)
 }
 
 #data-table tr.attention td,
 #data-table tr.updated td {
-    border-bottom: 1px solid #a9a244
+    border-bottom: 1px solid rgba(169, 162, 68, 0.5)
 }
 
 #data-table td,
 #data-table th {
-    padding: 6px
+    padding: 10px;
+    border-bottom: 1px solid rgba(6, 60, 101, 0.12)
 }
 
 #data-table th {
-    background: #ddd;
-    font-size: 11px
+    background: var(--zato-seablue);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    position: relative
+}
+
+#data-table th.header:not(.ignore):nth-child(n+3):hover {
+    background: var(--zato-seablue-light1);
+    cursor: pointer
+}
+
+#data-table th a {
+    color: white;
+    display: block;
+    position: relative;
+    padding-right: 15px
+}
+
+#data-table th a:after {
+    content: '';
+    display: none
 }
 
 #data-table td {
-    vertical-align:middle !important
+    vertical-align: middle !important
+}
+
+/* Center cells in columns whose headers contain specific text */
+
+/* Align columns by thead header text */
+#data-table tr th:has(a[href='#']:contains('Active')) ~ td:nth-child(4),
+#data-table tr td:nth-child(4) {
+    text-align: center;
+}
+
+#data-table tr th:has(a[href='#']:contains('Internal')) ~ td:nth-child(6),
+#data-table tr td:nth-child(6) {
+    text-align: center;
+}
+
+/* This is the flexible approach that works with any header text */
+/* Add more rules following this pattern for other headers */
+
+/* Helper attribute to store aligned column info */
+#data-table[data-center-columns="Active,Internal"] tr td:nth-child(4),
+#data-table[data-center-columns="Active,Internal"] tr td:nth-child(6) {
+    text-align: center;
 }
 
 #data-table td.inline_header {
-    background: #ddd
+    background: rgba(6, 60, 101, 0.05)
+}
+
+#data-table td.numbering {
+    position: relative;
+    text-align: center
 }
 
 #data-table td.numbering:before {
     content: counter(data_table_counter);
-    counter-increment: data_table_counter
+    counter-increment: data_table_counter;
+    color: #333;
+    font-size: 0.85rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 500
 }
 
-#data-table td.impexp {
-    width: 1px
-}
-
-#data-table td.impexp input {
-    display: none;
-    width: 1px
+#data-table td.impexp,
+#data-table th:nth-child(2) {
+    display: none
 }
 
 .form-data {
@@ -325,10 +401,51 @@ span.like-a {
     color: #000;
 }
 
+#login-form .form-data {
+    max-width: 620px;
+    margin: 0 auto;
+    background-color: var(--zato-seablue);
+    color: white;
+}
+
 .form-data td {
     border: none;
     padding: 4px;
     padding-right: 0px
+}
+
+#login-form .form-data td {
+    padding: 8px
+}
+
+#login-form .form-data td[colspan="2"] {
+    text-align: right !important;
+    padding: 15px 0 0 0
+}
+
+/* Position the login button */
+#login-form #login {
+    float: right;
+    margin-right: 0;
+    margin-top: 0
+}
+
+#login-form .form-data td:first-child {
+    width: 30%;
+    text-align: right;
+    padding-right: 23px;
+    padding-left: 15px
+}
+
+#login-form .form-data td:nth-child(2) {
+    width: 80%;
+    padding-left: 0px;
+    padding-right: 70px
+}
+
+/* Override any inline styling that might interfere with button positioning */
+#login-form .form-data tr:last-child td[style*="text-align:left"] {
+    text-align: right !important
 }
 
 .ui-dialog-titlebar {
@@ -338,7 +455,6 @@ span.like-a {
     border: 1px solid #666;
     border-bottom: none;
     text-align: left;
-    text-shadow-QQQ: 1px 1px 0 #aaa;
 }
 
 .form_hint {
@@ -356,7 +472,7 @@ span.like-a {
 }
 
 div.bd {
-    box-shadow: 1px 1px 10px #000
+    box-shadow: 3px 3px 10px #666
 }
 
 div.ui-dialog {
@@ -375,14 +491,11 @@ p.big-notice {
 }
 
 .ui-dialog-titlebar {
-    padding-bottom: 0px;
-    background-color: #333;
+    background-color: var(--zato-seablue-light1);
     font-size: 13px;
-    border: 1px solid #666;
     border-bottom: none;
     text-align: left;
     color: #eee;
-    text-shadow-QQQ: 1px 1px 0 #000
 }
 
 .ui-icon-closethick {
@@ -402,7 +515,7 @@ select {
 }
 
 .ui-widget {
-    box-shadow: 1px 1px 10px #000
+    box-shadow: 3px 3px 10px #666
 }
 
 .ui-datepicker {
@@ -443,22 +556,22 @@ a:not(.menu-link) {
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: underline;
     padding: 3px;
-    QQQ-padding-left: 0px
 }
 
-a:hover {
-    background-color: #e0e030;
-    color: #000033;
-    text-decoration: none
+a:not(.menu-link):hover {
+    color: #fff !important;
+    background-color: var(--zato-seablue-light3);
+    text-decoration: none;
 }
 
-a.top {
-    color: #fff;
-    text-shadow-QQQ: none
+th.header a:hover {
+    background-color: initial !important;
 }
 
+a.top,
 a.top:hover {
-    color: #000
+    color: #fff;
+    text-decoration: none;
 }
 
 a.hint {
@@ -668,7 +781,24 @@ div.ignore {
 
 div.page_prompt {
     padding: 4px;
-    font-size: 12px
+    font-size: 12px;
+}
+
+div.page_prompt a {
+    background-color: #ffc311;
+    color: #000;
+    text-decoration: none;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    border-radius: 5px;
+    box-shadow: 2px 2px 2px #d3d3d3
+}
+
+div.page_prompt a:hover {
+    background-color: #ffc311;
+    color: #000 !important;
 }
 
 div.page_prompt a.current {
@@ -693,7 +823,7 @@ div.page_prompt a.current {
 }
 
 #logo-link:hover {
-    background-color: #161616;
+    background-color: var(--zato-seablue);
 }
 
 .form-data tr td a {
@@ -710,7 +840,9 @@ div.page_prompt a.current {
 #data-table * tr.even:hover,
 table.multi-select-table tr:hover
 {
-    background-color: #ff8;
+    background-color: rgb(211, 229, 238);
+    border-top:1px solid #222 !important;
+    border-bottom:1px solid #222 !important;
 }
 
 .ui-icon {
@@ -763,4 +895,8 @@ input[data-zato-validator-required="required"]::placeholder {
 }
 .options-expanded td.to-ignore {
     background-color: #ccc;
+}
+
+.menu-link {
+    cursor: pointer;
 }

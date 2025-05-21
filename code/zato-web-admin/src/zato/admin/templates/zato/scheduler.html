@@ -5,13 +5,6 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    {% if items %}
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
-        }
-    </style>
-    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -119,8 +112,8 @@
                 </thead>
 
                 <tbody>
-                {% if jobs %}
-                {% for job in jobs %}
+                {% if items %}
+                {% for job in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
