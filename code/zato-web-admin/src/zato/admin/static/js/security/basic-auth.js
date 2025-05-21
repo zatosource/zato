@@ -24,11 +24,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.basic_auth.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new HTTP Basic Auth definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create HTTP Basic Auth definition', null);
 }
 
 $.fn.zato.security.basic_auth.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the HTTP Basic Auth definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit HTTP Basic Auth definition', id);
 }
 
 $.fn.zato.security.basic_auth.data_table.new_row = function(item, data, include_tr) {

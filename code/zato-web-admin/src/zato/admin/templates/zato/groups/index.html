@@ -56,11 +56,8 @@
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
-{% include "zato/search-form.html" with page_prompt="Show groups"%}
-
     {% if cluster_id %}
-        <div class='page_prompt' style="clear:left">
+        <div class='page_prompt' style="clear:left; padding-top:1rem">
             <a href="javascript:$.fn.zato.groups.create()">Create a new group</a>
         </div>
 
