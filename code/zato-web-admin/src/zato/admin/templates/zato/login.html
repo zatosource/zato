@@ -37,12 +37,12 @@
 <!-- Preloads the image so it's always displayed properly in the actual app -->
 <img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
 
-<div style="width:45%;margin: 0px auto -1px auto;padding-top:20px">
-    <form novalidate method="post" action="{% url "login" %}" style="width:100%">
+<div style="width:45%;margin: 0px auto -1px auto;padding-top:10px">
+    <form id="login-form" novalidate method="post" action="{% url "login" %}">
         {% csrf_token %}
-        <table class="form-data" border="">
+        <table class="form-data" border=""  style="table-layout: fixed; width:100%; padding-top:20px !important">
             <tr>
-                <td style="width:{% if is_totp_enabled %}19{% else %}7{% endif %}%">
+                <td style="width:100px !important">
                     Username
                 </td>
                 <td>
@@ -80,7 +80,7 @@
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="text-align:left">
+                <td colspan="2" style="text-align:left; padding-right:70px; padding-bottom:12px; padding-top:0px">
                     <button id="login" type="submit">Log in</button>
                     <input type="hidden" name="next" value="{{ next }}" />
                 </td>
