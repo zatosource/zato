@@ -2,7 +2,7 @@
 /* Customizable styles */
 
 .pure-css-nav {
-   position: inherit;
+   position: sticky;
    background-color:#363636;
    border-bottom: 3px solid #aaa;
    z-index: 9999;
