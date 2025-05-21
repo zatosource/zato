@@ -168,14 +168,13 @@ span.like-a {
     color: #999;
     font-weight: 600;
     font-family: sans-serif;
-    text-shadow-QQQ: 2px 2px 0 #333;
     vertical-align: middle
 }
 
 #logout {
     color: #fff;
     float: right;
-    font-size: 11px;
+    font-size: 0.77rem;
     padding-top: 6px;
     padding-right: 7.5px
 }
