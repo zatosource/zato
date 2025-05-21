@@ -80,7 +80,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td id="item_header_{{ item.id }}">{{ item.header }}</td>
+                        <td id="item_header_{{ item.id }}">{{ item.header|default:"X-API-Key" }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API key')">Change API key</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.apikey.delete_('{{ item.id }}')">Delete</a></td>
