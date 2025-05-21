@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Cache definitions (built-in){% endblock %}
+{% block html_title %}Caches{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -48,7 +48,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in</h2>
+<h2 class="zato">Caches</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -56,13 +56,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show definitions"%}
+{% include "zato/search-form.html" with page_prompt="Show caches"%}
 
 
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new definition</a>
+            <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new cache</a>
         </div>
 
         <div id="markup">
