@@ -535,7 +535,10 @@ class GetEndpointQueueList(_GetEndpointQueue):
         with closing(self.odb.session()) as session:
             for item in self.get_data(session):
 
-                item = item.get_value()
+                try:
+                    item = item.get_value()
+                except AttributeError:
+                    item = item._asdict()
 
                 self._add_queue_depths(session, item)
                 item['creation_time'] = datetime_from_ms(item['creation_time'] * 1000.0)
