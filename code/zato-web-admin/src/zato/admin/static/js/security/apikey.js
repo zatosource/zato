@@ -23,11 +23,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.apikey.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new API key', null);
+    $.fn.zato.data_table._create_edit('create', 'Create API key', null);
 }
 
 $.fn.zato.security.apikey.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the API key', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit API key', id);
 }
 
 $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) {

@@ -295,7 +295,6 @@ class ConfigStore:
 
         # Security definitions
         self.apikey = None   # type: ConfigDict
-        self.aws = None   # type: ConfigDict
         self.basic_auth = None # type: ConfigDict
         self.ntlm = None   # type: ConfigDict
         self.oauth = None   # type: ConfigDict
