@@ -4,13 +4,12 @@
 <div class="action-panel">
 
   <form novalidate action="." method="get" style="display:inline-block;">
-    <span class="form_hint">{{ meta.total }}</span>
-    <span class="form_hint">result{% if meta.total > 1 %}s{% endif %}</span>
-    |
-    <span class="form_hint">Page {{ meta.cur_page }} of {{ meta.num_pages }}</span>
-  |
-
-  <span style="vertical-align:middle">
+    <span style="vertical-align:middle;" class="pagination-wrapper">
+      <span class="form_hint">{{ meta.total }}</span>
+      <span class="form_hint">result{% if meta.total > 1 %}s{% endif %}</span>
+      |
+      <span class="form_hint">Page {{ meta.cur_page }} of {{ meta.num_pages }}</span>
+      |
 
   {% if meta.has_prev_page%}
     {% include "zato/paginate/prev-page.html" %}
@@ -23,9 +22,7 @@
   {% else %}
     <span class="previous-next">Next</span>
   {% endif %}
-
-  </span>
-
+    </span>
   </form>
 
 </div>
