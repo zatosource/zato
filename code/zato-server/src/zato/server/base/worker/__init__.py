@@ -578,7 +578,6 @@ class WorkerStore(_WorkerStoreBase):
             ntlm_config=self.worker_config.ntlm,
             oauth_config=self.worker_config.oauth,
             apikey_config=self.worker_config.apikey,
-            aws_config=self.worker_config.aws,
         )
 
         # .. now, initialize connections that may depend on what we have just loaded ..
