@@ -2,6 +2,7 @@
     --zato-seablue: #012845;
     --zato-seablue-light1: #063c65;
     --zato-seablue-light2: #14578a;
+    --zato-seablue-light3: #2f81bf;
 }
 
 html,
@@ -128,7 +129,6 @@ td {
     border-left: 1px solid #fff;
     border-top: 1px solid #CFDEFF;
     padding: .75em 1em;
-    text-shadow-QQQ-QQQ: -1px -1px 0 red;
     text-decoration: none;
     display: block;
     position: relative
@@ -136,11 +136,6 @@ td {
 
 span.like-a {
     color: #fff
-}
-
-.sf-menu a,
-span.like-a {
-    text-shadow-QQQ-QQQ: 1px 1px 0 #000
 }
 
 .sf-menu a,
@@ -477,7 +472,7 @@ span.like-a {
 }
 
 div.bd {
-    box-shadow: 1px 1px 10px #000
+    box-shadow: 3px 3px 10px #666
 }
 
 div.ui-dialog {
@@ -496,14 +491,11 @@ p.big-notice {
 }
 
 .ui-dialog-titlebar {
-    xpadding-bottom: 0px;
-    background-color: #333;
+    background-color: var(--zato-seablue-light1);
     font-size: 13px;
-    border: 1px solid #666;
     border-bottom: none;
     text-align: left;
     color: #eee;
-    text-shadow-QQQ: 1px 1px 0 #000
 }
 
 .ui-icon-closethick {
@@ -523,7 +515,7 @@ select {
 }
 
 .ui-widget {
-    box-shadow: 1px 1px 10px #000
+    box-shadow: 3px 3px 10px #666
 }
 
 .ui-datepicker {
@@ -566,9 +558,14 @@ a:not(.menu-link) {
     padding: 3px;
 }
 
-a:hover {
-    color: #000033;
-    text-decoration: none
+a:not(.menu-link):hover {
+    color: #fff !important;
+    background-color: var(--zato-seablue-light3);
+    text-decoration: none;
+}
+
+th.header a:hover {
+    background-color: initial !important;
 }
 
 a.top,
@@ -784,7 +781,24 @@ div.ignore {
 
 div.page_prompt {
     padding: 4px;
-    font-size: 12px
+    font-size: 12px;
+}
+
+div.page_prompt a {
+    background-color: #ffc311;
+    color: #000;
+    text-decoration: none;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    border-radius: 5px;
+    box-shadow: 2px 2px 2px #d3d3d3
+}
+
+div.page_prompt a:hover {
+    background-color: #ffc311;
+    color: #000 !important;
 }
 
 div.page_prompt a.current {
