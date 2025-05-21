@@ -24,13 +24,13 @@ $(document).ready(function() {
 
 
 $.fn.zato.cache.builtin.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new cache definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new cache', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cache.builtin.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update cache definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update cache', id);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,4 +125,3 @@ $.fn.zato.cache.builtin.add_row_hook = function(instance, elem_name, html_elem, 
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
