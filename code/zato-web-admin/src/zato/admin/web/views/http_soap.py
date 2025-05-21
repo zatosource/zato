@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 CONNECTION = {
-    'channel': 'channel',
+    'channel': 'API endpoint',
     'outgoing': 'outgoing connection',
     }
 
 CONNECTION_PLURAL = {
-    'channel': 'channels',
+    'channel': 'API endpoints',
     'outgoing': 'outgoing connections',
     }
 
