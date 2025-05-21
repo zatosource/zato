@@ -23,11 +23,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.ntlm.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new NTLM definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create NTLM definition', null);
 }
 
 $.fn.zato.security.ntlm.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the NTLM definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit NTLM definition', id);
 }
 
 $.fn.zato.security.ntlm.data_table.new_row = function(item, data, include_tr) {
@@ -59,6 +59,6 @@ $.fn.zato.security.ntlm.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.security.ntlm.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'NTLM definition `{0}` deleted',
-        'Are you sure you want to delete the NTLM definition `{0}`?',
+        'Are you sure you want to delete NTLM definition `{0}`?',
         true);
 }

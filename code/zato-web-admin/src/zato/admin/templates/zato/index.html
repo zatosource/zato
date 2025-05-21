@@ -38,11 +38,19 @@
 
     {% if zato_template_name == "zato/scheduler.html" %}
 
-            <style type="text/css">
-                .ui-dialog-titlebar {
-                    padding-bottom:-4px !important;
-                }
-            </style>
+        <style type="text/css">
+            .ui-dialog-titlebar {
+                padding-bottom:-4px !important;
+            }
+        </style>
+
+    {% elif zato_template_name == "zato/groups/index.html" %}
+
+        <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:0px !important;
+        }
+        </style>
 
     {% else %}
 

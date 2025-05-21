@@ -25,11 +25,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.oauth.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new Bearer token definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create Bearer token definition', null);
 }
 
 $.fn.zato.security.oauth.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the Bearer token definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id);
 }
 
 $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
@@ -73,6 +73,6 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.security.oauth.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Bearer token definition `{0}` deleted',
-        'Are you sure you want to delete the Bearer token definition `{0}`?',
+        'Are you sure you want to delete Bearer token definition `{0}`?',
         true);
 }
