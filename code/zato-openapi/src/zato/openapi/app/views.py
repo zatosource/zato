@@ -10,6 +10,9 @@ This file is a proprietary product, not an open-source one.
 import logging
 import os
 
+# stdlib
+import os
+
 # Django
 from django.conf import settings
 from django.http import HttpResponse, Http404
