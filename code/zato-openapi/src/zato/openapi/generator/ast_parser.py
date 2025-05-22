@@ -20,8 +20,7 @@ def extract_tuple_values(node):
     for elt in node.elts:
         if isinstance(elt, ast.Constant):
             values.append(elt.value)
-        elif isinstance(elt, ast.Str):  # For Python < 3.8
-            values.append(elt.s)
+
         elif isinstance(elt, ast.Call):
             values.append(extract_function_call(elt))
         else:
@@ -34,8 +33,7 @@ def extract_list_values(node):
     for elt in node.elts:
         if isinstance(elt, ast.Constant):
             values.append(elt.value)
-        elif isinstance(elt, ast.Str):  # For Python < 3.8
-            values.append(elt.s)
+
         elif isinstance(elt, ast.Call):
             values.append(extract_function_call(elt))
         else:
@@ -53,8 +51,7 @@ def extract_function_call(node):
     for arg in node.args:
         if isinstance(arg, ast.Constant):
             args.append(arg.value)
-        elif isinstance(arg, ast.Str):  # For Python < 3.8
-            args.append(arg.s)
+
         else:
             args.append(None)
 
@@ -89,8 +86,7 @@ def extract_class_definition(node):
                     value = None
                     if isinstance(item.value, ast.Constant):
                         value = item.value.value
-                    elif isinstance(item.value, ast.Str):  # For Python < 3.8
-                        value = item.value.s
+
                     elif isinstance(item.value, ast.Tuple):
                         value = extract_tuple_values(item.value)
                     elif isinstance(item.value, ast.List):
@@ -111,7 +107,7 @@ def extract_class_definition(node):
             elif isinstance(item.annotation, ast.Subscript) and isinstance(item.annotation.value, ast.Name):
                 # Handle simple subscript types like List[str]
                 container = item.annotation.value.id
-                if isinstance(item.annotation.slice, ast.Index):  # Python < 3.8
+                if isinstance(item.annotation.slice, ast.Index):
                     if hasattr(item.annotation.slice, 'value') and isinstance(item.annotation.slice.value, ast.Name):
                         elem_type = item.annotation.slice.value.id
                         annotations[item.target.id] = f'{container}[{elem_type}]'
