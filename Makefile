@@ -49,7 +49,7 @@ rules-tests:
 	cd $(CURDIR)/code/zato-common && make rules-tests
 
 openapi:
-	py $(CURDIR)/code/zato-openapi/src/zato/openapi/generator/cli.py $(filter-out $@,$(MAKECMDGOALS))
+	py -m zato.openapi.generator.cli $(filter-out $@,$(MAKECMDGOALS))
 
 run-openapi-server:
 	py $(CURDIR)/code/zato-openapi/src/zato/openapi/app/run.py
