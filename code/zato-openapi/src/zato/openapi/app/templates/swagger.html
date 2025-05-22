@@ -20,6 +20,54 @@
       background: #fafafa;
     }
 
+    /* Custom path search styles */
+    #path-search-container {
+      padding: 10px 20px;
+      background: #fff;
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,.15);
+      width: 100%;
+      max-width: 1460px;
+      margin: 0 auto 10px auto;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+
+    #path-search-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    #path-search-clear {
+      margin-left: 10px;
+      cursor: pointer;
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    #path-search-info {
+      margin-left: 15px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* Hide operations that don't match the search */
+    .path-hidden {
+      display: none !important;
+    }
+
+    /* Highlight matching path parts */
+    .path-match {
+      background-color: yellow;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -38,6 +86,7 @@
         }
       }
 
+      // Initialize Swagger UI
       window.ui = SwaggerUIBundle({
         url: "/openapi.yaml",
         dom_id: '#swagger-ui',
@@ -46,8 +95,154 @@
           SwaggerUIBundle.presets.apis,
           NoTopbarPreset
         ],
-        layout: "BaseLayout"
+        layout: "BaseLayout",
+        // Add a callback when Swagger UI has finished loading
+        onComplete: function() {
+          // Initialize our custom path search after Swagger UI loads
+          setTimeout(initPathSearch, 1000); // Wait a bit for everything to render
+        }
       });
+
+      // Initialize custom path search functionality
+      function initPathSearch() {
+        // Create and insert the search container after the information-container wrapper
+        const infoContainer = document.querySelector('.information-container.wrapper');
+        if (!infoContainer) {
+          console.error('Could not find .information-container.wrapper');
+          return;
+        }
+
+        // Create the search container elements
+        const searchContainer = document.createElement('div');
+        searchContainer.id = 'path-search-container';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.id = 'path-search-input';
+        searchInput.placeholder = 'Search by path (min. 2 characters)';
+
+        const clearButton = document.createElement('button');
+        clearButton.id = 'path-search-clear';
+        clearButton.textContent = 'Clear';
+
+        const searchInfo = document.createElement('div');
+        searchInfo.id = 'path-search-info';
+
+        // Assemble the container
+        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(clearButton);
+        searchContainer.appendChild(searchInfo);
+
+        // Insert after the info container
+        infoContainer.parentNode.insertBefore(searchContainer, infoContainer.nextSibling);
+
+        // Store original path texts for each operation to avoid corrupting the search
+        const operations = document.querySelectorAll('.opblock');
+        const pathTexts = new Map();
+
+        operations.forEach(operation => {
+          const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
+          if (pathElement) {
+            // Store the original path text for this operation
+            pathTexts.set(operation, pathElement.textContent);
+          }
+        });
+
+        let timeoutId = null;
+
+        // Function to perform the actual search with debounce
+        function performSearch() {
+          const query = searchInput.value.trim().toLowerCase();
+
+          // Only search if at least 2 characters are entered
+          if (query.length < 2) {
+            resetSearch();
+            searchInfo.textContent = '';
+            return;
+          }
+
+          // Find all operation containers
+          let matchCount = 0;
+
+          operations.forEach(operation => {
+            // Get the original path text from our map
+            const originalPath = pathTexts.get(operation);
+            if (!originalPath) return;
+
+            // Find the path element to update its display
+            const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
+            if (!pathElement) return;
+
+            // Check if the path contains the search query
+            const pathLower = originalPath.toLowerCase();
+            if (pathLower.includes(query)) {
+              matchCount++;
+              operation.classList.remove('path-hidden');
+
+              try {
+                // Highlight the matching part of the path
+                const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const highlightedText = originalPath.replace(
+                  new RegExp(escapedQuery, 'gi'),
+                  match => `<span class="path-match">${match}</span>`
+                );
+                pathElement.innerHTML = highlightedText;
+              } catch (e) {
+                console.error('Error highlighting path:', e);
+                pathElement.textContent = originalPath; // Fallback to plain text
+              }
+            } else {
+              // Hide operations that don't match
+              operation.classList.add('path-hidden');
+              // Reset to original text without highlights
+              pathElement.textContent = originalPath;
+            }
+          });
+
+          // Expand all matching operations' parents (tags)
+          document.querySelectorAll('.opblock:not(.path-hidden)').forEach(operation => {
+            const tagItem = operation.closest('.opblock-tag-section');
+            if (tagItem) {
+              tagItem.classList.remove('is-open');
+              tagItem.classList.add('is-open');
+            }
+          });
+
+          // Update search info
+          searchInfo.textContent = `${matchCount} result${matchCount !== 1 ? 's' : ''}`;
+        }
+
+        // Function to reset the search and show all operations
+        function resetSearch() {
+          operations.forEach(operation => {
+            operation.classList.remove('path-hidden');
+            const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
+            const originalPath = pathTexts.get(operation);
+
+            if (pathElement && originalPath) {
+              pathElement.textContent = originalPath; // Restore original text
+            }
+          });
+          searchInfo.textContent = '';
+        }
+
+        // Add input event with debounce (for real-time filtering)
+        searchInput.addEventListener('input', function() {
+          // Clear previous timeout
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+
+          // Set a small timeout to avoid searching on every keystroke
+          timeoutId = setTimeout(performSearch, 200);
+        });
+
+        // Add clear button functionality
+        clearButton.addEventListener('click', function() {
+          searchInput.value = '';
+          resetSearch();
+        });
+      }
     };
   </script>
 </body>
