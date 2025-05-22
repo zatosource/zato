@@ -48,6 +48,12 @@ scheduler-tests:
 rules-tests:
 	cd $(CURDIR)/code/zato-common && make rules-tests
 
+openapi:
+	py $(CURDIR)/code/zato-openapi/src/zato/openapi/generator/cli.py $(filter-out $@,$(MAKECMDGOALS))
+
+%:
+	@:
+
 rules-perf-tests:
 	cd $(CURDIR)/code/zato-common && make rules-perf-tests
 
