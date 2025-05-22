@@ -35,19 +35,32 @@ def openapi_spec(request):
     try:
         # Get the OpenAPI spec path from environment or use default
         spec_path = settings.OPENAPI_SPEC_PATH
-        
+
         # Check if the file exists
         if not Path(spec_path).exists():
             logger.warning(f'OpenAPI spec file not found at {spec_path}')
             return JsonResponse({'error': 'OpenAPI specification file not found'}, status=404)
-        
-        # Load the YAML file
+
+        # Load the YAML file directly as text
         with open(spec_path, 'r') as f:
-            spec_yaml = yaml.safe_load(f)
-        
-        # Return as JSON
-        return JsonResponse(spec_yaml)
-    
+            yaml_content = f.read()
+
+        # Parse the YAML content
+        spec_yaml = yaml.safe_load(yaml_content)
+
+        # Verify all required sections are present
+        required_sections = ['openapi', 'info', 'paths', 'components']
+        for section in required_sections:
+            if section not in spec_yaml:
+                logger.warning(f'Missing {section} section in OpenAPI specification')
+
+        # Log the structure of the spec for debugging
+        logger.info(f'OpenAPI spec sections: {list(spec_yaml.keys())}')
+        logger.info(f'Number of paths: {len(spec_yaml.get("paths", {}))} paths found')
+
+        # Use direct string conversion to preserve the exact structure
+        return HttpResponse(yaml_content, content_type='application/yaml')
+
     except Exception as e:
         logger.error(f'Error serving OpenAPI spec: {e}')
         return JsonResponse({'error': 'Error processing OpenAPI specification'}, status=500)
