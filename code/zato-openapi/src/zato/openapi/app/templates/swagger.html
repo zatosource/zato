@@ -19,6 +19,7 @@
       margin: 0;
       background: #fafafa;
     }
+
   </style>
 </head>
 <body>
@@ -28,18 +29,25 @@
   <script src="https://unpkg.com/swagger-ui-dist@5.19.0/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
   <script>
     window.onload = function() {
+      // Define a custom preset that removes the topbar
+      const NoTopbarPreset = function() {
+        return {
+          components: {
+            Topbar: function() { return null }
+          }
+        }
+      }
+      
       window.ui = SwaggerUIBundle({
         url: "/openapi.yaml",
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
           SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
+          NoTopbarPreset
         ],
-        plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
-        ],
-        layout: "StandaloneLayout"
+        plugins: [],
+        layout: "BaseLayout"
       });
     };
   </script>
