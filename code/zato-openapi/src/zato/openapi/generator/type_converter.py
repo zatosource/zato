@@ -89,7 +89,7 @@ def convert_type_to_schema(type_hint:'str | None') -> 'dict | None':
         return {}
 
     # For unknown types, assume they are references to models
-    if isinstance(type_hint, str) and type_hint not in ('', 'None', 'NoneType'):
+    if type_hint not in ('', 'None', 'NoneType'):
         # Clean up the type name
         type_name = type_hint.strip('\'"')
         return {'$ref': f'#/components/schemas/{type_name}'}

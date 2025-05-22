@@ -93,19 +93,18 @@ class Scanner:
         parameters = []
 
         # Simple parsing for string-based parameters
-        if isinstance(input_str, str):
-            parts = input_str.split(',')
-            for part in parts:
-                part = part.strip()
-                if part:
-                    param = {
-                        'name': part,
-                        'in': 'query',
-                        'schema': {
-                            'type': 'string'
-                        }
+        parts = input_str.split(',')
+        for part in parts:
+            part = part.strip()
+            if part:
+                param = {
+                    'name': part,
+                    'in': 'query',
+                    'schema': {
+                        'type': 'string'
                     }
-                    parameters.append(param)
+                }
+                parameters.append(param)
 
         return parameters
 
@@ -431,7 +430,7 @@ class Scanner:
                 self.components['schemas'][model_name] = schema
 
         # Process all services
-        for service_name, service_info in self.services.items():
+        for service_info in self.services.values():
             path_info = self.generate_path_from_service(service_info)
             if path_info:
                 path, path_object = path_info
