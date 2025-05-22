@@ -9,12 +9,15 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import ast
 import os
-import yaml
-from pathlib import Path
-from typing import Dict, List, Set, Tuple, Any
+
+# Zato
+from zato.common.typing_ import dictlist, list_
 
 # diskcache
 from diskcache import Cache
+
+# PyYAML
+import yaml
 
 # tqdm
 from tqdm import tqdm
@@ -25,7 +28,7 @@ from tqdm import tqdm
 class ServiceVisitor(ast.NodeVisitor):
     """ AST visitor that finds services in Python files.
     """
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.services = []
         self.current_class = None
         self.is_service = False
@@ -34,7 +37,7 @@ class ServiceVisitor(ast.NodeVisitor):
         self.output = None
         self.handle_method_exists = False
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node) -> 'None':
         """ Visit class definitions to identify services.
         """
         prev_class = self.current_class
@@ -68,7 +71,7 @@ class ServiceVisitor(ast.NodeVisitor):
 
         self.current_class = prev_class
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node) -> 'None':
         """ Visit assignments to find service attributes like name, input, output.
         """
         if not self.current_class or not self.is_service:
@@ -102,7 +105,7 @@ class ServiceVisitor(ast.NodeVisitor):
                 elif target.id == 'output' and isinstance(node.value, ast.Name):
                     self.output = node.value.id
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node) -> 'None':
         """ Visit function definitions to find handle() method.
         """
         if self.current_class and self.is_service and node.name == 'handle':
@@ -114,20 +117,20 @@ class ServiceVisitor(ast.NodeVisitor):
 class ServiceScanner:
     """ Scans directories for Zato services and extracts their information.
     """
-    def __init__(self, cache_dir: str = '/tmp/zato_service_scanner_cache'):
+    def __init__(self, cache_dir:'str'='/tmp/zato_service_scanner_cache'):
         self.cache = Cache(cache_dir)
 
-    def is_python_file(self, file_path: str) -> bool:
+    def is_python_file(self, file_path:'str') -> 'bool':
         """ Check if a file is a Python file.
         """
         return file_path.endswith('.py')
 
-    def get_file_mtime(self, file_path: str) -> float:
+    def get_file_mtime(self, file_path:'str') -> 'float':
         """ Get the modification time of a file.
         """
         return os.path.getmtime(file_path)
 
-    def scan_file(self, file_path: str) -> List[Dict[str, Any]]:
+    def scan_file(self, file_path:'str') -> 'dictlist':
         """ Scan a single Python file for services.
         """
         # Check cache first
@@ -152,7 +155,7 @@ class ServiceScanner:
 
         return services
 
-    def scan_directory(self, directory: str) -> List[Dict[str, Any]]:
+    def scan_directory(self, directory:'str') -> 'dictlist':
         """ Recursively scan a directory for services.
         """
         all_services = []
@@ -171,7 +174,7 @@ class ServiceScanner:
 
         return all_services
 
-    def scan_directories(self, directories: List[str]) -> List[Dict[str, Any]]:
+    def scan_directories(self, directories:'list_[str]') -> 'dictlist':
         """ Scan multiple directories for services.
         """
         all_services = []
@@ -180,7 +183,7 @@ class ServiceScanner:
             all_services.extend(services)
         return all_services
 
-    def generate_openapi(self, services: List[Dict[str, Any]], output_file: str) -> None:
+    def generate_openapi(self, services:'dictlist', output_file:'str') -> 'None':
         """ Generate an OpenAPI specification from the scanned services.
         """
         openapi = {
@@ -272,7 +275,7 @@ class ServiceScanner:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def scan_services(directories: List[str], output_file: str) -> None:
+def scan_services(directories:'list_[str]', output_file:'str') -> 'None':
     """ Scan directories for services and generate an OpenAPI specification.
     """
     scanner = ServiceScanner()
