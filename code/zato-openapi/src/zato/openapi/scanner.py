@@ -76,7 +76,8 @@ class Scanner:
 # ################################################################################################################################
 
     def parse_inline_input(self, input_def:'any_') -> 'list[dict]':
-        """ Parses inline input definition (string or tuple of strings). """
+        """ Parses inline input definition (string or tuple of strings).
+        """
         parameters = []
 
         if isinstance(input_def, str):
@@ -111,7 +112,8 @@ class Scanner:
 # ################################################################################################################################
 
     def extract_model_schema(self, model_class):
-        """ Extracts OpenAPI schema from a model class. """
+        """ Extracts OpenAPI schema from a model class.
+        """
         schema = {
             'type': 'object',
             'properties': {},
@@ -135,7 +137,8 @@ class Scanner:
 # ################################################################################################################################
 
     def type_to_schema(self, field_type):
-        """ Converts Python type to OpenAPI schema. """
+        """ Converts Python type to OpenAPI schema.
+        """
         # Use the type converter helper function
         schema = convert_type_to_schema(field_type, self.is_model_class)
 
@@ -150,7 +153,8 @@ class Scanner:
 # ################################################################################################################################
 
     def generate_path_from_service(self, service_class:'any_') -> 'optional[tuple[str, dict]]':
-        """ Generates an OpenAPI path object from a service class. """
+        """ Generates an OpenAPI path object from a service class.
+        """
         if not hasattr(service_class, 'name'):
             return None
 
@@ -257,12 +261,13 @@ class Scanner:
 # ################################################################################################################################
 
     def generate_spec(self, title:'str'='Zato API', version:'str'='1.0.0') -> 'dict':
-        """ Generates the full OpenAPI specification. """
+        """ Generates the full OpenAPI specification.
+        """
         # Scan for services and models
         self.scan_directory()
 
         # Generate paths
-        for service_name, service_class in self.services.items():
+        for service_class in self.services.values():
             path_info = self.generate_path_from_service(service_class)
             if not path_info:
                 continue
@@ -300,27 +305,30 @@ class Scanner:
 # ################################################################################################################################
 
     def to_yaml(self):
-        """ Converts the OpenAPI specification to YAML format. """
+        """ Converts the OpenAPI specification to YAML format.
+        """
         if not self.spec:
-            self.generate_spec()
+            _ = self.generate_spec()
 
         return yaml.dump(self.spec, sort_keys=False)
 
 # ################################################################################################################################
 
     def save_spec(self, output_path:'str', format_:'str'='yaml') -> 'None':
-        """ Saves the OpenAPI specification to a YAML file. """
+        """ Saves the OpenAPI specification to a YAML file.
+        """
         if not self.spec:
-            self.generate_spec()
+            _ = self.generate_spec()
 
         with open(output_path, 'w') as f:
-            f.write(self.to_yaml())
+            _ = f.write(self.to_yaml())
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def get_type_hints(cls):
-    """ Gets type hints for a class, handling potential exceptions. """
+    """ Gets type hints for a class, handling potential exceptions.
+    """
     try:
         return typing_get_type_hints(cls)
     except (TypeError, NameError):
@@ -331,7 +339,8 @@ def get_type_hints(cls):
 # ################################################################################################################################
 
 def scan_directory(directory_path, title='Zato API', version='1.0.0', output_path=None, format_='yaml'):
-    """ Convenience function to scan a directory and generate an OpenAPI spec. """
+    """ Convenience function to scan a directory and generate an OpenAPI spec.
+    """
     scanner = Scanner(directory_path)
     spec = scanner.generate_spec(title, version)
 
