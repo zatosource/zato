@@ -78,7 +78,7 @@
     /* Path numbering styles */
     .path-number {
       position: absolute;
-      left: -30px;
+      right: calc(100% + 10px); /* Position to the left of the path with a 10px gap */
       top: 50%;
       transform: translateY(-50%);
       color: #555;
@@ -86,6 +86,15 @@
       font-size: 12px;
       padding: 3px 5px;
       background: rgba(73, 204, 144, 0.1);
+      min-width: 30px;        /* Ensure minimum width for the number container */
+      text-align: center;     /* Center the numbers */
+      white-space: nowrap;    /* Prevent wrapping */
+      overflow: visible;      /* Allow overflow */
+    }
+
+    /* Add some extra spacing to operations to accommodate numbers */
+    .opblock-summary {
+      padding-left: 8px !important; /* Ensure there's always space for the number */
     }
   </style>
 </head>
@@ -129,13 +138,29 @@
         // Get all operation blocks
         const operations = document.querySelectorAll('.opblock-summary');
         let pathCounter = 1;
+        const totalPaths = operations.length;
+
+        // Calculate number format (padding) based on total number of paths
+        const numDigits = totalPaths.toString().length;
+
+        // Add extra margin to the parent container if many digits
+        if (numDigits > 2) {
+          // Add extra padding to all parent containers
+          document.querySelectorAll('.opblock').forEach(block => {
+            block.style.marginLeft = (numDigits * 10) + 'px';
+          });
+        }
 
         // Add number to each operation
         operations.forEach(operation => {
           // Create number element
           const numberElement = document.createElement('div');
           numberElement.className = 'path-number';
-          numberElement.textContent = pathCounter++;
+
+          // Format number with leading zeros for consistent width
+          const formattedNumber = pathCounter.toString().padStart(numDigits, ' ');
+          numberElement.textContent = formattedNumber;
+          pathCounter++;
 
           // Make sure the operation has position relative
           operation.style.position = 'relative';
