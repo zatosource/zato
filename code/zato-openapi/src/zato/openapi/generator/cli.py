@@ -27,7 +27,7 @@ def main():
 
     # Use the first path to initialize the scanner
     scanner = Scanner(args.paths[0])
-    
+
     # Add additional paths if provided
     for path in args.paths[1:]:
         scanner.add_directory(path)
