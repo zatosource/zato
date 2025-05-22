@@ -35,6 +35,7 @@ def import_module_from_path(file_path:'Path') -> 'optional[ModuleType]':
         spec.loader.exec_module(module)
         return module
     except Exception:
+        # Silently ignore import errors
         return None
 
 # ################################################################################################################################
@@ -103,38 +104,58 @@ def extract_path_from_service_name(service_name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def determine_http_method_from_service(service_class:'any_') -> 'str':
+def determine_http_method_from_service(service_name:'str') -> 'str':
     """ Determines the appropriate HTTP method for a service.
     """
-    # Check if the service explicitly defines a method
-    if hasattr(service_class, 'method') and isinstance(service_class.method, str):
-        method = service_class.method.lower()
-        if method in ('get', 'post', 'put', 'delete', 'patch'):
-            return method
-
-    # Check service name for method hints
-    name = service_class.__name__.lower()
-    if 'get' in name or 'list' in name or 'read' in name or 'view' in name or 'find' in name:
-        return 'get'
-    elif 'create' in name or 'add' in name or 'insert' in name:
-        return 'post'
-    elif 'update' in name or 'edit' in name or 'modify' in name:
-        return 'put'
-    elif 'delete' in name or 'remove' in name:
-        return 'delete'
+    # Convert to lowercase for consistent matching
+    name = service_name.lower()
+    
+    # Check for method indicators in the name
+    if 'get' in name:
+        return 'GET'
+    elif 'delete' in name:
+        return 'DELETE'
+    elif 'post' in name or 'create' in name:
+        return 'POST'
+    elif 'put' in name or 'update' in name:
+        return 'PUT'
     elif 'patch' in name:
-        return 'patch'
-
-    # Default to POST
-    return 'post'
+        return 'PATCH'
+    
+    # Default to POST if no clear indicator
+    return 'POST'
 
 # ################################################################################################################################
 
-def generate_operation_id(service_name:'str', http_method:'str') -> 'str':
-    """ Generates a unique operation ID for a service.
+def generate_operation_id(service_name:'str') -> 'str':
+    """ Generates a camelCase operation ID from a service name.
     """
-    # Replace dots with underscores and append the method
-    return f'{service_name.replace(".", "_")}_{http_method}'
+    # Clean the service name by removing non-alphanumeric characters
+    clean_name = ''.join(c for c in service_name if c.isalnum() or c == '_')
+    
+    # Split by underscores or other delimiters
+    parts = []
+    current_part = ''
+    for char in clean_name:
+        if char == '_':
+            if current_part:
+                parts.append(current_part)
+                current_part = ''
+        else:
+            current_part += char
+    if current_part:
+        parts.append(current_part)
+    
+    # Create camelCase operation ID
+    if parts:
+        # First part is lowercase, rest are capitalized
+        operation_id = parts[0].lower()
+        for part in parts[1:]:
+            operation_id += part.capitalize()
+    else:
+        operation_id = 'operation'
+    
+    return operation_id
 
 # ################################################################################################################################
 
@@ -162,25 +183,36 @@ def extract_description_from_docstring(obj:'any_') -> 'strnone':
 
 # ################################################################################################################################
 
-def generate_service_summary(service_class:'any_') -> 'str':
-    """ Generates a summary description for a service.
+def generate_service_summary(service_name:'str') -> 'str':
+    """ Generates a summary for a service based on its name.
     """
-    # Try to get from docstring first
-    doc = extract_description_from_docstring(service_class)
-    if doc:
-        # Return just the first line or first sentence
-        first_line = doc.split('\n')[0].strip()
-        first_sentence = first_line.split('.')[0].strip()
-        return first_sentence if first_sentence else service_class.__name__
-
-    # Generate from class name if no docstring
+    # Use service name and convert to readable format
+    clean_name = service_name.split('.')[-1]  # Get last part of name
     words = []
-    for i, char in enumerate(service_class.__name__):
-        if i > 0 and char.isupper() and not service_class.__name__[i-1].isupper():
-            words.append(' ')
-        words.append(char)
-
-    return ''.join(words).strip()
+    
+    # Split by underscores, dots, or camel case
+    current_word = ''
+    for i, char in enumerate(clean_name):
+        if char == '_' or char == '.':
+            if current_word:
+                words.append(current_word)
+                current_word = ''
+        elif char.isupper() and i > 0 and clean_name[i-1].islower():
+            # CamelCase boundary
+            words.append(current_word)
+            current_word = char
+        else:
+            current_word += char
+    
+    if current_word:
+        words.append(current_word)
+    
+    # Capitalize each word and join with spaces
+    if words:
+        title = ' '.join(word.capitalize() for word in words)
+        return f'{title} Operation'
+    
+    return 'API Operation'
 
 # ################################################################################################################################
 # ################################################################################################################################
