@@ -7,131 +7,95 @@ This file is a proprietary product, not an open-source one.
 """
 
 # stdlib
-import inspect
-
-# Zato
-from zato.common.typing_ import union_
-from zato.server.service import Model
+import re
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_optional_type(field_type):
-    """ Determines if a type is Optional[T].
+def convert_type_to_schema(type_hint:'str | None') -> 'dict | None':
+    """ Converts a Python type hint to an OpenAPI schema.
     """
-    return (
-        hasattr(field_type, '__origin__') and
-        field_type.__origin__ is union_ and
-        type(None) in field_type.__args__
-    )
+    # Handle None/null type
+    if type_hint is None or type_hint == 'None':
+        return {'type': 'null'}
 
-# ################################################################################################################################
+    # Handle string type
+    if type_hint == 'str' or type_hint == 'string':
+        return {'type': 'string'}
 
-def extract_optional_type(field_type):
-    """ Extracts the type T from Optional[T].
-    """
-    if not is_optional_type(field_type):
-        return field_type
+    # Handle integer types
+    if type_hint in ('int', 'integer'):
+        return {'type': 'integer', 'format': 'int32'}
 
-    for arg in field_type.__args__:
-        if arg is not type(None):  # noqa
-            return arg
+    # Handle floating point types
+    if type_hint in ('float', 'decimal', 'Decimal'):
+        return {'type': 'number', 'format': 'float'}
 
-    return str  # Default to string if no type found
+    # Handle boolean type
+    if type_hint in ('bool', 'boolean'):
+        return {'type': 'boolean'}
 
-# ################################################################################################################################
+    # Handle array/list types
+    list_match = re.match(r'(?:list|List|array)\[(.*?)\]', type_hint)
+    if list_match:
+        item_type = list_match.group(1).strip()
+        item_schema = convert_type_to_schema(item_type)
+        if item_schema:
+            return {
+                'type': 'array',
+                'items': item_schema
+            }
 
-def convert_type_to_schema(field_type, is_model_class_fn=None):
-    """ Converts a Python type to an OpenAPI schema.
-    """
+    # Handle dictionary/object types
+    dict_match = re.match(r'(?:dict|Dict|object)\[(.*?),\s*(.*?)\]', type_hint)
+    if dict_match:
+        # For dictionaries, we only care about the value type for OpenAPI
+        value_type = dict_match.group(2).strip()
+        value_schema = convert_type_to_schema(value_type)
+        if value_schema:
+            return {
+                'type': 'object',
+                'additionalProperties': value_schema
+            }
 
-    # Handle Optional types
-    if is_optional_type(field_type):
-        return convert_type_to_schema(extract_optional_type(field_type), is_model_class_fn)
+    # Handle optional types
+    optional_match = re.match(r'(?:Optional|optional)\[(.*?)\]', type_hint)
+    if optional_match:
+        inner_type = optional_match.group(1).strip()
+        inner_schema = convert_type_to_schema(inner_type)
+        if inner_schema:
+            # In OpenAPI, nullable is used for optional fields
+            inner_schema['nullable'] = True
+            return inner_schema
 
-    # Basic types
-    type_mapping = {
-        str: {'type': 'string'},
-        int: {'type': 'integer'},
-        float: {'type': 'number'},
-        bool: {'type': 'boolean'},
-        list: {'type': 'array', 'items': {}},
-        dict: {'type': 'object'}
-    }
+    # Handle Union types
+    union_match = re.match(r'(?:Union|union)\[(.*?)\]', type_hint)
+    if union_match:
+        types = [t.strip() for t in union_match.group(1).split(',')]
+        schemas = [convert_type_to_schema(t) for t in types if t != 'None']
+        schemas = [s for s in schemas if s is not None]
 
-    # Check for direct type matches
-    if field_type in type_mapping:
-        return type_mapping[field_type]
+        if 'None' in types or 'NoneType' in types:
+            if len(schemas) == 1:
+                # If it's just one type and None, make it nullable
+                schemas[0]['nullable'] = True
+                return schemas[0]
 
-    # Check for type name matches (for imported types)
-    type_name = getattr(field_type, '__name__', '')
-    for py_type, schema in type_mapping.items():
-        if type_name == py_type.__name__:
-            return schema
+        if schemas:
+            return {'oneOf': schemas}
 
-    # Handle List[T] types
-    if hasattr(field_type, '__origin__') and field_type.__origin__ is list:
-        item_type = field_type.__args__[0]
-        return {
-            'type': 'array',
-            'items': convert_type_to_schema(item_type, is_model_class_fn)
-        }
+    # Handle Any type
+    if type_hint in ('any', 'Any', 'object'):
+        return {}
 
-    # Handle Dict[K, V] types
-    if hasattr(field_type, '__origin__') and field_type.__origin__ is dict:
-        return {'type': 'object'}
+    # For unknown types, assume they are references to models
+    if isinstance(type_hint, str) and type_hint not in ('', 'None', 'NoneType'):
+        # Clean up the type name
+        type_name = type_hint.strip('\'"')
+        return {'$ref': f'#/components/schemas/{type_name}'}
 
-    # Handle custom model types
-    if inspect.isclass(field_type) and is_model_class_fn and is_model_class_fn(field_type):
-        model_name = field_type.__name__
-        return {'$ref': f'#/components/schemas/{model_name}'}
-
-    # Special Zato types
-    zato_type_mapping = {
-        'strnone': {'type': 'string'},
-        'intnone': {'type': 'integer'},
-        'floatnone': {'type': 'number'},
-        'boolnone': {'type': 'boolean'},
-        'datetime_': {'type': 'string', 'format': 'date-time'},
-        'date_': {'type': 'string', 'format': 'date'},
-        'bytesnone': {'type': 'string', 'format': 'binary'},
-    }
-
-    # Check for Zato type name matches
-    if type_name in zato_type_mapping:
-        return zato_type_mapping[type_name]
-
-    # Default to string for unknown types
-    return {'type': 'string'}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def extract_model_fields(model_class, type_hints):
-    """ Extracts field information from a model class.
-    """
-    properties = {}
-    required = []
-
-    for field_name, field_type in type_hints.items():
-        # Skip internal fields
-        if field_name.startswith('_'):
-            continue
-
-        # Determine if field is required
-        is_optional = is_optional_type(field_type)
-        has_default = hasattr(model_class, field_name) and getattr(model_class, field_name) is not None
-
-        if not is_optional and not has_default:
-            required.append(field_name)
-
-        # Convert field type to OpenAPI schema
-        properties[field_name] = convert_type_to_schema(
-            field_type,
-            lambda cls: inspect.isclass(cls) and issubclass(cls, Model)
-        )
-
-    return properties, required
+    # Default to empty schema if we can't determine the type
+    return {}
 
 # ################################################################################################################################
 # ################################################################################################################################

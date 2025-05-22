@@ -15,13 +15,13 @@ from pathlib import Path
 from types import ModuleType
 
 # Zato
-from zato.common.typing_ import any_, optional, strnone
+from zato.common.typing_ import any_, strnone
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def import_module_from_path(file_path:'Path') -> 'optional[ModuleType]':
+def import_module_from_path(file_path:'Path') -> 'ModuleType | None':
     """ Dynamically imports a Python module from its file path.
     """
     try:
@@ -109,7 +109,7 @@ def determine_http_method_from_service(service_name:'str') -> 'str':
     """
     # Convert to lowercase for consistent matching
     name = service_name.lower()
-    
+
     # Check for method indicators in the name
     if 'get' in name:
         return 'GET'
@@ -121,7 +121,7 @@ def determine_http_method_from_service(service_name:'str') -> 'str':
         return 'PUT'
     elif 'patch' in name:
         return 'PATCH'
-    
+
     # Default to POST if no clear indicator
     return 'POST'
 
@@ -132,7 +132,7 @@ def generate_operation_id(service_name:'str') -> 'str':
     """
     # Clean the service name by removing non-alphanumeric characters
     clean_name = ''.join(c for c in service_name if c.isalnum() or c == '_')
-    
+
     # Split by underscores or other delimiters
     parts = []
     current_part = ''
@@ -145,7 +145,7 @@ def generate_operation_id(service_name:'str') -> 'str':
             current_part += char
     if current_part:
         parts.append(current_part)
-    
+
     # Create camelCase operation ID
     if parts:
         # First part is lowercase, rest are capitalized
@@ -154,7 +154,7 @@ def generate_operation_id(service_name:'str') -> 'str':
             operation_id += part.capitalize()
     else:
         operation_id = 'operation'
-    
+
     return operation_id
 
 # ################################################################################################################################
@@ -189,7 +189,7 @@ def generate_service_summary(service_name:'str') -> 'str':
     # Use service name and convert to readable format
     clean_name = service_name.split('.')[-1]  # Get last part of name
     words = []
-    
+
     # Split by underscores, dots, or camel case
     current_word = ''
     for i, char in enumerate(clean_name):
@@ -203,15 +203,15 @@ def generate_service_summary(service_name:'str') -> 'str':
             current_word = char
         else:
             current_word += char
-    
+
     if current_word:
         words.append(current_word)
-    
+
     # Capitalize each word and join with spaces
     if words:
         title = ' '.join(word.capitalize() for word in words)
         return f'{title} Operation'
-    
+
     return 'API Operation'
 
 # ################################################################################################################################
