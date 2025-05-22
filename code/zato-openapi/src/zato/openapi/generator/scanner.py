@@ -14,12 +14,11 @@ from pathlib import Path
 import yaml
 
 # Zato
-from zato.common.typing_ import any_, dict_, list_, optional
+from zato.common.typing_ import optional
 from zato.openapi.generator.ast_parser import find_services_and_models
 from zato.openapi.generator.type_converter import convert_type_to_schema
-from zato.openapi.generator.utils import extract_description_from_docstring, extract_path_from_service_name, determine_http_method_from_service
+from zato.openapi.generator.utils import extract_path_from_service_name, determine_http_method_from_service
 from zato.openapi.generator.utils import generate_operation_id, generate_service_summary, scan_directory_for_modules
-from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Scanner:    
+class Scanner:
     """ Scans a directory for Zato service classes and model definitions to generate OpenAPI specifications.
     """
     def __init__(self, root_path:'str'):
@@ -41,7 +40,7 @@ class Scanner:
         self.paths = {}
         self.components = {'schemas': {}}
         self.spec = {}
-        
+
         # Scan the directory
         self.scan_directory()
 
@@ -52,16 +51,16 @@ class Scanner:
         """
         # Store the current root path
         original_path = self.root_path
-        
+
         # Set the new path temporarily
         self.root_path = Path(directory_path)
-        
+
         # Scan the directory
         self.scan_directory()
-        
+
         # Restore the original path
         self.root_path = original_path
-        
+
     def scan_directory(self):
         """ Scans the root directory for Python files containing service and model definitions.
         """
@@ -81,7 +80,7 @@ class Scanner:
             for service_info in services:
                 service_name = service_info['name']
                 self.services[service_name] = service_info
-                
+
             for model_info in models:
                 model_name = model_info['name']
                 self.models[model_name] = model_info
@@ -92,7 +91,7 @@ class Scanner:
         """ Parses an inline input string into parameters.
         """
         parameters = []
-        
+
         # Simple parsing for string-based parameters
         if isinstance(input_str, str):
             parts = input_str.split(',')
@@ -107,7 +106,7 @@ class Scanner:
                         }
                     }
                     parameters.append(param)
-        
+
         return parameters
 
 # ################################################################################################################################
@@ -118,20 +117,20 @@ class Scanner:
         service_name = service_info['attrs'].get('name')
         if not service_name:
             return None
-            
+
         path = extract_path_from_service_name(service_name)
-        
+
         if not path:
             # Skip services without a proper path
             return None
-            
+
         http_method = determine_http_method_from_service(service_name)
         operation_id = generate_operation_id(service_name)
         summary = generate_service_summary(service_name)
-        
+
         # Use class name as fallback description if no docstring
         description = service_info.get('name', 'Service')
-        
+
         # Initialize the path object
         path_object = {
             http_method: {
@@ -145,13 +144,13 @@ class Scanner:
                 }
             }
         }
-        
+
         # Add request body or parameters
         self._add_request_to_path(path_object, http_method, service_info)
-        
+
         # Add response schema
         self._add_response_to_path(path_object, http_method, service_info)
-            
+
         return path, path_object
 
 # ################################################################################################################################
@@ -162,17 +161,26 @@ class Scanner:
         # Add request body or parameters based on input definition
         if 'input' in service_info['attrs']:
             input_def = service_info['attrs']['input']
-            
+
             if isinstance(input_def, str):
                 # Inline input definition (parameter string)
                 path_object[http_method]['parameters'] = self.parse_inline_input(input_def)
-            
+
             elif isinstance(input_def, dict):
                 # Dictionary model reference
                 model_name = input_def.get('model')
                 if model_name and isinstance(model_name, str):
+                    # Ensure the model exists in our schemas
+                    if model_name not in self.components['schemas']:
+                        # If model was referenced but not found, create a placeholder schema
+                        self.components['schemas'][model_name] = {
+                            'type': 'object',
+                            'description': f'Schema for {model_name} (auto-generated)',
+                            'properties': {}
+                        }
+
                     schema_ref = {'$ref': f'#/components/schemas/{model_name}'}
-                    
+
                     # Add request body
                     path_object[http_method]['requestBody'] = {
                         'required': True,
@@ -182,6 +190,21 @@ class Scanner:
                             }
                         }
                     }
+
+            # Handle when input is a direct reference to a model class
+            elif isinstance(input_def, str) and input_def in self.models:
+                model_name = input_def
+                schema_ref = {'$ref': f'#/components/schemas/{model_name}'}
+
+                # Add request body
+                path_object[http_method]['requestBody'] = {
+                    'required': True,
+                    'content': {
+                        'application/json': {
+                            'schema': schema_ref
+                        }
+                    }
+                }
 
 # ################################################################################################################################
 
@@ -196,6 +219,15 @@ class Scanner:
                 # Dictionary model reference
                 model_name = output_def.get('model')
                 if model_name and isinstance(model_name, str):
+                    # Ensure the model exists in our schemas
+                    if model_name not in self.components['schemas']:
+                        # If model was referenced but not found, create a placeholder schema
+                        self.components['schemas'][model_name] = {
+                            'type': 'object',
+                            'description': f'Schema for {model_name} (auto-generated)',
+                            'properties': {}
+                        }
+
                     schema_ref = {'$ref': f'#/components/schemas/{model_name}'}
 
                     # Add response schema
@@ -204,13 +236,34 @@ class Scanner:
                             'schema': schema_ref
                         }
                     }
-        
+
+            # Handle when output is a direct reference to a model class
+            elif isinstance(output_def, str) and output_def in self.models:
+                model_name = output_def
+                schema_ref = {'$ref': f'#/components/schemas/{model_name}'}
+
+                # Add response schema
+                path_object[http_method]['responses']['200']['content'] = {
+                    'application/json': {
+                        'schema': schema_ref
+                    }
+                }
+
         # Process model attribute (used by some adapter services)
         if 'model' in service_info['attrs']:
             model_name = service_info['attrs']['model']
             if isinstance(model_name, str):
+                # Ensure the model exists in our schemas
+                if model_name not in self.components['schemas']:
+                    # If model was referenced but not found, create a placeholder schema
+                    self.components['schemas'][model_name] = {
+                        'type': 'object',
+                        'description': f'Schema for {model_name} (auto-generated)',
+                        'properties': {}
+                    }
+
                 schema_ref = {'$ref': f'#/components/schemas/{model_name}'}
-                
+
                 # Add response schema if not already added
                 if 'content' not in path_object[http_method]['responses']['200']:
                     path_object[http_method]['responses']['200']['content'] = {
@@ -224,13 +277,19 @@ class Scanner:
     def generate_spec(self, title:'str'='API Spec', version:'str'='1.0.0') -> 'dict':
         """ Generates an OpenAPI specification from scanned services and models.
         """
+        # Process all models first to ensure they're available for services
+        for model_name, model_info in self.models.items():
+            schema = self.extract_model_schema(model_info)
+            if schema:
+                self.components['schemas'][model_name] = schema
+
         # Process all services
         for service_name, service_info in self.services.items():
             path_info = self.generate_path_from_service(service_info)
             if path_info:
                 path, path_object = path_info
                 self.paths[path] = path_object
-                
+
         # Build the final spec
         self.spec = {
             'openapi': '3.0.0',
@@ -240,12 +299,51 @@ class Scanner:
             },
             'paths': self.paths
         }
-        
+
         # Add components if we have any
         if self.components['schemas']:
             self.spec['components'] = self.components
-            
+
         return self.spec
+
+# ################################################################################################################################
+
+    def extract_model_schema(self, model_info:'dict') -> 'optional[dict]':
+        """ Extract OpenAPI schema from a model class information.
+        """
+        # If there are no annotations, we can't extract a schema
+        if not model_info['annotations']:
+            return None
+
+        properties = {}
+        required = []
+
+        # Process each annotation as a property
+        for field_name, field_type in model_info['annotations'].items():
+            # Convert Python type to OpenAPI schema
+            prop_schema = convert_type_to_schema(field_type)
+
+            if prop_schema:
+                properties[field_name] = prop_schema
+
+                # Assume all fields are required unless they have a default value
+                if field_name not in model_info.get('attrs', {}):
+                    required.append(field_name)
+
+        if not properties:
+            return None
+
+        # Create the schema
+        schema = {
+            'type': 'object',
+            'properties': properties
+        }
+
+        # Add required fields if any
+        if required:
+            schema['required'] = required
+
+        return schema
 
 # ################################################################################################################################
 
