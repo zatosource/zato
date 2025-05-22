@@ -13,6 +13,59 @@ from pathlib import Path
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Helper functions to extract complex values
+def extract_tuple_values(node):
+    """ Extract values from a tuple node. """
+    values = []
+    for elt in node.elts:
+        if isinstance(elt, ast.Constant):
+            values.append(elt.value)
+        elif isinstance(elt, ast.Str):  # For Python < 3.8
+            values.append(elt.s)
+        elif isinstance(elt, ast.Call):
+            values.append(extract_function_call(elt))
+        else:
+            values.append(None)
+    return tuple(values)
+
+def extract_list_values(node):
+    """ Extract values from a list node. """
+    values = []
+    for elt in node.elts:
+        if isinstance(elt, ast.Constant):
+            values.append(elt.value)
+        elif isinstance(elt, ast.Str):  # For Python < 3.8
+            values.append(elt.s)
+        elif isinstance(elt, ast.Call):
+            values.append(extract_function_call(elt))
+        else:
+            values.append(None)
+    return values
+
+def extract_function_call(node):
+    """ Extract information from a function call node (e.g., Integer('port')). """
+    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+        return None
+
+    func_name = node.func.id
+    args = []
+
+    for arg in node.args:
+        if isinstance(arg, ast.Constant):
+            args.append(arg.value)
+        elif isinstance(arg, ast.Str):  # For Python < 3.8
+            args.append(arg.s)
+        else:
+            args.append(None)
+
+    return {
+        'type': func_name,
+        'args': args
+    }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def extract_class_definition(node):
     """ Extracts class definition information from an AST node.
     """
@@ -39,7 +92,12 @@ def extract_class_definition(node):
                     elif isinstance(item.value, ast.Str):  # For Python < 3.8
                         value = item.value.s
                     elif isinstance(item.value, ast.Tuple):
-                        value = tuple(elt.value if isinstance(elt, ast.Constant) else None for elt in item.value.elts)
+                        value = extract_tuple_values(item.value)
+                    elif isinstance(item.value, ast.List):
+                        value = extract_list_values(item.value)
+                    elif isinstance(item.value, ast.Call):
+                        # Handle function calls like Integer('port')
+                        value = extract_function_call(item.value)
 
                     attrs[target.id] = value
 
@@ -53,7 +111,7 @@ def extract_class_definition(node):
             elif isinstance(item.annotation, ast.Subscript) and isinstance(item.annotation.value, ast.Name):
                 # Handle simple subscript types like List[str]
                 container = item.annotation.value.id
-                if isinstance(item.annotation.slice, ast.Index):  # Python < 3.9
+                if isinstance(item.annotation.slice, ast.Index):  # Python < 3.8
                     if hasattr(item.annotation.slice, 'value') and isinstance(item.annotation.slice.value, ast.Name):
                         elem_type = item.annotation.slice.value.id
                         annotations[item.target.id] = f'{container}[{elem_type}]'
@@ -67,6 +125,12 @@ def extract_class_definition(node):
     output_def = attrs.get('output')
     model_def = attrs.get('model')
 
+    # Check for SimpleIO attributes
+    input_required = attrs.get('input_required')
+    input_optional = attrs.get('input_optional')
+    output_required = attrs.get('output_required')
+    output_optional = attrs.get('output_optional')
+
     return {
         'name': class_name,
         'bases': bases,
@@ -74,7 +138,11 @@ def extract_class_definition(node):
         'annotations': annotations,
         'input': input_def,
         'output': output_def,
-        'model': model_def
+        'model': model_def,
+        'input_required': input_required,
+        'input_optional': input_optional,
+        'output_required': output_required,
+        'output_optional': output_optional
     }
 
 # ################################################################################################################################
@@ -109,6 +177,14 @@ def is_service_class(class_info:'dict', service_base_names:'list[str]'=['Service
     """
     # Check if it inherits from a known service base class
     if any(base in service_base_names for base in class_info['bases']):
+        return True
+
+    # Check for SimpleIO-style service
+    has_simpleio = any(base.endswith('SIO') for base in class_info['bases']) or 'SimpleIO' in class_info['bases']
+    has_simpleio_attrs = ('input_required' in class_info['attrs'] or 'output_required' in class_info['attrs'] or
+                         'input_optional' in class_info['attrs'] or 'output_optional' in class_info['attrs'])
+
+    if has_simpleio or has_simpleio_attrs:
         return True
 
     # Check for service-like attributes
