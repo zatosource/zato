@@ -17,17 +17,17 @@ from zato.openapi.generator.service_scanner import scan_services
 # ################################################################################################################################
 # ################################################################################################################################
 
-def parse_args():
+def parse_args() -> 'argparse.Namespace':
     """ Parse command line arguments.
     """
-    parser = argparse.ArgumentParser(description='Scan Zato services and generate OpenAPI specification')
-    parser.add_argument('directories', nargs='+', help='Directories to scan for services')
-    parser.add_argument('--output', '-o', default='openapi.yaml', help='Output file path (default: openapi.yaml)')
+    _ = parser = argparse.ArgumentParser(description='Scan Zato services and generate OpenAPI specification')
+    _ = parser.add_argument('directories', nargs='+', help='Directories to scan for services')
+    _ = parser.add_argument('--output', '-o', default='openapi.yaml', help='Output file path (default: openapi.yaml)')
     return parser.parse_args()
 
 # ################################################################################################################################
 
-def main():
+def main() -> 'None':
     """ Main entry point for the CLI.
     """
     args = parse_args()
