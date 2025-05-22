@@ -8,10 +8,11 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import ast
+import logging
 import os
 
 # Zato
-from zato.common.typing_ import dictlist, list_
+from zato.common.typing_ import dictlist, strlist
 
 # diskcache
 from diskcache import Cache
@@ -21,6 +22,12 @@ import yaml
 
 # tqdm
 from tqdm import tqdm
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Logger for this module
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,7 +158,7 @@ class ServiceScanner:
             # Store in cache
             self.cache[cache_key] = services
         except Exception as e:
-            print(f"Error parsing {file_path}: {e}")
+            logger.error(f'Error parsing {file_path}: {e}')
 
         return services
 
@@ -174,7 +181,7 @@ class ServiceScanner:
 
         return all_services
 
-    def scan_directories(self, directories:'list_[str]') -> 'dictlist':
+    def scan_directories(self, directories:'strlist') -> 'dictlist':
         """ Scan multiple directories for services.
         """
         all_services = []
@@ -275,13 +282,13 @@ class ServiceScanner:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def scan_services(directories:'list_[str]', output_file:'str') -> 'None':
+def scan_services(directories:'strlist', output_file:'str') -> 'None':
     """ Scan directories for services and generate an OpenAPI specification.
     """
     scanner = ServiceScanner()
     services = scanner.scan_directories(directories)
     scanner.generate_openapi(services, output_file)
-    print(f"Found {len(services)} services. OpenAPI specification saved to {output_file}")
+    logger.info(f'Found {len(services)} services. OpenAPI specification saved to {output_file}')
 
 # ################################################################################################################################
 # ################################################################################################################################
