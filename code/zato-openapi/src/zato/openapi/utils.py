@@ -15,40 +15,42 @@ from pathlib import Path
 from types import ModuleType
 
 # Zato
-from zato.common.typing_ import any_, anydict, list_, optional, strnone
+from zato.common.typing_ import any_, optional, strnone
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def import_module_from_path(file_path:'Path') -> 'optional[ModuleType]':
-    """ Dynamically imports a Python module from its file path. """
+    """ Dynamically imports a Python module from its file path.
+    """
     try:
         module_name = file_path.stem
         spec = importlib.util.spec_from_file_location(module_name, file_path)
         if not spec or not spec.loader:
             return None
-            
+
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
         spec.loader.exec_module(module)
         return module
-    except Exception as e:
+    except Exception:
         return None
 
 # ################################################################################################################################
 
-def find_services_and_models(module:'ModuleType', base_service_class:'type'=Service, 
+def find_services_and_models(module:'ModuleType', base_service_class:'type'=Service,
         base_model_class:'type'=Model) -> 'tuple[dict, dict]':
-    """ Finds all service and model classes in a module. """
+    """ Finds all service and model classes in a module.
+    """
     services = {}
     models = {}
-    
+
     for name, obj in inspect.getmembers(module):
         # Skip builtins and modules
         if name.startswith('_') or inspect.ismodule(obj):
             continue
-            
+
         # Check if it's a service
         if inspect.isclass(obj):
             # Direct inheritance from Service
@@ -62,7 +64,7 @@ def find_services_and_models(module:'ModuleType', base_service_class:'type'=Serv
                 has_io = hasattr(obj, 'input') or hasattr(obj, 'output') or hasattr(obj, 'model')
                 class_name = obj.__name__
                 is_adapter = any(suffix for suffix in ('Adapter', 'API', 'Service') if class_name.endswith(suffix))
-                
+
                 if has_handle or has_io or is_adapter:
                     services[name] = obj
                     if hasattr(obj, 'name'):
@@ -70,13 +72,14 @@ def find_services_and_models(module:'ModuleType', base_service_class:'type'=Serv
             # Check if it's a model
             elif hasattr(obj, '__annotations__') and issubclass(obj, base_model_class) and obj != base_model_class:
                 models[name] = obj
-    
+
     return services, models
 
 # ################################################################################################################################
 
-def scan_directory_for_modules(directory_path:'str') -> 'list[Path]':
-    """ Recursively scans a directory for Python files. """
+def scan_directory_for_modules(directory_path:'str | Path') -> 'list[Path]':
+    """ Recursively scans a directory for Python files.
+    """
     py_files = []
     for root, _, files in os.walk(directory_path):
         for file_name in files:
@@ -87,26 +90,28 @@ def scan_directory_for_modules(directory_path:'str') -> 'list[Path]':
 # ################################################################################################################################
 
 def extract_path_from_service_name(service_name:'str') -> 'str':
-    """ Converts a service name to an API path. """
+    """ Converts a service name to an API path.
+    """
     # Replace dots with slashes
     path = service_name.replace('.', '/')
-    
+
     # Ensure path starts with a slash
     if not path.startswith('/'):
         path = f'/{path}'
-        
+
     return path
 
 # ################################################################################################################################
 
 def determine_http_method_from_service(service_class:'any_') -> 'str':
-    """ Determines the appropriate HTTP method for a service. """
+    """ Determines the appropriate HTTP method for a service.
+    """
     # Check if the service explicitly defines a method
     if hasattr(service_class, 'method') and isinstance(service_class.method, str):
         method = service_class.method.lower()
         if method in ('get', 'post', 'put', 'delete', 'patch'):
             return method
-    
+
     # Check service name for method hints
     name = service_class.__name__.lower()
     if 'get' in name or 'list' in name or 'read' in name or 'view' in name or 'find' in name:
@@ -119,44 +124,47 @@ def determine_http_method_from_service(service_class:'any_') -> 'str':
         return 'delete'
     elif 'patch' in name:
         return 'patch'
-    
+
     # Default to POST
     return 'post'
 
 # ################################################################################################################################
 
 def generate_operation_id(service_name:'str', http_method:'str') -> 'str':
-    """ Generates a unique operation ID for a service. """
+    """ Generates a unique operation ID for a service.
+    """
     # Replace dots with underscores and append the method
     return f'{service_name.replace(".", "_")}_{http_method}'
 
 # ################################################################################################################################
 
 def extract_description_from_docstring(obj:'any_') -> 'strnone':
-    """ Extracts a clean description from a docstring. """
+    """ Extracts a clean description from a docstring.
+    """
     if not obj.__doc__:
         return None
-        
+
     # Clean up docstring
     lines = [line.strip() for line in obj.__doc__.splitlines()]
-    
+
     # Remove empty lines at the beginning and end
     while lines and not lines[0]:
         lines.pop(0)
-    
+
     while lines and not lines[-1]:
         lines.pop()
-        
+
     if not lines:
         return None
-        
+
     # Join lines with space to create a single paragraph
     return ' '.join(lines)
 
 # ################################################################################################################################
 
 def generate_service_summary(service_class:'any_') -> 'str':
-    """ Generates a summary description for a service. """
+    """ Generates a summary description for a service.
+    """
     # Try to get from docstring first
     doc = extract_description_from_docstring(service_class)
     if doc:
@@ -164,14 +172,14 @@ def generate_service_summary(service_class:'any_') -> 'str':
         first_line = doc.split('\n')[0].strip()
         first_sentence = first_line.split('.')[0].strip()
         return first_sentence if first_sentence else service_class.__name__
-    
+
     # Generate from class name if no docstring
     words = []
     for i, char in enumerate(service_class.__name__):
         if i > 0 and char.isupper() and not service_class.__name__[i-1].isupper():
             words.append(' ')
         words.append(char)
-    
+
     return ''.join(words).strip()
 
 # ################################################################################################################################

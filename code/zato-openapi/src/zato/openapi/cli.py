@@ -16,6 +16,8 @@ from zato.openapi.scanner import Scanner
 # ################################################################################################################################
 
 def main():
+    """ Main entry point for the OpenAPI scanner CLI.
+    """
     parser = argparse.ArgumentParser(description='Generate OpenAPI specification from Zato services')
     _ = parser.add_argument('path', help='Directory path containing Zato services')
     _ = parser.add_argument('-o', '--output', help='Output file path (YAML format)', default='/tmp/openapi.yaml')
