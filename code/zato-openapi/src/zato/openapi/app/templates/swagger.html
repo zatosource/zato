@@ -71,6 +71,19 @@
       background-color: yellow;
       font-weight: bold;
     }
+
+    /* Path numbering styles */
+    .path-number {
+      position: absolute;
+      left: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #555;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 3px 5px;
+      background: rgba(73, 204, 144, 0.1);
+    }
   </style>
 </head>
 <body>
@@ -102,9 +115,32 @@
         // Add a callback when Swagger UI has finished loading
         onComplete: function() {
           // Initialize our custom path search after Swagger UI loads
-          setTimeout(initPathSearch, 20); // Wait a bit for everything to render
+          initPathSearch();
+          // Add numbering to all paths
+          addPathNumbering();
         }
       });
+
+      // Add path numbering to all operations
+      function addPathNumbering() {
+        // Get all operation blocks
+        const operations = document.querySelectorAll('.opblock-summary');
+        let pathCounter = 1;
+
+        // Add number to each operation
+        operations.forEach(operation => {
+          // Create number element
+          const numberElement = document.createElement('div');
+          numberElement.className = 'path-number';
+          numberElement.textContent = pathCounter++;
+
+          // Make sure the operation has position relative
+          operation.style.position = 'relative';
+
+          // Add number element to operation
+          operation.appendChild(numberElement);
+        });
+      }
 
       // Initialize custom path search functionality
       function initPathSearch() {
