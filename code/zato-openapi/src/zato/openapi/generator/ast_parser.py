@@ -59,11 +59,11 @@ def extract_class_definition(node):
                 if isinstance(item.annotation.slice, ast.Index):  # Python < 3.9
                     if hasattr(item.annotation.slice, 'value') and isinstance(item.annotation.slice.value, ast.Name):
                         elem_type = item.annotation.slice.value.id
-                        annotations[item.target.id] = f"{container}[{elem_type}]"
+                        annotations[item.target.id] = f'{container}[{elem_type}]'
                 else:  # Python 3.9+
                     if isinstance(item.annotation.slice, ast.Name):
                         elem_type = item.annotation.slice.id
-                        annotations[item.target.id] = f"{container}[{elem_type}]"
+                        annotations[item.target.id] = f'{container}[{elem_type}]'
     
     # Check for input and output attributes
     input_def = attrs.get('input')
