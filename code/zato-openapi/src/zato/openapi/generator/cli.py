@@ -8,11 +8,18 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 # Zato
 from zato.openapi.generator.service_scanner import scan_services
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Logger for this module
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +42,7 @@ def main() -> 'None':
     # Validate directories
     for directory in args.directories:
         if not Path(directory).is_dir():
-            print(f"Error: {directory} is not a valid directory")
+            logger.error(f'Error: {directory} is not a valid directory')
             sys.exit(1)
 
     # Scan services and generate OpenAPI spec
