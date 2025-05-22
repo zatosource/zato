@@ -13,11 +13,9 @@ import sys
 from pathlib import Path
 
 # Local imports
-from . import service_scanner
 from . import io_scanner
 
-# Reference the imported functions directly
-scan_services = service_scanner.scan_services
+# Reference the imported function directly
 scan_io = io_scanner.scan_io
 
 # ################################################################################################################################
@@ -35,8 +33,6 @@ def parse_args() -> 'argparse.Namespace':
     parser = argparse.ArgumentParser(description='Scan Zato services and generate OpenAPI specification')
     parser.add_argument('directories', nargs='+', help='Directories to scan for services')
     parser.add_argument('--output', '-o', default='/tmp/openapi.yaml', help='Output file path (default: /tmp/openapi.yaml)')
-    parser.add_argument('--scanner', '-s', choices=['service', 'io'], default='service', 
-                      help='Scanner to use: "service" for basic service info or "io" for detailed I/O definitions (default: service)')
     return parser.parse_args()
 
 # ################################################################################################################################
@@ -52,13 +48,8 @@ def main() -> 'None':
             logger.error(f'Error: {directory} is not a valid directory')
             sys.exit(1)
 
-    # Select scanner based on command line option
-    if args.scanner == 'service':
-        # Use the basic service scanner
-        scan_services(args.directories, args.output)
-    else:
-        # Use the I/O scanner for detailed service I/O definitions
-        scan_io(args.directories, args.output)
+    # Use the I/O scanner for OpenAPI generation
+    scan_io(args.directories, args.output)
 
 # ################################################################################################################################
 
