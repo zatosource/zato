@@ -29,7 +29,7 @@ def parse_args() -> 'argparse.Namespace':
     """
     _ = parser = argparse.ArgumentParser(description='Scan Zato services and generate OpenAPI specification')
     _ = parser.add_argument('directories', nargs='+', help='Directories to scan for services')
-    _ = parser.add_argument('--output', '-o', default='openapi.yaml', help='Output file path (default: openapi.yaml)')
+    _ = parser.add_argument('--output', '-o', default='/tmp/openapi.yaml', help='Output file path (default: /tmp/openapi.yaml)')
     return parser.parse_args()
 
 # ################################################################################################################################
