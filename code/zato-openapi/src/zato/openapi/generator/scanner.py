@@ -206,6 +206,81 @@ class Scanner:
                     }
                 }
 
+        # Handle SimpleIO-style input definitions
+        elif 'input_required' in service_info or 'input_optional' in service_info:
+            # Create a schema for the input
+            schema = {
+                'type': 'object',
+                'properties': {},
+                'required': []
+            }
+
+            # Process required input parameters
+            if 'input_required' in service_info and service_info['input_required']:
+                for param in service_info['input_required']:
+                    if isinstance(param, str):
+                        schema['properties'][param] = {'type': 'string'}
+                        schema['required'].append(param)
+                    elif isinstance(param, dict) and 'type' in param:  # Function call like Integer('port')
+                        param_name = param['args'][0] if param['args'] else 'unknown'
+                        param_type = param['type'].lower()
+
+                        # Map Zato types to OpenAPI types
+                        if param_type in ('integer', 'int', 'intsio'):
+                            schema['properties'][param_name] = {'type': 'integer'}
+                        elif param_type in ('boolean', 'bool', 'boolsio'):
+                            schema['properties'][param_name] = {'type': 'boolean'}
+                        elif param_type == 'float':
+                            schema['properties'][param_name] = {'type': 'number', 'format': 'float'}
+                        elif param_type == 'asis':
+                            # Handle AsIs parameters
+                            schema['properties'][param_name] = {'type': 'string'}
+                        else:
+                            schema['properties'][param_name] = {'type': 'string'}
+
+                        schema['required'].append(param_name)
+
+            # Process optional input parameters
+            if 'input_optional' in service_info and service_info['input_optional']:
+                for param in service_info['input_optional']:
+                    if isinstance(param, str):
+                        schema['properties'][param] = {'type': 'string'}
+                    elif isinstance(param, dict) and 'type' in param:  # Function call like Integer('port')
+                        param_name = param['args'][0] if param['args'] else 'unknown'
+                        param_type = param['type'].lower()
+
+                        # Map Zato types to OpenAPI types
+                        if param_type in ('integer', 'int', 'intsio'):
+                            schema['properties'][param_name] = {'type': 'integer'}
+                        elif param_type in ('boolean', 'bool', 'boolsio'):
+                            schema['properties'][param_name] = {'type': 'boolean'}
+                        elif param_type == 'float':
+                            schema['properties'][param_name] = {'type': 'number', 'format': 'float'}
+                        elif param_type == 'asis':
+                            # Handle AsIs parameters
+                            schema['properties'][param_name] = {'type': 'string'}
+                        else:
+                            schema['properties'][param_name] = {'type': 'string'}
+
+            # If we have any properties, add the request body
+            if schema['properties']:
+                # Generate a unique name for this schema
+                service_name = service_info['name'] if 'name' in service_info else 'UnknownService'
+                schema_name = f'{service_name}Input'
+
+                # Add the schema to components
+                self.components['schemas'][schema_name] = schema
+
+                # Add request body
+                path_object[http_method]['requestBody'] = {
+                    'required': True,
+                    'content': {
+                        'application/json': {
+                            'schema': {'$ref': f'#/components/schemas/{schema_name}'}
+                        }
+                    }
+                }
+
 # ################################################################################################################################
 
     def _add_response_to_path(self, path_object:'dict', http_method:'str', service_info:'dict') -> 'None':
@@ -246,6 +321,78 @@ class Scanner:
                 path_object[http_method]['responses']['200']['content'] = {
                     'application/json': {
                         'schema': schema_ref
+                    }
+                }
+
+        # Handle SimpleIO-style output definitions
+        elif 'output_required' in service_info or 'output_optional' in service_info:
+            # Create a schema for the output
+            schema = {
+                'type': 'object',
+                'properties': {},
+                'required': []
+            }
+
+            # Process required output parameters
+            if 'output_required' in service_info and service_info['output_required']:
+                for param in service_info['output_required']:
+                    if isinstance(param, str):
+                        schema['properties'][param] = {'type': 'string'}
+                        schema['required'].append(param)
+                    elif isinstance(param, dict) and 'type' in param:  # Function call like Integer('port')
+                        param_name = param['args'][0] if param['args'] else 'unknown'
+                        param_type = param['type'].lower()
+
+                        # Map Zato types to OpenAPI types
+                        if param_type in ('integer', 'int', 'intsio'):
+                            schema['properties'][param_name] = {'type': 'integer'}
+                        elif param_type in ('boolean', 'bool', 'boolsio'):
+                            schema['properties'][param_name] = {'type': 'boolean'}
+                        elif param_type == 'float':
+                            schema['properties'][param_name] = {'type': 'number', 'format': 'float'}
+                        elif param_type == 'asis':
+                            # Handle AsIs parameters
+                            schema['properties'][param_name] = {'type': 'string'}
+                        else:
+                            schema['properties'][param_name] = {'type': 'string'}
+
+                        schema['required'].append(param_name)
+
+            # Process optional output parameters
+            if 'output_optional' in service_info and service_info['output_optional']:
+                for param in service_info['output_optional']:
+                    if isinstance(param, str):
+                        schema['properties'][param] = {'type': 'string'}
+                    elif isinstance(param, dict) and 'type' in param:  # Function call like Integer('port')
+                        param_name = param['args'][0] if param['args'] else 'unknown'
+                        param_type = param['type'].lower()
+
+                        # Map Zato types to OpenAPI types
+                        if param_type in ('integer', 'int', 'intsio'):
+                            schema['properties'][param_name] = {'type': 'integer'}
+                        elif param_type in ('boolean', 'bool', 'boolsio'):
+                            schema['properties'][param_name] = {'type': 'boolean'}
+                        elif param_type == 'float':
+                            schema['properties'][param_name] = {'type': 'number', 'format': 'float'}
+                        elif param_type == 'asis':
+                            # Handle AsIs parameters
+                            schema['properties'][param_name] = {'type': 'string'}
+                        else:
+                            schema['properties'][param_name] = {'type': 'string'}
+
+            # If we have any properties, add the response schema
+            if schema['properties']:
+                # Generate a unique name for this schema
+                service_name = service_info['name'] if 'name' in service_info else 'UnknownService'
+                schema_name = f'{service_name}Output'
+
+                # Add the schema to components
+                self.components['schemas'][schema_name] = schema
+
+                # Add response schema
+                path_object[http_method]['responses']['200']['content'] = {
+                    'application/json': {
+                        'schema': {'$ref': f'#/components/schemas/{schema_name}'}
                     }
                 }
 
