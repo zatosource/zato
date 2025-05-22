@@ -58,8 +58,8 @@ def openapi_spec(request):
         logger.info(f'OpenAPI spec sections: {list(spec_yaml.keys())}')
         logger.info(f'Number of paths: {len(spec_yaml.get("paths", {}))} paths found')
 
-        # Use direct string conversion to preserve the exact structure
-        return HttpResponse(yaml_content, content_type='application/yaml')
+        json_content = json.dumps(spec_yaml)
+        return HttpResponse(json_content, content_type='application/json')
 
     except Exception as e:
         logger.error(f'Error serving OpenAPI spec: {e}')
