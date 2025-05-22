@@ -10,12 +10,13 @@ This file is a proprietary product, not an open-source one.
 import inspect
 import logging
 from pathlib import Path
+from typing import get_type_hints as typing_get_type_hints
 
 # PyYAML
 import yaml
 
 # Zato
-from zato.common.typing_ import any_, anydict, dict_, list_, optional, stranydict, strnone, type_, union_
+from zato.common.typing_ import any_, optional
 from zato.openapi.type_converter import convert_type_to_schema, extract_model_fields
 from zato.openapi.utils import extract_description_from_docstring, extract_path_from_service_name, determine_http_method_from_service
 from zato.openapi.utils import find_services_and_models, generate_operation_id, generate_service_summary, import_module_from_path
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class Scanner:
-    """ Scans a directory for Zato service classes and model definitions to generate OpenAPI specifications. """
-
+    """ Scans a directory for Zato service classes and model definitions to generate OpenAPI specifications.
+    """
     def __init__(self, root_path:'str', base_service_class:'type'=Service, base_model_class:'type'=Model):
         self.root_path = Path(root_path)
         self.base_service_class = base_service_class
@@ -48,10 +49,11 @@ class Scanner:
 # ################################################################################################################################
 
     def scan_directory(self):
-        """ Scans the root directory for Python files containing service and model definitions. """
+        """ Scans the root directory for Python files containing service and model definitions.
+        """
         # Find all Python files
         py_files = scan_directory_for_modules(self.root_path)
-        
+
         # Process each file
         for file_path in py_files:
             # Load the module
@@ -59,14 +61,14 @@ class Scanner:
             if not module:
                 logger.warning(f'Could not load module from {file_path}')
                 continue
-                
+
             # Extract services and models
             services, models = find_services_and_models(
-                module, 
-                self.base_service_class, 
+                module,
+                self.base_service_class,
                 self.base_model_class
             )
-            
+
             # Add to our collections
             self.services.update(services)
             self.models.update(models)
@@ -76,7 +78,7 @@ class Scanner:
     def parse_inline_input(self, input_def:'any_') -> 'list[dict]':
         """ Parses inline input definition (string or tuple of strings). """
         parameters = []
-        
+
         if isinstance(input_def, str):
             # Single parameter
             input_params = [input_def]
@@ -85,16 +87,16 @@ class Scanner:
             input_params = input_def
         else:
             return parameters
-            
+
         for param in input_params:
             required = True
             param_name = param
-            
+
             # Check for optional parameter indicated by minus sign
             if param.startswith('-'):
                 required = False
                 param_name = param[1:]
-                
+
             parameters.append({
                 'name': param_name,
                 'in': 'query',  # Default to query, can be overridden later
@@ -103,7 +105,7 @@ class Scanner:
                     'type': 'string'  # Default type
                 }
             })
-            
+
         return parameters
 
 # ################################################################################################################################
@@ -115,19 +117,19 @@ class Scanner:
             'properties': {},
             'required': []
         }
-        
+
         # Get type hints for the model
         type_hints = get_type_hints(model_class)
-        
+
         # Use the helper to extract fields
         properties, required = extract_model_fields(model_class, type_hints)
         schema['properties'] = properties
         schema['required'] = required
-        
+
         # If no required fields, remove the empty array
         if not schema['required']:
             del schema['required']
-                
+
         return schema
 
 # ################################################################################################################################
@@ -136,13 +138,13 @@ class Scanner:
         """ Converts Python type to OpenAPI schema. """
         # Use the type converter helper function
         schema = convert_type_to_schema(field_type, self.is_model_class)
-        
+
         # Register any referenced models
         if '$ref' in schema and schema['$ref'].startswith('#/components/schemas/'):
             model_name = schema['$ref'].split('/')[-1]
             if inspect.isclass(field_type) and model_name == field_type.__name__:
                 self.models[model_name] = field_type
-                
+
         return schema
 
 # ################################################################################################################################
@@ -151,11 +153,11 @@ class Scanner:
         """ Generates an OpenAPI path object from a service class. """
         if not hasattr(service_class, 'name'):
             return None
-            
+
         service_name = service_class.name
         path = extract_path_from_service_name(service_name)
         http_method = determine_http_method_from_service(service_class)
-        
+
         operation = {
             'operationId': generate_operation_id(service_name, http_method),
             'summary': generate_service_summary(service_class),
@@ -173,15 +175,15 @@ class Scanner:
                 }
             }
         }
-        
+
         # Remove None values
         if not operation['description']:
             del operation['description']
-        
+
         # Process input definition
         if hasattr(service_class, 'input'):
             input_def = service_class.input
-            
+
             if isinstance(input_def, (str, tuple)):
                 # Inline input definition
                 operation['parameters'] = self.parse_inline_input(input_def)
@@ -189,7 +191,7 @@ class Scanner:
                 # Model class input
                 model_name = input_def.__name__
                 self.models[model_name] = input_def
-                
+
                 operation['requestBody'] = {
                     'content': {
                         'application/yaml': {
@@ -200,15 +202,15 @@ class Scanner:
                     },
                     'required': True
                 }
-        
+
         # Process output definition
         if hasattr(service_class, 'output'):
             output_def = service_class.output
-            
+
             if inspect.isclass(output_def) and self.is_model_class(output_def):
                 model_name = output_def.__name__
                 self.models[model_name] = output_def
-                
+
                 operation['responses']['200']['content'] = {
                     'application/yaml': {
                         'schema': {
@@ -216,18 +218,18 @@ class Scanner:
                         }
                     }
                 }
-        
+
         # Process model attribute (used by some adapter services)
         if hasattr(service_class, 'model'):
             model_def = service_class.model
-            
+
             # Handle list of models
             if hasattr(model_def, '__origin__') and model_def.__origin__ is list and len(model_def.__args__) > 0:
                 item_model = model_def.__args__[0]
                 if inspect.isclass(item_model) and self.is_model_class(item_model):
                     model_name = item_model.__name__
                     self.models[model_name] = item_model
-                    
+
                     operation['responses']['200']['content'] = {
                         'application/yaml': {
                             'schema': {
@@ -241,7 +243,7 @@ class Scanner:
             elif inspect.isclass(model_def) and self.is_model_class(model_def):
                 model_name = model_def.__name__
                 self.models[model_name] = model_def
-                
+
                 operation['responses']['200']['content'] = {
                     'application/yaml': {
                         'schema': {
@@ -249,7 +251,7 @@ class Scanner:
                         }
                     }
                 }
-        
+
         return path, operation
 
 # ################################################################################################################################
@@ -258,29 +260,29 @@ class Scanner:
         """ Generates the full OpenAPI specification. """
         # Scan for services and models
         self.scan_directory()
-        
+
         # Generate paths
         for service_name, service_class in self.services.items():
             path_info = self.generate_path_from_service(service_class)
             if not path_info:
                 continue
-                
+
             path, operation = path_info
             http_method = determine_http_method_from_service(service_class).lower()
-            
+
             # Initialize path dictionary if needed
             if path not in self.paths:
                 self.paths[path] = {}
-                
+
             # Add the operation under the appropriate HTTP method
             self.paths[path][http_method] = operation
-        
+
         # Generate schemas from models
         for model_name, model_class in self.models.items():
             schema = self.extract_model_schema(model_class)
             if schema:
                 self.components['schemas'][model_name] = schema
-        
+
         # Construct the full specification
         self.spec = {
             'openapi': '3.0.0',
@@ -292,7 +294,7 @@ class Scanner:
             'paths': self.paths,
             'components': self.components
         }
-        
+
         return self.spec
 
 # ################################################################################################################################
@@ -301,7 +303,7 @@ class Scanner:
         """ Converts the OpenAPI specification to YAML format. """
         if not self.spec:
             self.generate_spec()
-            
+
         return yaml.dump(self.spec, sort_keys=False)
 
 # ################################################################################################################################
@@ -310,7 +312,7 @@ class Scanner:
         """ Saves the OpenAPI specification to a YAML file. """
         if not self.spec:
             self.generate_spec()
-            
+
         with open(output_path, 'w') as f:
             f.write(self.to_yaml())
 
@@ -320,7 +322,7 @@ class Scanner:
 def get_type_hints(cls):
     """ Gets type hints for a class, handling potential exceptions. """
     try:
-        return inspect.get_type_hints(cls)
+        return typing_get_type_hints(cls)
     except (TypeError, NameError):
         # Fall back to __annotations__ if get_type_hints fails
         return getattr(cls, '__annotations__', {})
@@ -332,10 +334,10 @@ def scan_directory(directory_path, title='Zato API', version='1.0.0', output_pat
     """ Convenience function to scan a directory and generate an OpenAPI spec. """
     scanner = Scanner(directory_path)
     spec = scanner.generate_spec(title, version)
-    
+
     if output_path:
         scanner.save_spec(output_path, format_)
-        
+
     return spec
 
 # ################################################################################################################################

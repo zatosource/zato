@@ -8,8 +8,6 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import argparse
-import os
-import sys
 
 # Zato
 from zato.openapi.scanner import Scanner
