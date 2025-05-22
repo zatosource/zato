@@ -78,7 +78,7 @@
     /* Path numbering styles */
     .path-number {
       position: absolute;
-      right: calc(100% + 10px); /* Position to the left of the path with a 10px gap */
+      right: calc(100% + 10px);
       top: 50%;
       transform: translateY(-50%);
       color: #555;
@@ -90,6 +90,24 @@
       text-align: center;     /* Center the numbers */
       white-space: nowrap;    /* Prevent wrapping */
       overflow: visible;      /* Allow overflow */
+    }
+
+    /* Schema number styling (different color) */
+    .schema-number {
+      position: absolute;
+      right: calc(100% + 30px);
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: bold;
+      color: #555; /* Restore original color */
+      background: rgba(73, 114, 204, 0.1);
+      padding: 3px 5px;
+      font-size: 12px;
+      min-width: 30px;        /* Ensure minimum width for the number container */
+      text-align: center;     /* Center the numbers */
+      white-space: nowrap;    /* Prevent wrapping */
+      overflow: visible;      /* Allow overflow */
+      z-index: 10;
     }
 
     /* Add some extra spacing to operations to accommodate numbers */
@@ -130,6 +148,8 @@
           initPathSearch();
           // Add numbering to all paths
           addPathNumbering();
+          // Add numbering to schemas
+          addSchemaNumbering();
         }
       });
 
@@ -168,6 +188,88 @@
           // Add number element to operation
           operation.appendChild(numberElement);
         });
+      }
+
+      // Add numbering to schema sections
+      function addSchemaNumbering() {
+        try {
+          // Wait for schemas to fully load before attempting to add numbers
+          const waitForSchemas = () => {
+            // Clear any existing numbers first
+            document.querySelectorAll('.schema-number').forEach(el => el.remove());
+
+            // Target the schema accordion buttons which contain the schema titles
+            const schemaAccordions = document.querySelectorAll('.json-schema-2020-12-accordion');
+            console.log('Found schema accordions:', schemaAccordions.length);
+
+            if (!schemaAccordions.length) {
+              console.log('No schema accordions found, retrying in 1s');
+              setTimeout(waitForSchemas, 1000);
+              return;
+            }
+
+            // Apply the numbering
+            let counter = 1;
+            const totalSchemas = schemaAccordions.length;
+            const numDigits = totalSchemas.toString().length;
+            console.log(`Numbering ${totalSchemas} schemas with ${numDigits} digits padding`);
+
+            // For schema elements - use a different zIndex to appear above paths
+            document.querySelectorAll('.schema-number').forEach(el => {
+              el.style.zIndex = '10';
+            });
+
+            // Apply padding to models section if needed
+            if (numDigits > 2) {
+              const modelsSection = document.querySelector('.models');
+              if (modelsSection) {
+                modelsSection.style.paddingLeft = (numDigits * 6 + 30) + 'px';
+              }
+            }
+
+            schemaAccordions.forEach(accordion => {
+              // Find the parent article which has a position context
+              const article = accordion.closest('article');
+              if (!article) return;
+
+              // Set relative positioning on the article
+              article.style.position = 'relative';
+
+              // Get title text for logging
+              const titleEl = accordion.querySelector('.json-schema-2020-12__title');
+              const titleText = titleEl ? titleEl.textContent : 'unknown';
+
+              // Create number element with schema specific style
+              const numberElement = document.createElement('div');
+              numberElement.className = 'schema-number';
+
+              // Format number with proper padding using spaces
+              const formattedNumber = counter.toString().padStart(numDigits, ' ');
+              numberElement.textContent = formattedNumber;
+              counter++;
+
+              // Don't add additional positioning - let the CSS handle it
+              // This ensures schema numbers align with path numbers
+
+              // Append to the article (schema container)
+              article.appendChild(numberElement);
+
+              console.log(`Added number ${formattedNumber} to schema: ${titleText}`);
+            });
+          };
+
+          // Ensure models section is expanded first
+          const modelsControl = document.querySelector('.models-control');
+          if (modelsControl && modelsControl.getAttribute('aria-expanded') !== 'true') {
+            console.log('Expanding models section first');
+            modelsControl.click();
+          }
+
+          // Start the process with a small delay
+          setTimeout(waitForSchemas, 500);
+        } catch (error) {
+          console.error('Error in schema numbering:', error);
+        }
       }
 
       // Initialize custom path search functionality
