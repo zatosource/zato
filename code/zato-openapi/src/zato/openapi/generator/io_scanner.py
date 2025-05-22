@@ -155,12 +155,24 @@ class IOVisitor(ast.NodeVisitor):
 
             # Handle Union types: union_[Type1, Type2]
             if container_type in ('union_', 'Union'):
-                # For union types, we'll use the first type as a fallback
-                # In OpenAPI, we could use oneOf, but for simplicity we'll use the first type
+                # Extract all union types
+                union_types = []
+
+                # Check if it's a slice with a tuple of types
+                if isinstance(annotation.slice, ast.Tuple):
+                    # Multiple types in the union
+                    for elt in annotation.slice.elts:
+                        type_name = self._get_name_from_node(elt)
+                        union_types.append(type_name)
+                else:
+                    # Single type in the union (unusual but possible)
+                    type_name = self._get_name_from_node(annotation.slice)
+                    union_types.append(type_name)
+
                 return {
                     'type': 'union',
                     'container': 'union',
-                    'element_type': 'str'  # Default to string for union types
+                    'union_types': union_types  # Store all possible types
                 }
 
             # Handle other container types - map to generic object
@@ -348,9 +360,37 @@ class TypeMapper:
         # Handle container types like list_[Type] or List[Type]
         if isinstance(zato_type, dict) and 'container' in zato_type:
             container_type = zato_type['container']
-            element_type = zato_type['element_type']
+
+            # Handle union types with oneOf schema
+            if container_type == 'union' and 'union_types' in zato_type:
+                union_types = zato_type['union_types']
+                one_of_schemas = []
+
+                # Map each type in the union
+                for type_name in union_types:
+                    try:
+                        mapped_type = self.map_type(type_name, model_definitions)
+                        one_of_schemas.append(mapped_type)
+                    except TypeConversionError as e:
+                        logger.warning(f'Could not map union type {type_name}: {e}')
+
+                # Return oneOf schema if we have any valid types
+                if one_of_schemas:
+                    return {
+                        'oneOf': one_of_schemas
+                    }
+                else:
+                    return {
+                        'anyOf': [
+                            {'type': 'string'},
+                            {'type': 'number'},
+                            {'type': 'object'},
+                            {'type': 'array', 'items': {'type': 'object'}}
+                        ]
+                    }
 
             # Handle list-like containers
+            element_type = zato_type.get('element_type', 'object')
             if container_type in ('list', 'list_', 'List'):
                 return {
                     'type': 'array',
