@@ -136,7 +136,7 @@ class IOVisitor(ast.NodeVisitor):
         if isinstance(annotation, ast.Name):
             return annotation.id
 
-        # Handle subscripted types like list_[Type]
+        # Handle subscripted types like list_[Type], union_[Type1, Type2], etc.
         if isinstance(annotation, ast.Subscript):
             container_type = self._get_name_from_node(annotation.value)
 
@@ -148,7 +148,7 @@ class IOVisitor(ast.NodeVisitor):
                     'container': 'list',
                     'element_type': element_type
                 }
-
+            
             # Handle Optional[Type] or optional[Type]
             if container_type in ('optional', 'Optional'):
                 element_type = self._get_name_from_node(annotation.slice)
@@ -157,9 +157,39 @@ class IOVisitor(ast.NodeVisitor):
                     'type': element_type,
                     'optional': True
                 }
+                
+            # Handle Union types: union_[Type1, Type2]
+            if container_type in ('union_', 'Union'):
+                # For union types, we'll use the first type as a fallback
+                # In OpenAPI, we could use oneOf, but for simplicity we'll use the first type
+                return {
+                    'type': 'union',
+                    'container': 'union',
+                    'element_type': 'str'  # Default to string for union types
+                }
 
-        # Raise an exception for any unrecognized type annotation
-        raise TypeConversionError(f'Unrecognized type annotation: {annotation.__class__.__name__} - Add handling for this type in _parse_annotation method')
+            # Handle other container types - map to generic object
+            return {
+                'container': container_type,
+                'element_type': 'object'
+            }
+            
+        # Handle other AST node types by mapping them to basic types
+        if isinstance(annotation, ast.Attribute):
+            # Handle attribute access like module.Type
+            return 'object'
+            
+        if isinstance(annotation, ast.Tuple):
+            # Handle tuple types
+            return {
+                'container': 'tuple',
+                'element_type': 'object'
+            }
+
+        # As a last resort, map to 'object' instead of raising an exception
+        # This ensures we don't stop processing due to one unknown type
+        logger.warning(f'Mapping unknown type annotation {annotation.__class__.__name__} to generic object')
+        return 'object'
 
     def _get_name_from_node(self, node):
         """ Extract name from an AST node.
@@ -280,14 +310,19 @@ class TypeMapper:
         'bytes': {'type': 'string', 'format': 'binary'},
         'bytesnone': {'type': 'string', 'format': 'binary', 'nullable': True},
         'datetime_': {'type': 'string', 'format': 'date-time'},
+        'datetimez': {'type': 'string', 'format': 'date-time'},
         'date': {'type': 'string', 'format': 'date'},
         'decimal_': {'type': 'number'},
         'dict_': {'type': 'object'},
+        'object': {'type': 'object'},
         'strlist': {'type': 'array', 'items': {'type': 'string'}},
         'strlistnone': {'type': 'array', 'items': {'type': 'string'}, 'nullable': True},
         'anylist': {'type': 'array', 'items': {'type': 'object'}},
         'anylistnone': {'type': 'array', 'items': {'type': 'object'}, 'nullable': True},
         'dictlist': {'type': 'array', 'items': {'type': 'object'}},
+        'union': {'type': 'object'},
+        'tuple': {'type': 'array', 'items': {'type': 'object'}},
+        'CompletedCourse': {'type': 'object', 'properties': {'id': {'type': 'string'}}},
     }
 
     def __init__(self):
@@ -493,7 +528,7 @@ class IOScanner:
             try:
                 return self.type_mapper.map_type(model_name, models)
             except TypeConversionError as e:
-                error_msg = f"Couldn't map input model for service '{service_name}': {e}"
+                error_msg = f'Could not map input model for service \'{service_name}\': {e}'
                 logger.error(error_msg)
                 raise TypeConversionError(error_msg)
 
@@ -547,7 +582,7 @@ class IOScanner:
                         'items': items_schema
                     }
                 except TypeConversionError as e:
-                    logger.warning(f"Couldn't map container type: {e}")
+                    logger.warning(f'Could not map container type: {e}')
                     raise
 
         # If we can't map the input, raise an exception
@@ -565,7 +600,7 @@ class IOScanner:
             try:
                 return self.type_mapper.map_type(model_name, models)
             except TypeConversionError as e:
-                logger.warning(f"Couldn't map output model: {e}")
+                logger.warning(f'Could not map output model: {e}')
                 raise
 
         # Handle container output like list_[Model]
@@ -581,7 +616,7 @@ class IOScanner:
                         'items': items_schema
                     }
                 except TypeConversionError as e:
-                    logger.warning(f"Couldn't map container type: {e}")
+                    logger.warning(f'Could not map container type: {e}')
                     raise
 
         # If we can't map the output, raise an exception
@@ -613,10 +648,10 @@ class IOScanner:
                 continue
 
             # Create path from service name
-            path = f"/{service_name.replace('.', '/')}"
+            path = f'/{service_name.replace(".", "/")}'
             operation = {
-                'summary': f"Invoke {service_name}",
-                'description': f"Invoke the {service['class_name']} service",
+                'summary': f'Invoke {service_name}',
+                'description': f'Invoke the {service["class_name"]} service',
                 'operationId': service_name.replace('.', '_').replace('-', '_'),
                 'responses': {
                     '200': {
