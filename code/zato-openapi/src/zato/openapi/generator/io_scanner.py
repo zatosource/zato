@@ -148,7 +148,7 @@ class IOVisitor(ast.NodeVisitor):
                     'container': 'list',
                     'element_type': element_type
                 }
-            
+
             # Handle Optional[Type] or optional[Type]
             if container_type in ('optional', 'Optional'):
                 element_type = self._get_name_from_node(annotation.slice)
@@ -157,7 +157,7 @@ class IOVisitor(ast.NodeVisitor):
                     'type': element_type,
                     'optional': True
                 }
-                
+
             # Handle Union types: union_[Type1, Type2]
             if container_type in ('union_', 'Union'):
                 # For union types, we'll use the first type as a fallback
@@ -173,12 +173,12 @@ class IOVisitor(ast.NodeVisitor):
                 'container': container_type,
                 'element_type': 'object'
             }
-            
+
         # Handle other AST node types by mapping them to basic types
         if isinstance(annotation, ast.Attribute):
             # Handle attribute access like module.Type
             return 'object'
-            
+
         if isinstance(annotation, ast.Tuple):
             # Handle tuple types
             return {
@@ -653,6 +653,7 @@ class IOScanner:
                 'summary': f'Invoke {service_name}',
                 'description': f'Invoke the {service["class_name"]} service',
                 'operationId': service_name.replace('.', '_').replace('-', '_'),
+                'tags': ['API Endpoints'],
                 'responses': {
                     '200': {
                         'description': 'Successful response'
