@@ -26,7 +26,7 @@
       background: #fff;
       box-shadow: 0 1px 2px 0 rgba(0,0,0,.15);
       width: 100%;
-      max-width: 1460px;
+      max-width: 960px;
       margin: 0 auto 10px auto;
       box-sizing: border-box;
       display: flex;
@@ -56,6 +56,9 @@
       margin-left: 15px;
       font-size: 12px;
       color: #666;
+      min-width: 70px;
+      display: inline-block;
+      text-align: left;
     }
 
     /* Hide operations that don't match the search */
@@ -99,7 +102,7 @@
         // Add a callback when Swagger UI has finished loading
         onComplete: function() {
           // Initialize our custom path search after Swagger UI loads
-          setTimeout(initPathSearch, 1000); // Wait a bit for everything to render
+          setTimeout(initPathSearch, 20); // Wait a bit for everything to render
         }
       });
 
