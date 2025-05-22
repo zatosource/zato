@@ -631,8 +631,8 @@ class IOScanner:
         openapi = {
             'openapi': '3.1.0',
             'info': {
-                'title': 'Zato API',
-                'description': 'API generated from Zato services with I/O definitions',
+                'title': 'API Specification',
+                'description': '',
                 'version': '1.0.0'
             },
             'paths': {},
