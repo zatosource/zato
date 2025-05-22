@@ -7,114 +7,172 @@ This file is a proprietary product, not an open-source one.
 """
 
 # stdlib
-import importlib
+import os
+import importlib.util
 import inspect
-import logging
 import sys
-from typing import Any, Dict, List, Optional, Set, Tuple, Type
+from pathlib import Path
+from types import ModuleType
+
+# Zato
+from zato.common.typing_ import any_, anydict, list_, optional, strnone
+from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_full_class_name(cls: Type) -> str:
-    """Get the fully qualified name of a class."""
-    module = cls.__module__
-    if module == 'builtins':
-        return cls.__name__
-    return f'{module}.{cls.__name__}'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def is_model_class(cls: Any) -> bool:
-    """Check if a class is a Zato model class."""
-    if not inspect.isclass(cls):
-        return False
-
-    # Check if it inherits from Model or BaseModel
-    for base in cls.__mro__:
-        base_name = base.__name__
-        if base_name in ['Model', 'BaseModel']:
-            return True
-
-    # Check if it has the dataclass decorator
-    if hasattr(cls, '__dataclass_fields__'):
-        return True
-
-    return False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def resolve_model_class(model_name: str) -> Optional[Type]:
-    """Resolve a model class name to the actual class."""
-    # Try to import the model
-    parts = model_name.split('.')
-
-    # If it's just a class name without a module
-    if len(parts) == 1:
-        # Check if it's already in sys.modules
-        for module_name, module in sys.modules.items():
-            if hasattr(module, model_name):
-                cls = getattr(module, model_name)
-                if is_model_class(cls):
-                    return cls
+def import_module_from_path(file_path:'Path') -> 'optional[ModuleType]':
+    """ Dynamically imports a Python module from its file path. """
+    try:
+        module_name = file_path.stem
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if not spec or not spec.loader:
+            return None
+            
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+    except Exception as e:
         return None
 
-    # If it's a fully qualified name
-    module_name = '.'.join(parts[:-1])
-    class_name = parts[-1]
-
-    try:
-        module = importlib.import_module(module_name)
-        if hasattr(module, class_name):
-            cls = getattr(module, class_name)
-            if is_model_class(cls):
-                return cls
-    except (ImportError, AttributeError) as e:
-        logger.debug(f"Could not resolve model {model_name}: {e}")
-
-    return None
-
-# ################################################################################################################################
 # ################################################################################################################################
 
-def follow_inheritance_chain(cls: Type) -> List[Type]:
-    """Follow the inheritance chain of a class up to the Service base class."""
-    chain = []
-    for base in cls.__mro__:
-        chain.append(base)
-        if base.__name__ == 'Service':
-            break
-    return chain
+def find_services_and_models(module:'ModuleType', base_service_class:'type'=Service, 
+        base_model_class:'type'=Model) -> 'tuple[dict, dict]':
+    """ Finds all service and model classes in a module. """
+    services = {}
+    models = {}
+    
+    for name, obj in inspect.getmembers(module):
+        # Skip builtins and modules
+        if name.startswith('_') or inspect.ismodule(obj):
+            continue
+            
+        # Check if it's a service
+        if inspect.isclass(obj):
+            # Direct inheritance from Service
+            if issubclass(obj, base_service_class) and obj != base_service_class:
+                services[name] = obj
+                if hasattr(obj, 'name'):
+                    services[obj.name] = obj
+            # Check for service-like patterns
+            elif hasattr(obj, 'name') and isinstance(obj.name, str):
+                has_handle = hasattr(obj, 'handle') and callable(getattr(obj, 'handle'))
+                has_io = hasattr(obj, 'input') or hasattr(obj, 'output') or hasattr(obj, 'model')
+                class_name = obj.__name__
+                is_adapter = any(suffix for suffix in ('Adapter', 'API', 'Service') if class_name.endswith(suffix))
+                
+                if has_handle or has_io or is_adapter:
+                    services[name] = obj
+                    if hasattr(obj, 'name'):
+                        services[obj.name] = obj
+            # Check if it's a model
+            elif hasattr(obj, '__annotations__') and issubclass(obj, base_model_class) and obj != base_model_class:
+                models[name] = obj
+    
+    return services, models
 
 # ################################################################################################################################
+
+def scan_directory_for_modules(directory_path:'str') -> 'list[Path]':
+    """ Recursively scans a directory for Python files. """
+    py_files = []
+    for root, _, files in os.walk(directory_path):
+        for file_name in files:
+            if file_name.endswith('.py') and not file_name.startswith('__'):
+                py_files.append(Path(os.path.join(root, file_name)))
+    return py_files
+
 # ################################################################################################################################
 
-def extract_inline_io_fields(io_definition: Any) -> Dict[str, Dict[str, Any]]:
-    """Extract field information from an inline I/O definition."""
-    fields = {}
+def extract_path_from_service_name(service_name:'str') -> 'str':
+    """ Converts a service name to an API path. """
+    # Replace dots with slashes
+    path = service_name.replace('.', '/')
+    
+    # Ensure path starts with a slash
+    if not path.startswith('/'):
+        path = f'/{path}'
+        
+    return path
 
-    if isinstance(io_definition, tuple):
-        for field in io_definition:
-            # Check if it's an optional field (prefixed with -)
-            if isinstance(field, str) and field.startswith('-'):
-                field_name = field[1:]  # Remove the - prefix
-                fields[field_name] = {
-                    'type': 'string',
-                    'nullable': True
-                }
-            elif isinstance(field, str):
-                fields[field] = {
-                    'type': 'string'
-                }
+# ################################################################################################################################
 
-    return fields
+def determine_http_method_from_service(service_class:'any_') -> 'str':
+    """ Determines the appropriate HTTP method for a service. """
+    # Check if the service explicitly defines a method
+    if hasattr(service_class, 'method') and isinstance(service_class.method, str):
+        method = service_class.method.lower()
+        if method in ('get', 'post', 'put', 'delete', 'patch'):
+            return method
+    
+    # Check service name for method hints
+    name = service_class.__name__.lower()
+    if 'get' in name or 'list' in name or 'read' in name or 'view' in name or 'find' in name:
+        return 'get'
+    elif 'create' in name or 'add' in name or 'insert' in name:
+        return 'post'
+    elif 'update' in name or 'edit' in name or 'modify' in name:
+        return 'put'
+    elif 'delete' in name or 'remove' in name:
+        return 'delete'
+    elif 'patch' in name:
+        return 'patch'
+    
+    # Default to POST
+    return 'post'
+
+# ################################################################################################################################
+
+def generate_operation_id(service_name:'str', http_method:'str') -> 'str':
+    """ Generates a unique operation ID for a service. """
+    # Replace dots with underscores and append the method
+    return f'{service_name.replace(".", "_")}_{http_method}'
+
+# ################################################################################################################################
+
+def extract_description_from_docstring(obj:'any_') -> 'strnone':
+    """ Extracts a clean description from a docstring. """
+    if not obj.__doc__:
+        return None
+        
+    # Clean up docstring
+    lines = [line.strip() for line in obj.__doc__.splitlines()]
+    
+    # Remove empty lines at the beginning and end
+    while lines and not lines[0]:
+        lines.pop(0)
+    
+    while lines and not lines[-1]:
+        lines.pop()
+        
+    if not lines:
+        return None
+        
+    # Join lines with space to create a single paragraph
+    return ' '.join(lines)
+
+# ################################################################################################################################
+
+def generate_service_summary(service_class:'any_') -> 'str':
+    """ Generates a summary description for a service. """
+    # Try to get from docstring first
+    doc = extract_description_from_docstring(service_class)
+    if doc:
+        # Return just the first line or first sentence
+        first_line = doc.split('\n')[0].strip()
+        first_sentence = first_line.split('.')[0].strip()
+        return first_sentence if first_sentence else service_class.__name__
+    
+    # Generate from class name if no docstring
+    words = []
+    for i, char in enumerate(service_class.__name__):
+        if i > 0 and char.isupper() and not service_class.__name__[i-1].isupper():
+            words.append(' ')
+        words.append(char)
+    
+    return ''.join(words).strip()
 
 # ################################################################################################################################
 # ################################################################################################################################
