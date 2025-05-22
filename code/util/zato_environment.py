@@ -491,6 +491,7 @@ class EnvironmentManager:
             'zato-client',
             'zato-distlock',
             'zato-scheduler',
+            'zato-openapi',
             'zato-server',
             'zato-web-admin',
             'zato-testing',
