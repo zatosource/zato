@@ -384,7 +384,9 @@ Examples:
         access_log = os.path.join(logs_dir, 'gunicorn-access.log')
         error_log = os.path.join(logs_dir, 'gunicorn-error.log')
 
-        gunicorn_executable = 'gunicorn' # Assumes Gunicorn is in system PATH
+        # Use the Zato Python interpreter to run Gunicorn
+        zato_python = os.path.join(zato_base_code_dir, 'bin', 'python')
+        gunicorn_executable = zato_python + ' -m gunicorn'
         wsgi_app_module = 'zato.admin.wsgi:application' # Path to the WSGI app object
 
         gunicorn_args = [
