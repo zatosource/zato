@@ -447,9 +447,6 @@ class Create(_CreateEdit):
                 else:
                     skip_opaque.append('password')
 
-                # Configure CA certs
-                self._set_validate_tls(item, input)
-
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
@@ -633,9 +630,6 @@ class Edit(_CreateEdit):
                     item.password = input.password
                 else:
                     skip_opaque.append('password')
-
-                # Configure CA certs
-                self._set_validate_tls(item, input)
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input, skip=skip_opaque)
