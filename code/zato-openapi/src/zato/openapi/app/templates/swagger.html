@@ -272,8 +272,16 @@
         }
       }
 
-      // Initialize custom path search functionality
+      // Initialize custom path search functionality with improved handling for collapse/expand
       function initPathSearch() {
+        // Create a persistent search state object that survives DOM changes
+        window.searchState = {
+          query: '',
+          isActive: false,
+          pathTexts: new Map(), // Will be keyed by operation ID instead of DOM element
+          lastMatchCount: 0
+        };
+
         // Create and insert the search container after the information-container wrapper
         const infoContainer = document.querySelector('.information-container.wrapper');
         if (!infoContainer) {
@@ -305,16 +313,44 @@
         // Insert after the info container
         infoContainer.parentNode.insertBefore(searchContainer, infoContainer.nextSibling);
 
-        // Store original path texts for each operation to avoid corrupting the search
-        const operations = document.querySelectorAll('.opblock');
-        const pathTexts = new Map();
+        // Function to build/rebuild the path texts map
+        function buildPathTextsMap() {
+          const operations = document.querySelectorAll('.opblock');
+          searchState.pathTexts.clear();
 
-        operations.forEach(operation => {
-          const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
-          if (pathElement) {
-            // Store the original path text for this operation
-            pathTexts.set(operation, pathElement.textContent);
-          }
+          operations.forEach(operation => {
+            if (!operation.id) return;
+
+            const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
+            if (pathElement) {
+              // Store the original path text indexed by operation ID
+              searchState.pathTexts.set(operation.id, pathElement.textContent);
+            }
+          });
+
+          console.log(`Built path texts map with ${searchState.pathTexts.size} entries`);
+          return operations;
+        }
+
+        // Initial build of the path texts map
+        let operations = buildPathTextsMap();
+
+        // Find and add event listener to the tag collapse/expand button
+        const tagButtons = document.querySelectorAll('.opblock-tag .expand-operation');
+        tagButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            // After a short delay to let the DOM update
+            setTimeout(() => {
+              console.log('Tag section toggled, refreshing path texts map');
+              // Rebuild the path texts map
+              operations = buildPathTextsMap();
+
+              // Re-apply the search if it was active
+              if (searchState.isActive) {
+                performSearch();
+              }
+            }, 300);
+          });
         });
 
         let timeoutId = null;
@@ -322,20 +358,27 @@
         // Function to perform the actual search with debounce
         function performSearch() {
           const query = searchInput.value.trim().toLowerCase();
+          searchState.query = query;
 
           // Only search if at least 2 characters are entered
           if (query.length < 2) {
             resetSearch();
             searchInfo.textContent = '';
+            searchState.isActive = false;
             return;
           }
 
-          // Find all operation containers
+          searchState.isActive = true;
+
+          // Get fresh operations list to ensure we have current DOM elements
+          const currentOperations = document.querySelectorAll('.opblock');
           let matchCount = 0;
 
-          operations.forEach(operation => {
-            // Get the original path text from our map
-            const originalPath = pathTexts.get(operation);
+          currentOperations.forEach(operation => {
+            if (!operation.id) return;
+
+            // Get the original path text from our map using the operation ID
+            const originalPath = searchState.pathTexts.get(operation.id);
             if (!originalPath) return;
 
             // Find the path element to update its display
@@ -368,11 +411,12 @@
             }
           });
 
-          // Expand all matching operations' parents (tags)
+          searchState.lastMatchCount = matchCount;
+
+          // Ensure all tag sections with matching operations are expanded
           document.querySelectorAll('.opblock:not(.path-hidden)').forEach(operation => {
             const tagItem = operation.closest('.opblock-tag-section');
-            if (tagItem) {
-              tagItem.classList.remove('is-open');
+            if (tagItem && !tagItem.classList.contains('is-open')) {
               tagItem.classList.add('is-open');
             }
           });
@@ -383,16 +427,23 @@
 
         // Function to reset the search and show all operations
         function resetSearch() {
-          operations.forEach(operation => {
+          const currentOperations = document.querySelectorAll('.opblock');
+
+          currentOperations.forEach(operation => {
             operation.classList.remove('path-hidden');
+
+            if (!operation.id) return;
+
             const pathElement = operation.querySelector('.opblock-summary-path, .opblock-summary-path__deprecated');
-            const originalPath = pathTexts.get(operation);
+            const originalPath = searchState.pathTexts.get(operation.id);
 
             if (pathElement && originalPath) {
               pathElement.textContent = originalPath; // Restore original text
             }
           });
+
           searchInfo.textContent = '';
+          searchState.isActive = false;
         }
 
         // Add input event with debounce (for real-time filtering)
