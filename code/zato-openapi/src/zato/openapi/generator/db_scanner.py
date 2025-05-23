@@ -36,29 +36,29 @@ def fetch_all():
         channels = session.query(HTTPSOAP).filter(
             HTTPSOAP.cluster_id == CLUSTER_ID,
             HTTPSOAP.connection == 'channel',  # Only incoming channels
-        ).all()
+        ).all() # type: ignore
         logger.info(f'All incoming channels with cluster_id={CLUSTER_ID}: {len(channels)}')
 
         # Include everything (be more permissive)
         logger.info('Using all available channels for OpenAPI generation')
 
         # All HTTP Basic Auth definitions
-        basic_auth_defs = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.cluster_id == CLUSTER_ID).all()
+        basic_auth_defs = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.cluster_id == CLUSTER_ID).all() # type: ignore
 
         # All API Key definitions
-        api_key_defs = session.query(APIKeySecurity).filter(APIKeySecurity.cluster_id == CLUSTER_ID).all()
+        api_key_defs = session.query(APIKeySecurity).filter(APIKeySecurity.cluster_id == CLUSTER_ID).all() # type: ignore
 
         # All groups
         groups = session.query(GenericObject).filter(
             GenericObject.type_ == 'group',
             GenericObject.cluster_id == CLUSTER_ID
-        ).all()
+        ).all() # type: ignore
 
         # All group members (as GenericObject, type_='group-member')
         group_members = session.query(GenericObject).filter(
             GenericObject.type_ == 'group-member',
             GenericObject.cluster_id == CLUSTER_ID
-        ).all()
+        ).all() # type: ignore
 
         return {
             'channels': channels,
@@ -72,10 +72,13 @@ def fetch_all():
 
 # --- Data assembly ---
 def build_scan_results():
+
     data = fetch_all()
+
     # Build security lookup tables
-    basic_auth_by_id = {x.id: x for x in data['basic_auth_defs']}
-    api_key_by_id = {x.id: x for x in data['api_key_defs']}
+    basic_auth_by_id = {item.id: item for item in data['basic_auth_defs']}
+    api_key_by_id = {item.id: item for item in data['api_key_defs']}
+
     # Group membership: group_id -> [member_id]
     group_members = {}
     for gm in data['group_members']:
@@ -83,10 +86,13 @@ def build_scan_results():
         if parent_id not in group_members:
             group_members[parent_id] = []
         group_members[parent_id].append(gm.object_id)
+
     # Group lookup
-    group_by_id = {g.id: g for g in data['groups']}
+    group_by_id = {group.id: group for group in data['groups']}
+
     # Assemble services (one per channel)
     services = []
+
     for channel in data['channels']:
         # Debug info for this channel
         logger.debug(f'Processing channel: {channel.name}, security_id: {channel.security_id}')
@@ -114,13 +120,14 @@ def build_scan_results():
             if group:
                 logger.debug(f'  - Found Security Group: {group.name}')
                 member_ids = group_members.get(group.id, [])
-                for mid in member_ids:
-                    if mid in basic_auth_by_id:
-                        security.append({'type': 'basic_auth', 'name': basic_auth_by_id[mid].name})
-                        logger.debug(f'    - Group member: Basic Auth {basic_auth_by_id[mid].name}')
-                    elif mid in api_key_by_id:
-                        security.append({'type': 'apikey', 'name': api_key_by_id[mid].name})
-                        logger.debug(f'    - Group member: API Key {api_key_by_id[mid].name}')
+                for member_id in member_ids:
+                    if member_id in basic_auth_by_id:
+                        security.append({'type': 'basic_auth', 'name': basic_auth_by_id[member_id].name})
+                        logger.debug(f'    - Group member: Basic Auth {basic_auth_by_id[member_id].name}')
+                    elif member_id in api_key_by_id:
+                        security.append({'type': 'apikey', 'name': api_key_by_id[member_id].name})
+                        logger.debug(f'    - Group member: API Key {api_key_by_id[member_id].name}')
+
         # Extract service name or use channel name as fallback
         service_name = None
         if hasattr(channel.service, 'name'):
@@ -140,5 +147,5 @@ def build_scan_results():
             'security': security,
             'channel_name': channel.name,
         })
-    # No models for now
+
     return {'services': services, 'models': {}}

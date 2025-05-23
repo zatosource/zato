@@ -42,7 +42,7 @@ def main() -> 'None':
     """
     args = parse_args()
     from zato.openapi.generator import db_openapi
-    db_openapi.main(args.output)
+    db_openapi.main(args.output, args.directories)
 
 # ################################################################################################################################
 
