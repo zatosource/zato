@@ -573,6 +573,62 @@
           searchInput.value = '';
           resetSearch();
         });
+
+        // Directly implement panel collapse detection
+        // This code runs after the search input is initialized
+
+        // Add visual styles
+        const disabledStyle = document.createElement('style');
+        disabledStyle.textContent = `
+          #path-search-input.disabled {
+            background-color: #f1f1f1 !important;
+            color: #999 !important;
+            cursor: not-allowed !important;
+          }
+          #path-search-info.disabled {
+            color: #e53935 !important;
+          }
+          #path-search-clear.disabled {
+            opacity: 0.5 !important;
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(disabledStyle);
+
+        // Function to disable search when panels are collapsed
+        function updateSearchState() {
+          const panelParent = document.querySelector('.opblock-tag-section');
+          const isExpanded = panelParent && panelParent.classList.contains('is-open');
+
+          console.log('Panel state check - isExpanded:', isExpanded);
+
+          if (!isExpanded) {
+            // Panel is collapsed - disable search
+            searchInput.disabled = true;
+            searchInput.classList.add('disabled');
+            searchInput.placeholder = 'Expand API endpoints to enable search';
+            clearButton.classList.add('disabled');
+            console.log('Search disabled: Panel is collapsed');
+          } else {
+            // Panel is expanded - enable search
+            searchInput.disabled = false;
+            searchInput.classList.remove('disabled');
+            searchInput.placeholder = 'Search by path (min. 2 characters)';
+            clearButton.classList.remove('disabled');
+            searchInfo.classList.remove('disabled');
+            searchInfo.textContent = '';
+            console.log('Search enabled: Panel is expanded');
+          }
+        }
+
+        // Initially check the state
+        updateSearchState();
+
+        // Use a global click handler to catch all clicks
+        document.addEventListener('click', function(e) {
+          // Wait a moment for the UI to update after any click
+          setTimeout(updateSearchState, 100);
+        }, true);
       }
     };
   </script>
