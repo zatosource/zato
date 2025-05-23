@@ -9,14 +9,6 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import argparse
 import logging
-import sys
-from pathlib import Path
-
-# Local imports
-from zato.openapi.generator import io_scanner
-
-# Reference the imported function directly
-scan_io = io_scanner.scan_io
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,8 +23,8 @@ def parse_args() -> 'argparse.Namespace':
     """ Parse command line arguments.
     """
     parser = argparse.ArgumentParser(description='Generate OpenAPI specification from Zato ODB')
-    parser.add_argument('directories', nargs='*', help='(Ignored)')
-    parser.add_argument('--output', '-o', default='/tmp/openapi.yaml', help='Output file path (default: /tmp/openapi.yaml)')
+    _ = parser.add_argument('directories', nargs='*')
+    _ = parser.add_argument('--output', '-o', default='/tmp/openapi.yaml', help='Output file path (default: /tmp/openapi.yaml)')
     return parser.parse_args()
 
 # ################################################################################################################################

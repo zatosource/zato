@@ -1,22 +1,33 @@
 # -*- coding: utf-8 -*-
+
 """
-Extracts REST channel, service, and security info from the ODB using direct SQLAlchemy queries.
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+This file is a proprietary product, not an open-source one.
 """
+
 import os
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, HTTPSOAP, GenericObject
 
-# Logger for this module
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 _SQLITE_PATH = os.path.expanduser('~/env/qs-1/zato.db')
 _ENGINE = create_engine(f'sqlite:///{_SQLITE_PATH}')
 Session = sessionmaker(bind=_ENGINE)
 CLUSTER_ID = 1
 
-# --- Bulk data fetch ---
+# ################################################################################################################################
+# ################################################################################################################################
+
 def fetch_all():
     session = Session()
     try:
@@ -70,7 +81,9 @@ def fetch_all():
     finally:
         session.close()
 
-# --- Data assembly ---
+# ################################################################################################################################
+# ################################################################################################################################
+
 def build_scan_results():
 
     data = fetch_all()
@@ -149,3 +162,6 @@ def build_scan_results():
         })
 
     return {'services': services, 'models': {}}
+
+# ################################################################################################################################
+# ################################################################################################################################
