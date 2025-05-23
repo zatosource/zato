@@ -160,6 +160,9 @@
         let pathCounter = 1;
         const totalPaths = operations.length;
 
+        // Create a persistent store for path numbers
+        window.pathNumberMap = window.pathNumberMap || new Map();
+
         // Calculate number format (padding) based on total number of paths
         const numDigits = totalPaths.toString().length;
 
@@ -173,6 +176,13 @@
 
         // Add number to each operation
         operations.forEach(operation => {
+          // Get path identifier
+          const pathElement = operation.querySelector('.opblock-summary-path');
+          if (!pathElement) return;
+
+          const path = pathElement.getAttribute('data-path');
+          if (!path) return;
+
           // Create number element
           const numberElement = document.createElement('div');
           numberElement.className = 'path-number';
@@ -180,6 +190,10 @@
           // Format number with leading zeros for consistent width
           const formattedNumber = pathCounter.toString().padStart(numDigits, ' ');
           numberElement.textContent = formattedNumber;
+
+          // Store the path number in our map for later restoration
+          window.pathNumberMap.set(path, formattedNumber);
+
           pathCounter++;
 
           // Make sure the operation has position relative
@@ -188,6 +202,103 @@
           // Add number element to operation
           operation.appendChild(numberElement);
         });
+
+        // Set up direct hooks into SwaggerUI
+        setupSwaggerUIHooks();
+      }
+
+      // Function to add number to a single operation
+      function addNumberToOperation(operation, number) {
+        // Remove existing number if present
+        const existingNumber = operation.querySelector('.path-number');
+        if (existingNumber) existingNumber.remove();
+
+        // Create and add number element
+        const numberElement = document.createElement('div');
+        numberElement.className = 'path-number';
+        numberElement.textContent = number;
+        operation.style.position = 'relative';
+        operation.appendChild(numberElement);
+      }
+
+      // Restore all path numbers
+      function restoreAllNumbers() {
+        if (!window.pathNumberMap) return;
+
+        document.querySelectorAll('.opblock-summary').forEach(operation => {
+          // Skip if already has a number
+          if (operation.querySelector('.path-number')) return;
+
+          const pathElement = operation.querySelector('.opblock-summary-path');
+          if (!pathElement) return;
+
+          const path = pathElement.getAttribute('data-path');
+          if (!path || !window.pathNumberMap.has(path)) return;
+
+          addNumberToOperation(operation, window.pathNumberMap.get(path));
+        });
+      }
+
+      // Hook directly into Swagger UI's system
+      function setupSwaggerUIHooks() {
+        // 1. Hook into the React component system via DOM mutations
+        const observer = new MutationObserver(() => {
+          // Check if any operations are missing numbers
+          const operations = document.querySelectorAll('.opblock-summary');
+          const pathNumbers = document.querySelectorAll('.path-number');
+
+          if (operations.length > pathNumbers.length) {
+            requestAnimationFrame(restoreAllNumbers);
+          }
+        });
+
+        // Observe the entire Swagger UI container
+        observer.observe(document.getElementById('swagger-ui'), {
+          childList: true,
+          subtree: true
+        });
+
+        // 2. Specifically target the expand/collapse buttons
+        document.addEventListener('click', e => {
+          // Check if clicked on expand/collapse buttons
+          const isTagButton = e.target.closest('.opblock-tag .expand-operation');
+          const isOpButton = e.target.closest('.opblock-summary-control');
+
+          if (isTagButton || isOpButton) {
+            // Use requestAnimationFrame to wait for browser to update the DOM
+            requestAnimationFrame(() => {
+              // Double requestAnimationFrame ensures we run after React's updates
+              requestAnimationFrame(restoreAllNumbers);
+            });
+          }
+        }, true);
+
+        // Hook into SwaggerUI's system through events
+        // In this version of Swagger UI, the direct system API is different
+        // Listen for known Swagger UI events on the document
+        document.addEventListener('click', function(e) {
+          // Target any element that might trigger UI updates
+          if (e.target.tagName === 'BUTTON' ||
+              e.target.tagName === 'A' ||
+              e.target.classList.contains('arrow') ||
+              e.target.classList.contains('opblock-control')) {
+
+            // Run restoration after UI updates
+            requestAnimationFrame(() => {
+              requestAnimationFrame(restoreAllNumbers);
+            });
+          }
+        }, true);
+
+        // Add a failsafe periodic check that runs every 2 seconds
+        const checkInterval = setInterval(() => {
+          const operations = document.querySelectorAll('.opblock-summary');
+          const pathNumbers = document.querySelectorAll('.path-number');
+
+          if (operations.length > 0 && operations.length > pathNumbers.length) {
+            restoreAllNumbers();
+          }
+        }, 2000);
       }
 
       // Add numbering to schema sections
