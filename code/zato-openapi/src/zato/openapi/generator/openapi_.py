@@ -166,11 +166,12 @@ class OpenAPIGenerator:
             if not service_name:
                 continue
 
-            # Create path from service name
-            path = f'/{service_name.replace(".", "/")}'
+            # Use url_path and http_method from DB-driven scan if present
+            path = service.get('url_path') or f'/{service_name.replace(".", "/")}'
+            http_method = service.get('http_method', 'post').lower()
             operation = {
                 'summary': f'Invoke {service_name}',
-                'description': f'Invoke the {service["class_name"]} service',
+                'description': f'Invoke the {service.get('class_name', '')} service',
                 'operationId': service_name.replace('.', '_').replace('-', '_'),
                 'tags': ['API Endpoints'],
                 'responses': {
@@ -223,7 +224,7 @@ class OpenAPIGenerator:
             if path not in openapi['paths']:
                 openapi['paths'][path] = {}
 
-            openapi['paths'][path]['post'] = operation
+            openapi['paths'][path][http_method] = operation
 
         # Add schema components
         schema_components = self.type_mapper.get_schema_components()
