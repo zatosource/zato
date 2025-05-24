@@ -14,11 +14,9 @@ import logging
 # globre
 from globre import match as globre_match
 
-# Paste
-from paste.util.converters import asbool
-
 # Zato
 from zato.common.api import FALSE_TRUE, TRUE_FALSE
+from zato.common.util.api import as_bool
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ class Matcher:
             if key == 'order':
                 continue
 
-            value = asbool(value)
+            value = as_bool(value)
 
             # Add new items
             self.items[value].append(key)

@@ -5,18 +5,6 @@ MAKEFLAGS += --silent
 default: run-tests
 PY_DIR=$(CURDIR)/../bin
 
-common-tests:
-	cd $(CURDIR)/code/zato-common && make run-tests
-
-cy-tests:
-	cd $(CURDIR)/code/zato-cy && make run-tests
-
-server-tests:
-	cd $(CURDIR)/code/zato-server && make run-tests
-
-cli-tests:
-	cd $(CURDIR)/code/zato-cli && make run-tests
-
 static-check:
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
@@ -35,18 +23,20 @@ type-check:
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
-type-check-pubsub:
-	cd $(CURDIR)/code/zato-server && $(MAKE) pyright-pubsub
-	echo "Type checks OK"
-
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' make run-tests
 
-scheduler-tests:
-	cd $(CURDIR)/code/zato-scheduler && make run-tests
+common-tests:
+	cd $(CURDIR)/code/zato-common && make run-tests
 
-rules-tests:
-	cd $(CURDIR)/code/zato-common && make rules-tests
+server-tests:
+	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make run-tests
+
+cy-tests:
+	cd $(CURDIR)/code/zato-cy && make PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' run-tests
+
+cli-tests:
+	cd $(CURDIR)/code/zato-cli && make run-tests
 
 openapi:
 	py -m zato.openapi.generator.cli $(filter-out $@,$(MAKECMDGOALS))
@@ -57,9 +47,6 @@ run-openapi-server:
 %:
 	@:
 
-rules-perf-tests:
-	cd $(CURDIR)/code/zato-common && make rules-perf-tests
-
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx playwright install
@@ -67,8 +54,8 @@ install-qa-reqs:
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
-#	$(MAKE) web-admin-tests
-#	$(MAKE) common-tests
+	$(MAKE) web-admin-tests
+	$(MAKE) common-tests
 	$(MAKE) server-tests
 #	$(MAKE) cli-tests
-#	$(MAKE) cy-tests
+	$(MAKE) cy-tests
