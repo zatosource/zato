@@ -24,7 +24,7 @@ from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from getpass import getuser as getpass_getuser
 from glob import glob
 from inspect import isfunction, ismethod
@@ -743,10 +743,10 @@ def from_utc_to_local(dt, tz_name):
 
 # ################################################################################################################################
 
-def _utcnow():
+def _utcnow(_utc_zone=timezone.utc):
     """ See zato.common.util.utcnow for docstring.
     """
-    return datetime.utcnow()
+    return datetime.now(_utc_zone)
 
 # ################################################################################################################################
 
