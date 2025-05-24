@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
-from .base import BaseTestCase
+from base import BaseTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################

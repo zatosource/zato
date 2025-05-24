@@ -15,8 +15,8 @@ from uuid import UUID as uuid_UUID
 # Bunch
 from bunch import bunchify
 
-# dateparser
-from dateparser import parse as dt_parse
+# Local date utilities
+from test.zato.cy.simpleio_.date_util import parse_date as dt_parse
 
 # Zato
 from zato.common.api import DATA_FORMAT

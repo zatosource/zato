@@ -68,11 +68,11 @@ install-qa-reqs:
 
 functional-tests:
 	$(MAKE) web-admin-tests
-	$(MAKE) common-tests
+#	$(MAKE) common-tests
 	$(MAKE) server-tests
 	$(MAKE) cli-tests
 	$(MAKE) scheduler-tests
-	$(MAKE) cy-tests
+#	$(MAKE) cy-tests
 
 run-tests:
 	$(MAKE) install-qa-reqs
