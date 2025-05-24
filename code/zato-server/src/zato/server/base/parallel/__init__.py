@@ -907,6 +907,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def reload_config(self):
+        logger.info('Config reloading')
+        self.set_up_config(self)
+        self.worker_store.init()
+        logger.info('Config reloaded')
+
+# ################################################################################################################################
+
     def set_scheduler_address(self, scheduler_address:'str') -> 'None':
         self.broker_client.set_scheduler_address(scheduler_address)
 

@@ -190,6 +190,7 @@ class Ping(AdminService):
     name = 'built-in.ping'
 
     def handle(self):
+        self.server.reload_config()
         self.response.payload = '{"pong":"zato"}'
 
 # ################################################################################################################################
