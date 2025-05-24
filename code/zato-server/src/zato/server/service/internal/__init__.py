@@ -187,7 +187,7 @@ class AdminService(Service):
 class Ping(AdminService):
     """ A ping service, useful for API testing.
     """
-    name = 'built-in.ping'
+    name = 'demo.ping'
 
     def handle(self):
         self.server.reload_config()
