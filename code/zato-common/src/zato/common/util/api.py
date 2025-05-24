@@ -131,7 +131,7 @@ logging.addLevelName(TRACE1, 'TRACE1')
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
-_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
+_epoch = datetime.fromtimestamp(0, tz=timezone.utc) # Start of UNIX epoch
 
 cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}

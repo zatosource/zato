@@ -6,7 +6,16 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# stdlib
+import os
+import warnings
+
+# Silence SQLAlchemy 2.0 warnings
+os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
+
+# Explicitly ignore the warning at the Python level
+warnings.filterwarnings('ignore', message='.*MovedIn20Warning.*')
+warnings.filterwarnings('ignore', message='.*these feature.*are not compatible with SQLAlchemy 2.0.*')
 
 # dictalchemy
 from zato.common.ext.dictalchemy import make_class_dictable
