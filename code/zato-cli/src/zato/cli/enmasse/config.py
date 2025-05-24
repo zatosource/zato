@@ -10,26 +10,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'
-    Confluence = 'confluence'
-    Channel_AMQP = 'channel_amqp'
-    Channel_REST = 'channel_rest'
-    Channel_WebSockets = 'channel_websockets'
-    Email_IMAP = 'email_imap'
-    Email_SMTP = 'email_smtp'
-    Jira = 'jira'
-    LDAP = 'ldap'
-    Microsoft_365 = 'cloud_microsoft_365'
-    Odoo = 'odoo'
-    Outgoing_AMQP = 'outgoing_amqp'
-    Outgoing_REST = 'outgoing_rest'
-    Outgoing_SOAP = 'outgoing_soap'
-    Outgoing_WebSockets = 'outgoing_websockets'
-    Search_ElasticSearch = 'elastic_search'
-    SOAP = 'soap'
-    SQL  = 'sql'
-    Scheduler = 'scheduler'
-    Security = 'security'
+    Cache = 'cache'                             #
+    Confluence = 'confluence'                   #
+    Channel_AMQP = 'channel_amqp'               #
+    Channel_REST = 'channel_rest'               # x
+    Channel_WebSockets = 'channel_websockets'   #
+    Email_IMAP = 'email_imap'                   #
+    Email_SMTP = 'email_smtp'                   #
+    Jira = 'jira'                               #
+    LDAP = 'ldap'                               # x
+    Microsoft_365 = 'cloud_microsoft_365'       #
+    Odoo = 'odoo'                               #
+    Outgoing_AMQP = 'outgoing_amqp'             #
+    Outgoing_REST = 'outgoing_rest'             # x
+    Outgoing_SOAP = 'outgoing_soap'             # x
+    Outgoing_WebSockets = 'outgoing_websockets' #
+    PubSub_Topic = 'pubsub_topic'               #
+    Search_ElasticSearch = 'elastic_search'     #
+    SQL  = 'sql'                                #
+    Scheduler = 'scheduler'                     # x
+    Security = 'security'                       # x
 
 # ################################################################################################################################
 # ################################################################################################################################
