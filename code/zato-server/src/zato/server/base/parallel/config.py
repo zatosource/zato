@@ -248,10 +248,6 @@ class ConfigLoader:
         locally_deployed        # type: anyset
     ) -> 'None':
 
-        # Deploy missing services found on other servers
-        if locally_deployed:
-            self.deploy_missing_services(locally_deployed)
-
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
 
