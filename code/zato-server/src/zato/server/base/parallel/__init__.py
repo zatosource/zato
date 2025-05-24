@@ -23,9 +23,6 @@ from uuid import uuid4
 from gevent import sleep
 from gevent.lock import RLock
 
-# Paste
-from paste.util.converters import asbool
-
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -346,7 +343,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
             # .. whereas details are optional.
-            if asbool(os.environ.get('Zato_Log_User_Services_Deployed', False)):
+            if as_bool(os.environ.get('Zato_Log_User_Services_Deployed', False)):
                 for item in sorted(elem.name for elem in user_defined_deployed):
                     logger.info('Deployed user service: %s', item)
 
@@ -756,7 +753,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if log_details := os.environ.get(EnvVariable.Log_Env_Details) or True:
 
             # .. now, make sure it is set to True ..
-            if asbool(log_details):
+            if as_bool(log_details):
 
                 # .. now, we need to have the correct file available ..
                 path = ['~', 'env', 'details', 'all-zato-env-details.txt']
@@ -784,7 +781,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_first_worker = self.process_idx == 0
 
         # Used later on
-        use_tls = asbool(self.fs_server_config.crypto.use_tls)
+        use_tls = as_bool(self.fs_server_config.crypto.use_tls)
 
         # This changed in 3.2 so we need to take both into account
         self.work_dir = self.fs_server_config.main.get('work_dir') or self.fs_server_config.hot_deploy.get('work_dir')
@@ -928,7 +925,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 else:
                     _name = name
 
-                value = asbool(self.fs_server_config.hot_deploy.get(_name, True))
+                value = as_bool(self.fs_server_config.hot_deploy.get(_name, True))
                 self.hot_deploy_config[name] = value
             else:
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(

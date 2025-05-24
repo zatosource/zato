@@ -10,9 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from traceback import format_exc
 
-# Paste
-from paste.util.converters import asbool
-
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
@@ -22,6 +19,7 @@ from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
@@ -176,7 +174,7 @@ class GetList(_BaseGet):
         # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
-            asbool(self.server.fs_server_config.misc.return_internal_objects),
+            as_bool(self.server.fs_server_config.misc.return_internal_objects),
             self.request.input.get('data_format'),
             False,
             )
