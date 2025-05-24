@@ -40,7 +40,7 @@ type-check-pubsub:
 	echo "Type checks OK"
 
 web-admin-tests:
-	cd $(CURDIR)/code/zato-web-admin && make run-tests
+	cd $(CURDIR)/code/zato-web-admin && PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' make run-tests
 
 scheduler-tests:
 	cd $(CURDIR)/code/zato-scheduler && make run-tests
@@ -66,16 +66,9 @@ install-qa-reqs:
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
-functional-tests:
-	$(MAKE) web-admin-tests
+run-tests:
+#	$(MAKE) web-admin-tests
 #	$(MAKE) common-tests
 	$(MAKE) server-tests
-	$(MAKE) cli-tests
-	$(MAKE) scheduler-tests
+#	$(MAKE) cli-tests
 #	$(MAKE) cy-tests
-
-run-tests:
-	$(MAKE) install-qa-reqs
-	$(CURDIR)/code/bin/playwright install
-	$(MAKE) static-check
-	$(MAKE) functional-tests

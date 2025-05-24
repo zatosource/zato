@@ -501,18 +501,18 @@ class CommandsService(Service):
         def test_invoke_with_callback_service_class(self):
 
             # stdlib
-            from zato.server.service.internal.helpers import RawRequestLogger
+            from zato.server.service.internal.helpers import PubInputLogger
 
-            self._test_impl(callback=RawRequestLogger)
+            self._test_impl(callback=PubInputLogger)
 
 # ################################################################################################################################
 
         def test_invoke_with_callback_service_name(self):
 
             # stdlib
-            from zato.server.service.internal.helpers import RawRequestLogger
+            from zato.server.service.internal.helpers import PubInputLogger
 
-            self._test_impl(callback=RawRequestLogger.get_name())
+            self._test_impl(callback=PubInputLogger.get_name())
 
 # ################################################################################################################################
 
