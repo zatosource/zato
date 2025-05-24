@@ -38,6 +38,7 @@ ldap3==2.10.2rc2
 lxml==5.3.0
 more-itertools==9.0.0
 msal==1.32.3
+multipart==1.2.1
 ndg-httpsclient==0.4.0
 netaddr==0.8.0
 netifaces==0.11.0

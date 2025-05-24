@@ -8,10 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import copy
-from cgi import FieldStorage
 from collections.abc import Mapping
 from io import BytesIO
 from urllib.parse import parse_qsl, quote, urlencode
+
+# Multipart
+from multipart import parse_form_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,17 +58,18 @@ def get_form_data(wsgi_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict
     buff.write(data)
     buff.seek(0)
 
-    # Output to return
-    form = FieldStorage(fp=buff, environ=wsgi_environ, keep_blank_values=True)
+    # Parse form data using modern multipart parser
+    _, form_dict = parse_form_data({
+        'CONTENT_TYPE': wsgi_environ.get('CONTENT_TYPE', ''),
+        'CONTENT_LENGTH': str(len(data))
+    }, buff)
 
     # Clean up
     buff.close()
 
-    # Turn the FieldStorage object into a dict ..
+    # Process the form data if needed
     if as_dict:
-        if form.list:
-            form_to_dict = {item.name: item.value for item in form.list}
-            out.update(form_to_dict)
+        out.update(form_dict)
 
     # Return the dict now
     return out
