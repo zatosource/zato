@@ -57,5 +57,5 @@ run-tests:
 #	$(MAKE) web-admin-tests
 #	$(MAKE) common-tests
 #	$(MAKE) server-tests
-#	$(MAKE) cli-tests
+	$(MAKE) cli-tests
 #	$(MAKE) cy-tests
