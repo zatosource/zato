@@ -33,8 +33,8 @@ git_repo_dir = os.path.abspath(os.path.join(release_info_dir, '..'))
 #
 # This is Zato version information
 #
-release = open(os.path.join(release_info_dir, 'release.json')).read()
-release = json.loads(release)
+with open(os.path.join(release_info_dir, 'release.json')) as f:
+    release = json.loads(f.read())
 
 # ################################################################################################################################
 # ################################################################################################################################

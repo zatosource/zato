@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from unittest import main
 
+# Selenium
+from selenium.webdriver.common.by import By
+
 # Zato
 from base import BaseTestCase
 
@@ -47,7 +50,7 @@ class LoginLogoutTestCase(BaseTestCase):
         self.assertEqual(self.client.current_url, address)
 
         # .. now, log us out ..
-        logout:'WebElement' = self.client.find_element_by_partial_link_text('Log out')
+        logout:'WebElement' = self.client.find_element(By.PARTIAL_LINK_TEXT, 'Log out')
         logout.click()
 
         # .. try to access an address ..
