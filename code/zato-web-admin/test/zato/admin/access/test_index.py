@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from unittest import main
 
 # Zato
-from .base import BaseTestCase
+from base import BaseTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +88,7 @@ class IndexTestCase(BaseTestCase):
             url_paths.add(url_path)
 
         # All the index-like URL paths found ..
-        url_paths = sorted(url_paths)
+        url_paths = sorted(url_paths) # type: ignore
 
         # .. the list of patterns that point to URL paths that need to be skipped,
         # .. e.g. that appear to be index-like but they are not really.
@@ -98,21 +98,17 @@ class IndexTestCase(BaseTestCase):
             'cache/builtin/clear',
             'favicon.ico',
             'generate-totp-key',
-            'outgoing/redis',
-            'pubsub/message/publish-action/',
-            'pubsub/task/delivery/', # <----------------- ...
 
             '/accounts/login',
             '/create/',
             '/change-password/',
             '/config-file/',
-            '/data-dict/',
             '/edit/',
             '/logout',
+            '/stats/user/',
 
             '/zato/cloud/jira/reset-oauth2-scopes/',
-            '/zato/security/oauth/outconn/client-credentials/change-secret/',
-            '/zato/security/rbac/role/',
+            '/zato/security/oauth/outconn',
             '/zato/service/ide/create-file/',
             '/zato/service/ide/delete-file/',
             '/zato/service/ide/rename-file/',

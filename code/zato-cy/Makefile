@@ -30,9 +30,8 @@ simpleio-tests:
 
 run-tests:
 	echo "Running tests in $(Zato_Package_Name)"
-#	$(MAKE) reqresp-tests
+	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
-	echo
 
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
