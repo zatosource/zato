@@ -8,35 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ManageCommand
+from zato.cli.enmasse.config import ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import dictlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ModuleCtx:
-
-    class Include_Type:
-        All  = 'all'
-        Cache = 'cache'
-        LDAP = 'ldap'
-        Microsoft_365 = 'cloud-microsoft-365'
-        SQL  = 'sql'
-        PubSub = 'pubsub'
-        REST = 'rest'
-        Scheduler = 'scheduler'
-        Security = 'security'
-        WebSockets = 'websockets'
-
-        # How many seconds to wait for servers to start up
-        Initial_Wait_Time = 60 * 60 * 12 # In seconds = 12 hours
-
-        # How many seconds to wait for missing objects
-        Missing_Wait_Time = 120
 
 # ################################################################################################################################
 # ################################################################################################################################

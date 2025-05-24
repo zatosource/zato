@@ -1,106 +1,144 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-# flake8: noqa
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 template_complex_01 = """
 
-channel_plain_http:
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse1/{test_suffix}
-    params_pri: channel -params-over-msg
-    sec_def: zato-no-security
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse1/{test_suffix}
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse2/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse2/{test_suffix}
+security:
 
-zato_generic_connection:
-    - address: ws://localhost:12345
-      cache_expiry: 0
-      has_auto_reconnect: true
-      is_active: true
-      is_channel: true
-      is_internal: false
-      is_outconn: false
-      is_zato: true
-      name: test.enmasse.{test_suffix}
-      on_connect_service_name: pub.zato.ping
-      on_message_service_name: pub.zato.ping
-      pool_size: 1
-      sec_use_rbac: false
-      security_def: ZATO_NONE
-      subscription_list:
-      type_: outconn-wsx
-      # These are taken from generic.connection.py -> extra_secret_keys
-      oauth2_access_token: null
-      consumer_key: null
-      consumer_secret: null
-
-def_sec:
-  - name: "Test Basic Auth {test_suffix}"
-    is_active: true
+  - name: enmasse.basic_auth.1
+    username: pubapi
+    password: abcdef123456
     type: basic_auth
-    username: "MyUser {test_suffix}"
-    password: "MyPassword"
-    realm: "My Realm"
+    realm: 'enmasse'
 
-email_smtp:
-  - name: test.email.smtp.complex-01.{smtp_config.name}.{test_suffix}
-    host: {smtp_config.host}
-    is_active: true
-    is_debug: false
-    mode: starttls
-    port: 587
-    timeout: 300
-    username: {smtp_config.username}
-    password: {smtp_config.password}
-    ping_address: {smtp_config.ping_address}
+  - name: enmasse.bearer_token.1
+    username: enmasse.1
+    password: Zato_Enmasse_Env.EnmasseBearerToken1
+    type: bearer_token
+    auth_endpoint: https://example.com
+    client_id_field: username
+    client_secret_field: password
+    grant_type: password
+    data_format: form
 
-web_socket:
-    - address: "ws://0.0.0.0:10203/api/{test_suffix}"
-      data_format: "json"
-      id: 1
-      is_active: true
-      is_audit_log_received_active: false
-      is_audit_log_sent_active: false
-      is_internal: false
-      max_bytes_per_message_received: null
-      max_bytes_per_message_sent: null
-      max_len_messages_received: null
-      max_len_messages_sent: null
-      name: "wsx.enmasse.{test_suffix}"
-      new_token_wait_time: 5
-      opaque1: '{{"max_bytes_per_message_sent":null,"max_bytes_per_message_received":null,"ping_interval":30,"extra_properties":null,"is_audit_log_received_active":false,"max_len_messages_received":null,"pings_missed_threshold":2,"max_len_messages_sent":null,"security":null,"is_audit_log_sent_active":false,"service_name":"pub.zato.ping"}}'
-      ping_interval: 30
-      pings_missed_threshold: 2
-      sec_def: "zato-no-security"
-      sec_type: null
-      security_id: null
-      service: "pub.zato.ping"
-      service_name: "pub.zato.ping"
-      token_ttl: 3600
+  - name: enmasse.bearer_token.2
+    username: enmasse.2
+    password: abcdef123456
+    type: bearer_token
+    auth_endpoint: example.com
+    extra_fields:
+      - audience=example.com
+
+  - name: enmasse.ntlm.1
+    username: enmasse\user
+    password: abcdef123456
+    type: ntlm
+
+  - name: enmasse.apikey.1
+    type: apikey
+    username: enmasse
+    password: Zato_Enmasse_Env.EnmasseApiKey1
+
+channel_rest:
+
+  - name: enmasse.channel.rest.1
+    service: demo.ping
+    url_path: /enmasse.rest.1
+
+  - name: enmasse.channel.rest.2
+    service: demo.ping
+    url_path: /enmasse.rest.2
+    data_format: json
+
+  - name: enmasse.channel.rest.3
+    service: demo.ping
+    security_name: enmasse.basic_auth.1
+    data_format: json
+
+outgoing_rest:
+
+  - name: enmasse.outgoing.rest.1
+    host: https://example.com:443
+    url_path: /sso/{type}/hello/{endpoint}
+    data_format: json
+    timeout: 60
+
+  - name: enmasse.outgoing.rest.2
+    host: https://api.businesscentral.dynamics.com
+    url_path: /abc/2
+    security: enmasse.bearer_token.1
+    timeout: 20
+
+  - name: enmasse.outgoing.rest.3
+    host: https://example.azurewebsites.net
+    url_path: /abc/3
+    data_format: json # No default value
+
+  - name: enmasse.outgoing.rest.4
+    host: https://example.com
+    url_path: /abc/4
+    ping_method: GET # Set explicitly because it defaults to GET already
+
+  - name: enmasse.outgoing.rest.5
+    host: https://example.com
+    url_path: /abc/5
+    ping_method: GET
+    tls_verify: false # Default is True
+
+outgoing_soap:
+
+  - name: enmasse.outgoing.soap.1
+    host: https://example.com
+    url_path: /SOAP
+    security: enmasse.ntlm.1
+    soap_action: urn:microsoft-dynamics-schemas/page/example:Create
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20
+
+scheduler:
+
+  - name: enmasse.scheduler.1
+    service: demo.ping
+    job_type: interval_based
+    start_date: '2025-01-11 11:23:52'
+    seconds: 2
+    is_active: Zato_Enmasse_Env.Enmasse_Scheduler_Is_Active
+
+  - name: enmasse.scheduler.2
+    service: demo.ping
+    job_type: interval_based
+    start_date: '2025-02-19 12:00:00'
+    minutes: 51
+
+  - name: enmasse.scheduler.3
+    service: demo.ping
+    job_type: interval_based
+    start_date: '2025-03-03 15:00:00'
+    hours: 3
+
+  - name: enmasse.scheduler.4
+    service: demo.ping
+    job_type: interval_based
+    start_date: '2025-04-21 23:19:47'
+    days: 10
+
+ldap:
+
+  - name: enmasse.ldap.1
+    username: 'CN=enmasse,OU=testing,OU=Servers,DC=enmasse'
+    auth_type: NTLM
+    server_list: 127.0.0.1:389
+    password: Zato_Enmasse_Env.Enmasse_LDAP_Password
+
 """
 
 # ################################################################################################################################
