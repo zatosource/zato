@@ -15,15 +15,12 @@ from traceback import format_exc
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
-# Paste
-from paste.util.converters import asbool
-
 # Zato
 from zato.cache import Cache as _CyCache
 from zato.common.api import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.typing_ import cast_
-from zato.common.util.api import parse_extra_into_dict
+from zato.common.util.api import as_bool
 
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import iteritems, itervalues
