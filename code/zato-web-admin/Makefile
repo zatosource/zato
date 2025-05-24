@@ -7,7 +7,7 @@ Zato_Package_Name=zato-web-admin
 
 run-tests:
 	echo "Running access checks in $(Zato_Package_Name)"
-#	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/admin/access/test_login_logout.py
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/admin/access/test_login_logout.py
 	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/admin/access/test_index.py
 
 flake8:
