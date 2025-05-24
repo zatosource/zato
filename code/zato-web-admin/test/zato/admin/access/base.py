@@ -9,14 +9,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+import warnings
 from http.client import FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK
 from unittest import TestCase
+
+# Target the specific X509Extension warnings with exact message pattern
+warnings.filterwarnings('ignore', message='X509Extension support in pyOpenSSL is deprecated. You should use the APIs in cryptography.')
 
 # Bunch
 from bunch import bunchify
 
 # Django
 import django
+
+# Selenium
+from selenium.webdriver.common.by import By
 
 # Selenium-Wire
 if os.environ.get('ZATO_TEST_DASHBOARD'):
@@ -67,8 +74,8 @@ class BaseTestCase(TestCase):
         pymysql.install_as_MySQLdb()
 
         config_path = os.path.join(Config.web_admin_location, 'config', 'repo', 'web-admin.conf')
-        config = open(config_path).read()
-        config = json.loads(config)
+        with open(config_path, 'r') as f:
+            config = json.loads(f.read())
 
         config['config_dir'] = Config.web_admin_location
         config['log_config'] = os.path.join(Config.web_admin_location, config['log_config'])
@@ -173,8 +180,8 @@ class BaseTestCase(TestCase):
         self._confirm_not_logged_in()
 
         # .. get our form elements ..
-        username = self.client.find_element_by_name('username')
-        password = self.client.find_element_by_name('password')
+        username = self.client.find_element(By.NAME, 'username')
+        password = self.client.find_element(By.NAME, 'password')
 
         # .. fill out the form ..
         username.send_keys(self.username)

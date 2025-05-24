@@ -32,7 +32,9 @@ class _WebAdminAuthCommand(ManageCommand):
 
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = loads(open_r(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
+        config_path = os.path.join(base_dir, '.', 'config/repo/web-admin.conf')
+        with open_r(config_path) as f:
+            config = loads(f.read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
