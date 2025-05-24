@@ -236,69 +236,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deploy_missing_services(self, locally_deployed:'anylist') -> 'None':
-        """ Deploys services that exist on other servers but not on ours.
-        """
-        # The locally_deployed list are all the services that we could import based on our current
-        # understanding of the contents of the cluster. However, it's possible that we have
-        # been shut down for a long time and during that time other servers deployed services
-        # we don't know anything about. They are not stored locally because we were down.
-        # Hence we need to check out if there are any other servers in the cluster and if so,
-        # grab their list of services, compare it with what we have deployed and deploy
-        # any that are missing.
-
-        # Continue only if there is more than one running server in the cluster.
-        other_servers = self.odb.get_servers()
-
-        if other_servers:
-            other_server = other_servers[0] # Index 0 is as random as any other because the list is not sorted.
-            missing = self.odb.get_missing_services(other_server, {item.name for item in locally_deployed})
-
-            if missing:
-
-                logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
-
-                # (file_name, source_path) -> a list of services it contains
-                modules:'strdict' = {}
-
-                # Coalesce all service modules - it is possible that each one has multiple services
-                # so we do want to deploy the same module over for each service found.
-                for _ignored_service_id, name, source_path, source in missing:
-                    file_name = os.path.basename(source_path)
-                    _, tmp_full_path = mkstemp(suffix='-'+ file_name)
-
-                    # Module names are unique so they can serve as keys
-                    key = file_name
-
-                    if key not in modules:
-                        modules[key] = {
-                            'tmp_full_path': tmp_full_path,
-                            'services': [name] # We can append initial name already in this 'if' branch
-                        }
-
-                        # Save the source code only once here
-                        f = open(tmp_full_path, 'wb')
-                        _ = f.write(source)
-                        f.close()
-
-                    else:
-                        modules[key]['services'].append(name)
-
-                # Create a deployment package in ODB out of which all the services will be picked up ..
-                for file_name, values in modules.items():
-                    msg:'bunch_' = Bunch()
-                    msg.action = HOT_DEPLOY.CREATE_SERVICE.value
-                    msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
-                    msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
-
-                    # .. and tell the worker to actually deploy all the services the package contains.
-                    # gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
-                    self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(msg)
-
-                    logger.info('Deployed extra services found: %s', sorted(values['services']))
-
-# ################################################################################################################################
-
     def maybe_on_first_worker(self, server:'ParallelServer') -> 'anyset':
         """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
         processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
