@@ -26,3 +26,9 @@ classifiers = [
 
 [tool.setuptools]
 package-dir = { "" = "src" }
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning:pkg_resources.*",
+    "ignore::DeprecationWarning:humanize.*",
+]

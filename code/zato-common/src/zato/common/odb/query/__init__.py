@@ -128,7 +128,7 @@ def query_wrapper(func):
             result = func(*args)
 
         tool = _SearchWrapper(result, **kwargs)
-        result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
+        result = _SearchResults(tool.q, tool.q.all(), tool.q.subquery().columns, tool.total)
 
         if needs_columns:
             return result, result.columns
