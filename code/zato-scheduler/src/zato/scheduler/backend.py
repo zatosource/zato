@@ -125,7 +125,7 @@ class Job:
         is_active = is_active if is_active is not None else self.is_active
 
         return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs,
-            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition, self.service,
+            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.service,
             self.extra)
 
 # ################################################################################################################################
