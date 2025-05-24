@@ -9,12 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-import warnings
 from http.client import FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK
 from unittest import TestCase
-
-# Target the specific X509Extension warnings with exact message pattern
-warnings.filterwarnings('ignore', message='X509Extension support in pyOpenSSL is deprecated. You should use the APIs in cryptography.')
 
 # Bunch
 from bunch import bunchify

@@ -23,7 +23,7 @@ class ServiceCommandsTestCase(CommandLineServiceTestCase):
         service_name = 'helpers.commands-service'
 
         # Run the test now
-        self.run_zato_service_test(service_name)
+        _ = self.run_zato_service_test(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

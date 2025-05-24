@@ -1214,7 +1214,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def publish(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        raise Exception('TODO: Implement it using the new pub/sub')
+        # raise Exception('TODO: Implement it using the new pub/sub')
+        pass
 
 # ################################################################################################################################
 
