@@ -22,7 +22,6 @@ import requests
 from zato.common.crypto.api import CryptoManager
 from zato.common.test import BaseZatoTestCase
 from zato.common.test.config import TestConfig
-from zato.sso import status_code
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -196,7 +195,7 @@ class RESTClient:
                 cid = response_data.get('cid', _unexpected)
                 if cid is _unexpected:
                     raise Exception('Unexpected CID found in response `{}`'.format(response.text))
-                if response_data['status'] != status_code.ok:
+                if response_data['status'] != 'ok':
                     raise Exception('Unexpected response_data.status found in response `{}` ({})'.format(
                         response.text, response_data['status']))
 
