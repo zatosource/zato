@@ -37,9 +37,10 @@ class _object_type:
 
 _object_alias = {}
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
-_object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-microsoft-365'
+_object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
+_object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SQL] = 'outconn_sql'
