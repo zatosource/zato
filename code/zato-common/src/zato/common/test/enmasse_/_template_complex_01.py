@@ -93,17 +93,6 @@ outgoing_rest:
     ping_method: GET
     tls_verify: false # Default is True
 
-outgoing_soap:
-
-  - name: enmasse.outgoing.soap.1
-    host: https://example.com
-    url_path: /SOAP
-    security: enmasse.ntlm.1
-    soap_action: urn:microsoft-dynamics-schemas/page/example:Create
-    soap_version: "1.1"
-    tls_verify: false
-    timeout: 20
-
 scheduler:
 
   - name: enmasse.scheduler.1
@@ -139,6 +128,36 @@ ldap:
     server_list: 127.0.0.1:389
     password: Zato_Enmasse_Env.Enmasse_LDAP_Password
 
+sql:
+
+  - name: enmasse.sql.1
+    type: mysql
+    host: 127.0.0.1
+    port: 3306
+    db_name: MYDB_01
+    username: enmasse.1
+    password: Zato_Enmasse_Env.SQL_Password_1
+
+  - name: enmasse.sql.2
+    type: oracle
+    host: 10.152.81.199
+    port: 1521
+    db_name: MYDB_01
+    username: enmasse.2
+    password: Zato_Enmasse_Env.SQL_Password_2
+    extra: connect_timeout=10
+    pool_size: 10
+
+outgoing_soap:
+
+  - name: enmasse.outgoing.soap.1
+    host: https://example.com
+    url_path: /SOAP
+    security: enmasse.ntlm.1
+    soap_action: urn:microsoft-dynamics-schemas/page/example:Create
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20
 """
 
 # ################################################################################################################################
