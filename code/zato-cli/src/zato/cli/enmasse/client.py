@@ -12,8 +12,14 @@ import os
 # Zato
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
-from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
+from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
 from zato.common.util.cli import read_stdin_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,15 +28,8 @@ def get_session_from_server_dir(
     server_dir:'str',
     stdin_data:'strnone'=None,
     ) -> 'any_':
-    """ Creates a new SQLAlchemy session based on server configuration without requiring a running server.
-    This function reads the server's SQL configuration and builds a database session.
+    """ Creates a new SQLAlchemy session based on server configuration.
     """
-    # stdlib
-    import os
-
-    # Zato - imported here to avoid circular imports
-    from zato.cli.zato_command import get_config
-    from zato.common.util.api import get_odb_session_from_server_config
 
     # Find repository location from server directory
     repo_location = get_repo_dir_from_component_dir(server_dir)
@@ -66,9 +65,6 @@ def get_session_from_server_dir(
 # ################################################################################################################################
 
 if __name__ == '__main__':
-
-    # stdlib
-    import os
 
     # Create a session using the example server path
     server_path = os.path.expanduser('~/env/qs-1/server1')
