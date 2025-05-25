@@ -10,21 +10,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'                               #
-    Confluence = 'confluence'                     #
-    Channel_REST = 'channel_rest'                 # x
-    Email_IMAP = 'email_imap'                     #
-    Email_SMTP = 'email_smtp'                     #
-    Jira = 'jira'                                 #
-    LDAP = 'ldap'                                 # x
-    Microsoft_365 = 'cloud_microsoft_365'         #
-    Odoo = 'odoo'                                 #
-    Outgoing_REST = 'outgoing_rest'               # x
-    Outgoing_SOAP = 'outgoing_soap'               # x
-    Search_ElasticSearch = 'elastic_search'       #
-    SQL  = 'sql'                                  # x
-    Scheduler = 'scheduler'                       # x
-    Security = 'security'                         # x
+    Cache = 'cache'                               # 1
+    Confluence = 'confluence'                     # 1
+    Channel_REST = 'channel_rest'                 # 1
+    Email_IMAP = 'email_imap'                     # 1
+    Email_SMTP = 'email_smtp'                     # 1
+    Jira = 'jira'                                 # 1
+    LDAP = 'ldap'                                 # 1
+    Microsoft_365 = 'cloud_microsoft_365'         # 1
+    Odoo = 'odoo'                                 # 1
+    Outgoing_REST = 'outgoing_rest'               # 1
+    Outgoing_SOAP = 'outgoing_soap'               # 1
+    Search_ElasticSearch = 'elastic_search'       # 1
+    SQL  = 'sql'                                  # 1
+    Scheduler = 'scheduler'                       # 1
+    Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #
@@ -36,6 +36,7 @@ class _object_type:
 # ################################################################################################################################
 
 _object_alias = {}
+
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
@@ -45,10 +46,63 @@ _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 _attr_alias = {}
-_attr_alias[_object_type.SQL] = {'type':'engine'}
+
+_attr_alias[_object_type.SQL] = {
+    'type':'engine'
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 _attr_default = {}
+
+_attr_default[_object_type.Cache] = {
+    'is_active': True,
+    'is_default': False,
+    'max_size': 10000,
+    'max_item_size': 1000000,
+    'sync_method': 'in-background',
+    'persistent_storage': 'sqlite',
+    'cache_type': 'builtin'
+}
+
+_attr_default[_object_type.Confluence] = {
+    'is_active': True,
+    'is_cloud': True,
+    'api_version': 'v1'
+}
+
+_attr_default[_object_type.Email_IMAP] = {
+    'is_active': True,
+    'timeout': 30,
+    'debug_level': 0,
+    'mode': 'ssl',
+    'get_criteria': 'ALL'
+}
+
+_attr_default[_object_type.Email_SMTP] = {
+    'is_active': True,
+    'timeout': 30,
+    'is_debug': False,
+    'mode': 'starttls',
+    'ping_address': 'example@example.com'
+}
+
+_attr_default[_object_type.Jira] = {
+    'is_active': True,
+    'is_cloud': True,
+    'api_version': 'v2'
+}
+
+_attr_default[_object_type.Odoo] = {
+    'is_active': True,
+    'protocol': 'jsonrpc',
+    'pool_size': 10
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
