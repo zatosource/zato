@@ -158,6 +158,95 @@ outgoing_soap:
     soap_version: "1.1"
     tls_verify: false
     timeout: 20
+
+cloud_microsoft_365:
+
+  - name: enmasse.cloud.microsoft365.1
+    is_active: true
+    client_id: 12345678-1234-1234-1234-123456789abc
+    secret_value: Zato_Enmasse_Env.Microsoft365SecretValue
+    scopes: Mail.Read Mail.Send
+    tenant_id: 87654321-4321-4321-4321-cba987654321
+
+cache:
+
+  - name: enmasse.cache.builtin.1
+    is_active: true
+    is_default: false
+    max_size: 10000
+    max_item_size: 1000000
+    extend_expiry_on_get: true
+    extend_expiry_on_set: false
+    sync_method: in-background
+    persistent_storage: sqlite
+    cache_type: builtin
+
+confluence:
+
+  - name: enmasse.confluence.1
+    is_active: true
+    is_cloud: true
+    api_version: v1
+    address: https://example.atlassian.net
+    username: api_user@example.com
+    password: Zato_Enmasse_Env.ConfluenceAPIToken
+
+email_imap:
+
+  - name: enmasse.email.imap.1
+    is_active: true
+    host: imap.example.com
+    port: 993
+    timeout: 30
+    debug_level: 0
+    username: enmasse@example.com
+    password: Zato_Enmasse_Env.IMAPPassword
+    mode: ssl
+    get_criteria: ALL
+
+email_smtp:
+
+  - name: enmasse.email.smtp.1
+    is_active: true
+    host: smtp.example.com
+    port: 587
+    timeout: 30
+    is_debug: false
+    username: enmasse@example.com
+    password: Zato_Enmasse_Env.SMTPPassword
+    mode: starttls
+    ping_address: test@example.com
+
+jira:
+
+  - name: enmasse.jira.1
+    is_active: true
+    is_cloud: true
+    api_version: v2
+    address: https://your-domain.atlassian.net
+    username: api_user@example.com
+    password: Zato_Enmasse_Env.JiraAPIToken
+
+odoo:
+
+  - name: enmasse.odoo.1
+    is_active: true
+    host: odoo.example.com
+    port: 8069
+    user: admin
+    database: enmasse_db
+    protocol: jsonrpc
+    pool_size: 10
+    password: Zato_Enmasse_Env.OdooPassword
+
+elastic_search:
+
+  - name: enmasse.elastic.1
+    is_active: true
+    hosts: http://elasticsearch:9200
+    timeout: 60
+    body_as: json
+
 """
 
 # ################################################################################################################################
