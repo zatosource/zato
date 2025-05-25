@@ -38,7 +38,7 @@ security:
       - audience=example.com
 
   - name: enmasse.ntlm.1
-    username: enmasse\user
+    username: enmasse\\user
     password: abcdef123456
     type: ntlm
 
@@ -171,22 +171,12 @@ cloud_microsoft_365:
 cache:
 
   - name: enmasse.cache.builtin.1
-    is_active: true
-    is_default: false
-    max_size: 10000
-    max_item_size: 1000000
     extend_expiry_on_get: true
     extend_expiry_on_set: false
-    sync_method: in-background
-    persistent_storage: sqlite
-    cache_type: builtin
 
 confluence:
 
   - name: enmasse.confluence.1
-    is_active: true
-    is_cloud: true
-    api_version: v1
     address: https://example.atlassian.net
     username: api_user@example.com
     password: Zato_Enmasse_Env.ConfluenceAPIToken
@@ -194,50 +184,34 @@ confluence:
 email_imap:
 
   - name: enmasse.email.imap.1
-    is_active: true
     host: imap.example.com
     port: 993
-    timeout: 30
-    debug_level: 0
     username: enmasse@example.com
     password: Zato_Enmasse_Env.IMAPPassword
-    mode: ssl
-    get_criteria: ALL
 
 email_smtp:
 
   - name: enmasse.email.smtp.1
-    is_active: true
     host: smtp.example.com
     port: 587
-    timeout: 30
-    is_debug: false
     username: enmasse@example.com
     password: Zato_Enmasse_Env.SMTPPassword
-    mode: starttls
-    ping_address: test@example.com
 
 jira:
 
   - name: enmasse.jira.1
-    is_active: true
-    is_cloud: true
-    api_version: v2
-    address: https://your-domain.atlassian.net
-    username: api_user@example.com
+    address: https://example.atlassian.net
+    username: enmasse@example.com
     password: Zato_Enmasse_Env.JiraAPIToken
 
 odoo:
 
   - name: enmasse.odoo.1
-    is_active: true
     host: odoo.example.com
     port: 8069
     user: admin
-    database: enmasse_db
-    protocol: jsonrpc
-    pool_size: 10
     password: Zato_Enmasse_Env.OdooPassword
+    database: enmasse_db
 
 elastic_search:
 
