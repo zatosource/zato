@@ -15,7 +15,7 @@ pubsub_endpoint:
 
   - name: 'Test.Enmasse.Simple-04.Demo Endpoint.Service.{test_suffix}'
     endpoint_type: service
-    service_name: pub.zato.ping
+    service_name: demo.ping
     topic_patterns: |-
       pub=/*
       sub=/*

@@ -27,7 +27,7 @@ if 0:
 # ################################################################################################################################
 
 class Config:
-    ServiceName = 'pub.zato.ping'
+    ServiceName = 'demo.ping'
     MaxBytesRequests = 500   # 0.5k because requests are usually shorter
     MaxBytesResponses = 5000 # 5k because responses are usually longer
 

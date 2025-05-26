@@ -70,6 +70,21 @@ def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
         return out
 
     else:
+
+        # SQLAlchemy
+        from sqlalchemy.orm.query import Query
+
+        if isinstance(data, Query):
+            data = data.all()
+            return to_json(data, return_as_dict)
+
+        if isinstance(data, list):
+            out = []
+            for item in data:
+                _item = _to_json(item, return_as_dict)
+                out.append(_item)
+            return out
+
         return _to_json(data, return_as_dict)
 
 # ################################################################################################################################
