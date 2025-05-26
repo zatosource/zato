@@ -15,8 +15,8 @@ import yaml
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.common.odb.model import Cluster, HTTPBasicAuth, APIKeySecurity, NTLM, to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list
+from zato.common.odb.model import Cluster, HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json
+from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -95,37 +95,41 @@ class EnmasseYAMLImporter:
         """
         # Get data from to_json - it will be a list of dictionaries
         definitions = to_json(query_result, return_as_dict=True)
-        
+
         # Process each definition
         for item in definitions:
-            
+
             # Store the type
             item['type'] = sec_type
-            
+
             # Get the name - it's a required field so should always be present
             name = item['name']
-            
+
             # Store in the dictionary using name as key
             out[name] = item
-    
+
     def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         """ Retrieves all security definitions from the database.
         """
         # Query the database for all existing definitions
         out = {}
-        
+
         # Process basic auth definitions
         basic_auth_defs = basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=True)
         self._process_security_defs(basic_auth_defs, 'basic_auth', out)
-        
+
         # Process API key definitions
         apikey_defs = apikey_security_list(session, cluster_id, True)
         self._process_security_defs(apikey_defs, 'apikey', out)
-        
+
         # Process NTLM definitions
         ntlm_defs = ntlm_list(session, cluster_id, True)
         self._process_security_defs(ntlm_defs, 'ntlm', out)
-        
+
+        # Process OAuth (bearer token) definitions
+        oauth_defs = oauth_list(session, cluster_id, True)
+        self._process_security_defs(oauth_defs, 'bearer_token', out)  # Map OAuth to bearer_token in YAML
+
         # Return the in-memory representation
         return out
 
@@ -190,12 +194,12 @@ class EnmasseYAMLImporter:
             security_def['password'],
             cluster
         )
-        
+
         # Set any opaque attributes
         set_instance_opaque_attrs(auth, security_def)
-        
+
         return auth
-    
+
     def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
         """ Create an API key security definition.
         """
@@ -208,16 +212,16 @@ class EnmasseYAMLImporter:
             security_def['password'],
             cluster
         )
-        
+
         # Set header if provided
         if 'header' in security_def:
             auth.header = security_def['header']
-            
+
         # Set any opaque attributes
         set_instance_opaque_attrs(auth, security_def)
-        
+
         return auth
-        
+
     def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
         """ Create an NTLM security definition.
         """
@@ -230,12 +234,33 @@ class EnmasseYAMLImporter:
             security_def.get('password'),
             cluster
         )
-        
+
         # Set any opaque attributes
         set_instance_opaque_attrs(auth, security_def)
-        
+
         return auth
-    
+
+    def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        """ Create a Bearer Token (OAuth) security definition.
+        """
+        # Create new instance (OAuth class is used for bearer_token)
+        auth = OAuth(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def.get('password'),
+            'not-used',    # proto_version
+            'not-used',    # sig_method
+            0,             # max_nonce_log
+            cluster
+        )
+
+        # Set any additional opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+
+        return auth
+
     def create_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Creates a new security definition instance.
         """
@@ -243,7 +268,7 @@ class EnmasseYAMLImporter:
 
         # Get cluster by ID
         cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
-        
+
         # Create instance based on security type
         if sec_type == 'basic_auth':
             auth = self._create_basic_auth(security_def, cluster)
@@ -251,11 +276,13 @@ class EnmasseYAMLImporter:
             auth = self._create_apikey(security_def, cluster)
         elif sec_type == 'ntlm':
             auth = self._create_ntlm(security_def, cluster)
+        elif sec_type == 'bearer_token':
+            auth = self._create_bearer_token(security_def, cluster)
         else:
             # Log warning for unsupported types
             logger.warning(f'Unsupported security type: {sec_type}')
             return None
-            
+
         # Add to session
         session.add(auth)
         return auth
@@ -270,7 +297,7 @@ class EnmasseYAMLImporter:
             # Skip type, name and id attributes
             if key in ('type', 'name', 'id'):
                 continue
-                
+
             # Set attribute if it exists on the definition
             if hasattr(definition, key):
                 setattr(definition, key, value)
@@ -279,12 +306,12 @@ class EnmasseYAMLImporter:
                 def_type = security_def['type']
                 def_name = security_def['name']
                 logger.warning(f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}')
-        
+
         # Set any opaque attributes
         set_instance_opaque_attrs(definition, security_def)
-        
+
         return definition
-        
+
     def update_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Updates an existing security definition instance.
         """
@@ -295,20 +322,24 @@ class EnmasseYAMLImporter:
         if sec_type == 'basic_auth':
             definition = session.query(HTTPBasicAuth).filter_by(id=definition_id).one()
             self._update_definition(definition, security_def)
-            
+
         elif sec_type == 'apikey':
             definition = session.query(APIKeySecurity).filter_by(id=definition_id).one()
             self._update_definition(definition, security_def)
-            
+
         elif sec_type == 'ntlm':
             definition = session.query(NTLM).filter_by(id=definition_id).one()
             self._update_definition(definition, security_def)
-            
+
+        elif sec_type == 'bearer_token':
+            definition = session.query(OAuth).filter_by(id=definition_id).one()
+            self._update_definition(definition, security_def)
+
         else:
             # Log warning for unsupported types
             logger.warning(f'Unsupported security type: {sec_type}')
             return None
-        
+
         # Add to session
         session.add(definition)
         return definition
@@ -338,7 +369,7 @@ class EnmasseYAMLImporter:
                     out_created.append(instance)
 
                     # Get model data as a dictionary (will be a single-item list)
-                    instance_dict = to_json(instance, return_as_dict=True)[0]
+                    instance_dict = to_json(instance, return_as_dict=True)
 
                     # Add the type information
                     instance_dict['type'] = item['type']
