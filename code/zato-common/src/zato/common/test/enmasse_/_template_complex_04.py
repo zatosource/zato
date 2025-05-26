@@ -86,9 +86,9 @@ channel_plain_http:
     security_id: null
     security_name: null
     serialization_type: "string"
-    service: "pub.zato.ping"
+    service: "demo.ping"
     service_id: 707
-    service_name: "pub.zato.ping"
+    service_name: "demo.ping"
     service_whitelist: [
         ""
     ]
@@ -109,8 +109,8 @@ channel_plain_http:
     name: /test/api/complex-01/001/{test_suffix}
     params_pri: channel-params-over-msg
     sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
+    service: demo.ping
+    service_name: demo.ping
     transport: plain_http
     url_path: /test/api/complex-01/001/{test_suffix}
 

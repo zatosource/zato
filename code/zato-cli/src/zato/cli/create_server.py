@@ -127,7 +127,7 @@ needs_x_zato_cid=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
-service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
+service_invoker_allow_internal="demo.ping", "/zato/api/invoke/service_name"
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS

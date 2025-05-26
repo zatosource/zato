@@ -458,6 +458,7 @@ class EnmasseYAMLImporter:
         logger.info('Processing %d REST channels', len(channels))
 
         for item in channels:
+            item = item['fields']
             name = item['name']
             logger.info('Processing channel: %s (id=%s)', name, item['id'])
             out[name] = item
@@ -518,8 +519,8 @@ class EnmasseYAMLImporter:
         # Get service by name
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.cluster_id).first()
         if not service:
-            logger.error('Service %s not found', service_name)
-            return None
+            msg = f'Service not found {service_name} -> REST channel {name}'
+            raise Exception(msg)
 
         # Create new HTTP/SOAP channel instance
         channel = HTTPSOAP()
@@ -528,7 +529,10 @@ class EnmasseYAMLImporter:
         channel.transport = 'plain_http'
         channel.url_path = url_path
         channel.service = service
-        channel.cluster_id = 1  # Always 1
+        channel.cluster_id = self.cluster_id
+        channel.is_active = True
+        channel.is_internal = False
+        channel.soap_action = 'not-used'
 
         # Set all other attributes directly from YAML definition
         for key, value in channel_def.items():
@@ -625,6 +629,30 @@ class EnmasseYAMLImporter:
             raise
 
         return out_created, out_updated
+
+# ################################################################################################################################
+
+    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
+        """ Synchronizes all objects from a YAML configuration with the database.
+            This is the main entry point for processing a complete YAML file.
+        """
+        logger.info('Starting synchronization of YAML configuration')
+
+        # First process security definitions
+        security_list = yaml_config.get('security', [])
+        if security_list:
+            logger.info('Processing %d security definitions', len(security_list))
+            security_created, security_updated = self.sync_security_definitions(security_list, session)
+            logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
+
+        # Then process REST channels which may depend on security definitions
+        channel_list = yaml_config.get('channel_rest', [])
+        if channel_list:
+            logger.info('Processing %d REST channels', len(channel_list))
+            channels_created, channels_updated = self.sync_channel_rest(channel_list, session)
+            logger.info('Processed REST channels: created=%d updated=%d', len(channels_created), len(channels_updated))
+
+        logger.info('YAML synchronization completed')
 
 # ################################################################################################################################
 # ################################################################################################################################
