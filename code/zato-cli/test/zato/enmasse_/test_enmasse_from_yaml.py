@@ -12,7 +12,7 @@ import tempfile
 from unittest import TestCase, main
 
 # Zato
-from zato.cli.enmasse.client import get_session_from_server_dir
+from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 
@@ -24,8 +24,7 @@ class TestEnmasseFromYAML(TestCase):
     """
 
     def setUp(self) -> 'None':
-        """ Set up test environment.
-        """
+
         # Server path for database connection
         self.server_path = os.path.expanduser('~/env/qs-1/server1')
 
@@ -38,10 +37,8 @@ class TestEnmasseFromYAML(TestCase):
         self.importer = EnmasseYAMLImporter()
 
     def tearDown(self) -> 'None':
-        """ Clean up after test.
-        """
-        # Remove temporary file
         os.unlink(self.temp_file.name)
+        cleanup_enmasse()
 
     def test_import_from_yaml_file(self) -> 'None':
         """ Test importing configuration from a YAML file.
