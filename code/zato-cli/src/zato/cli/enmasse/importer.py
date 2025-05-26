@@ -15,8 +15,8 @@ import yaml
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.common.odb.model import Cluster, HTTPBasicAuth, APIKeySecurity, to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list
+from zato.common.odb.model import Cluster, HTTPBasicAuth, APIKeySecurity, NTLM, to_json
+from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -122,6 +122,10 @@ class EnmasseYAMLImporter:
         apikey_defs = apikey_security_list(session, cluster_id, True)
         self._process_security_defs(apikey_defs, 'apikey', out)
         
+        # Process NTLM definitions
+        ntlm_defs = ntlm_list(session, cluster_id, True)
+        self._process_security_defs(ntlm_defs, 'ntlm', out)
+        
         # Return the in-memory representation
         return out
 
@@ -213,6 +217,24 @@ class EnmasseYAMLImporter:
         set_instance_opaque_attrs(auth, security_def)
         
         return auth
+        
+    def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        """ Create an NTLM security definition.
+        """
+        # Create new instance
+        auth = NTLM(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def.get('password'),
+            cluster
+        )
+        
+        # Set any opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+        
+        return auth
     
     def create_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Creates a new security definition instance.
@@ -227,6 +249,8 @@ class EnmasseYAMLImporter:
             auth = self._create_basic_auth(security_def, cluster)
         elif sec_type == 'apikey':
             auth = self._create_apikey(security_def, cluster)
+        elif sec_type == 'ntlm':
+            auth = self._create_ntlm(security_def, cluster)
         else:
             # Log warning for unsupported types
             logger.warning(f'Unsupported security type: {sec_type}')
@@ -274,6 +298,10 @@ class EnmasseYAMLImporter:
             
         elif sec_type == 'apikey':
             definition = session.query(APIKeySecurity).filter_by(id=definition_id).one()
+            self._update_definition(definition, security_def)
+            
+        elif sec_type == 'ntlm':
+            definition = session.query(NTLM).filter_by(id=definition_id).one()
             self._update_definition(definition, security_def)
             
         else:
