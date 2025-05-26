@@ -29,9 +29,6 @@ logger = getLogger(__name__)
 
 class EnmasseTestCase(BaseEnmasseTestCase):
 
-
-# ################################################################################################################################
-
     def _test_enmasse_ok(self, template:'str') -> 'None':
 
         # sh
