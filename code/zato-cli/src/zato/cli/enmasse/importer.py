@@ -94,28 +94,28 @@ class EnmasseYAMLImporter:
         """ Retrieves all security definitions from the database.
         """
         # Query the database for all existing definitions
-        security_defs = {}
+        out = {}
 
         # Get all basic auth definitions
         basic_auth_defs = basic_auth_list(session, cluster_id, None, True)
 
-        # Convert to dictionary keyed by name
-        for definition in basic_auth_defs:
+        # Get data from to_json - it will be a list of dictionaries
+        definitions = to_json(basic_auth_defs, return_as_dict=True)
 
-            # Get all model attributes
-            definition_dict = to_json(definition, return_as_dict=True)['fields']
+        # Process each definition
+        for item in definitions:
 
-            print()
+            # Store the type
+            item['type'] = 'basic_auth'
 
-            # Add the definition type and reference
-            definition_dict['type'] = 'basic_auth'
-            definition_dict['definition'] = definition
+            # Get the name - it's a required field so should always be present
+            name = item['name']
 
             # Store in the dictionary using name as key
-            security_defs[definition.name] = definition_dict
+            out[name] = item
 
         # Return the in-memory representation
-        return security_defs
+        return out
 
 # ################################################################################################################################
 
@@ -126,8 +126,8 @@ class EnmasseYAMLImporter:
         to_update = []
 
         # Process each definition from YAML
-        for yaml_def in yaml_defs:
-            name = yaml_def['name']
+        for item in yaml_defs:
+            name = item['name']
 
             # Skip if no name defined
             if not name:
@@ -138,14 +138,14 @@ class EnmasseYAMLImporter:
 
             if not db_def:
                 # Definition doesn't exist in DB, create it
-                to_create.append(yaml_def)
+                to_create.append(item)
             else:
 
                 # Definition exists, check if update is needed
                 needs_update = False
 
                 # Compare all other attributes that are in YAML
-                for key, value in yaml_def.items():
+                for key, value in item.items():
 
                     # We never compare these
                     if key in ('type', 'name', 'password'):
@@ -158,8 +158,8 @@ class EnmasseYAMLImporter:
 
                 if needs_update:
                     # Add database ID to YAML definition for update
-                    yaml_def['id'] = db_def['id']
-                    to_update.append(yaml_def)
+                    item['id'] = db_def['id']
+                    to_update.append(item)
 
         return to_create, to_update
 
@@ -243,25 +243,30 @@ class EnmasseYAMLImporter:
         # Compare YAML definitions with database
         to_create, to_update = self.compare_security_defs(security_yaml_defs, db_defs)
 
-        created = []
-        updated = []
+        out_created = []
+        out_updated = []
 
         try:
             # Create new definitions
-            for security_def in to_create:
-                instance = self.create_security_definition(security_def, session)
+            for item in to_create:
+                instance = self.create_security_definition(item, session)
                 if instance:
-                    created.append(instance)
+                    out_created.append(instance)
 
-                    # Update in-memory representation with model data
-                    instance_dict = to_json(instance, return_as_dict=True)['fields']
-                    instance_dict['type'] = security_def['type']
-                    instance_dict['definition'] = instance
+                    # Get model data as a dictionary (will be a single-item list)
+                    instance_dict = to_json(instance, return_as_dict=True)[0]
+
+                    # Add the type information
+                    instance_dict['type'] = item['type']
+
+                    # Store in memory
                     self.sec_defs[instance.name] = instance_dict
 
             # Update existing definitions
-            for security_def in to_update:
-                _ = self.update_security_definition(security_def, session)
+            for item in to_update:
+                instance = self.update_security_definition(item, session)
+                if instance:
+                    out_updated.append(instance)
 
             # Commit all changes
             session.commit()
@@ -271,7 +276,7 @@ class EnmasseYAMLImporter:
             session.rollback()
             raise
 
-        return created, updated
+        return out_created, out_updated
 
 # ################################################################################################################################
 # ################################################################################################################################
