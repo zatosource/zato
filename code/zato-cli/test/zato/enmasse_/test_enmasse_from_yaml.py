@@ -38,7 +38,7 @@ class TestEnmasseFromYAML(TestCase):
 
     def tearDown(self) -> 'None':
         os.unlink(self.temp_file.name)
-        # cleanup_enmasse()
+        cleanup_enmasse()
 
     def test_import_from_yaml_file(self) -> 'None':
         """ Test importing configuration from a YAML file.
@@ -59,11 +59,11 @@ class TestEnmasseFromYAML(TestCase):
 
             # Sync security definitions with the database first
             sec_created, _ = self.importer.sync_security_definitions(security_list, session)
-            #self.assertTrue(len(sec_created) > 0, 'No security definitions were created')
+            self.assertTrue(len(sec_created) > 0, 'No security definitions were created')
 
             # Verify the security definitions were stored in memory
-            #for instance in sec_created:
-            #    self.assertIn(instance.name, self.importer.sec_defs)
+            for instance in sec_created:
+                self.assertIn(instance.name, self.importer.sec_defs)
 
             # Get REST channels from the YAML
             channel_list = yaml_config['channel_rest']
@@ -73,7 +73,7 @@ class TestEnmasseFromYAML(TestCase):
             channel_created, _ = self.importer.sync_channel_rest(channel_list, session)
 
             # If channels were defined, verify they were created
-            # self.assertTrue(len(channel_created) > 0, 'No REST channels were created')
+            self.assertTrue(len(channel_created) > 0, 'No REST channels were created')
 
         finally:
             # Clean up

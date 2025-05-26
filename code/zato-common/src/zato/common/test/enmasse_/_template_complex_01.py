@@ -13,6 +13,11 @@ template_complex_01 = """
 
 security:
 
+  - name: enmasse.basic_auth.1
+    type: basic_auth
+    username: enmasse
+    password: Zato_Enmasse_Env.BasicAuth1
+
   - name: enmasse.bearer_token.1
     username: enmasse.1
     password: Zato_Enmasse_Env.EnmasseBearerToken1
