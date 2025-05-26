@@ -49,7 +49,7 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.objects = {}
         self.cluster = None
-        
+
 # ################################################################################################################################
 
     def get_cluster(self, session:'SASession') -> 'any_':
@@ -236,6 +236,11 @@ class EnmasseYAMLImporter:
         )
 
 
+        # Set any opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+
+        return auth
+
     def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
         """ Create an NTLM security definition.
         """
@@ -282,7 +287,7 @@ class EnmasseYAMLImporter:
         def_name = security_def.get('name', 'unnamed')
 
         logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
-        
+
         # Get the cluster instance
         self.get_cluster(session)
 
