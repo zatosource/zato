@@ -263,7 +263,7 @@ def apikey_security_list(session, cluster_id, needs_columns=False):
         order_by(SecurityBase.name)
 
 @query_wrapper
-def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
+def basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
     q = session.query(

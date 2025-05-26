@@ -30,6 +30,10 @@ class EnmasseYAMLImporter:
     """ Imports enmasse YAML configuration files and builds an in-memory representation.
     """
     def __init__(self) -> 'None':
+
+        # This is always the same
+        self.cluster_id = ModuleCtx.Cluster_ID
+
         self.sec_defs = {}
         self.objects = {}
 
