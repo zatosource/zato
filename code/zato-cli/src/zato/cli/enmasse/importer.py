@@ -101,8 +101,11 @@ class EnmasseYAMLImporter:
 
         # Convert to dictionary keyed by name
         for definition in basic_auth_defs:
-            # Get all model attributes using to_json
+
+            # Get all model attributes
             definition_dict = to_json(definition, return_as_dict=True)['fields']
+
+            print()
 
             # Add the definition type and reference
             definition_dict['type'] = 'basic_auth'

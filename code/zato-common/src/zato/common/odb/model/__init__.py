@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
+def _to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
     out = {}
@@ -48,6 +48,26 @@ def to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
         return out
     else:
         return json_dumps([out])
+
+def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
+
+    # Zato
+    from zato.common.util.search import SearchResults
+
+    if isinstance(data, SearchResults):
+
+        out = []
+
+        data = data.to_dict()
+        data = data['result']
+
+        for item in data:
+            _item = item._asdict()
+            out.append(_item)
+        return out
+
+    else:
+        return _to_json(data, return_as_dict)
 
 # ################################################################################################################################
 
