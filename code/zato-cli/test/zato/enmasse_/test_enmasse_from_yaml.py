@@ -15,6 +15,13 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,7 +31,6 @@ class TestEnmasseFromYAML(TestCase):
     """
 
     def setUp(self) -> 'None':
-
         # Server path for database connection
         self.server_path = os.path.expanduser('~/env/qs-1/server1')
 
@@ -36,48 +42,314 @@ class TestEnmasseFromYAML(TestCase):
         # Initialize the importer
         self.importer = EnmasseYAMLImporter()
 
+        # Parse the YAML file
+        self.yaml_config = cast_('stranydict', None)
+        self.session = cast_('any_', None)
+
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
+        if self.session:
+            self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
 
-    def test_import_from_yaml_file(self) -> 'None':
-        """ Test importing configuration from a YAML file.
+# ################################################################################################################################
+
+    def _setup_test_environment(self):
+        """ Set up the test environment by opening a database session and parsing the YAML file.
         """
-        # Get a database session
-        session = get_session_from_server_dir(self.server_path)
+        if not self.session:
+            self.session = get_session_from_server_dir(self.server_path)
 
-        try:
-            # Parse the YAML file
-            yaml_config = self.importer.from_path(self.temp_file.name)
+        if not self.yaml_config:
+            self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-            # Verify the YAML was parsed correctly
-            self.assertIn('security', yaml_config)
-            self.assertIsInstance(yaml_config['security'], list)
+# ################################################################################################################################
 
-            # Get security definitions from the YAML
-            security_list = yaml_config.get('security', [])
+    def test_yaml_parsing(self):
+        """ Test that the YAML file is parsed correctly.
+        """
+        self._setup_test_environment()
 
-            # Sync security definitions with the database first
-            sec_created, _ = self.importer.sync_security_definitions(security_list, session)
-            self.assertTrue(len(sec_created) > 0, 'No security definitions were created')
+        # Verify the YAML was parsed correctly
+        self.assertIn('security', self.yaml_config)
+        self.assertIsInstance(self.yaml_config['security'], list)
+        self.assertIn('channel_rest', self.yaml_config)
+        self.assertIsInstance(self.yaml_config['channel_rest'], list)
+        self.assertIn('outgoing_rest', self.yaml_config)
+        self.assertIsInstance(self.yaml_config['outgoing_rest'], list)
+        self.assertIn('scheduler', self.yaml_config)
+        self.assertIsInstance(self.yaml_config['scheduler'], list)
 
-            # Verify the security definitions were stored in memory
-            for instance in sec_created:
-                self.assertIn(instance.name, self.importer.sec_defs)
+# ################################################################################################################################
 
-            # Get REST channels from the YAML
-            channel_list = yaml_config['channel_rest']
+    def test_basic_auth_creation(self):
+        """ Test the creation of basic_auth security definitions.
+        """
+        self._setup_test_environment()
 
-            # Skip if no channels defined
-            # Sync channel definitions with the database
-            channel_created, _ = self.importer.sync_channel_rest(channel_list, session)
+        # Filter only basic_auth security definitions
+        basic_auth_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'basic_auth']
+        self.assertTrue(len(basic_auth_defs) > 0, 'No basic_auth definitions found in YAML')
 
-            # If channels were defined, verify they were created
-            self.assertTrue(len(channel_created) > 0, 'No REST channels were created')
+        # Process security definitions
+        sec_created, _ = self.importer.sync_security_definitions(basic_auth_defs, self.session)
 
-        finally:
-            # Clean up
-            session.close()
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(basic_auth_defs), 'Not all basic_auth definitions were created')
+
+        # Verify each definition was created correctly
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            self.assertEqual(instance.username, 'enmasse')
+            self.assertIsNotNone(instance.password)
+
+# ################################################################################################################################
+
+    def test_bearer_token_creation(self):
+        """ Test the creation of bearer_token security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only bearer_token security definitions
+        bearer_token_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'bearer_token']
+        self.assertTrue(len(bearer_token_defs) > 0, 'No bearer_token definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.importer.sync_security_definitions(bearer_token_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(bearer_token_defs), 'Not all bearer_token definitions were created')
+
+        # Verify each definition was created correctly
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            self.assertTrue(instance.name.startswith('enmasse.bearer_token.'))
+            self.assertIsNotNone(instance.username)
+            self.assertIsNotNone(instance.password)
+
+# ################################################################################################################################
+
+    def test_ntlm_creation(self):
+        """ Test the creation of NTLM security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only NTLM security definitions
+        ntlm_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'ntlm']
+        self.assertTrue(len(ntlm_defs) > 0, 'No NTLM definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.importer.sync_security_definitions(ntlm_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(ntlm_defs), 'Not all NTLM definitions were created')
+
+        # Verify each definition was created correctly
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            self.assertEqual(instance.name, 'enmasse.ntlm.1')
+            self.assertTrue('\\' in instance.username)  # Check for backslash in username
+
+# ################################################################################################################################
+
+    def test_apikey_creation(self):
+        """ Test the creation of API key security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only API key security definitions
+        apikey_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'apikey']
+        self.assertTrue(len(apikey_defs) > 0, 'No API key definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.importer.sync_security_definitions(apikey_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(apikey_defs), 'Not all API key definitions were created')
+
+        # Verify each definition was created correctly
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            self.assertEqual(instance.name, 'enmasse.apikey.1')
+            self.assertEqual(instance.username, 'enmasse')
+            self.assertIsNotNone(instance.password)
+
+# ################################################################################################################################
+
+    def test_channel_rest_creation(self):
+        """ Test the creation of REST channels.
+        """
+        self._setup_test_environment()
+
+        # First create all security definitions (channels may depend on them)
+        _ = self.importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Get REST channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        self.assertTrue(len(channel_defs) > 0, 'No REST channel definitions found in YAML')
+
+        # Process channel definitions
+        channel_created, _ = self.importer.sync_channel_rest(channel_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(channel_created), len(channel_defs), 'Not all REST channels were created')
+
+        # Verify specific channels were created correctly
+        for channel in channel_created:
+            self.assertTrue(channel.name.startswith('enmasse.channel.rest.'))
+            self.assertTrue(channel.url_path.startswith('/enmasse.rest.'))
+            self.assertEqual(channel.connection, 'channel')
+            self.assertEqual(channel.transport, 'plain_http')
+
+            # Check for channel with security
+            if channel.name == 'enmasse.channel.rest.3':
+                # Verify that security was configured properly
+                # Find the channel definition in YAML using a loop
+                channel_def = None
+                for c in channel_defs:
+                    if c['name'] == channel.name:
+                        channel_def = c
+                        break
+
+                self.assertIsNotNone(channel_def, f'Channel definition not found for {channel.name}')
+                self.assertIn('security', channel_def, 'Channel should have security defined in YAML') # type: ignore
+
+                # Ensure the security name in YAML exists in the importer's security definitions
+                security_name = channel_def['security'] # type: ignore
+                self.assertIn(security_name, self.importer.sec_defs, f'Security definition {security_name} not found')
+
+            # Check for channel with data_format
+            if channel.name in ['enmasse.channel.rest.2', 'enmasse.channel.rest.3']:
+                self.assertEqual(channel.data_format, 'json', f'Wrong data_format for {channel.name}')
+
+# ################################################################################################################################
+
+    def test_outgoing_rest_configuration(self):
+        """ Test the configuration of outgoing REST connections.
+        """
+        self._setup_test_environment()
+
+        # Verify outgoing_rest configurations exist in the YAML
+        outgoing_defs = self.yaml_config['outgoing_rest']
+        self.assertTrue(len(outgoing_defs) > 0, 'No outgoing REST definitions found in YAML')
+
+        # Check specific properties in the outgoing connections
+        for item in outgoing_defs:
+            self.assertIn('name', item)
+            self.assertIn('host', item)
+            self.assertIn('url_path', item)
+            self.assertTrue(item['name'].startswith('enmasse.outgoing.rest.'))
+
+        # Verify the specific details for each connection
+        conn1 = cast_('any_', None)
+        conn2 = cast_('any_', None)
+        conn5 = cast_('any_', None)
+
+        # Find connections by name using a simple loop
+        for item in outgoing_defs:
+            if item['name'] == 'enmasse.outgoing.rest.1':
+                conn1 = item
+            elif item['name'] == 'enmasse.outgoing.rest.2':
+                conn2 = item
+            elif item['name'] == 'enmasse.outgoing.rest.5':
+                conn5 = item
+
+        # Check conn1 details
+        self.assertIsNotNone(conn1)
+        self.assertEqual(conn1['host'], 'https://example.com:443')
+        self.assertEqual(conn1['url_path'], '/sso/{type}/hello/{endpoint}')
+        self.assertEqual(conn1['data_format'], 'json')
+        self.assertEqual(conn1['timeout'], 60)
+
+        # Check conn2 security configuration
+        self.assertIsNotNone(conn2)
+        self.assertIn('security', conn2)
+        self.assertEqual(conn2['security'], 'enmasse.bearer_token.1')
+
+        # Check conn5 TLS verification setting
+        self.assertIsNotNone(conn5)
+        self.assertIn('tls_verify', conn5)
+        self.assertEqual(conn5['tls_verify'], False)
+
+# ################################################################################################################################
+
+    def test_scheduler_configuration(self):
+        """ Test the configuration of scheduled jobs.
+        """
+        self._setup_test_environment()
+
+        # Verify scheduler configurations exist in the YAML
+        scheduler_defs = self.yaml_config['scheduler']
+        self.assertTrue(len(scheduler_defs) > 0, 'No scheduler definitions found in YAML')
+
+        # Check common properties for all scheduler items
+        for item in scheduler_defs:
+            self.assertIn('name', item)
+            self.assertIn('service', item)
+            self.assertIn('job_type', item)
+            self.assertIn('start_date', item)
+            self.assertTrue(item['name'].startswith('enmasse.scheduler.'))
+            self.assertEqual(item['service'], 'demo.ping')
+            self.assertEqual(item['job_type'], 'interval_based')
+
+        # Verify different interval types (seconds, minutes, hours, days)
+        scheduler1 = cast_('any_', None)
+        scheduler2 = cast_('any_', None)
+        scheduler3 = cast_('any_', None)
+        scheduler4 = cast_('any_', None)
+
+        # Find scheduler items by name using a simple loop
+        for item in scheduler_defs:
+            if item['name'] == 'enmasse.scheduler.1':
+                scheduler1 = item
+            elif item['name'] == 'enmasse.scheduler.2':
+                scheduler2 = item
+            elif item['name'] == 'enmasse.scheduler.3':
+                scheduler3 = item
+            elif item['name'] == 'enmasse.scheduler.4':
+                scheduler4 = item
+
+        # Check scheduler with seconds interval
+        self.assertIsNotNone(scheduler1)
+        self.assertIn('seconds', scheduler1)
+        self.assertEqual(scheduler1['seconds'], 2)
+
+        # Check scheduler with minutes interval
+        self.assertIsNotNone(scheduler2)
+        self.assertIn('minutes', scheduler2)
+        self.assertEqual(scheduler2['minutes'], 51)
+
+        # Check scheduler with hours interval
+        self.assertIsNotNone(scheduler3)
+        self.assertIn('hours', scheduler3)
+        self.assertEqual(scheduler3['hours'], 3)
+
+        # Check scheduler with days interval
+        self.assertIsNotNone(scheduler4)
+        self.assertIn('days', scheduler4)
+        self.assertEqual(scheduler4['days'], 10)
+
+# ################################################################################################################################
+
+    def test_complete_import_flow(self):
+        """ Test the complete flow of importing all definitions from a YAML file.
+        """
+        self._setup_test_environment()
+
+        # Sync all objects from the YAML configuration
+        self.importer.sync_from_yaml(self.yaml_config, self.session)
+
+        # Verify security definitions were created
+        self.assertTrue(len(self.importer.sec_defs) >= 5, 'Not all security definitions were created')
+
+        # Check each security definition type exists
+        security_types = [def_info['type'] for def_info in self.importer.sec_defs.values()]
+        self.assertIn('basic_auth', security_types)
+        self.assertIn('bearer_token', security_types)
+        self.assertIn('ntlm', security_types)
+        self.assertIn('apikey', security_types)
 
 # ################################################################################################################################
 # ################################################################################################################################

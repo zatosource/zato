@@ -41,7 +41,7 @@ def _to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
     out['fields'] = {}
     out['pk'] = getattr(model, 'id', None)
 
-    for col in model._sa_class_manager.mapper.mapped_table.columns:
+    for col in model._sa_class_manager.mapper.persist_selectable.columns:
         out['fields'][col.name] = getattr(model, col.name)
 
     if return_as_dict:
