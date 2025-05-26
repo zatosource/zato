@@ -13,12 +13,6 @@ template_complex_01 = """
 
 security:
 
-  - name: enmasse.basic_auth.1
-    username: pubapi
-    password: abcdef123456
-    type: basic_auth
-    realm: 'enmasse'
-
   - name: enmasse.bearer_token.1
     username: enmasse.1
     password: Zato_Enmasse_Env.EnmasseBearerToken1
