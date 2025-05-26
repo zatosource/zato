@@ -54,6 +54,9 @@ def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
     # Zato
     from zato.common.util.search import SearchResults
 
+    if isinstance(data, tuple):
+        data = data[0]
+
     if isinstance(data, SearchResults):
 
         out = []
