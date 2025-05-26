@@ -48,6 +48,17 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.objects = {}
+        self.cluster = None
+        
+# ################################################################################################################################
+
+    def get_cluster(self, session:'SASession') -> 'any_':
+        """ Returns the cluster instance, retrieving it from the database if needed.
+        """
+        if not self.cluster:
+            logger.info('Getting cluster by id=%s', self.cluster_id)
+            self.cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
+        return self.cluster
 
 # ################################################################################################################################
 
@@ -224,32 +235,6 @@ class EnmasseYAMLImporter:
             cluster
         )
 
-        # Set any opaque attributes
-        set_instance_opaque_attrs(auth, security_def)
-
-        return auth
-
-    def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
-        """ Create an API key security definition.
-        """
-        # Create new instance
-        auth = APIKeySecurity(
-            None,
-            security_def['name'],
-            security_def.get('is_active', True),
-            security_def['username'],
-            security_def['password'],
-            cluster
-        )
-
-        # Set header if provided
-        if 'header' in security_def:
-            auth.header = security_def['header']
-
-        # Set any opaque attributes
-        set_instance_opaque_attrs(auth, security_def)
-
-        return auth
 
     def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
         """ Create an NTLM security definition.
@@ -297,20 +282,19 @@ class EnmasseYAMLImporter:
         def_name = security_def.get('name', 'unnamed')
 
         logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
-
-        # Get cluster by ID
-        logger.info('Getting cluster by id=%s', self.cluster_id)
-        cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
+        
+        # Get the cluster instance
+        self.get_cluster(session)
 
         # Create instance based on security type
         if sec_type == 'basic_auth':
-            auth = self._create_basic_auth(security_def, cluster)
+            auth = self._create_basic_auth(security_def, self.cluster)
         elif sec_type == 'apikey':
-            auth = self._create_apikey(security_def, cluster)
+            auth = self._create_apikey(security_def, self.cluster)
         elif sec_type == 'ntlm':
-            auth = self._create_ntlm(security_def, cluster)
+            auth = self._create_ntlm(security_def, self.cluster)
         elif sec_type == 'bearer_token':
-            auth = self._create_bearer_token(security_def, cluster)
+            auth = self._create_bearer_token(security_def, self.cluster)
         else:
             # Log warning for unsupported types
             logger.warning('Unsupported security type: %s', sec_type)
@@ -391,6 +375,7 @@ class EnmasseYAMLImporter:
     def sync_security_definitions(self, security_list:'anylist', session:'SASession') -> 'tuple[anylist, anylist]':
         """ Synchronizes security definitions between YAML and database.
         """
+
         # Filter only security definitions
         security_yaml_defs = [item for item in security_list if 'type' in item]
         logger.info('Processing %d security definitions from YAML', len(security_yaml_defs))
@@ -522,14 +507,13 @@ class EnmasseYAMLImporter:
             msg = f'Service not found {service_name} -> REST channel {name}'
             raise Exception(msg)
 
-        # Create new HTTP/SOAP channel instance
         channel = HTTPSOAP()
         channel.name = name
         channel.connection = 'channel'
         channel.transport = 'plain_http'
         channel.url_path = url_path
         channel.service = service
-        channel.cluster_id = self.cluster_id
+        channel.cluster = self.get_cluster(session)
         channel.is_active = True
         channel.is_internal = False
         channel.soap_action = 'not-used'
@@ -597,7 +581,7 @@ class EnmasseYAMLImporter:
         """
         logger.info('Processing %d REST channels from YAML', len(channel_list))
 
-        db_channels = self.get_rest_channels_from_db(session, 1)  # Cluster ID is always 1
+        db_channels = self.get_rest_channels_from_db(session, self.cluster_id)
         to_create, to_update = self.compare_channel_rest(channel_list, db_channels)
 
         out_created = []
