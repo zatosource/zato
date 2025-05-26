@@ -15,7 +15,7 @@ import yaml
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common.odb.model import Cluster, HTTPBasicAuth, to_json
 from zato.common.odb.query import basic_auth_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -24,7 +24,7 @@ from zato.common.util.sql import set_instance_opaque_attrs
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +39,7 @@ class EnmasseYAMLImporter:
     """
 
     def __init__(self) -> 'None':
+
         # This is always the same
         self.cluster_id = ModuleCtx.Cluster_ID
 
@@ -47,6 +48,8 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.objects = {}
+
+# ################################################################################################################################
 
     def from_path(self, path:'str') -> 'stranydict':
         """ Imports YAML configuration from a file path.
@@ -58,6 +61,8 @@ class EnmasseYAMLImporter:
             yaml_content = f.read()
 
         return self.from_string(yaml_content)
+
+# ################################################################################################################################
 
     def from_string(self, yaml_string:'str') -> 'stranydict':
         """ Imports YAML configuration from a string.
@@ -83,6 +88,8 @@ class EnmasseYAMLImporter:
 
         return result
 
+# ################################################################################################################################
+
     def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         """ Retrieves all security definitions from the database.
         """
@@ -94,18 +101,20 @@ class EnmasseYAMLImporter:
 
         # Convert to dictionary keyed by name
         for definition in basic_auth_defs:
-            security_defs[definition.name] = {
-                'id': definition.id,
-                'name': definition.name,
-                'is_active': definition.is_active,
-                'username': definition.username,
-                'realm': definition.realm,
-                'type': 'basic_auth',
-                'definition': definition,
-            }
+            # Get all model attributes using to_json
+            definition_dict = to_json(definition, return_as_dict=True)['fields']
+
+            # Add the definition type and reference
+            definition_dict['type'] = 'basic_auth'
+            definition_dict['definition'] = definition
+
+            # Store in the dictionary using name as key
+            security_defs[definition.name] = definition_dict
 
         # Return the in-memory representation
         return security_defs
+
+# ################################################################################################################################
 
     def compare_security_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'tuple[anylist, anylist]':
         """ Compares security definitions from YAML with database records.
@@ -151,6 +160,8 @@ class EnmasseYAMLImporter:
 
         return to_create, to_update
 
+# ################################################################################################################################
+
     def create_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Creates a new security definition instance.
         """
@@ -183,6 +194,8 @@ class EnmasseYAMLImporter:
         logger.warning(f'Unsupported security type: {sec_type}')
         return None
 
+# ################################################################################################################################
+
     def update_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Updates an existing security definition instance.
         """
@@ -213,6 +226,8 @@ class EnmasseYAMLImporter:
         logger.warning(f'Unsupported security type: {sec_type}')
         return None
 
+# ################################################################################################################################
+
     def sync_security_definitions(self, security_list:'anylist', session:'SASession') -> 'tuple[anylist, anylist]':
         """ Synchronizes security definitions between YAML and database.
         """
@@ -235,14 +250,11 @@ class EnmasseYAMLImporter:
                 if instance:
                     created.append(instance)
 
-                    # Update in-memory representation with new ID
-                    self.sec_defs[instance.name] = {
-                        'id': instance.id,
-                        'name': instance.name,
-                        'is_active': instance.is_active,
-                        'type': security_def['type'],
-                        'definition': instance,
-                    }
+                    # Update in-memory representation with model data
+                    instance_dict = to_json(instance, return_as_dict=True)['fields']
+                    instance_dict['type'] = security_def['type']
+                    instance_dict['definition'] = instance
+                    self.sec_defs[instance.name] = instance_dict
 
             # Update existing definitions
             for security_def in to_update:
