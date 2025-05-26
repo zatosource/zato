@@ -97,7 +97,7 @@ class EnmasseYAMLImporter:
         definitions = to_json(query_result, return_as_dict=True)
 
         # Process each definition
-        for item in definitions:
+        for idx, item in enumerate(definitions):
 
             # Store the type
             item['type'] = sec_type
@@ -149,7 +149,7 @@ class EnmasseYAMLImporter:
             if not name:
                 continue
 
-            # Check if definition already exists in database
+            # Get definition from the database, if it exists
             db_def = db_defs.get(name)
 
             if not db_def:
@@ -167,8 +167,8 @@ class EnmasseYAMLImporter:
                     if key in ('type', 'name', 'password'):
                         continue
 
-                    # Compare with database value if exists
-                    if key in db_def and value != db_def[key]:
+                    # If the values are different, an update is needed
+                    if key in db_def and db_def[key] != value:
                         needs_update = True
                         break
 
@@ -312,33 +312,40 @@ class EnmasseYAMLImporter:
 
         return definition
 
-    def update_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
+    def get_class_by_type(self, sec_type):
+        """ Get the appropriate class for the security type.
+        """
+        class_map = {
+            'basic_auth': HTTPBasicAuth,
+            'apikey': APIKeySecurity,
+            'ntlm': NTLM,
+            'bearer_token': OAuth
+        }
+        return class_map[sec_type]
+
+    def update_security_definition(self, sec_def:'anydict', session:'SASession', db_defs:'anydict') -> 'any_':
         """ Updates an existing security definition instance.
         """
-        sec_type = security_def['type']
-        definition_id = security_def['id']
+        # Get basic info from the security definition
+        sec_type = sec_def['type']
+        def_id = sec_def['id']
+        def_name = sec_def['name']
 
-        # Find and update the definition based on security type
-        if sec_type == 'basic_auth':
-            definition = session.query(HTTPBasicAuth).filter_by(id=definition_id).one()
-            self._update_definition(definition, security_def)
+        # Get the security class for this type
+        model = self.get_class_by_type(sec_type)
 
-        elif sec_type == 'apikey':
-            definition = session.query(APIKeySecurity).filter_by(id=definition_id).one()
-            self._update_definition(definition, security_def)
+        # Object db_def will definitely exist since we got here from compare_security_defs
+        # Use it to fill in any missing values before updating the database object
+        db_def = db_defs[def_name]
+        for item in db_def:
+            if item not in sec_def and item not in ('id', 'type', 'definition'):
+                sec_def[item] = db_def[item]
 
-        elif sec_type == 'ntlm':
-            definition = session.query(NTLM).filter_by(id=definition_id).one()
-            self._update_definition(definition, security_def)
+        # Query the database for the definition
+        definition = session.query(model).filter_by(id=def_id).one()
 
-        elif sec_type == 'bearer_token':
-            definition = session.query(OAuth).filter_by(id=definition_id).one()
-            self._update_definition(definition, security_def)
-
-        else:
-            # Log warning for unsupported types
-            logger.warning(f'Unsupported security type: {sec_type}')
-            return None
+        # Update the definition with values from security_def
+        self._update_definition(definition, sec_def)
 
         # Add to session
         session.add(definition)
@@ -379,7 +386,7 @@ class EnmasseYAMLImporter:
 
             # Update existing definitions
             for item in to_update:
-                instance = self.update_security_definition(item, session)
+                instance = self.update_security_definition(item, session, db_defs)
                 if instance:
                     out_updated.append(instance)
 
