@@ -95,6 +95,7 @@ class EnmasseYAMLImporter:
         """
         # Get data from to_json - it will be a list of dictionaries
         definitions = to_json(query_result, return_as_dict=True)
+        logger.info('Processing %d %s definitions', len(definitions), sec_type)
 
         # Process each definition
         for item in definitions:
@@ -104,6 +105,7 @@ class EnmasseYAMLImporter:
 
             # Get the name - it's a required field so should always be present
             name = item['name']
+            logger.info('Processing security definition: %s (type=%s, id=%s)', name, sec_type, item.get('id'))
 
             # Store in the dictionary using name as key
             out[name] = item
@@ -113,26 +115,35 @@ class EnmasseYAMLImporter:
     def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         """ Retrieves all security definitions from the database.
         """
-        # Query the database for all existing definitions
         out = {}
+        logger.info('Retrieving security definitions from database for cluster_id=%s', cluster_id)
 
-        # Process basic auth definitions
-        basic_auth_defs = basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=True)
-        self._process_security_defs(basic_auth_defs, 'basic_auth', out)
+        # Get basic auth definitions
+        basic_auth = basic_auth_list(session, cluster_id)
+        logger.info('Getting basic_auth definitions')
+        self._process_security_defs(basic_auth, 'basic_auth', out)
 
-        # Process API key definitions
-        apikey_defs = apikey_security_list(session, cluster_id, True)
-        self._process_security_defs(apikey_defs, 'apikey', out)
+        # Get API key definitions
+        apikey = apikey_security_list(session, cluster_id)
+        logger.info('Getting apikey definitions')
+        self._process_security_defs(apikey, 'apikey', out)
 
-        # Process NTLM definitions
-        ntlm_defs = ntlm_list(session, cluster_id, True)
-        self._process_security_defs(ntlm_defs, 'ntlm', out)
+        # Get NTLM definitions
+        ntlm = ntlm_list(session, cluster_id)
+        logger.info('Getting ntlm definitions')
+        self._process_security_defs(ntlm, 'ntlm', out)
 
-        # Process OAuth (bearer token) definitions
-        oauth_defs = oauth_list(session, cluster_id, True)
-        self._process_security_defs(oauth_defs, 'bearer_token', out)  # Map OAuth to bearer_token in YAML
+        # Get OAuth definitions
+        oauth = oauth_list(session, cluster_id)
+        # Convert to JSON to inspect the raw results
+        oauth_json = to_json(oauth)
+        logger.info('Getting oauth/bearer_token definitions: %s', oauth_json)
+        self._process_security_defs(oauth, 'bearer_token', out)
 
-        # Return the in-memory representation
+        logger.info('Total security definitions from DB: %d', len(out))
+        for name, details in out.items():
+            logger.info('DB security def: name=%s type=%s', name, details.get('type'))
+
         return out
 
 # ################################################################################################################################
@@ -143,12 +154,21 @@ class EnmasseYAMLImporter:
         to_create = []
         to_update = []
 
+        logger.info('Comparing %d YAML defs with %d DB defs', len(yaml_defs), len(db_defs))
+
+        # Log all database definitions keys for debugging
+        logger.info('DB definition keys: %s', list(db_defs.keys()))
+
         # Process each definition from YAML
         for item in yaml_defs:
             name = item['name']
+            sec_type = item['type']
+
+            logger.info('Checking YAML def: name=%s type=%s', name, sec_type)
 
             # Skip if no name defined
             if not name:
+                logger.warning('Skipping unnamed security definition')
                 continue
 
             # Get definition from the database, if it exists
@@ -156,8 +176,10 @@ class EnmasseYAMLImporter:
 
             if not db_def:
                 # Definition doesn't exist in DB, create it
+                logger.info('Definition %s not found in DB, will create new', name)
                 to_create.append(item)
             else:
+                logger.info('Definition %s exists in DB with id=%s type=%s', name, db_def.get('id'), db_def.get('type'))
 
                 # Definition exists, check if update is needed
                 needs_update = False
@@ -171,14 +193,19 @@ class EnmasseYAMLImporter:
 
                     # If the values are different, an update is needed
                     if key in db_def and db_def[key] != value:
+                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
 
                 if needs_update:
                     # Add database ID to YAML definition for update
                     item['id'] = db_def['id']
+                    logger.info('Will update %s with id=%s', name, db_def['id'])
                     to_update.append(item)
+                else:
+                    logger.info('No update needed for %s', name)
 
+        logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
         return to_create, to_update
 
 # ################################################################################################################################
@@ -267,8 +294,12 @@ class EnmasseYAMLImporter:
         """ Creates a new security definition instance.
         """
         sec_type = security_def['type']
+        def_name = security_def.get('name', 'unnamed')
+
+        logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
 
         # Get cluster by ID
+        logger.info('Getting cluster by id=%s', self.cluster_id)
         cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
 
         # Create instance based on security type
@@ -282,9 +313,10 @@ class EnmasseYAMLImporter:
             auth = self._create_bearer_token(security_def, cluster)
         else:
             # Log warning for unsupported types
-            logger.warning(f'Unsupported security type: {sec_type}')
+            logger.warning('Unsupported security type: %s', sec_type)
             return None
 
+        logger.info('Created new security definition: %s (type=%s)', def_name, sec_type)
         # Add to session
         session.add(auth)
         return auth
@@ -296,6 +328,7 @@ class EnmasseYAMLImporter:
         """
         # Update fields - iterate through all attributes in the yaml definition
         for key, value in security_def.items():
+
             # Skip type, name and id attributes
             if key in ('type', 'name', 'id'):
                 continue
@@ -360,6 +393,7 @@ class EnmasseYAMLImporter:
         """
         # Filter only security definitions
         security_yaml_defs = [item for item in security_list if 'type' in item]
+        logger.info('Processing %d security definitions from YAML', len(security_yaml_defs))
 
         # Get current definitions from database
         db_defs = self.get_security_defs_from_db(session, self.cluster_id)
@@ -372,9 +406,12 @@ class EnmasseYAMLImporter:
 
         try:
             # Create new definitions
+            logger.info('Creating %d new security definitions', len(to_create))
             for item in to_create:
+                logger.info('Creating security definition: name=%s type=%s', item.get('name'), item.get('type'))
                 instance = self.create_security_definition(item, session)
                 if instance:
+                    logger.info('Created security definition: name=%s id=%s', instance.name, getattr(instance, 'id', None))
                     out_created.append(instance)
 
                     # Get model data as a dictionary (will be a single-item list)
@@ -387,16 +424,22 @@ class EnmasseYAMLImporter:
                     self.sec_defs[instance.name] = instance_dict
 
             # Update existing definitions
+            logger.info('Updating %d existing security definitions', len(to_update))
             for item in to_update:
+                logger.info('Updating security definition: name=%s id=%s', item.get('name'), item.get('id'))
                 instance = self.update_security_definition(item, session, db_defs)
                 if instance:
+                    logger.info('Updated security definition: name=%s id=%s', instance.name, getattr(instance, 'id', None))
                     out_updated.append(instance)
 
             # Commit all changes
+            logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()
+            logger.info('Successfully committed all changes')
 
         except Exception as e:
-            logger.error(f'Error syncing security definitions: {e}')
+            logger.error('Error syncing security definitions: %s', e)
+            logger.exception('Full exception details:')
             session.rollback()
             raise
 
