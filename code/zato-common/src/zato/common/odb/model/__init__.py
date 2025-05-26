@@ -262,7 +262,7 @@ class HTTPBasicAuth(SecurityBase):
     __tablename__ = 'sec_basic_auth'
     __mapper_args__ = {'polymorphic_identity': 'basic_auth'}
 
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
     realm = Column(String(200), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, username=None, realm=None, password=None, cluster=None):
@@ -282,7 +282,7 @@ class OAuth(SecurityBase):
     __tablename__ = 'sec_oauth'
     __mapper_args__ = {'polymorphic_identity':'oauth'}
 
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
     proto_version = Column(String(32), nullable=False)
     sig_method = Column(String(32), nullable=False) # HMAC-SHA1 or PLAINTEXT
     max_nonce_log = Column(Integer(), nullable=False)
@@ -310,7 +310,7 @@ class NTLM(SecurityBase):
     __tablename__ = 'sec_ntlm'
     __mapper_args__ = {'polymorphic_identity': 'ntlm'}
 
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
         self.id = id
@@ -330,7 +330,7 @@ class APIKeySecurity(SecurityBase):
     __tablename__ = 'sec_apikey'
     __mapper_args__ = {'polymorphic_identity': 'apikey'}
 
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
         self.id = id

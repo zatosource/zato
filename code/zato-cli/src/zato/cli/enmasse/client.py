@@ -94,6 +94,51 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
         table_names = inspector.get_table_names()
         logger.info(f'Found {len(table_names)} tables in database')
 
+        # Store security IDs that need to be cleaned up
+        security_ids = []
+
+        # Special handling for sec_base table
+        try:
+            # First fetch IDs from sec_base that match the prefix
+            query = f'SELECT id FROM sec_base WHERE name LIKE "{prefix}%"'
+            result = session.execute(query)
+            security_ids = [row[0] for row in result.fetchall()]
+
+            if security_ids:
+                logger.info(f'Found {len(security_ids)} security ID{"s" if len(security_ids) != 1 else ""} in sec_base with prefix {prefix}')
+
+                # Delete from sec_base
+                delete_query = f'DELETE FROM sec_base WHERE name LIKE "{prefix}%"'
+                result = session.execute(delete_query)
+                session.commit()
+                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from sec_base with prefix {prefix}')
+        except SQLAlchemyError as e:
+            session.rollback()
+            logger.debug(f'Error handling sec_base: {e}')
+
+        # Find all security tables
+        security_tables = [name for name in table_names if name.startswith('sec_') and name != 'sec_base']
+
+        # If we have security IDs to clean up and security tables
+        if security_ids and security_tables:
+            for table_name in security_tables:
+                try:
+                    # Delete records with matching IDs
+                    if len(security_ids) == 1:
+                        query = f'DELETE FROM {table_name} WHERE id = {security_ids[0]}'
+                    else:
+                        ids_string = ', '.join(str(id) for id in security_ids)
+                        query = f'DELETE FROM {table_name} WHERE id IN ({ids_string})'
+
+                    result = session.execute(query)
+                    session.commit()
+
+                    if result.rowcount > 0:
+                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with ID{"s" if len(security_ids) != 1 else ""} from sec_base')
+                except SQLAlchemyError as e:
+                    session.rollback()
+                    logger.debug(f'Could not delete from {table_name}: {e}')
+
         # Track if we made any changes
         changes_made = True
 
@@ -103,6 +148,10 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
 
             # Go through each table
             for table_name in table_names:
+                # Skip security tables that we've already handled
+                if table_name == 'sec_base' or (table_name.startswith('sec_') and security_ids):
+                    continue
+
                 try:
                     # Execute a delete query for objects with names starting with the prefix
                     result = session.execute(
@@ -115,12 +164,12 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
                     # If rows were deleted
                     if result.rowcount > 0:
                         changes_made = True
-                        logger.info(f'Deleted {result.rowcount} rows from {table_name} with prefix {prefix}')
+                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with prefix {prefix}')
 
                 except SQLAlchemyError as e:
                     # Roll back in case of error
                     session.rollback()
-                    logger.info(f'Could not delete from {table_name}: {e}')
+                    logger.debug(f'Could not delete from {table_name}: {e}')
 
                     # If the table doesn't have a name column, try to use an alternate strategy
                     try:
@@ -140,7 +189,7 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
 
                             if result.rowcount > 0:
                                 changes_made = True
-                                logger.info(f'Deleted {result.rowcount} rows from {table_name} using column {name_col}')
+                                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} using column {name_col}')
                     except SQLAlchemyError:
                         session.rollback()
                         # Just skip this table if we can't determine how to delete by prefix
