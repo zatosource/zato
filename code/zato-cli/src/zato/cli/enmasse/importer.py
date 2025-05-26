@@ -230,11 +230,29 @@ class EnmasseYAMLImporter:
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def.get('realm'),
+            security_def.get('realm', 'zato'),  # Set default realm to 'zato' if not provided
             security_def['password'],
             cluster
         )
 
+
+        # Set any opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+
+        return auth
+
+    def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        """ Create an API key security definition.
+        """
+        # Create new instance
+        auth = APIKeySecurity(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def['password'],
+            cluster
+        )
 
         # Set any opaque attributes
         set_instance_opaque_attrs(auth, security_def)
@@ -404,11 +422,11 @@ class EnmasseYAMLImporter:
                     logger.info('Created security definition: name=%s id=%s', instance.name, getattr(instance, 'id', None))
                     out_created.append(instance)
 
-                    # Get model data as a dictionary (will be a single-item list)
-                    instance_dict = to_json(instance, return_as_dict=True)
-
-                    # Add the type information
-                    instance_dict['type'] = item['type']
+                    instance_dict = {
+                        'id': instance.id,
+                        'name': instance.name,
+                        'type': item['type']
+                    }
 
                     # Store in memory
                     self.sec_defs[instance.name] = instance_dict
