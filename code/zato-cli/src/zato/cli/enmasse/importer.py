@@ -128,22 +128,21 @@ class EnmasseYAMLImporter:
                 # Definition doesn't exist in DB, create it
                 to_create.append(yaml_def)
             else:
+
                 # Definition exists, check if update is needed
                 needs_update = False
 
-                # Check basic auth specific attributes
-                if yaml_def['type'] == 'basic_auth':
-                    # Compare attributes that are in YAML
-                    if 'is_active' in yaml_def and yaml_def['is_active'] != db_def['is_active']:
+                # Compare all other attributes that are in YAML
+                for key, value in yaml_def.items():
+
+                    # We never compare these
+                    if key in ('type', 'name', 'password'):
+                        continue
+
+                    # Compare with database value if exists
+                    if key in db_def and value != db_def[key]:
                         needs_update = True
-                    elif 'username' in yaml_def and yaml_def['username'] != db_def['username']:
-                        needs_update = True
-                    elif 'realm' in yaml_def and yaml_def['realm'] != db_def['realm']:
-                        needs_update = True
-                    elif 'password' in yaml_def:
-                        # Password requires special handling, always consider it needing update
-                        # if it's explicitly provided in YAML
-                        needs_update = True
+                        break
 
                 if needs_update:
                     # Add database ID to YAML definition for update
@@ -193,18 +192,15 @@ class EnmasseYAMLImporter:
             # Find the definition
             definition = session.query(HTTPBasicAuth).filter_by(id=security_def['id']).one()
 
-            # Update fields
-            if 'is_active' in security_def:
-                definition.is_active = security_def['is_active']
+            # Update fields - iterate through all attributes in the yaml definition
+            for key, value in security_def.items():
+                # Skip type, name and id attributes
+                if key in ('type', 'name', 'id'):
+                    continue
 
-            if 'username' in security_def:
-                definition.username = security_def['username']
-
-            if 'realm' in security_def:
-                definition.realm = security_def.get('realm')
-
-            if 'password' in security_def:
-                definition.password = security_def['password']
+                # Set attribute if it exists on the definition
+                if hasattr(definition, key):
+                    setattr(definition, key, value)
 
             # Set any opaque attributes
             set_instance_opaque_attrs(definition, security_def)
@@ -239,11 +235,18 @@ class EnmasseYAMLImporter:
                 if instance:
                     created.append(instance)
 
+                    # Update in-memory representation with new ID
+                    self.sec_defs[instance.name] = {
+                        'id': instance.id,
+                        'name': instance.name,
+                        'is_active': instance.is_active,
+                        'type': security_def['type'],
+                        'definition': instance,
+                    }
+
             # Update existing definitions
             for security_def in to_update:
-                instance = self.update_security_definition(security_def, session)
-                if instance:
-                    updated.append(instance)
+                _ = self.update_security_definition(security_def, session)
 
             # Commit all changes
             session.commit()
