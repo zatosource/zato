@@ -25,7 +25,7 @@ from zato.common.odb.model.base import Base, _JSON
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import boolnone, floatnone, intnone, strnone
+    from zato.common.typing_ import any_, boolnone, floatnone, intnone, strnone
     boolnone = boolnone
     floatnone = floatnone
     intnone = intnone
@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def to_json(model, return_as_dict=False):
+def to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
     out = {}
