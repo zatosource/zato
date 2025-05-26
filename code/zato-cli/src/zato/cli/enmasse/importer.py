@@ -97,7 +97,7 @@ class EnmasseYAMLImporter:
         definitions = to_json(query_result, return_as_dict=True)
 
         # Process each definition
-        for idx, item in enumerate(definitions):
+        for item in definitions:
 
             # Store the type
             item['type'] = sec_type
@@ -107,6 +107,8 @@ class EnmasseYAMLImporter:
 
             # Store in the dictionary using name as key
             out[name] = item
+
+# ################################################################################################################################
 
     def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         """ Retrieves all security definitions from the database.
