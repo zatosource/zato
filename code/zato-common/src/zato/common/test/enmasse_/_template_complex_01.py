@@ -54,7 +54,7 @@ channel_rest:
 
   - name: enmasse.channel.rest.3
     service: demo.ping
-    security_name: enmasse.basic_auth.1
+    security: enmasse.basic_auth.1
     data_format: json
 
 outgoing_rest:
