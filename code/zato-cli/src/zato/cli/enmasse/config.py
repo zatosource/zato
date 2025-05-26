@@ -108,6 +108,10 @@ _attr_default[_object_type.Odoo] = {
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    # This is always the same
+    Cluster_ID = 1
+
     ObjectType  = _object_type
     ObjectAlias = _object_alias
 
