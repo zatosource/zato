@@ -15,8 +15,8 @@ import yaml
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.common.odb.model import Cluster, HTTPBasicAuth, to_json
-from zato.common.odb.query import basic_auth_list
+from zato.common.odb.model import Cluster, HTTPBasicAuth, APIKeySecurity, to_json
+from zato.common.odb.query import basic_auth_list, apikey_security_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -97,7 +97,7 @@ class EnmasseYAMLImporter:
         out = {}
 
         # Get all basic auth definitions
-        basic_auth_defs = basic_auth_list(session, cluster_id, None, True)
+        basic_auth_defs = basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=True)
 
         # Get data from to_json - it will be a list of dictionaries
         definitions = to_json(basic_auth_defs, return_as_dict=True)
@@ -107,6 +107,24 @@ class EnmasseYAMLImporter:
 
             # Store the type
             item['type'] = 'basic_auth'
+
+            # Get the name - it's a required field so should always be present
+            name = item['name']
+
+            # Store in the dictionary using name as key
+            out[name] = item
+
+        # Get all API key definitions
+        apikey_defs = apikey_security_list(session, cluster_id, True)
+
+        # Get data from to_json - it will be a list of dictionaries
+        definitions = to_json(apikey_defs, return_as_dict=True)
+
+        # Process each definition
+        for item in definitions:
+
+            # Store the type
+            item['type'] = 'apikey'
 
             # Get the name - it's a required field so should always be present
             name = item['name']
@@ -192,6 +210,28 @@ class EnmasseYAMLImporter:
             # Add to session
             session.add(auth)
             return auth
+            
+        elif sec_type == 'apikey':
+            # Create new instance
+            auth = APIKeySecurity(
+                None,
+                name,
+                security_def.get('is_active', True),
+                security_def['username'],
+                security_def['password'],
+                cluster
+            )
+            
+            # Set header if provided
+            if 'header' in security_def:
+                auth.header = security_def['header']
+                
+            # Set any opaque attributes
+            set_instance_opaque_attrs(auth, security_def)
+            
+            # Add to session
+            session.add(auth)
+            return auth
 
         # Add handlers for other security types
         logger.warning(f'Unsupported security type: {sec_type}')
@@ -221,6 +261,27 @@ class EnmasseYAMLImporter:
             # Set any opaque attributes
             set_instance_opaque_attrs(definition, security_def)
 
+            # Add to session
+            session.add(definition)
+            return definition
+            
+        elif sec_type == 'apikey':
+            # Find the definition
+            definition = session.query(APIKeySecurity).filter_by(id=security_def['id']).one()
+            
+            # Update fields - iterate through all attributes in the yaml definition
+            for key, value in security_def.items():
+                # Skip type, name and id attributes
+                if key in ('type', 'name', 'id'):
+                    continue
+                    
+                # Set attribute if it exists on the definition
+                if hasattr(definition, key):
+                    setattr(definition, key, value)
+            
+            # Set any opaque attributes
+            set_instance_opaque_attrs(definition, security_def)
+            
             # Add to session
             session.add(definition)
             return definition
