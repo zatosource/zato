@@ -24,10 +24,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_session_from_server_dir(
-    server_dir:'str',
-    stdin_data:'strnone'=None,
-    ) -> 'any_':
+def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 'any_':
     """ Creates a new SQLAlchemy session based on server configuration.
     """
 

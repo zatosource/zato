@@ -12,41 +12,58 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 template_simple_01 = """
 
 security:
-  - name: Test Basic Auth Simple
-    username: "MyUser {test_suffix}"
-    password: "MyPassword"
+  - name: enmasse.basic_auth.1
+    username: enmasse.basic_auth.1
+    password: abcdef.123456
     type: basic_auth
-    realm: "My Realm"
+    realm: enmasse
 
-  - name: Test Basic Auth Simple.2
-    username: "MyUser {test_suffix}.2"
+  - name: enmasse.basic_auth.2
+    username: enmasse.basic_auth.2
+    password: Zato_Enmasse_Env.My_Password
     type: basic_auth
-    realm: "My Realm"
+    realm: enmasse
 
 channel_rest:
 
-  - name: /test/enmasse1/simple/{test_suffix}
-    service: pub.zato.ping
-    url_path: /test/enmasse1/simple/{test_suffix}
+  - name: enmasse.channel_rest.1
+    service: demo.ping
+    url_path: /enmasse.channel_rest.1
+
+  - name: enmasse.channel_rest.2
+    service: demo.ping
+    url_path: /enmasse.channel_rest.2
+    security: enmasse.basic_auth.2
 
 outgoing_rest:
 
-  - name: Outgoing Rest Enmasse {test_suffix}
+  - name: enmasse.outgoing_rest.1
     host: https://example.com
-    url_path: /enmasse/simple/{test_suffix}
+    url_path: /enmasse.outgoing_rest.1
 
-  - name: Outgoing Rest Enmasse {test_suffix}.2
+  - name: enmasse.outgoing_rest.2
     host: https://example.com
-    url_path: /enmasse/simple/{test_suffix}.2
+    url_path: /enmasse.outgoing_rest.2
+    data_format: json
+
+  - name: enmasse.outgoing_rest.3
+    host: https://example.com
+    url_path: /enmasse.outgoing_rest.3
     data_format: form
+
+  - name: enmasse.outgoing_rest.4
+    host: https://example.com
+    url_path: /enmasse.outgoing_rest.4
+    data_format: json
+    security: enmasse.basic_auth.1
 
 outgoing_ldap:
 
-  - name: Enmasse LDAP {test_suffix}
-    username: 'CN=example.ldap,OU=example01,OU=Example,OU=Groups,DC=example,DC=corp'
-    auth_type: NTLM
+  - name: enmasse.ldap.1
     server_list: 127.0.0.1:389
-    password: {test_suffix}
+    username: 'CN=example.ldap,OU=example01,OU=Example,OU=Groups,DC=example,DC=corp'
+    password: Zato_Enmasse_Env.LDAP_Password
+    auth_type: NTLM
 """
 
 # ################################################################################################################################
