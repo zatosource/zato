@@ -90,48 +90,38 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def _process_security_defs(self, query_result:'any_', sec_type:'str', out:'dict') -> 'None':
+        """ Process security definitions from a query result and add them to the output dictionary.
+        """
+        # Get data from to_json - it will be a list of dictionaries
+        definitions = to_json(query_result, return_as_dict=True)
+        
+        # Process each definition
+        for item in definitions:
+            
+            # Store the type
+            item['type'] = sec_type
+            
+            # Get the name - it's a required field so should always be present
+            name = item['name']
+            
+            # Store in the dictionary using name as key
+            out[name] = item
+    
     def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         """ Retrieves all security definitions from the database.
         """
         # Query the database for all existing definitions
         out = {}
-
-        # Get all basic auth definitions
+        
+        # Process basic auth definitions
         basic_auth_defs = basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=True)
-
-        # Get data from to_json - it will be a list of dictionaries
-        definitions = to_json(basic_auth_defs, return_as_dict=True)
-
-        # Process each definition
-        for item in definitions:
-
-            # Store the type
-            item['type'] = 'basic_auth'
-
-            # Get the name - it's a required field so should always be present
-            name = item['name']
-
-            # Store in the dictionary using name as key
-            out[name] = item
-
-        # Get all API key definitions
+        self._process_security_defs(basic_auth_defs, 'basic_auth', out)
+        
+        # Process API key definitions
         apikey_defs = apikey_security_list(session, cluster_id, True)
-
-        # Get data from to_json - it will be a list of dictionaries
-        definitions = to_json(apikey_defs, return_as_dict=True)
-
-        # Process each definition
-        for item in definitions:
-
-            # Store the type
-            item['type'] = 'apikey'
-
-            # Get the name - it's a required field so should always be present
-            name = item['name']
-
-            # Store in the dictionary using name as key
-            out[name] = item
-
+        self._process_security_defs(apikey_defs, 'apikey', out)
+        
         # Return the in-memory representation
         return out
 
@@ -183,112 +173,117 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def _create_basic_auth(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        """ Create a basic auth security definition.
+        """
+        # Create new instance
+        auth = HTTPBasicAuth(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def.get('realm'),
+            security_def['password'],
+            cluster
+        )
+        
+        # Set any opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+        
+        return auth
+    
+    def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        """ Create an API key security definition.
+        """
+        # Create new instance
+        auth = APIKeySecurity(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def['password'],
+            cluster
+        )
+        
+        # Set header if provided
+        if 'header' in security_def:
+            auth.header = security_def['header']
+            
+        # Set any opaque attributes
+        set_instance_opaque_attrs(auth, security_def)
+        
+        return auth
+    
     def create_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Creates a new security definition instance.
         """
-        name = security_def['name']
         sec_type = security_def['type']
 
         # Get cluster by ID
         cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
-
+        
+        # Create instance based on security type
         if sec_type == 'basic_auth':
-            # Create new instance
-            auth = HTTPBasicAuth(
-                None,
-                name,
-                security_def.get('is_active', True),
-                security_def['username'],
-                security_def.get('realm'),
-                security_def['password'],
-                cluster
-            )
-
-            # Set any opaque attributes
-            set_instance_opaque_attrs(auth, security_def)
-
-            # Add to session
-            session.add(auth)
-            return auth
-            
+            auth = self._create_basic_auth(security_def, cluster)
         elif sec_type == 'apikey':
-            # Create new instance
-            auth = APIKeySecurity(
-                None,
-                name,
-                security_def.get('is_active', True),
-                security_def['username'],
-                security_def['password'],
-                cluster
-            )
+            auth = self._create_apikey(security_def, cluster)
+        else:
+            # Log warning for unsupported types
+            logger.warning(f'Unsupported security type: {sec_type}')
+            return None
             
-            # Set header if provided
-            if 'header' in security_def:
-                auth.header = security_def['header']
-                
-            # Set any opaque attributes
-            set_instance_opaque_attrs(auth, security_def)
-            
-            # Add to session
-            session.add(auth)
-            return auth
-
-        # Add handlers for other security types
-        logger.warning(f'Unsupported security type: {sec_type}')
-        return None
+        # Add to session
+        session.add(auth)
+        return auth
 
 # ################################################################################################################################
 
+    def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
+        """ Update a security definition with values from YAML.
+        """
+        # Update fields - iterate through all attributes in the yaml definition
+        for key, value in security_def.items():
+            # Skip type, name and id attributes
+            if key in ('type', 'name', 'id'):
+                continue
+                
+            # Set attribute if it exists on the definition
+            if hasattr(definition, key):
+                setattr(definition, key, value)
+            else:
+                # Log a detailed warning about the invalid attribute
+                def_type = security_def['type']
+                def_name = security_def['name']
+                logger.warning(f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}')
+        
+        # Set any opaque attributes
+        set_instance_opaque_attrs(definition, security_def)
+        
+        return definition
+        
     def update_security_definition(self, security_def:'anydict', session:'SASession') -> 'any_':
         """ Updates an existing security definition instance.
         """
         sec_type = security_def['type']
+        definition_id = security_def['id']
 
+        # Find and update the definition based on security type
         if sec_type == 'basic_auth':
-            # Find the definition
-            definition = session.query(HTTPBasicAuth).filter_by(id=security_def['id']).one()
-
-            # Update fields - iterate through all attributes in the yaml definition
-            for key, value in security_def.items():
-                # Skip type, name and id attributes
-                if key in ('type', 'name', 'id'):
-                    continue
-
-                # Set attribute if it exists on the definition
-                if hasattr(definition, key):
-                    setattr(definition, key, value)
-
-            # Set any opaque attributes
-            set_instance_opaque_attrs(definition, security_def)
-
-            # Add to session
-            session.add(definition)
-            return definition
+            definition = session.query(HTTPBasicAuth).filter_by(id=definition_id).one()
+            self._update_definition(definition, security_def)
             
         elif sec_type == 'apikey':
-            # Find the definition
-            definition = session.query(APIKeySecurity).filter_by(id=security_def['id']).one()
+            definition = session.query(APIKeySecurity).filter_by(id=definition_id).one()
+            self._update_definition(definition, security_def)
             
-            # Update fields - iterate through all attributes in the yaml definition
-            for key, value in security_def.items():
-                # Skip type, name and id attributes
-                if key in ('type', 'name', 'id'):
-                    continue
-                    
-                # Set attribute if it exists on the definition
-                if hasattr(definition, key):
-                    setattr(definition, key, value)
-            
-            # Set any opaque attributes
-            set_instance_opaque_attrs(definition, security_def)
-            
-            # Add to session
-            session.add(definition)
-            return definition
-
-        # Add handlers for other security types
-        logger.warning(f'Unsupported security type: {sec_type}')
-        return None
+        else:
+            # Log warning for unsupported types
+            logger.warning(f'Unsupported security type: {sec_type}')
+            return None
+        
+        # Add to session
+        session.add(definition)
+        return definition
 
 # ################################################################################################################################
 
