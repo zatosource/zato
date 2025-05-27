@@ -360,14 +360,14 @@ class TestEnmasseFromYAML(TestCase):
 
         # Process security definitions
         security_list = self.yaml_config.get('security', [])
-        self.security_importer.sync_security_definitions(security_list, self.session)
+        _ = self.security_importer.sync_security_definitions(security_list, self.session)
 
         # Update importer's security definitions for channel importer to use
         self.importer.sec_defs = self.security_importer.sec_defs
 
         # Process channels which depend on security definitions
         channel_list = self.yaml_config.get('channel_rest', [])
-        self.channel_importer.sync_channel_rest(channel_list, self.session)
+        _ = self.channel_importer.sync_channel_rest(channel_list, self.session)
 
         # Verify security definitions were created
         self.assertTrue(len(self.security_importer.sec_defs) >= 5, 'Not all security definitions were created')
