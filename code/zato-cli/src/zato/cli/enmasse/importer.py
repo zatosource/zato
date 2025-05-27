@@ -17,6 +17,7 @@ import yaml
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel import ChannelImporter
+from zato.cli.enmasse.importers.group import GroupImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -52,6 +53,7 @@ class EnmasseYAMLImporter:
         # Initialize importers
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
+        self.group_importer = GroupImporter(self)
 
 # ################################################################################################################################
 
@@ -120,6 +122,13 @@ class EnmasseYAMLImporter:
             # Get security definitions from the security importer
             self.sec_defs = self.security_importer.sec_defs
             logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
+
+        # Process security groups (depends on security definitions)
+        group_list = yaml_config.get('groups', [])
+        if group_list:
+            logger.info('Processing %d security groups', len(group_list))
+            groups_created, groups_updated = self.group_importer.sync_groups(group_list, session)
+            logger.info('Processed security groups: created=%d updated=%d', len(groups_created), len(groups_updated))
 
         # Then process REST channels which may depend on security definitions
         channel_list = yaml_config.get('channel_rest', [])
