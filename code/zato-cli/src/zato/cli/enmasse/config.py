@@ -15,7 +15,7 @@ class _object_type:
     Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     #
     Email_SMTP = 'email_smtp'                     #
-    Groups = 'groups'                             #
+    Groups = 'groups'                             # 1
     Jira = 'jira'                                 #
     LDAP = 'ldap'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
