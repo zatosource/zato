@@ -142,12 +142,21 @@ class EnmasseYAMLImporter:
         # Process cache definitions
         cache_list = yaml_config.get('cache', [])
         if cache_list:
-            logger.info('Processing %d cache definitions', len(cache_list))
+            logger.info('DEBUG: In importer sync_from_yaml - cache_list: %s', cache_list)
+            
+            # Examine each cache item in detail
+            for idx, item in enumerate(cache_list):
+                logger.info('DEBUG: Cache item %d: %s', idx, item)
+                if not item.get('name'):
+                    logger.error('DEBUG: ERROR - Cache item %d has no name', idx)
+                
+            logger.info('DEBUG: Processing %d cache definitions', len(cache_list))
             cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
             
             # Get cache definitions from the cache importer
             self.cache_defs = self.cache_importer.cache_defs
-            logger.info('Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
+            logger.info('DEBUG: Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
+            logger.info('DEBUG: Final cache_defs: %s', self.cache_defs)
 
         logger.info('YAML synchronization completed')
 
