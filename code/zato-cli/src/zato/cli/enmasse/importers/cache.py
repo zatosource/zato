@@ -205,6 +205,7 @@ class CacheImporter:
         try:
             logger.info('Creating %d new cache definitions', len(to_create))
             for item in to_create:
+
                 # Keep track of things that already exist
                 existing_cache = session.query(Cache).filter(Cache.name == item.get('name')).first()
                 if existing_cache:
