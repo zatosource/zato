@@ -36,6 +36,7 @@ class CacheImporter:
 
         self.importer = importer
         self.cache_defs = {}
+        self._id_counter = 1
 
 # ################################################################################################################################
 
@@ -67,44 +68,33 @@ class CacheImporter:
 
 # ################################################################################################################################
 
-    def compare_cache_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
+    def compare_cache_defs(self, yaml_defs:'anylist', db_defs:'anylist') -> 'tuple':
+
+        # Build dictionaries for easier lookup
+        yaml_dict = {}
+        for d in yaml_defs:
+            yaml_dict[d['name']] = d
+
+        db_dict = {}
+        for d in db_defs:
+            db_dict[d['name']] = d
+
+        # Find items to create and update
         to_create = []
         to_update = []
 
-        logger.info('Comparing %d YAML defs with %d DB defs', len(yaml_defs), len(db_defs))
-        logger.info('DB definition keys: %s', list(db_defs.keys()))
-
-        for item in yaml_defs:
-            name = item['name']
-
-            logger.info('Checking YAML def: name=%s', name)
-
-            db_def = db_defs.get(name)
-
-            if not db_def:
-                logger.info('Definition %s not found in DB, will create new', name)
-                to_create.append(item)
+        for name, yaml_def in yaml_dict.items():
+            if name in db_dict:
+                # Update existing definition
+                update_def = yaml_def.copy()
+                update_def['id'] = db_dict[name]['id']
+                logger.info('Adding to update: %s', update_def)
+                to_update.append(update_def)
             else:
-                logger.info('Definition %s exists in DB with id=%s type=%s', name, db_def.get('id'), db_def.get('type'))
+                # Create new definition
+                logger.info('Adding to create: %s', yaml_def)
+                to_create.append(yaml_def)
 
-                needs_update = False
-                for key, value in item.items():
-                    if key in ('type', 'name'):
-                        continue
-
-                    if key in db_def and db_def[key] != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
-                        needs_update = True
-                        break
-
-                if needs_update:
-                    item['id'] = db_def['id']
-                    logger.info('Will update %s with id=%s', name, db_def['id'])
-                    to_update.append(item)
-                else:
-                    logger.info('No update needed for %s', name)
-
-        logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
         return to_create, to_update
 
 # ################################################################################################################################
@@ -143,12 +133,36 @@ class CacheImporter:
 
     def create_cache_definition(self, cache_def:'anydict', session:'SASession') -> 'any_':
         def_name = cache_def.get('name', 'unnamed')
-
         logger.info('Creating cache definition: name=%s', def_name)
-        cluster = self.importer.get_cluster(session)
 
-        cache = self._create_builtin_cache(cache_def, cluster)
+        # Create builtin cache directly
+        cache = CacheBuiltin()
+
+        # Set required attributes
+        cache.cluster_id = int(self.importer.cluster_id)
+        cache.name = def_name
+        cache.cache_type = 'builtin'
+        cache.is_active = cache_def.get('is_active', True)
+        cache.is_default = cache_def.get('is_default', False)
+
+        # Set CacheBuiltin-specific attributes
+        cache.max_size = cache_def.get('max_size', 10000)
+        cache.max_item_size = cache_def.get('max_item_size', 1000000)
+        cache.extend_expiry_on_get = cache_def.get('extend_expiry_on_get', True)
+        cache.extend_expiry_on_set = cache_def.get('extend_expiry_on_set', False)
+
+        # Set additional attributes
+        cache.sync_method = cache_def.get('sync_method', 'in-background')
+        cache.persistent_storage = cache_def.get('persistent_storage', 'sqlite')
+
+        # Set opaque attributes from the configuration
+        set_instance_opaque_attrs(cache, cache_def)
+
+        # Add to session and flush to get ID
         session.add(cache)
+        session.flush()
+
+        # Only add to session once
         return cache
 
 # ################################################################################################################################
@@ -191,7 +205,12 @@ class CacheImporter:
         try:
             logger.info('Creating %d new cache definitions', len(to_create))
             for item in to_create:
-                logger.info('Creating cache definition: name=%s', item.get('name'))
+                # Keep track of things that already exist
+                existing_cache = session.query(Cache).filter(Cache.name == item.get('name')).first()
+                if existing_cache:
+                    logger.info('Cache with name %s already exists, skipping', item.get('name'))
+                    continue
+
                 instance = self.create_cache_definition(item, session)
                 logger.info('Created cache definition: name=%s id=%s', instance.name, instance.id)
                 out_created.append(instance)
@@ -205,7 +224,6 @@ class CacheImporter:
 
             logger.info('Updating %d existing cache definitions', len(to_update))
             for item in to_update:
-                logger.info('Updating cache definition: name=%s id=%s', item.get('name'), item.get('id'))
                 instance = self.update_cache_definition(item, session)
                 logger.info('Updated cache definition: name=%s id=%s', instance.name, instance.id)
                 out_updated.append(instance)
