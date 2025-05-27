@@ -12,9 +12,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 class _object_type:
     Cache = 'cache'                               #
     Confluence = 'confluence'                     #
-    Channel_REST = 'channel_rest'                 #
+    Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     #
     Email_SMTP = 'email_smtp'                     #
+    Groups = 'groups'                             #
     Jira = 'jira'                                 #
     LDAP = 'ldap'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
@@ -24,7 +25,7 @@ class _object_type:
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
     Scheduler = 'scheduler'                       #
-    Security = 'security'                         #
+    Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #

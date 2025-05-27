@@ -15,8 +15,13 @@ security:
 
   - name: enmasse.basic_auth.1
     type: basic_auth
-    username: enmasse
+    username: enmasse.1
     password: Zato_Enmasse_Env.BasicAuth1
+
+  - name: enmasse.basic_auth.2
+    type: basic_auth
+    username: enmasse.2
+    password: Zato_Enmasse_Env.BasicAuth2
 
   - name: enmasse.bearer_token.1
     username: enmasse.1
@@ -43,8 +48,26 @@ security:
 
   - name: enmasse.apikey.1
     type: apikey
-    username: enmasse
+    username: enmasse.1
     password: Zato_Enmasse_Env.EnmasseApiKey1
+
+  - name: enmasse.apikey.2
+    type: apikey
+    username: enmasse.2
+    password: Zato_Enmasse_Env.EnmasseApiKey2
+
+groups:
+  - name: enmasse.group.1
+    members:
+      - enmasse.basic_auth.1
+      - enmasse.basic_auth.2
+      - enmasse.apikey.1
+
+  - name: enmasse.group.2
+    members:
+      - enmasse.apikey.1
+      - enmasse.apikey.2
+      - enmasse.basic_auth.1
 
 channel_rest:
 
