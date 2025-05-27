@@ -132,6 +132,7 @@ iterator_     = iterator_
 iobytes_      = io_[bytes]
 listnone      = anylistnone
 listorstr     = union_[anylist, str]
+listtuple     = tuple_[anylist, anylist]
 model         = type_[BaseModel]
 modelnone     = optional[type_[BaseModel]]
 module_       = ModuleType

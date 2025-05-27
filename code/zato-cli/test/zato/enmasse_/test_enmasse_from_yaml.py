@@ -14,6 +14,8 @@ from unittest import TestCase, main
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
+from zato.cli.enmasse.importers.security import SecurityImporter
+from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -41,6 +43,10 @@ class TestEnmasseFromYAML(TestCase):
 
         # Initialize the importer
         self.importer = EnmasseYAMLImporter()
+
+        # Initialize specialized importers
+        self.security_importer = SecurityImporter(self.importer)
+        self.channel_importer = ChannelImporter(self.importer)
 
         # Parse the YAML file
         self.yaml_config = cast_('stranydict', None)
@@ -94,7 +100,9 @@ class TestEnmasseFromYAML(TestCase):
         self.assertTrue(len(basic_auth_defs) > 0, 'No basic_auth definitions found in YAML')
 
         # Process security definitions
-        sec_created, _ = self.importer.sync_security_definitions(basic_auth_defs, self.session)
+        sec_created, _ = self.security_importer.sync_security_definitions(basic_auth_defs, self.session)
+        # Update importer's security definitions for other tests
+        self.importer.sec_defs = self.security_importer.sec_defs
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(basic_auth_defs), 'Not all basic_auth definitions were created')
@@ -102,7 +110,7 @@ class TestEnmasseFromYAML(TestCase):
         # Verify each definition was created correctly
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
-            self.assertEqual(instance.username, 'enmasse')
+            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2'})
             self.assertIsNotNone(instance.password)
 
 # ################################################################################################################################
@@ -117,7 +125,10 @@ class TestEnmasseFromYAML(TestCase):
         self.assertTrue(len(bearer_token_defs) > 0, 'No bearer_token definitions found in YAML')
 
         # Process security definitions
-        sec_created, _ = self.importer.sync_security_definitions(bearer_token_defs, self.session)
+        sec_created, _ = self.security_importer.sync_security_definitions(bearer_token_defs, self.session)
+
+        # Update importer's security definitions for other tests
+        self.importer.sec_defs = self.security_importer.sec_defs
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(bearer_token_defs), 'Not all bearer_token definitions were created')
@@ -141,7 +152,10 @@ class TestEnmasseFromYAML(TestCase):
         self.assertTrue(len(ntlm_defs) > 0, 'No NTLM definitions found in YAML')
 
         # Process security definitions
-        sec_created, _ = self.importer.sync_security_definitions(ntlm_defs, self.session)
+        sec_created, _ = self.security_importer.sync_security_definitions(ntlm_defs, self.session)
+
+        # Update importer's security definitions for other tests
+        self.importer.sec_defs = self.security_importer.sec_defs
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(ntlm_defs), 'Not all NTLM definitions were created')
@@ -164,7 +178,10 @@ class TestEnmasseFromYAML(TestCase):
         self.assertTrue(len(apikey_defs) > 0, 'No API key definitions found in YAML')
 
         # Process security definitions
-        sec_created, _ = self.importer.sync_security_definitions(apikey_defs, self.session)
+        sec_created, _ = self.security_importer.sync_security_definitions(apikey_defs, self.session)
+
+        # Update importer's security definitions for other tests
+        self.importer.sec_defs = self.security_importer.sec_defs
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(apikey_defs), 'Not all API key definitions were created')
@@ -172,8 +189,8 @@ class TestEnmasseFromYAML(TestCase):
         # Verify each definition was created correctly
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
-            self.assertEqual(instance.name, 'enmasse.apikey.1')
-            self.assertEqual(instance.username, 'enmasse')
+            self.assertIn(instance.name, {'enmasse.apikey.1', 'enmasse.apikey.2'})
+            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2'})
             self.assertIsNotNone(instance.password)
 
 # ################################################################################################################################
@@ -183,21 +200,24 @@ class TestEnmasseFromYAML(TestCase):
         """
         self._setup_test_environment()
 
-        # First create all security definitions (channels may depend on them)
-        _ = self.importer.sync_security_definitions(self.yaml_config['security'], self.session)
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
 
-        # Get REST channel definitions
+        # Update importer's security definitions for channel importer to use
+        self.importer.sec_defs = self.security_importer.sec_defs
+
+        # Filter only REST channel definitions
         channel_defs = self.yaml_config['channel_rest']
         self.assertTrue(len(channel_defs) > 0, 'No REST channel definitions found in YAML')
 
         # Process channel definitions
-        channel_created, _ = self.importer.sync_channel_rest(channel_defs, self.session)
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
 
         # Assert the correct number of items were created
-        self.assertEqual(len(channel_created), len(channel_defs), 'Not all REST channels were created')
+        self.assertEqual(len(channels_created), len(channel_defs), 'Not all REST channels were created')
 
         # Verify specific channels were created correctly
-        for channel in channel_created:
+        for channel in channels_created:
             self.assertTrue(channel.name.startswith('enmasse.channel.rest.'))
             self.assertTrue(channel.url_path.startswith('/enmasse.rest.'))
             self.assertEqual(channel.connection, 'channel')
@@ -338,14 +358,22 @@ class TestEnmasseFromYAML(TestCase):
         """
         self._setup_test_environment()
 
-        # Sync all objects from the YAML configuration
-        self.importer.sync_from_yaml(self.yaml_config, self.session)
+        # Process security definitions
+        security_list = self.yaml_config.get('security', [])
+        self.security_importer.sync_security_definitions(security_list, self.session)
+
+        # Update importer's security definitions for channel importer to use
+        self.importer.sec_defs = self.security_importer.sec_defs
+
+        # Process channels which depend on security definitions
+        channel_list = self.yaml_config.get('channel_rest', [])
+        self.channel_importer.sync_channel_rest(channel_list, self.session)
 
         # Verify security definitions were created
-        self.assertTrue(len(self.importer.sec_defs) >= 5, 'Not all security definitions were created')
+        self.assertTrue(len(self.security_importer.sec_defs) >= 5, 'Not all security definitions were created')
 
         # Check each security definition type exists
-        security_types = [def_info['type'] for def_info in self.importer.sec_defs.values()]
+        security_types = [def_info['type'] for def_info in self.security_importer.sec_defs.values()]
         self.assertIn('basic_auth', security_types)
         self.assertIn('bearer_token', security_types)
         self.assertIn('ntlm', security_types)
