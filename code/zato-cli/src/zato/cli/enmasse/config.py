@@ -38,6 +38,7 @@ class _object_type:
 
 _object_alias = {}
 
+_object_alias[_object_type.Cache] = 'cache_builtin'
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
@@ -103,6 +104,17 @@ _attr_default[_object_type.Odoo] = {
     'is_active': True,
     'protocol': 'jsonrpc',
     'pool_size': 10
+}
+
+_attr_default[_object_type.Cache] = {
+    'is_active': True,
+    'is_default': False,
+    'max_size': 10000,
+    'max_item_size': 1000000,
+    'extend_expiry_on_get': True,
+    'extend_expiry_on_set': False,
+    'sync_method': 'in-background',
+    'persistent_storage': 'sqlite'
 }
 
 # ################################################################################################################################

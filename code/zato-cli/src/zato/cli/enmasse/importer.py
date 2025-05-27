@@ -18,6 +18,7 @@ from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
+from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -47,6 +48,7 @@ class EnmasseYAMLImporter:
         self.object_alias = ModuleCtx.ObjectAlias
 
         self.sec_defs = {}
+        self.cache_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -54,6 +56,7 @@ class EnmasseYAMLImporter:
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
         self.group_importer = GroupImporter(self)
+        self.cache_importer = CacheImporter(self)
 
 # ################################################################################################################################
 
@@ -135,6 +138,16 @@ class EnmasseYAMLImporter:
             logger.info('Processing %d REST channels', len(channel_list))
             channels_created, channels_updated = self.channel_importer.sync_channel_rest(channel_list, session)
             logger.info('Processed REST channels: created=%d updated=%d', len(channels_created), len(channels_updated))
+
+        # Process cache definitions
+        cache_list = yaml_config.get('cache', [])
+        if cache_list:
+            logger.info('Processing %d cache definitions', len(cache_list))
+            cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
+            
+            # Get cache definitions from the cache importer
+            self.cache_defs = self.cache_importer.cache_defs
+            logger.info('Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
 
         logger.info('YAML synchronization completed')
 
