@@ -19,6 +19,7 @@ from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
+from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
@@ -53,6 +54,7 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.cache_defs = {}
         self.odoo_defs = {}
+        self.smtp_defs = {}
         self.sql_defs = {}
         self.job_defs = {}
         self.objects = {}
@@ -64,6 +66,7 @@ class EnmasseYAMLImporter:
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
+        self.smtp_importer = SMTPImporter(self)
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
 
@@ -180,6 +183,21 @@ class EnmasseYAMLImporter:
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
+            
+        # Process SMTP connection definitions
+        smtp_list = yaml_config.get('email_smtp', [])
+        if smtp_list:
+            logger.info('Processing %d SMTP connection definitions', len(smtp_list))
+
+            # Examine each SMTP item
+            for idx, item in enumerate(smtp_list):
+                logger.info('SMTP connection item %d: %s', idx, item)
+
+            smtp_created, smtp_updated = self.smtp_importer.sync_smtp_definitions(smtp_list, session)
+
+            # Get SMTP definitions from the SMTP importer
+            self.smtp_defs = self.smtp_importer.smtp_defs
+            logger.info('Processed SMTP connection definitions: created=%d updated=%d', len(smtp_created), len(smtp_updated))
             
         # Process SQL connection pool definitions
         sql_list = yaml_config.get('sql', [])
