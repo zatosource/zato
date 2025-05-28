@@ -121,16 +121,8 @@ class SchedulerImporter:
         session.flush()
 
         # Create the associated IntervalBasedJob
-        # Check if the interval job already exists
-        existing_interval_job = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
-
-        if existing_interval_job:
-            # Update existing interval job
-            interval_job = existing_interval_job
-        else:
-            # Create new interval job
-            interval_job = IntervalBasedJob(None, job)
-
+        interval_job = IntervalBasedJob(None, job)
+        
         # Set interval attributes
         for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
             if attr in job_def:
