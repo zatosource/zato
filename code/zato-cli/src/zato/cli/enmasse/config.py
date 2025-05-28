@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'                               #
+    Cache = 'cache'                               # 1
     Confluence = 'confluence'                     #
     Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     #
@@ -19,7 +19,7 @@ class _object_type:
     Jira = 'jira'                                 #
     LDAP = 'ldap'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
-    Odoo = 'odoo'                                 #
+    Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
     Search_ElasticSearch = 'elastic_search'       #
@@ -44,6 +44,7 @@ _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluen
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
 _object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
+_object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SQL] = 'outconn_sql'
