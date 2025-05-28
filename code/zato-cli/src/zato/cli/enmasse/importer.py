@@ -20,7 +20,6 @@ from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
-from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -62,7 +61,6 @@ class EnmasseYAMLImporter:
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
-        self.scheduler_importer = SchedulerImporter(self)
 
 # ################################################################################################################################
 
@@ -149,16 +147,16 @@ class EnmasseYAMLImporter:
         cache_list = yaml_config.get('cache', [])
         if cache_list:
             logger.info('DEBUG: In importer sync_from_yaml - cache_list: %s', cache_list)
-            
+
             # Examine each cache item in detail
             for idx, item in enumerate(cache_list):
                 logger.info('DEBUG: Cache item %d: %s', idx, item)
                 if not item.get('name'):
                     logger.error('DEBUG: ERROR - Cache item %d has no name', idx)
-                
+
             logger.info('DEBUG: Processing %d cache definitions', len(cache_list))
             cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
-            
+
             # Get cache definitions from the cache importer
             self.cache_defs = self.cache_importer.cache_defs
             logger.info('DEBUG: Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
@@ -168,37 +166,18 @@ class EnmasseYAMLImporter:
         odoo_list = yaml_config.get('odoo', [])
         if odoo_list:
             logger.info('Processing %d Odoo connection definitions', len(odoo_list))
-            
+
             # Examine each Odoo item
             for idx, item in enumerate(odoo_list):
                 logger.info('Odoo connection item %d: %s', idx, item)
                 if not item.get('name'):
                     logger.error('ERROR - Odoo connection item %d has no name', idx)
-            
+
             odoo_created, odoo_updated = self.odoo_importer.sync_odoo_definitions(odoo_list, session)
-            
+
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
-
-        # Process Scheduler job definitions
-        job_list = yaml_config.get('scheduler_job', [])
-        if job_list:
-            logger.info('Processing %d scheduler job definitions', len(job_list))
-            
-            # Examine each scheduler job item
-            for idx, item in enumerate(job_list):
-                logger.info('Scheduler job item %d: %s', idx, item)
-                if not item.get('name'):
-                    logger.error('ERROR - Scheduler job item %d has no name', idx)
-                if not item.get('service'):
-                    logger.error('ERROR - Scheduler job item %d has no service', idx)
-            
-            job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, session)
-            
-            # Get job definitions from the scheduler importer
-            self.job_defs = self.scheduler_importer.job_defs
-            logger.info('Processed scheduler job definitions: created=%d updated=%d', len(job_created), len(job_updated))
 
         logger.info('YAML synchronization completed')
 
