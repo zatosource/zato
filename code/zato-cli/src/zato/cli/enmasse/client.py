@@ -139,6 +139,28 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
 
+        # Special handling for job_interval_based table - need to handle it before job records are deleted
+        # as it doesn't have a name column but depends on job_id from the job table
+        try:
+            # First fetch job IDs from the job table that match the prefix
+            query = f'SELECT id FROM job WHERE name LIKE "{prefix}%"'
+            result = session.execute(query)
+            job_ids = [row[0] for row in result.fetchall()]
+
+            if job_ids:
+                logger.info(f'Found {len(job_ids)} job ID{"s" if len(job_ids) != 1 else ""} in job table with prefix {prefix}')
+
+                # Delete from job_interval_based using the job_ids
+                ids_string = ', '.join(str(id) for id in job_ids)
+                delete_query = f'DELETE FROM job_interval_based WHERE job_id IN ({ids_string})'
+
+                result = session.execute(delete_query)
+                session.commit()
+                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from job_interval_based linked to jobs with prefix {prefix}')
+        except SQLAlchemyError as e:
+            session.rollback()
+            logger.debug(f'Error handling job_interval_based cleanup: {e}')
+
         # Track if we made any changes
         changes_made = True
 
