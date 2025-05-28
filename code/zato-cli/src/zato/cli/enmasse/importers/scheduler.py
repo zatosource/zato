@@ -8,13 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from uuid import uuid4
 
 # Zato
-from zato.common.odb.model import Job, IntervalBasedJob, Cluster, Service, to_json
-from zato.common.odb.query import job_list
-from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.api import SCHEDULER
+from zato.common.odb.model import Job, IntervalBasedJob, Service, to_json
+from zato.common.odb.query import job_list
+from zato.common.util.api import parse_datetime
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,32 +101,44 @@ class SchedulerImporter:
 
         # Get the service instance
         service_name = job_def['service']
-        service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one()
+        service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one() # type: ignore
+
+        # Parse the start_date from string to datetime object
+        start_date = parse_datetime(job_def['start_date'])
+        
+        # Prepare job parameters
+        job_id = None
+        job_name = job_def['name']
+        job_is_active = job_def.get('is_active', True)
+        job_type = job_def['job_type']
+        job_extra = job_def.get('extra', '')
 
         # Create a new job instance
-        job = Job(None, job_def['name'], job_def['is_active'], job_def['job_type'], 
-                job_def['start_date'], job_def.get('extra', ''), cluster=cluster, service=service)
+        job = Job(job_id, job_name, job_is_active, job_type, start_date, job_extra, cluster=cluster, service=service)
 
         # Add to session and flush to get ID
         session.add(job)
         session.flush()
 
-        # If it's an interval-based job, create the associated IntervalBasedJob
-        if job.job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+        # Create the associated IntervalBasedJob
+        # Check if the interval job already exists
+        existing_interval_job = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
+
+        if existing_interval_job:
+            # Update existing interval job
+            interval_job = existing_interval_job
+        else:
+            # Create new interval job
             interval_job = IntervalBasedJob(None, job)
-            
-            # Set interval attributes
-            for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
-                if attr in job_def:
-                    setattr(interval_job, attr, job_def[attr])
 
-            # Handle definition_text if provided
-            if 'cron_definition' in job_def:
-                interval_job.definition_text = job_def['cron_definition']
-
-            # Add the interval job to the session
-            session.add(interval_job)
-            session.flush()
+        # Set interval attributes
+        for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
+            if attr in job_def:
+                setattr(interval_job, attr, job_def[attr])
+                
+        # Add the interval job to the session
+        session.add(interval_job)
+        session.flush()
 
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(job, job_def)
@@ -149,26 +161,31 @@ class SchedulerImporter:
         for key, value in job_def.items():
             # Skip special fields that shouldn't be directly updated
             if key not in ['id', 'type', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition']:
+                # Handle start_date conversion from string to datetime if present
+                if key == 'start_date' and value:
+                    from zato.common.util.api import parse_datetime
+                    value = parse_datetime(value)
+
                 setattr(job, key, value)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(job, job_def)
 
-        # If it's an interval-based job, update the associated IntervalBasedJob
-        if job.job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+        # Update the associated IntervalBasedJob
+        # Check if the interval job already exists
+        try:
             interval_job = session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
-            
-            # Update interval attributes
-            for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
-                if attr in job_def:
-                    setattr(interval_job, attr, job_def[attr])
+        except:
+            # Create a new one if it doesn't exist
+            interval_job = IntervalBasedJob(None, job)
 
-            # Handle definition_text if provided
-            if 'cron_definition' in job_def:
-                interval_job.definition_text = job_def['cron_definition']
+        # Update interval attributes
+        for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
+            if attr in job_def:
+                setattr(interval_job, attr, job_def[attr])
 
-            # Add the updated interval job to the session
-            session.add(interval_job)
+        # Add the updated interval job to the session
+        session.add(interval_job)
 
         session.add(job)
         return job
@@ -191,7 +208,13 @@ class SchedulerImporter:
                 # Keep track of things that already exist
                 existing_job = session.query(Job).filter(Job.name == item.get('name')).first()
                 if existing_job:
-                    logger.info('Scheduler job with name %s already exists, skipping', item.get('name'))
+                    logger.info('Scheduler job with name %s already exists, updating instead of creating', item.get('name'))
+                    # Add the ID to the item and update it instead of creating
+                    update_item = item.copy()
+                    update_item['id'] = existing_job.id
+                    instance = self.update_job_definition(update_item, session)
+                    logger.info('Updated scheduler job definition: name=%s id=%s', instance.name, instance.id)
+                    out_updated.append(instance)
                     continue
 
                 instance = self.create_job_definition(item, session)
