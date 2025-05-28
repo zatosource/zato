@@ -153,6 +153,9 @@ class EnmasseYAMLImporter:
             # Examine each cache item in detail
             for idx, item in enumerate(cache_list):
                 if not item.get('name'):
+                    # Skip items without a name or log them if needed
+                    logger.warning('Cache item %d has no name, skipping', idx)
+                    continue
 
             cache_created, cache_updated = self.cache_importer.sync_cache_definitions(cache_list, session)
 

@@ -123,7 +123,7 @@ scheduler:
     job_type: interval_based
     start_date: '2025-01-11 11:23:52'
     seconds: 2
-    is_active: Zato_Enmasse_Env.Enmasse_Scheduler_Is_Active
+    is_active: True
 
   - name: enmasse.scheduler.2
     service: demo.ping
