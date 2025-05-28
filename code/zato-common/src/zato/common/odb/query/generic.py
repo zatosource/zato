@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
 from logging import getLogger
 
 # SQLAlchemy
@@ -18,6 +17,7 @@ from zato.common.api import GENERIC, NotGiven
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
 from zato.common.typing_ import cast_
+from zato.common.util.api import utcnow
 from zato.common.util.sql import get_dict_with_opaque
 
 # ################################################################################################################################
@@ -131,7 +131,7 @@ class GenericObjectWrapper:
         # Local variables
         type_ = type_ or self.type_
         subtype = subtype or self.subtype
-        now = datetime.utcnow()
+        now = utcnow()
 
         # Preprocess each item we have on input
         for item in item_list:
