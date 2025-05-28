@@ -76,16 +76,16 @@ class CacheImporter:
 
         for yaml_def in yaml_defs:
             name = yaml_def['name']
-            
-            # Check if definition exists in database
+
+            # Update existing definition
             if name in db_defs:
-                # Update existing definition
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
                 logger.info('Adding to update: %s', update_def)
                 to_update.append(update_def)
+
+            # Create new definition
             else:
-                # Create new definition
                 logger.info('Adding to create: %s', yaml_def)
                 to_create.append(yaml_def)
 
