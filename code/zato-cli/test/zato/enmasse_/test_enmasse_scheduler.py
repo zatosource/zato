@@ -8,9 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import time
 import tempfile
-from datetime import datetime
 from unittest import TestCase, main
 
 # Zato
@@ -18,7 +16,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.common.api import SCHEDULER
-from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
+from zato.common.odb.model import IntervalBasedJob, Job
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -26,7 +24,6 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
@@ -56,11 +53,15 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -71,7 +72,9 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-    def xtest_job_definition_creation(self):
+# ################################################################################################################################
+
+    def test_job_definition_creation(self):
         """ Test creating scheduler job definitions from YAML.
         """
         self._setup_test_environment()
@@ -102,7 +105,9 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
         self.assertEqual(interval_job.minutes, 51)
 
-    def xtest_job_update(self):
+# ################################################################################################################################
+
+    def test_job_update(self):
         """ Test updating existing scheduler job definitions.
         """
         self._setup_test_environment()
@@ -136,6 +141,8 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         updated_interval = self.session.query(IntervalBasedJob).filter_by(job_id=updated_instance.id).one()
         self.assertEqual(updated_interval.seconds, 5)
         self.assertEqual(updated_interval.minutes, 30)
+
+# ################################################################################################################################
 
     def test_complete_job_import_flow(self):
         """ Test the complete flow of importing scheduler job definitions from a YAML file.
