@@ -207,7 +207,7 @@ class CacheImporter:
             for item in to_create:
 
                 # Keep track of things that already exist
-                existing_cache = session.query(Cache).filter(Cache.name == item.get('name')).first()
+                existing_cache = session.query(CacheBuiltin).filter(CacheBuiltin.name == item.get('name')).first()
                 if existing_cache:
                     logger.info('Cache with name %s already exists, skipping', item.get('name'))
                     continue
