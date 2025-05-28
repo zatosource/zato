@@ -20,6 +20,7 @@ from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
+from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -61,6 +62,7 @@ class EnmasseYAMLImporter:
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
+        self.scheduler_importer = SchedulerImporter(self)
 
 # ################################################################################################################################
 
@@ -178,6 +180,23 @@ class EnmasseYAMLImporter:
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
+
+        # Process scheduler job definitions
+        scheduler_list = yaml_config.get('scheduler', [])
+        if scheduler_list:
+            logger.info('Processing %d scheduler job definitions', len(scheduler_list))
+            
+            # Examine each scheduler item
+            for idx, item in enumerate(scheduler_list):
+                logger.info('Scheduler job item %d: %s', idx, item)
+                if not item.get('name'):
+                    logger.error('ERROR - Scheduler job item %d has no name', idx)
+            
+            scheduler_created, scheduler_updated = self.scheduler_importer.sync_scheduler_jobs(scheduler_list, session)
+            
+            # Get scheduler definitions from the scheduler importer
+            self.job_defs = self.scheduler_importer.job_defs
+            logger.info('Processed scheduler job definitions: created=%d updated=%d', len(scheduler_created), len(scheduler_updated))
 
         logger.info('YAML synchronization completed')
 
