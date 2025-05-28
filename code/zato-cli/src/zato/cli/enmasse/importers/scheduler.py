@@ -12,9 +12,8 @@ from uuid import uuid4
 
 # Zato
 from zato.common.api import SCHEDULER, ZATO_NONE
-from zato.common.odb.model import Cluster, Job, IntervalBasedJob, Service as ODBService
+from zato.common.odb.model import Cluster, Job, IntervalBasedJob, Service, to_json
 from zato.common.odb.query import job_by_name, job_list
-from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,29 +43,31 @@ class SchedulerImporter:
     def _process_job_defs(self, query_result:'any_', out:'dict') -> 'None':
         logger.info('Processing %d scheduler job definitions', len(query_result))
 
-        for item in query_result:
-            name = item.name
-            logger.info('Processing scheduler job definition: %s (id=%s)', name, item.id)
+        processed_query_result = to_json(query_result)
+
+        for item_dict in processed_query_result:
+
+            name = item_dict['name']
+            item_id = item_dict['id']
+            logger.info('Processing scheduler job definition: %s (id=%s)', name, item_id)
             out[name] = {
-                'id': item.id,
+                'id': item_id,
                 'name': name,
-                'is_active': item.is_active,
-                'job_type': item.job_type,
-                'service_name': item.service.name,
-                'start_date': item.start_date.isoformat() if item.start_date else None,
-                'extra': item.extra
+                'is_active': item_dict['is_active'],
+                'job_type': item_dict['job_type'],
+                'service_name': item_dict.get('service_name') or item_dict.get('service', {}).get('name'),
+                'start_date': item_dict['start_date'],
+                'extra': item_dict['extra']
             }
 
-            # Add interval-based parameters if this is an interval-based job
-            if item.job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED and item.interval_based:
-                ib = item.interval_based
+            if item_dict['job_type'] == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                 out[name].update({
-                    'weeks': ib.weeks,
-                    'days': ib.days,
-                    'hours': ib.hours,
-                    'minutes': ib.minutes,
-                    'seconds': ib.seconds,
-                    'repeats': ib.repeats
+                    'weeks': item_dict.get('weeks'),
+                    'days': item_dict.get('days'),
+                    'hours': item_dict.get('hours'),
+                    'minutes': item_dict.get('minutes'),
+                    'seconds': item_dict.get('seconds'),
+                    'repeats': item_dict.get('repeats')
                 })
 
 # ################################################################################################################################
@@ -88,21 +89,18 @@ class SchedulerImporter:
 # ################################################################################################################################
 
     def compare_job_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'tuple':
-        # Find items to create and update
         to_create = []
         to_update = []
 
         for yaml_def in yaml_defs:
             name = yaml_def['name']
 
-            # Update existing definition
             if name in db_defs:
                 update_def = yaml_def.copy()
                 update_def['id'] = db_defs[name]['id']
                 logger.info('Adding to update: %s', update_def)
                 to_update.append(update_def)
 
-            # Create new definition
             else:
                 logger.info('Adding to create: %s', yaml_def)
                 to_create.append(yaml_def)
@@ -112,57 +110,46 @@ class SchedulerImporter:
 # ################################################################################################################################
 
     def create_job_definition(self, job_def:'anydict', session:'SASession') -> 'any_':
-        # Get the cluster instance from the importer
         cluster = self.importer.get_cluster(session)
 
-        # Check job type
         job_type = job_def.get('job_type')
-        if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
-            msg = f'Unrecognized job type [{job_type}]'
-            logger.error(msg)
-            raise ValueError(msg)
 
-        # Is the service's name correct?
         service_name = job_def.get('service')
-        service = session.query(ODBService)\
-            .filter(Cluster.id==cluster.id)\
-            .filter(ODBService.cluster_id==Cluster.id)\
-            .filter(ODBService.name==service_name)\
-            .first()
+        service = session.query(Service).filter(Cluster.id==cluster.id).filter(Service.cluster_id==Cluster.id).filter(Service.name==service_name).first()
 
         if not service:
-            msg = f'ODBService `{service_name}` does not exist in this cluster'
+            msg = f'Service `{service_name}` does not exist in this cluster'
             logger.info(msg)
             raise ValueError(msg)
 
-        # Parse required parameters
         name = job_def.get('name')
         is_active = job_def.get('is_active', True)
-        
-        # Parse start_date
+
         start_date = None
         if 'start_date' in job_def and job_def['start_date']:
             try:
                 from zato.common.util.api import parse_datetime
             except ImportError:
                 from dateutil.parser import parse as parse_datetime
-            
+
             start_date = parse_datetime(job_def['start_date'])
 
-        # Get extra data
-        extra = job_def.get('extra', '')
+        # Ensure 'extra' is bytes
+        extra_val = job_def.get('extra')
+        if isinstance(extra_val, str):
+            extra_bytes = extra_val.encode('utf-8')
+        elif isinstance(extra_val, bytes):
+            extra_bytes = extra_val
+        else:
+            extra_bytes = b''
 
-        # Create base Job object
-        job = Job(None, name, is_active, job_type, start_date, extra, cluster=cluster, service=service)
+        job = Job(None, name, is_active, job_type, start_date, extra_bytes, cluster=cluster, service=service)
 
-        # Add but don't commit yet
         session.add(job)
 
-        # If job type is interval-based, create an IntervalBasedJob too
         if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
             ib_job = IntervalBasedJob(None, job)
 
-            # Set interval parameters
             for param in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
                 value = job_def.get(param)
                 if value is not None and value != ZATO_NONE:
@@ -170,7 +157,6 @@ class SchedulerImporter:
 
             session.add(ib_job)
 
-        # Flush to get the ID but don't commit yet
         session.flush()
 
         return job
@@ -183,55 +169,56 @@ class SchedulerImporter:
 
         logger.info('Updating scheduler job definition: name=%s id=%s', def_name, job_id)
 
-        # Get the existing job
         job = session.query(Job).filter_by(id=job_id).one()
 
-        # Update basic job properties
         for key in ('name', 'is_active'):
             if key in job_def:
                 setattr(job, key, job_def[key])
 
-        # Update service if provided
         if 'service' in job_def:
             service_name = job_def['service']
-            service = session.query(ODBService)\
+            service = session.query(Service)\
                 .filter(Cluster.id==job.cluster_id)\
-                .filter(ODBService.cluster_id==Cluster.id)\
-                .filter(ODBService.name==service_name)\
+                .filter(Service.cluster_id==Cluster.id)\
+                .filter(Service.name==service_name)\
                 .first()
-            
+
             if not service:
-                msg = f'ODBService `{service_name}` does not exist in this cluster'
+                msg = f'Service `{service_name}` does not exist in this cluster'
                 logger.info(msg)
                 raise ValueError(msg)
-            
+
             job.service = service
 
-        # Update start_date if provided
         if 'start_date' in job_def and job_def['start_date']:
             try:
                 from zato.common.util.api import parse_datetime
             except ImportError:
                 from dateutil.parser import parse as parse_datetime
-            
+
             job.start_date = parse_datetime(job_def['start_date'])
 
-        # Update extra if provided
         if 'extra' in job_def:
-            job.extra = job_def.get('extra', '')
+            extra_val = job_def.get('extra')
+            if isinstance(extra_val, str):
+                job.extra = extra_val.encode('utf-8')
+            elif isinstance(extra_val, bytes):
+                job.extra = extra_val
+            else:
+                job.extra = b''
+        elif 'extra' not in job_def and hasattr(job, 'extra'): # Ensure it's bytes even if not in job_def (e.g. clearing it)
+             pass # If not in job_def, existing job.extra (which should be bytes) is kept or handled by ORM defaults if nullable.
+                  # If we wanted to explicitly clear it to b'' if not provided: job.extra = b''
 
-        # Update interval-based parameters if applicable
         if job.job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED and job.interval_based:
             ib_job = job.interval_based
 
-            # Update interval parameters if provided
             for param in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
                 if param in job_def and job_def[param] is not None and job_def[param] != ZATO_NONE:
                     setattr(ib_job, param, job_def[param])
 
             session.add(ib_job)
 
-        # Add the updated job
         session.add(job)
 
         return job
@@ -251,7 +238,6 @@ class SchedulerImporter:
             logger.info('Creating %d new scheduler job definitions', len(to_create))
             for item in to_create:
 
-                # Check if job already exists by name
                 existing_job = job_by_name(session, self.importer.cluster_id, item.get('name'))
                 if existing_job:
                     logger.info('Scheduler job with name %s already exists, skipping', item.get('name'))
@@ -261,7 +247,6 @@ class SchedulerImporter:
                 logger.info('Created scheduler job definition: name=%s id=%s', instance.name, instance.id)
                 out_created.append(instance)
 
-                # Store the mapping for future reference
                 self.job_defs[instance.name] = {
                     'id': instance.id,
                     'name': instance.name,
