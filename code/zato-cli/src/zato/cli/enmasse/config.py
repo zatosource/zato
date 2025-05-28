@@ -22,10 +22,9 @@ class _object_type:
     Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
-    Scheduler_Job = 'scheduler'                   # 1
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
-    Scheduler = 'scheduler'                       #
+    Scheduler = 'scheduler'                       # 1
     Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
@@ -47,7 +46,6 @@ _object_alias[_object_type.LDAP] = 'outgoing_ldap'
 _object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
-_object_alias[_object_type.Scheduler_Job] = 'scheduler_job'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
