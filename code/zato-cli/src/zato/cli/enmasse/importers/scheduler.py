@@ -97,11 +97,43 @@ class SchedulerImporter:
 # ################################################################################################################################
 
     def create_job_definition(self, job_def:'anydict', session:'SASession') -> 'any_':
-        def_name = job_def.get('name', 'unnamed')
+        """Create a new scheduler job definition in the database.
+        """
+        # Extract basic information
+        def_name = job_def.get('name')
         logger.info('Creating job definition: name=%s', def_name)
 
+        if not def_name:
+            logger.error('Job definition missing required name')
+            return None
+            
         # Get a cluster for this job
         cluster = session.query(Cluster).filter(Cluster.id==self.importer.cluster_id).one()
+            
+        # Check if a job with this name already exists
+        existing_job = session.query(Job).filter(Job.name==def_name).filter(Job.cluster_id==cluster.id).first()
+        if existing_job:
+            # If it exists, log and return it - don't try to create it again
+            logger.info('Job definition %s already exists, will use existing (id=%s)', def_name, existing_job.id)
+            # First, check if there's already an interval-based entry for this job
+            existing_interval = session.query(JobIntervalBased).filter(JobIntervalBased.job_id==existing_job.id).first()
+            if existing_interval:
+                # Update the existing interval-based job if needed
+                if 'seconds' in job_def:
+                    existing_interval.seconds = job_def['seconds']
+                if 'minutes' in job_def:
+                    existing_interval.minutes = job_def['minutes']
+                if 'hours' in job_def:
+                    existing_interval.hours = job_def['hours']
+                if 'days' in job_def:
+                    existing_interval.days = job_def['days']
+                if 'weeks' in job_def:
+                    existing_interval.weeks = job_def['weeks']
+                if 'repeats' in job_def:
+                    existing_interval.repeats = job_def['repeats']
+                
+                logger.info('Updated interval-based job for %s', def_name)
+            return existing_job
 
         # Get the service for this job
         service_name = job_def.get('service')
@@ -130,41 +162,61 @@ class SchedulerImporter:
         extra = (job_def.get('extra') or '').encode('utf-8')
 
         # Create the job object
-        job = Job()
-        job.name = def_name
-        
         # Handle is_active - if it's a string that could be an environment variable reference, treat as True
         is_active = job_def.get('is_active', True)
         if isinstance(is_active, str) and is_active.startswith('Zato_Enmasse_Env.'):
             is_active = True
+
+        # First check if job exists - this approach avoids database locking issues
+        existing_job = session.query(Job).filter(Job.name==def_name).filter(Job.cluster_id==cluster.id).first()
+        if existing_job:
+            logger.info('Job %s already exists, using existing (id=%s)', def_name, existing_job.id)
+            return existing_job
             
-        job.is_active = is_active
-        job.job_type = job_type
-        job.start_date = start_date
-        job.extra = extra
-        job.cluster = cluster
-        job.service = service
+        # Create the job definition
+        job = Job(
+            name=def_name,
+            is_active=is_active,
+            start_date=start_date,
+            cluster=cluster,
+            service=service,
+            extra=extra,
+            job_type=job_type
+        )
+        
+        session.add(job)
+        session.flush()
 
         # Set opaque attributes
         set_instance_opaque_attrs(job, job_def)
 
-        # Add job to session and flush to get ID
-        session.add(job)
-        session.flush()
-
         # If it's an interval-based job, create the interval definition
         if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-            ib_job = IntervalBasedJob()
-            ib_job.job = job
+            # Check if an interval record already exists for this job
+            existing_interval = session.query(IntervalBasedJob).filter(IntervalBasedJob.job_id==job.id).first()
+            
+            if existing_interval:
+                # Update existing interval record
+                for param in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
+                    value = job_def.get(param)
+                    if value is not None:
+                        setattr(existing_interval, param, int(value))
+                logger.info('Updated existing interval record for job %s', def_name)
+            else:
+                # Create a new interval record
+                ib_job = IntervalBasedJob()
+                ib_job.job = job
 
-            # Set interval attributes from job definition
-            for param in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
-                value = job_def.get(param)
-                if value is not None:
-                    setattr(ib_job, param, int(value))
+                # Set interval attributes from job definition
+                for param in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
+                    value = job_def.get(param)
+                    if value is not None:
+                        setattr(ib_job, param, int(value))
 
-            # Add interval job to session
-            session.add(ib_job)
+                # Add interval job to session
+                session.add(ib_job)
+                
+            # Flush to ensure everything is saved
             session.flush()
 
         return job
@@ -229,53 +281,63 @@ class SchedulerImporter:
 
 # ################################################################################################################################
 
-    def sync_job_definitions(self, job_list:'anylist', session:'SASession') -> 'listtuple':
-        logger.info('Processing %d job definitions from YAML', len(job_list))
+    def sync_job_definitions(self, job_defs:'anylist', session:'SASession') -> 'tuple_[anylist, anylist]':
+        """Process scheduler job definitions - create new ones and update existing ones.
+        Returns a tuple of (created_job_defs, updated_job_defs)
+        """
+        logger.info('Processing %s job definitions from YAML', len(job_defs))
 
+        # Get existing job definitions from database for comparison
         db_defs = self.get_job_defs_from_db(session, self.importer.cluster_id)
-        to_create, to_update = self.compare_job_defs(job_list, db_defs)
 
-        out_created = []
-        out_updated = []
+        # Determine which definitions need to be created and which need to be updated
+        to_create, to_update = self.compare_job_defs(job_defs, db_defs)
 
-        try:
-            logger.info('Creating %d new job definitions', len(to_create))
+        # Create new job definitions
+        job_created = []
+        if to_create:
+            logger.info('Creating %s new job definitions', len(to_create))
+            
             for item in to_create:
-                # Check if a job with this name already exists
-                existing_job = session.query(Job).filter(Job.name == item.get('name')).filter(Job.cluster_id == self.importer.cluster_id).first()
-                if existing_job:
-                    logger.info('Job with name %s already exists, skipping', item.get('name'))
-                    continue
+                try:
+                    instance = self.create_job_definition(item, session)
+                    if instance:
+                        job_created.append(instance)
+                        # Add to job_defs dictionary for external access
+                        self.job_defs[instance.name] = instance
+                except Exception as e:
+                    # If an error occurs, roll back and continue
+                    logger.error('Error creating job definition: %s, error: %s', item.get('name'), str(e))
+                    session.rollback()
 
-                instance = self.create_job_definition(item, session)
-                if instance:
-                    logger.info('Created job definition: name=%s id=%s', instance.name, instance.id)
-                    out_created.append(instance)
+        # Update existing job definitions
+        job_updated = []
+        if to_update:
+            logger.info('Updating %s existing job definitions', len(to_update))
 
-                    # Store the mapping for future reference
-                    self.job_defs[instance.name] = {
-                        'id': instance.id,
-                        'name': instance.name,
-                        'job_type': instance.job_type
-                    }
-
-            logger.info('Updating %d existing job definitions', len(to_update))
             for item in to_update:
-                instance = self.update_job_definition(item, session)
-                logger.info('Updated job definition: name=%s id=%s', instance.name, instance.id)
-                out_updated.append(instance)
+                try:
+                    instance = self.update_job_definition(item, session)
+                    if instance:
+                        job_updated.append(instance)
+                        # Update job_defs dictionary for external access
+                        self.job_defs[instance.name] = instance
+                except Exception as e:
+                    # If an error occurs, roll back and continue
+                    logger.error('Error updating job definition: %s, error: %s', item.get('name'), str(e))
+                    session.rollback()
 
-            logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
+        # Commit changes
+        try:
+            logger.info('Committing changes: created=%s updated=%s', len(job_created), len(job_updated))
             session.commit()
             logger.info('Successfully committed all changes')
-
         except Exception as e:
-            logger.error('Error syncing job definitions: %s', e)
-            logger.exception('Full exception details:')
+            logger.error('Error committing changes: %s', str(e))
             session.rollback()
             raise
 
-        return out_created, out_updated
+        return job_created, job_updated
 
 # ################################################################################################################################
 # ################################################################################################################################
