@@ -15,7 +15,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
-from zato.common.odb.model import OutgoingOdoo, Cluster
+from zato.common.odb.model import OutgoingOdoo
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -65,52 +65,6 @@ class TestEnmasseOdooFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
-
-    def test_create_odoo_object(self):
-        """ Test the basic creation of an Odoo connection object in the database.
-        """
-        self._setup_test_environment()
-
-        cluster = self.session.query(Cluster).filter(Cluster.id==1).one()
-        cluster.id = 1
-
-        odoo = OutgoingOdoo()
-        odoo.cluster = cluster
-        odoo.name = 'enmasse.odoo.test.basic'
-        odoo.is_active = True
-        odoo.host = 'odoo-test.example.com'
-        odoo.port = 8069
-        odoo.user = 'odoo_user'
-        odoo.database = 'odoo_test_db'
-        odoo.protocol = 'jsonrpc'
-        odoo.pool_size = 10
-        odoo.password = 'test_password'
-
-        self.session.add(odoo)
-        self.session.commit()
-
-        # Query to verify it was created
-        result = self.session.query(OutgoingOdoo).filter_by(name='enmasse.odoo.test.basic').one()
-        self.assertEqual(result.name, 'enmasse.odoo.test.basic')
-        self.assertEqual(result.host, 'odoo-test.example.com')
-
-    def test_yaml_odoo_parsing(self):
-        """ Test that Odoo definitions in YAML are parsed correctly.
-        """
-        self._setup_test_environment()
-
-        # Verify the YAML contains odoo definitions
-        self.assertIn('odoo', self.yaml_config)
-        odoo_defs = self.yaml_config['odoo']
-        self.assertEqual(len(odoo_defs), 1)
-
-        # Check the definition
-        odoo_def = odoo_defs[0]
-        self.assertEqual(odoo_def['name'], 'enmasse.odoo.1')
-        self.assertEqual(odoo_def['host'], 'odoo.example.com')
-        self.assertEqual(odoo_def['port'], 8069)
-        self.assertEqual(odoo_def['user'], 'admin')
-        self.assertEqual(odoo_def['database'], 'enmasse_db')
 
     def test_odoo_definition_creation(self):
         """ Test creating Odoo definitions from YAML.

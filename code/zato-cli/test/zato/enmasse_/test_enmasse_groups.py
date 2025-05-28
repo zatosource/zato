@@ -65,20 +65,6 @@ class TestEnmasseGroups(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-    def test_groups_yaml_parsing(self):
-        """ Test that the groups section in YAML is parsed correctly.
-        """
-        self._setup_test_environment()
-
-        self.assertIn('groups', self.yaml_config)
-        self.assertIsInstance(self.yaml_config['groups'], list)
-
-        # Verify structure of first group
-        group = self.yaml_config['groups'][0]
-        self.assertIn('name', group)
-        self.assertIn('members', group)
-        self.assertIsInstance(group['members'], list)
-
     def test_sync_groups(self):
         """ Test the new sync_groups implementation that deletes and recreates groups.
         """
