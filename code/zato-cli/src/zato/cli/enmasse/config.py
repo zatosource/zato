@@ -22,6 +22,7 @@ class _object_type:
     Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
+    Scheduler_Job = 'scheduler_job'               # 1
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
     Scheduler = 'scheduler'                       #
@@ -46,6 +47,7 @@ _object_alias[_object_type.LDAP] = 'outgoing_ldap'
 _object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
+_object_alias[_object_type.Scheduler_Job] = 'scheduler_job'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
@@ -116,6 +118,17 @@ _attr_default[_object_type.Cache] = {
     'extend_expiry_on_set': False,
     'sync_method': 'in-background',
     'persistent_storage': 'sqlite'
+}
+
+_attr_default[_object_type.Scheduler_Job] = {
+    'is_active': True,
+    'job_type': 'interval_based',
+    'weeks': 0,
+    'days': 0,
+    'hours': 0,
+    'minutes': 1,
+    'seconds': 0,
+    'repeats': 0
 }
 
 # ################################################################################################################################

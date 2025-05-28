@@ -64,5 +64,6 @@ source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
 PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
+PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/pip uninstall -y urllib3-secure-extra || true
 
 echo ⭐ Successfully installed `zato --version`
