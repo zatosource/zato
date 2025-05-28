@@ -118,7 +118,7 @@ _attr_default[_object_type.Cache] = {
     'persistent_storage': 'sqlite'
 }
 
-_attr_default[_object_type.Scheduler_Job] = {
+_attr_default[_object_type.Scheduler] = {
     'is_active': True,
     'job_type': 'interval_based',
     'weeks': 0,
