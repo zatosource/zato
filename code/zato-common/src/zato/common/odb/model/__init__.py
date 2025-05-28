@@ -599,7 +599,7 @@ class Job(Base):
     is_active = Column(Boolean(), nullable=False)
     job_type = Column(Enum(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
-    extra = Column(LargeBinary(500000), nullable=True)
+    extra = Column(String(500), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)

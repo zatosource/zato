@@ -219,7 +219,7 @@ def job_by_name(session, cluster_id, name):
     """
     return _job(session, cluster_id).\
         filter(Job.name==name).\
-        one()
+        first()
 
 # ################################################################################################################################
 
