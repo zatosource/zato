@@ -150,7 +150,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         self._setup_test_environment()
 
         # Process all job definitions from the YAML
-        job_list = self.yaml_config.get('scheduler', [])
+        job_list = self.yaml_config['scheduler']
         job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, self.session)
 
         # Update importer's job definitions
