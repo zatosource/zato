@@ -20,6 +20,7 @@ from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
+from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -51,6 +52,7 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.cache_defs = {}
         self.odoo_defs = {}
+        self.job_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -60,6 +62,7 @@ class EnmasseYAMLImporter:
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
+        self.scheduler_importer = SchedulerImporter(self)
 
 # ################################################################################################################################
 
@@ -177,6 +180,25 @@ class EnmasseYAMLImporter:
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
+
+        # Process Scheduler job definitions
+        job_list = yaml_config.get('scheduler_job', [])
+        if job_list:
+            logger.info('Processing %d scheduler job definitions', len(job_list))
+            
+            # Examine each scheduler job item
+            for idx, item in enumerate(job_list):
+                logger.info('Scheduler job item %d: %s', idx, item)
+                if not item.get('name'):
+                    logger.error('ERROR - Scheduler job item %d has no name', idx)
+                if not item.get('service'):
+                    logger.error('ERROR - Scheduler job item %d has no service', idx)
+            
+            job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, session)
+            
+            # Get job definitions from the scheduler importer
+            self.job_defs = self.scheduler_importer.job_defs
+            logger.info('Processed scheduler job definitions: created=%d updated=%d', len(job_created), len(job_updated))
 
         logger.info('YAML synchronization completed')
 
