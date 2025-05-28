@@ -22,7 +22,7 @@ class _object_type:
     Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
-    Scheduler_Job = 'scheduler_job'               # 1
+    Scheduler_Job = 'scheduler'                   # 1
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
     Scheduler = 'scheduler'                       #
