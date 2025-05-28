@@ -11,7 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
-from zato.common.odb.model import SMTP, Cluster, to_json
+from zato.common.odb.model import SMTP, to_json
 from zato.common.odb.query import email_smtp_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -98,7 +98,8 @@ class SMTPImporter:
         cluster = self.importer.get_cluster(session)
 
         # Create a new SMTP connection instance
-        smtp_conn = SMTP(cluster)
+        smtp_conn = SMTP()
+        smtp_conn.cluster = cluster
 
         # Define attribute values
         name = smtp_def['name']
@@ -109,7 +110,7 @@ class SMTPImporter:
         is_debug = smtp_def.get('is_debug', False)
         mode = smtp_def.get('mode', 'plain')
         ping_address = smtp_def.get('ping_address', '')
-        
+
         # Set attributes
         smtp_conn.name = name
         smtp_conn.is_active = is_active
@@ -188,7 +189,7 @@ class SMTPImporter:
             for item in to_create:
 
                 # Keep track of things that already exist
-                existing_smtp = session.query(SMTP).filter(SMTP.name == item.get('name')).first()
+                existing_smtp = session.query(SMTP).filter(SMTP.name == item.get('name')).first() # type: ignore
                 if existing_smtp:
                     logger.info('SMTP connection with name %s already exists, skipping', item.get('name'))
                     continue
