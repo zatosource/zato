@@ -11,7 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
-from zato.common.odb.model import SQLConnectionPool, Cluster, to_json
+from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -98,12 +98,15 @@ class SQLImporter:
         cluster = self.importer.get_cluster(session)
 
         # Create a new SQL connection pool instance
-        sql_conn = SQLConnectionPool(cluster)
+        sql_conn = SQLConnectionPool()
+
+        # Set cluster_id explicitly
+        sql_conn.cluster = cluster
 
         # Set the basic attributes
         name = sql_def['name']
         is_active = sql_def.get('is_active', True)
-        
+
         # Accept either 'type' or 'engine' field
         engine = sql_def['type'] if 'type' in sql_def else sql_def['engine']
         host = sql_def['host']
@@ -111,7 +114,7 @@ class SQLImporter:
         db_name = sql_def['db_name']
         username = sql_def['username']
         pool_size = sql_def.get('pool_size', 5)
-        
+
         sql_conn.name = name
         sql_conn.is_active = is_active
         sql_conn.engine = engine
@@ -192,7 +195,7 @@ class SQLImporter:
             for item in to_create:
 
                 # Keep track of things that already exist
-                existing_sql = session.query(SQLConnectionPool).filter(SQLConnectionPool.name == item.get('name')).first()
+                existing_sql = session.query(SQLConnectionPool).filter(SQLConnectionPool.name == item.get('name')).first() # type: ignore
                 if existing_sql:
                     logger.info('SQL connection pool with name %s already exists, skipping', item.get('name'))
                     continue
