@@ -174,6 +174,21 @@ class EnmasseYAMLImporter:
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
+            
+        # Process scheduler job definitions
+        job_list = yaml_config.get('scheduler', [])
+        if job_list:
+            logger.info('Processing %d scheduler job definitions', len(job_list))
+            
+            # Examine each scheduler job item
+            for idx, item in enumerate(job_list):
+                logger.info('Scheduler job item %d: %s', idx, item)
+                
+            job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, session)
+            
+            # Get scheduler job definitions from the scheduler importer
+            self.job_defs = self.scheduler_importer.job_defs
+            logger.info('Processed scheduler job definitions: created=%d updated=%d', len(job_created), len(job_updated))
 
         logger.info('YAML synchronization completed')
 
