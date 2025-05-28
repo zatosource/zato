@@ -23,7 +23,7 @@ class _object_type:
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
     Search_ElasticSearch = 'elastic_search'       #
-    SQL  = 'sql'                                  #
+    SQL  = 'sql'                                  # 1
     Scheduler = 'scheduler'                       # 1
     Security = 'security'                         # 1
 
@@ -139,6 +139,7 @@ class ModuleCtx:
 
     ObjectType  = _object_type
     ObjectAlias = _object_alias
+    AttrDefault = _attr_default
 
 # ################################################################################################################################
 # ################################################################################################################################

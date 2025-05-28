@@ -130,7 +130,7 @@ class TestEnmasseOdooFromYAML(TestCase):
         self._setup_test_environment()
 
         # Process all Odoo definitions from the YAML
-        odoo_list = self.yaml_config.get('odoo', [])
+        odoo_list = self.yaml_config['odoo']
         odoo_created, odoo_updated = self.odoo_importer.sync_odoo_definitions(odoo_list, self.session)
 
         # Update importer's Odoo definitions
