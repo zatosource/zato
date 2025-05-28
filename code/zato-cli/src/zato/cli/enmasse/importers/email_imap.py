@@ -98,7 +98,8 @@ class IMAPImporter:
         cluster = self.importer.get_cluster(session)
 
         # Create a new IMAP connection instance
-        imap_conn = IMAP(cluster)
+        imap_conn = IMAP()
+        imap_conn.cluster_id = cluster.id
 
         name = imap_def.get('name', '')
         is_active = imap_def.get('is_active', True)
