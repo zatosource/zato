@@ -206,20 +206,19 @@ class TestEnmasseCacheFromYAML(TestCase):
         """
         self._setup_test_environment()
 
-        # Create a cache definition
-        cache_def = {
-            'name': 'enmasse.cache.update.test',
-            'max_size': 5000
-        }
-
+        # Get cache definition from YAML
+        cache_defs = self.yaml_config['cache']
+        cache_def = cache_defs[0]
+        
         # Create the cache definition
         instance = self.cache_importer.create_cache_definition(cache_def, self.session)
         self.session.commit()
-        self.assertEqual(instance.max_size, 5000)
+        original_name = cache_def['name']
+        self.assertEqual(instance.name, original_name)
 
         # Update the cache definition
         update_def = {
-            'name': 'enmasse.cache.update.test',
+            'name': original_name,
             'id': instance.id,
             'max_size': 8000,
             'extend_expiry_on_get': False

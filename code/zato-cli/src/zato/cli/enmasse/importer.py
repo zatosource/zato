@@ -19,6 +19,7 @@ from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
+from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -49,6 +50,7 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.cache_defs = {}
+        self.odoo_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -57,6 +59,7 @@ class EnmasseYAMLImporter:
         self.channel_importer = ChannelImporter(self)
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
+        self.odoo_importer = OdooImporter(self)
 
 # ################################################################################################################################
 
@@ -157,6 +160,23 @@ class EnmasseYAMLImporter:
             self.cache_defs = self.cache_importer.cache_defs
             logger.info('DEBUG: Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
             logger.info('DEBUG: Final cache_defs: %s', self.cache_defs)
+
+        # Process Odoo connection definitions
+        odoo_list = yaml_config.get('odoo', [])
+        if odoo_list:
+            logger.info('Processing %d Odoo connection definitions', len(odoo_list))
+            
+            # Examine each Odoo item
+            for idx, item in enumerate(odoo_list):
+                logger.info('Odoo connection item %d: %s', idx, item)
+                if not item.get('name'):
+                    logger.error('ERROR - Odoo connection item %d has no name', idx)
+            
+            odoo_created, odoo_updated = self.odoo_importer.sync_odoo_definitions(odoo_list, session)
+            
+            # Get Odoo definitions from the Odoo importer
+            self.odoo_defs = self.odoo_importer.odoo_defs
+            logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
 
         logger.info('YAML synchronization completed')
 
