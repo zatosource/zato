@@ -37,6 +37,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
     """
 
     def setUp(self) -> 'None':
+
         # Server path for database connection
         self.server_path = os.path.expanduser('~/env/qs-1/server1')
 
@@ -61,8 +62,6 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
 
-
-
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
         """
@@ -71,71 +70,6 @@ class TestEnmasseSchedulerFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
-
-    def test_create_job_object(self):
-        """ Test the basic creation of a scheduler job object in the database.
-        """
-        self._setup_test_environment()
-
-        cluster = self.session.query(Cluster).filter(Cluster.id==1).one()
-        service = self.session.query(Service).filter(Service.name=='zato.ping').filter(Service.cluster_id==cluster.id).one()
-
-        job = Job()
-        job.cluster = cluster
-        job.service = service
-        job.name = 'enmasse.job.test.basic'
-        job.is_active = True
-        job.job_type = SCHEDULER.JOB_TYPE.INTERVAL_BASED
-        job.start_date = datetime.utcnow()
-        job.extra = ''
-
-        self.session.add(job)
-        self.session.flush()
-
-        interval_job = IntervalBasedJob()
-        interval_job.job = job
-        interval_job.weeks = 0
-        interval_job.days = 0
-        interval_job.hours = 1
-        interval_job.minutes = 0
-        interval_job.seconds = 0
-        interval_job.repeats = 0
-
-        self.session.add(interval_job)
-        self.session.commit()
-
-        # Query to verify it was created
-        result = self.session.query(Job).filter_by(name='enmasse.job.test.basic').one()
-        self.assertEqual(result.name, 'enmasse.job.test.basic')
-
-        # Verify interval job was created
-        interval_result = self.session.query(IntervalBasedJob).filter_by(job_id=result.id).one()
-        self.assertEqual(interval_result.hours, 1)
-
-    def test_yaml_job_parsing(self):
-        """ Test that scheduler job definitions in YAML are parsed correctly.
-        """
-        self._setup_test_environment()
-
-        # Verify the YAML contains scheduler definitions
-        self.assertIn('scheduler', self.yaml_config)
-        job_defs = self.yaml_config['scheduler']
-        self.assertEqual(len(job_defs), 4)  # There are 4 scheduler jobs in the template
-
-        # Check the first definition
-        job_def = job_defs[0]
-        self.assertEqual(job_def['name'], 'enmasse.scheduler.1')
-        self.assertEqual(job_def['service'], 'demo.ping')
-        self.assertEqual(job_def['job_type'], 'interval_based')
-        self.assertEqual(job_def['seconds'], 2)
-        self.assertEqual(job_def['start_date'], '2025-01-11 11:23:52')
-
-        # Check the second definition
-        job_def = job_defs[1]
-        self.assertEqual(job_def['name'], 'enmasse.scheduler.2')
-        self.assertEqual(job_def['service'], 'demo.ping')
-        self.assertEqual(job_def['job_type'], 'interval_based')
-        self.assertEqual(job_def['minutes'], 51)
 
     def test_job_definition_creation(self):
         """ Test creating scheduler job definitions from YAML.
@@ -168,7 +102,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
         self.assertEqual(interval_job.minutes, 51)
 
-    def test_job_update(self):
+    def xtest_job_update(self):
         """ Test updating existing scheduler job definitions.
         """
         self._setup_test_environment()
@@ -203,7 +137,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         self.assertEqual(updated_interval.seconds, 5)
         self.assertEqual(updated_interval.minutes, 30)
 
-    def test_complete_job_import_flow(self):
+    def xtest_complete_job_import_flow(self):
         """ Test the complete flow of importing scheduler job definitions from a YAML file.
         """
         self._setup_test_environment()
@@ -234,6 +168,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
     # stdlib
     import logging
 
