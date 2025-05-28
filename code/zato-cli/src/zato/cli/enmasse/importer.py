@@ -24,6 +24,7 @@ from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
+from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -59,6 +60,7 @@ class EnmasseYAMLImporter:
         self.imap_defs = {}
         self.sql_defs = {}
         self.job_defs = {}
+        self.confluence_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -72,6 +74,7 @@ class EnmasseYAMLImporter:
         self.imap_importer = IMAPImporter(self)
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
+        self.confluence_importer = ConfluenceImporter(self)
 
 # ################################################################################################################################
 
@@ -303,6 +306,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_confluence(self, confluence_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Confluence connection definitions from a YAML configuration with the database.
+        """
+        if not confluence_list:
+            return [], []
+            
+        logger.info('Processing %d Confluence connection definitions', len(confluence_list))
+
+        # Examine each Confluence connection item
+        for idx, item in enumerate(confluence_list):
+            logger.info('Confluence connection item %d: %s', idx, item)
+
+        confluence_created, confluence_updated = self.confluence_importer.sync_confluence_definitions(confluence_list, session)
+
+        # Get Confluence definitions from the Confluence importer
+        self.confluence_defs = self.confluence_importer.confluence_defs
+        logger.info('Processed Confluence connection definitions: created=%d updated=%d', len(confluence_created), len(confluence_updated))
+        
+        return confluence_created, confluence_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
@@ -335,6 +360,9 @@ class EnmasseYAMLImporter:
         
         # Process scheduler job definitions
         self.sync_scheduler(yaml_config.get('scheduler', []), session)
+        
+        # Process Confluence connection definitions
+        self.sync_confluence(yaml_config.get('confluence', []), session)
 
         logger.info('YAML synchronization completed')
 
