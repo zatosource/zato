@@ -98,7 +98,7 @@ class ConfluenceImporter:
         cluster = self.importer.get_cluster(session)
 
         # Create a new confluence connection instance (using GenericConn)
-        confluence_conn = GenericConn(cluster=cluster)
+        connection = GenericConn(cluster=cluster)
 
         # Set default values for Confluence connections
         defaults = {
@@ -115,35 +115,47 @@ class ConfluenceImporter:
         # Apply defaults unless overridden in YAML
         for key, default_value in defaults.items():
             value = confluence_def.get(key, default_value)
-            setattr(confluence_conn, key, value)
+            setattr(connection, key, value)
 
         # Set required fields - they will always exist
-        confluence_conn.name = confluence_def['name']
-        confluence_conn.address = confluence_def['address']
-        confluence_conn.username = confluence_def['username']
+        required_attrs = ['name', 'address', 'username']
+        for attr in required_attrs:
+            setattr(connection, attr, confluence_def[attr])
 
-        # Set secret - will always exist
-        confluence_conn.secret = confluence_def.get('password') or confluence_def.get('secret')
+        # Set secret - using a list of possible keys with priority order
+        secret_keys = ['password', 'secret', 'api_token']
+        for key in secret_keys:
+            if key in confluence_def and confluence_def[key]:
+                connection.secret = confluence_def[key]
+                break
 
         # Additional Confluence-specific fields for opaque attributes
-        extra_fields = {
-            'site_url': confluence_def.get('site_url'),
-            'auth_token': confluence_def.get('auth_token'),
-            'is_cloud': confluence_def.get('is_cloud', True),
-            'api_version': confluence_def.get('api_version', 'v1'),
+        # Define fields with their default values
+        extra_field_defaults = {
+            'site_url': None,
+            'auth_token': None,
+            'is_cloud': True,
+            'api_version': 'v1',
         }
+
+        # Build extra_fields using the defaults
+        extra_fields = {}
+        for field, default in extra_field_defaults.items():
+            value = confluence_def.get(field, default)
+            if value is not None:
+                extra_fields[field] = value
 
         # Filter out None values
         extra_fields = {key: value for key, value in extra_fields.items() if value is not None}
 
         # Set any opaque attributes from the configuration
-        set_instance_opaque_attrs(confluence_conn, confluence_def, extra_fields)
+        set_instance_opaque_attrs(connection, confluence_def, extra_fields)
 
         # Add to session and flush to get ID
-        session.add(confluence_conn)
+        session.add(connection)
         session.flush()
 
-        return confluence_conn
+        return connection
 
 # ################################################################################################################################
 
@@ -156,20 +168,33 @@ class ConfluenceImporter:
 
         confluence_conn = session.query(GenericConn).filter_by(id=confluence_id).one()
 
-        confluence_conn.name = confluence_def['name']
-        confluence_conn.address = confluence_def['address']
-        confluence_conn.username = confluence_def['username']
+        # Set required fields using the same approach as create
+        required_attrs = ['name', 'address', 'username']
+        for attr in required_attrs:
+            setattr(confluence_conn, attr, confluence_def[attr])
 
-        # Set secret - will always exist
-        confluence_conn.secret = confluence_def.get('password') or confluence_def.get('secret')
+        # Set secret - using a list of possible keys with priority order
+        secret_keys = ['password', 'secret', 'api_token']
+        for key in secret_keys:
+            if key in confluence_def and confluence_def[key]:
+                confluence_conn.secret = confluence_def[key]
+                break
 
-        # Set opaque attributes
-        extra_fields = {
-            'site_url': confluence_def.get('site_url'),
-            'auth_token': confluence_def.get('auth_token'),
-            'is_cloud': confluence_def.get('is_cloud', True),
-            'api_version': confluence_def.get('api_version', 'v1'),
+        # Additional Confluence-specific fields for opaque attributes
+        # Define fields with their default values
+        extra_field_defaults = {
+            'site_url': None,
+            'auth_token': None,
+            'is_cloud': True,
+            'api_version': 'v1',
         }
+
+        # Build extra_fields using the defaults
+        extra_fields = {}
+        for field, default in extra_field_defaults.items():
+            value = confluence_def.get(field, default)
+            if value is not None:
+                extra_fields[field] = value
 
         # Filter out None values
         extra_fields = {k: v for k, v in extra_fields.items() if v is not None}
