@@ -76,7 +76,7 @@ class TestEnmasseSMTPFromYAML(TestCase):
         smtp_def = smtp_defs[0]
 
         # Process the SMTP definition
-        instance = self.smtp_importer.create_smtp_definition(smtp_def, self.session)
+        _ = self.smtp_importer.create_smtp_definition(smtp_def, self.session)
         self.session.commit()
 
         # Verify SMTP connection was created correctly
@@ -84,7 +84,6 @@ class TestEnmasseSMTPFromYAML(TestCase):
         self.assertEqual(smtp.host, 'smtp.example.com')
         self.assertEqual(smtp.port, 587)
         self.assertEqual(smtp.username, 'enmasse@example.com')
-        # We don't check the password value since it can be environment-dependent
         self.assertTrue(smtp.password)
 
     def test_smtp_update(self):
@@ -122,7 +121,6 @@ class TestEnmasseSMTPFromYAML(TestCase):
 
         # Make sure other fields were preserved from the original definition
         self.assertEqual(updated_instance.username, smtp_def['username'])
-        # We don't test password directly since it can contain environment variables
 
     def test_complete_smtp_import_flow(self):
         """ Test the complete flow of importing SMTP definitions using sync_smtp_definitions.
