@@ -14,7 +14,7 @@ class _object_type:
     Confluence = 'confluence'                     #
     Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     #
-    Email_SMTP = 'email_smtp'                     #
+    Email_SMTP = 'email_smtp'                     # 1
     Groups = 'groups'                             # 1
     Jira = 'jira'                                 #
     LDAP = 'ldap'                                 #
