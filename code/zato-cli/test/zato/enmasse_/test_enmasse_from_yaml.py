@@ -29,7 +29,7 @@ if 0:
 # ################################################################################################################################
 
 class TestEnmasseFromYAML(TestCase):
-    """ Tests importing configurations from YAML files using enmasse.
+    """ Tests importing configuration from YAML files using enmasse.
     """
 
     def setUp(self) -> 'None':

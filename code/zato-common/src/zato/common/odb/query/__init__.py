@@ -21,7 +21,7 @@ from sqlalchemy.sql.expression import case
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
-from zato.common.odb.model import APIKeySecurity, Cache, CacheBuiltin, ChannelAMQP, Cluster, \
+from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
     OutgoingSAP
@@ -420,7 +420,7 @@ def _http_soap(session, cluster_id):
         SecurityBase.password.label('password'),
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
-        outerjoin(Cache, Cache.id==HTTPSOAP.cache_id).\
+        outerjoin(CacheBuiltin, CacheBuiltin.id==HTTPSOAP.cache_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Cluster.id==cluster_id).\
