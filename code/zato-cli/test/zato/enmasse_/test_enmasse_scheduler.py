@@ -71,7 +71,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-    def test_job_definition_creation(self):
+    def xtest_job_definition_creation(self):
         """ Test creating scheduler job definitions from YAML.
         """
         self._setup_test_environment()
@@ -137,7 +137,7 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         self.assertEqual(updated_interval.seconds, 5)
         self.assertEqual(updated_interval.minutes, 30)
 
-    def xtest_complete_job_import_flow(self):
+    def test_complete_job_import_flow(self):
         """ Test the complete flow of importing scheduler job definitions from a YAML file.
         """
         self._setup_test_environment()

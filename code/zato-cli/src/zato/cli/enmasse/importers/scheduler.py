@@ -163,14 +163,9 @@ class SchedulerImporter:
         # Set any opaque attributes
         set_instance_opaque_attrs(job, job_def)
 
-        # Update the associated IntervalBasedJob
-        # Check if the interval job already exists
-        try:
-            interval_job = session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
-        except:
-            # Create a new one if it doesn't exist
-            interval_job = IntervalBasedJob(None, job)
-
+        # Get the associated IntervalBasedJob
+        interval_job = session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
+        
         # Update interval attributes
         for attr in ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'):
             if attr in job_def:
