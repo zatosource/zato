@@ -21,6 +21,7 @@ from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
+from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -52,6 +53,7 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.cache_defs = {}
         self.odoo_defs = {}
+        self.sql_defs = {}
         self.job_defs = {}
         self.objects = {}
         self.cluster = None
@@ -62,6 +64,7 @@ class EnmasseYAMLImporter:
         self.group_importer = GroupImporter(self)
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
+        self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
 
 # ################################################################################################################################
@@ -177,6 +180,21 @@ class EnmasseYAMLImporter:
             # Get Odoo definitions from the Odoo importer
             self.odoo_defs = self.odoo_importer.odoo_defs
             logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
+            
+        # Process SQL connection pool definitions
+        sql_list = yaml_config.get('sql', [])
+        if sql_list:
+            logger.info('Processing %d SQL connection pool definitions', len(sql_list))
+
+            # Examine each SQL connection pool item
+            for idx, item in enumerate(sql_list):
+                logger.info('SQL connection pool item %d: %s', idx, item)
+
+            sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, session)
+
+            # Get SQL definitions from the SQL importer
+            self.sql_defs = self.sql_importer.sql_defs
+            logger.info('Processed SQL connection pool definitions: created=%d updated=%d', len(sql_created), len(sql_updated))
             
         # Process scheduler job definitions
         job_list = yaml_config.get('scheduler', [])
