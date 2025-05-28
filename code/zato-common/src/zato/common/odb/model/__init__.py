@@ -65,13 +65,6 @@ def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
         data = data['result']
 
         for item in data:
-
-            print()
-            print(111, item)
-            print(222, type(item))
-            print(333, dir(item))
-            print()
-
             as_dict_func = getattr(item, '_asdict', None) or getattr(item, 'asdict', None)
             _item = as_dict_func()
 
