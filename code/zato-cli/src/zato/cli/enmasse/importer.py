@@ -20,6 +20,7 @@ from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
+from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
@@ -55,6 +56,7 @@ class EnmasseYAMLImporter:
         self.cache_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
+        self.imap_defs = {}
         self.sql_defs = {}
         self.job_defs = {}
         self.objects = {}
@@ -67,6 +69,7 @@ class EnmasseYAMLImporter:
         self.cache_importer = CacheImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
+        self.imap_importer = IMAPImporter(self)
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
 
@@ -198,6 +201,21 @@ class EnmasseYAMLImporter:
             # Get SMTP definitions from the SMTP importer
             self.smtp_defs = self.smtp_importer.smtp_defs
             logger.info('Processed SMTP connection definitions: created=%d updated=%d', len(smtp_created), len(smtp_updated))
+            
+        # Process IMAP connection definitions
+        imap_list = yaml_config.get('email_imap', [])
+        if imap_list:
+            logger.info('Processing %d IMAP connection definitions', len(imap_list))
+
+            # Examine each IMAP item
+            for idx, item in enumerate(imap_list):
+                logger.info('IMAP connection item %d: %s', idx, item)
+
+            imap_created, imap_updated = self.imap_importer.sync_imap_definitions(imap_list, session)
+
+            # Get IMAP definitions from the IMAP importer
+            self.imap_defs = self.imap_importer.imap_defs
+            logger.info('Processed IMAP connection definitions: created=%d updated=%d', len(imap_created), len(imap_updated))
             
         # Process SQL connection pool definitions
         sql_list = yaml_config.get('sql', [])
