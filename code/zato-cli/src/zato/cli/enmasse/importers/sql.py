@@ -103,7 +103,9 @@ class SQLImporter:
         # Set the basic attributes
         name = sql_def['name']
         is_active = sql_def.get('is_active', True)
-        engine = sql_def['engine']
+        
+        # Accept either 'type' or 'engine' field
+        engine = sql_def['type'] if 'type' in sql_def else sql_def['engine']
         host = sql_def['host']
         port = sql_def['port']
         db_name = sql_def['db_name']
