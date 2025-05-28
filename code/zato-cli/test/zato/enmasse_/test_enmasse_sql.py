@@ -77,8 +77,8 @@ class TestEnmasseSQLFromYAML(TestCase):
         # Process all SQL definitions
         created, updated = self.sql_importer.sync_sql_definitions(sql_defs, self.session)
 
-        # Should have created 1 definition
-        self.assertEqual(len(created), 1)
+        # Should have created 2 definitions (based on the number in the template)
+        self.assertEqual(len(created), 2)
         self.assertEqual(len(updated), 0)
 
         # Verify SQL connection was created correctly
@@ -90,7 +90,7 @@ class TestEnmasseSQLFromYAML(TestCase):
         self.assertEqual(sql.engine, 'mysql')
         self.assertTrue(hasattr(sql, 'password'))
 
-    def xtest_sql_update(self):
+    def test_sql_update(self):
         """ Test updating existing SQL connection pool definitions.
         """
         self._setup_test_environment()
@@ -126,7 +126,7 @@ class TestEnmasseSQLFromYAML(TestCase):
         self.assertEqual(updated_instance.db_name, sql_def['db_name'])
         self.assertEqual(updated_instance.engine, sql_def['type'])
 
-    def xtest_complete_sql_import_flow(self):
+    def test_complete_sql_import_flow(self):
         """ Test the complete flow of importing SQL connection pool definitions from a YAML file.
         """
         self._setup_test_environment()
