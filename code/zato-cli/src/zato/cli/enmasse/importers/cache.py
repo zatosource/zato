@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.odb.model import CacheBuiltin, to_json
+from zato.common.odb.model import CacheBuiltin, Cluster, to_json
 from zato.common.odb.query import cache_builtin_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -68,26 +68,20 @@ class CacheImporter:
 
 # ################################################################################################################################
 
-    def compare_cache_defs(self, yaml_defs:'anylist', db_defs:'anylist') -> 'tuple':
-
-        # Build dictionaries for easier lookup
-        yaml_dict = {}
-        for d in yaml_defs:
-            yaml_dict[d['name']] = d
-
-        db_dict = {}
-        for d in db_defs:
-            db_dict[d['name']] = d
+    def compare_cache_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'tuple':
 
         # Find items to create and update
         to_create = []
         to_update = []
 
-        for name, yaml_def in yaml_dict.items():
-            if name in db_dict:
+        for yaml_def in yaml_defs:
+            name = yaml_def['name']
+            
+            # Check if definition exists in database
+            if name in db_defs:
                 # Update existing definition
                 update_def = yaml_def.copy()
-                update_def['id'] = db_dict[name]['id']
+                update_def['id'] = db_defs[name]['id']
                 logger.info('Adding to update: %s', update_def)
                 to_update.append(update_def)
             else:
@@ -132,14 +126,18 @@ class CacheImporter:
 # ################################################################################################################################
 
     def create_cache_definition(self, cache_def:'anydict', session:'SASession') -> 'any_':
+
         def_name = cache_def.get('name', 'unnamed')
         logger.info('Creating cache definition: name=%s', def_name)
 
-        # Create builtin cache directly
+        # Get a cluster for this cache
+        cluster = session.query(Cluster).filter(Cluster.id==1).one()
+
+        # Create a new instance
         cache = CacheBuiltin()
 
         # Set required attributes
-        cache.cluster_id = int(self.importer.cluster_id)
+        cache.cluster = cluster
         cache.name = def_name
         cache.cache_type = 'builtin'
         cache.is_active = cache_def.get('is_active', True)

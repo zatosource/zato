@@ -409,8 +409,8 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.cache_expiry,
         HTTPSOAP.content_encoding,
         HTTPSOAP.opaque1,
-        Cache.name.label('cache_name'),
-        Cache.cache_type,
+        CacheBuiltin.name.label('cache_name'),
+        CacheBuiltin.cache_type,
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),
@@ -720,10 +720,10 @@ def email_imap_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def cache_by_id(session, cluster_id, cache_id):
-    return session.query(Cache).\
-        filter(Cache.id==cluster_id).\
-        filter(Cluster.id==Cache.cluster_id).\
-        filter(Cache.id==cache_id).\
+    return session.query(CacheBuiltin).\
+        filter(CacheBuiltin.id==cluster_id).\
+        filter(Cluster.id==CacheBuiltin.cluster_id).\
+        filter(CacheBuiltin.id==cache_id).\
         one()
 
 # ################################################################################################################################
@@ -732,8 +732,7 @@ def _cache_builtin(session, cluster_id):
     return session.query(CacheBuiltin).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheBuiltin.cluster_id).\
-        filter(Cache.id==CacheBuiltin.cache_id).\
-        filter(Cache.cache_type==CACHE.TYPE.BUILTIN).\
+        filter(CacheBuiltin.cache_type==CACHE.TYPE.BUILTIN).\
         order_by(CacheBuiltin.name)
 
 def cache_builtin(session, cluster_id, id):
