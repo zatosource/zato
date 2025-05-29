@@ -27,6 +27,7 @@ from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
+from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -65,6 +66,7 @@ class EnmasseYAMLImporter:
         self.confluence_defs = {}
         self.jira_defs = {}
         self.ldap_defs = {}
+        self.microsoft_365_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -81,6 +83,7 @@ class EnmasseYAMLImporter:
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
         self.ldap_importer = LDAPImporter(self)
+        self.microsoft_365_importer = Microsoft365Importer(self)
 
 # ################################################################################################################################
 
@@ -378,6 +381,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_microsoft_365(self, microsoft_365_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Microsoft 365 connection definitions from a YAML configuration with the database.
+        """
+        if not microsoft_365_list:
+            return [], []
+
+        logger.info('Processing %d Microsoft 365 connection definitions', len(microsoft_365_list))
+
+        # Examine each Microsoft 365 connection item
+        for idx, item in enumerate(microsoft_365_list):
+            logger.info('Microsoft 365 connection item %d: %s', idx, item)
+
+        microsoft_365_created, microsoft_365_updated = self.microsoft_365_importer.sync_definitions(microsoft_365_list, session)
+
+        # Get Microsoft 365 definitions from the Microsoft 365 importer
+        self.microsoft_365_defs = self.microsoft_365_importer.connection_defs
+        logger.info('Processed Microsoft 365 connection definitions: created=%d updated=%d', len(microsoft_365_created), len(microsoft_365_updated))
+
+        return microsoft_365_created, microsoft_365_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
@@ -419,6 +444,9 @@ class EnmasseYAMLImporter:
 
         # Process LDAP connection definitions
         self.sync_ldap(yaml_config.get('ldap', []), session)
+
+        # Process Microsoft 365 connection definitions
+        self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
 
         logger.info('YAML synchronization completed')
 
