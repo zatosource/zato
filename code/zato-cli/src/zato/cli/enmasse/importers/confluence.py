@@ -62,7 +62,7 @@ class ConfluenceImporter:
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
 
         self.importer = importer
-        self.confluence_defs = {}
+        self.connection_defs = {}
 
 # ################################################################################################################################
 
@@ -218,7 +218,7 @@ class ConfluenceImporter:
                 out_created.append(instance)
 
                 # Store the mapping for future reference
-                self.confluence_defs[instance.name] = {
+                self.connection_defs[instance.name] = {
                     'id': instance.id,
                     'name': instance.name,
                 }
