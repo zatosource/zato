@@ -114,11 +114,11 @@ class OutgoingRESTImporter:
         outgoing.data_format = outgoing_def.get('data_format', 'json')
 
         for key, value in outgoing_def.items():
-            if key not in ['service', 'security']:
+            if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
 
-        if 'security' in outgoing_def:
-            security_name = outgoing_def['security']
+        if 'security' in outgoing_def or 'security_name' in outgoing_def:
+            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
             if security_name not in self.importer.sec_defs:
                 error_msg = f'Security definition "{security_name}" not found for outgoing REST connection "{name}"'
                 logger.error(error_msg)
@@ -140,11 +140,11 @@ class OutgoingRESTImporter:
         outgoing = session.query(HTTPSOAP).filter_by(id=outgoing_id).one()
 
         for key, value in outgoing_def.items():
-            if key not in ['id', 'service', 'security']:
+            if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
 
-        if 'security' in outgoing_def:
-            security_name = outgoing_def['security']
+        if 'security' in outgoing_def or 'security_name' in outgoing_def:
+            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
             if security_name not in self.importer.sec_defs:
                 error_msg = f'Security definition "{security_name}" not found for outgoing REST connection "{name}"'
                 logger.error(error_msg)
