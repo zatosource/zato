@@ -39,15 +39,15 @@ class IMAPExporter:
         """ Export IMAP connection definitions from the database.
         """
         logger.info('Exporting IMAP connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get IMAP connections from the database
         imap_connections = imap_connection_list(session, self.exporter.cluster_id)
-        
+
         imap_defs = []
-        
+
         for conn in imap_connections:
             logger.info('Processing IMAP connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the IMAP connection
             imap_def = {
                 'name': conn.name,
@@ -56,32 +56,32 @@ class IMAPExporter:
                 'username': conn.username,
                 'is_active': conn.is_active
             }
-            
+
             # Add timeout if not default
             if conn.timeout != 30:
                 imap_def['timeout'] = conn.timeout
-                
+
             # Add debug level if not default
             if conn.debug_level != 0:
                 imap_def['debug_level'] = conn.debug_level
-                
+
             # Add mode if not default
             if conn.mode != 'ssl':
                 imap_def['mode'] = conn.mode
-                
+
             # Add get criteria if not default
             if conn.get_criteria != 'ALL':
                 imap_def['get_criteria'] = conn.get_criteria
-            
+
             # Store in exporter's IMAP definitions
             self.exporter.imap_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             imap_defs.append(imap_def)
-            
+
         logger.info('Exported %d IMAP connections', len(imap_defs))
         return imap_defs
 

@@ -39,15 +39,15 @@ class LDAPExporter:
         """ Export LDAP connection definitions from the database.
         """
         logger.info('Exporting LDAP connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get LDAP connections from the database
         ldap_connections = ldap_connection_list(session, self.exporter.cluster_id)
-        
+
         ldap_defs = []
-        
+
         for conn in ldap_connections:
             logger.info('Processing LDAP connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the LDAP connection
             ldap_def = {
                 'name': conn.name,
@@ -56,16 +56,16 @@ class LDAPExporter:
                 'server_list': conn.server_list,
                 'is_active': conn.is_active
             }
-            
+
             # Store in exporter's LDAP definitions
             self.exporter.ldap_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             ldap_defs.append(ldap_def)
-            
+
         logger.info('Exported %d LDAP connections', len(ldap_defs))
         return ldap_defs
 
