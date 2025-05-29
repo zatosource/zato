@@ -318,7 +318,7 @@ class EnmasseYAMLImporter:
         for idx, item in enumerate(confluence_list):
             logger.info('Confluence connection item %d: %s', idx, item)
 
-        confluence_created, confluence_updated = self.confluence_importer.sync_confluence_definitions(confluence_list, session)
+        confluence_created, confluence_updated = self.confluence_importer.sync_definitions(confluence_list, session)
 
         # Get Confluence definitions from the Confluence importer
         self.confluence_defs = self.confluence_importer.connection_defs
