@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'                               # 1
+    Cache = 'cache'                               # 1 2
     Confluence = 'confluence'                     # 1
     Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     # 1
