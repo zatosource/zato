@@ -26,6 +26,7 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
+from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -63,6 +64,7 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
+        self.ldap_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -78,6 +80,7 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
+        self.ldap_importer = LDAPImporter(self)
 
 # ################################################################################################################################
 
@@ -353,6 +356,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_ldap(self, ldap_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes LDAP connection definitions from a YAML configuration with the database.
+        """
+        if not ldap_list:
+            return [], []
+
+        logger.info('Processing %d LDAP connection definitions', len(ldap_list))
+
+        # Examine each LDAP connection item
+        for idx, item in enumerate(ldap_list):
+            logger.info('LDAP connection item %d: %s', idx, item)
+
+        ldap_created, ldap_updated = self.ldap_importer.sync_definitions(ldap_list, session)
+
+        # Get LDAP definitions from the LDAP importer
+        self.ldap_defs = self.ldap_importer.connection_defs
+        logger.info('Processed LDAP connection definitions: created=%d updated=%d', len(ldap_created), len(ldap_updated))
+
+        return ldap_created, ldap_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
@@ -391,6 +416,9 @@ class EnmasseYAMLImporter:
 
         # Process Jira connection definitions
         self.sync_jira(yaml_config.get('jira', []), session)
+
+        # Process LDAP connection definitions
+        self.sync_ldap(yaml_config.get('ldap', []), session)
 
         logger.info('YAML synchronization completed')
 
