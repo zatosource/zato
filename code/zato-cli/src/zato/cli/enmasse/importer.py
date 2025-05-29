@@ -21,7 +21,7 @@ from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
-from zato.cli.enmasse.importers.es import ESImporter
+from zato.cli.enmasse.importers.es import ElasticSearchImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
@@ -80,7 +80,7 @@ class EnmasseYAMLImporter:
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
-        self.es_importer = ESImporter(self)
+        self.es_importer = ElasticSearchImporter(self)
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
