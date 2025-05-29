@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 
 # ################################################################################################################################
@@ -39,7 +40,7 @@ class ChannelImporter:
         out = {}
         logger.info('Retrieving REST channels from database for cluster_id=%s', cluster_id)
 
-        query = session.query(HTTPSOAP).filter(HTTPSOAP.cluster_id==cluster_id).filter(HTTPSOAP.connection=='channel').filter(HTTPSOAP.transport=='plain_http') # type: ignore
+        query = session.query(HTTPSOAP).filter(HTTPSOAP.cluster_id==cluster_id).filter(HTTPSOAP.connection==CONNECTION.CHANNEL).filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
         channels = to_json(query, return_as_dict=True)
         logger.info('Processing %d REST channels', len(channels))
 
@@ -105,8 +106,8 @@ class ChannelImporter:
 
         channel = HTTPSOAP()
         channel.name = name
-        channel.connection = 'channel'
-        channel.transport = 'plain_http'
+        channel.connection = CONNECTION.CHANNEL
+        channel.transport = URL_TYPE.PLAIN_HTTP
         channel.url_path = url_path
         channel.service = service
         channel.cluster = self.importer.get_cluster(session)

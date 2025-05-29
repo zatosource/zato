@@ -1,0 +1,174 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import os
+import tempfile
+from unittest import TestCase, main
+
+# Zato
+from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
+from zato.cli.enmasse.importer import EnmasseYAMLImporter
+from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
+from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.odb.model import HTTPSOAP
+from zato.common.test.enmasse_._template_complex_01 import template_complex_01
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEnmasseOutgoingRESTFromYAML(TestCase):
+    """ Tests importing outgoing REST connections from YAML files using enmasse.
+    """
+
+    def setUp(self) -> 'None':
+        # Server path for database connection
+        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+
+        # Create a temporary file using the existing template which already contains outgoing REST connections
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
+        _ = self.temp_file.write(template_complex_01.encode('utf-8'))
+        self.temp_file.close()
+
+        # Initialize the importer
+        self.importer = EnmasseYAMLImporter()
+
+        # Initialize outgoing REST importer
+        self.outgoing_rest_importer = OutgoingRESTImporter(self.importer)
+
+        # Parse the YAML file
+        self.yaml_config = cast_('stranydict', None)
+        self.session = cast_('any_', None)
+
+    def tearDown(self) -> 'None':
+        if self.session:
+            self.session.close()
+        os.unlink(self.temp_file.name)
+        cleanup_enmasse()
+
+    def _setup_test_environment(self):
+        """ Set up the test environment by opening a database session and parsing the YAML file.
+        """
+        if not self.session:
+            self.session = get_session_from_server_dir(self.server_path)
+
+        if not self.yaml_config:
+            self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+    def test_outgoing_rest_creation(self):
+        """ Test creating outgoing REST connections from YAML.
+        """
+        self._setup_test_environment()
+
+        # Get outgoing REST definitions from YAML
+        outgoing_rest_defs = self.yaml_config['outgoing_rest']
+
+        # Process all outgoing REST definitions
+        created, updated = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_defs, self.session)
+
+        # Should have created 5 connections
+        self.assertEqual(len(created), 5)
+        self.assertEqual(len(updated), 0)
+
+        # Verify the first outgoing REST connection was created correctly
+        outgoing = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.outgoing.rest.1',
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.PLAIN_HTTP
+        ).one()
+
+        self.assertEqual(outgoing.host, 'https://example.com:443')
+        self.assertEqual(outgoing.url_path, '/sso/{type}/hello/{endpoint}')
+        self.assertEqual(outgoing.data_format, 'json')
+        self.assertEqual(outgoing.timeout, 60)
+
+    def test_outgoing_rest_update(self):
+        """ Test updating existing outgoing REST connections.
+        """
+        self._setup_test_environment()
+
+        # First, get an outgoing REST definition from YAML and create it
+        outgoing_rest_defs = self.yaml_config['outgoing_rest']
+        outgoing_def = outgoing_rest_defs[0]
+
+        # Create the outgoing REST connection
+        instance = self.outgoing_rest_importer.create_outgoing_rest(outgoing_def, self.session)
+        self.session.commit()
+        original_host = outgoing_def['host']
+        self.assertEqual(instance.host, original_host)
+
+        # Prepare an update definition based on the existing one
+        update_def = {
+            'name': outgoing_def['name'],
+            'id': instance.id,
+            'host': 'https://updated-example.com',  # Changed host
+            'url_path': '/updated/path',  # Changed path
+            'timeout': 30  # Changed timeout
+        }
+
+        # Update the outgoing REST connection
+        updated_instance = self.outgoing_rest_importer.update_outgoing_rest(update_def, self.session)
+        self.session.commit()
+
+        # Verify the update was applied
+        self.assertEqual(updated_instance.host, 'https://updated-example.com')
+        self.assertEqual(updated_instance.url_path, '/updated/path')
+        self.assertEqual(updated_instance.timeout, 30)
+
+        # Make sure other fields were preserved
+        self.assertEqual(updated_instance.connection, CONNECTION.OUTGOING)
+        self.assertEqual(updated_instance.transport, URL_TYPE.PLAIN_HTTP)
+
+    def test_complete_outgoing_rest_import_flow(self):
+        """ Test the complete flow of importing outgoing REST connections from a YAML file.
+        """
+        self._setup_test_environment()
+
+        # Process all outgoing REST definitions from the YAML
+        outgoing_rest_list = self.yaml_config['outgoing_rest']
+        outgoing_created, outgoing_updated = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_list, self.session)
+
+        # Update main importer's outgoing REST definitions
+        self.importer.outgoing_rest_defs = self.outgoing_rest_importer.connection_defs
+
+        # Verify outgoing REST connections were created
+        self.assertEqual(len(outgoing_created), 5)
+        self.assertEqual(len(outgoing_updated), 0)
+
+        # Verify the outgoing REST connections dictionary was populated
+        self.assertEqual(len(self.outgoing_rest_importer.connection_defs), 5)
+
+        # Verify that these definitions are accessible from the main importer
+        self.assertEqual(len(self.importer.outgoing_rest_defs), 5)
+
+        # Try importing the same definitions again - should result in updates, not creations
+        outgoing_created2, outgoing_updated2 = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_list, self.session)
+        self.assertEqual(len(outgoing_created2), 0)
+        self.assertEqual(len(outgoing_updated2), 5)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    _ = main()
+
+# ################################################################################################################################
+# ################################################################################################################################
