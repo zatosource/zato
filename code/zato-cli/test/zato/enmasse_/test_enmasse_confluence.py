@@ -76,7 +76,7 @@ class TestEnmasseConfluenceFromYAML(TestCase):
         confluence_defs = self.yaml_config['confluence']
 
         # Process all Confluence definitions
-        created, updated = self.confluence_importer.sync_confluence_definitions(confluence_defs, self.session)
+        created, updated = self.confluence_importer.sync_definitions(confluence_defs, self.session)
 
         # Should have created 1 definition
         self.assertEqual(len(created), 1)
@@ -102,7 +102,7 @@ class TestEnmasseConfluenceFromYAML(TestCase):
         confluence_def = confluence_defs[0]
 
         # Create the Confluence definition
-        instance = self.confluence_importer.create_confluence_definition(confluence_def, self.session)
+        instance = self.confluence_importer.create_definition(confluence_def, self.session)
         self.session.commit()
         original_address = confluence_def['address']
         self.assertEqual(instance.address, original_address)
@@ -116,7 +116,7 @@ class TestEnmasseConfluenceFromYAML(TestCase):
         }
 
         # Update the Confluence definition
-        updated_instance = self.confluence_importer.update_confluence_definition(update_def, self.session)
+        updated_instance = self.confluence_importer.update_definition(update_def, self.session)
         self.session.commit()
 
         # Verify the update was applied
@@ -133,7 +133,7 @@ class TestEnmasseConfluenceFromYAML(TestCase):
 
         # Process all Confluence definitions from the YAML
         confluence_list = self.yaml_config['confluence']
-        confluence_created, confluence_updated = self.confluence_importer.sync_confluence_definitions(confluence_list, self.session)
+        confluence_created, confluence_updated = self.confluence_importer.sync_definitions(confluence_list, self.session)
 
         # Update importer's Confluence definitions
         self.importer.confluence_defs = self.confluence_importer.confluence_defs
@@ -149,7 +149,7 @@ class TestEnmasseConfluenceFromYAML(TestCase):
         self.assertEqual(len(self.importer.confluence_defs), 1)
 
         # Try importing the same definitions again - should result in updates, not creations
-        confluence_created2, confluence_updated2 = self.confluence_importer.sync_confluence_definitions(confluence_list, self.session)
+        confluence_created2, confluence_updated2 = self.confluence_importer.sync_definitions(confluence_list, self.session)
         self.assertEqual(len(confluence_created2), 0)
         self.assertEqual(len(confluence_updated2), 1)
 
