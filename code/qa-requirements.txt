@@ -19,4 +19,5 @@ types-markdown
 types-pyyaml
 types-ujson
 typing-extensions==4.12.2
+unify==0.5
 yapf

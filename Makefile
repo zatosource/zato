@@ -1,4 +1,3 @@
-
 .PHONY: build
 MAKEFLAGS += --silent
 
@@ -59,3 +58,13 @@ run-tests:
 #	$(MAKE) server-tests
 	$(MAKE) cli-tests
 #	$(MAKE) cy-tests
+
+unify:
+	mkdir -p $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2
+	echo 'def detect_encoding(readline):\n    return ("utf-8", [])' > $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/tokenize.py
+	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/__init__.py
+	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/__init__.py
+	bash -c 'git ls-files --modified --others --exclude-standard -- "*.py" | \
+	    while IFS= read -r file; do \
+	        command unify -i -r "$$file"; \
+	    done'
