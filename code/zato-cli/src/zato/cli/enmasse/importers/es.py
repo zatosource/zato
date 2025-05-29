@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from uuid import uuid4
 
 # Zato
 from zato.common.odb.model import ElasticSearch, to_json
@@ -31,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ESImporter:
+class ElasticSearchImporter:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
 
