@@ -182,7 +182,7 @@ outgoing_soap:
     tls_verify: false
     timeout: 20
 
-cloud_microsoft_365:
+microsoft_365:
 
   - name: enmasse.cloud.microsoft365.1
     is_active: true
