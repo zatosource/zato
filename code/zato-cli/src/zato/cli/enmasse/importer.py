@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+from pathlib import Path
 
 # PyYAML
 import yaml
@@ -106,10 +107,21 @@ class EnmasseYAMLImporter:
         if not os.path.exists(path):
             raise ValueError(f'Path does not exist -> {path}')
 
+        # Convert the path to an absolute path
+        path = os.path.abspath(path)
+        base_dir = os.path.dirname(path)
+
         with open(path, 'r') as f:
             yaml_content = f.read()
 
-        return self.from_string(yaml_content)
+        # Parse the YAML content
+        config = yaml.safe_load(yaml_content)
+
+        # Process includes if present
+        if 'include' in config:
+            config = self._process_includes(config, base_dir)
+
+        return self._process_config(config)
 
 # ################################################################################################################################
 
@@ -119,12 +131,93 @@ class EnmasseYAMLImporter:
         # Parse YAML into Python data structure
         config = yaml.safe_load(yaml_string)
 
+        # Process the config (without include handling since we don't have a base directory)
+        return self._process_config(config)
+
+# ################################################################################################################################
+
+    def _process_includes(self, config:'stranydict', base_dir:'str', processed_paths:set=None) -> 'stranydict':
+
+        # Initialize set of processed paths to prevent recursive includes
+        if processed_paths is None:
+            processed_paths = set()
+
+        # Get the list of files to include
+        include_files = config.get('include', [])
+        if not include_files:
+            return config
+
+        # Remove the include directive since we're processing it
+        merged_config = {key: value for key, value in config.items() if key != 'include'}
+
+        # Process each included file
+        for include_path in include_files:
+
+            # Resolve the path (absolute or relative to base_dir)
+            if os.path.isabs(include_path):
+                resolved_path = include_path
+            else:
+                resolved_path = os.path.normpath(os.path.join(base_dir, include_path))
+
+            # Check if path exists
+            if not os.path.exists(resolved_path):
+                raise ValueError(f'Included file does not exist -> {resolved_path}')
+
+            # Check for recursive/circular includes
+            if resolved_path in processed_paths:
+                raise ValueError(f'Circular include detected -> {resolved_path}')
+
+            # Mark this path as processed
+            processed_paths.add(resolved_path)
+
+            # Read and parse the included file
+            with open(resolved_path, 'r') as f:
+                include_content = f.read()
+
+            include_config = yaml.safe_load(include_content)
+
+            # If the included file itself has includes, process them recursively
+            include_dir = os.path.dirname(resolved_path)
+
+            if 'include' in include_config:
+                include_config = self._process_includes(include_config, include_dir, processed_paths)
+
+            # Merge the included config with our current config
+            self._merge_configs(merged_config, include_config)
+
+        return merged_config
+
+# ################################################################################################################################
+
+    def _merge_configs(self, target:'stranydict', source:'stranydict') -> None:
+        """ Merge source config into target config.
+            This combines the lists for each section rather than overwriting.
+        """
+
+        for key, items in source.items():
+
+            # Skip if no items for this object type
+            if not items:
+                continue
+
+            # Initialize section if it doesn't exist
+            if key not in target:
+                target[key] = []
+
+            # Add all items for this object type
+            target[key].extend(items)
+
+# ################################################################################################################################
+
+    def _process_config(self, config:'stranydict') -> 'stranydict':
+        """ Process a config dict into the expected result format.
+            This is the final processing step after handling includes.
+        """
         # Convert the raw YAML into a structured representation
         result = {}
 
         # Process each object type from the YAML
         for key, items in config.items():
-
             # Skip if no items for this object type
             if not items:
                 continue
