@@ -21,6 +21,7 @@ from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
+from zato.cli.enmasse.importers.es import ESImporter
 from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
@@ -61,6 +62,7 @@ class EnmasseYAMLImporter:
         self.odoo_defs = {}
         self.smtp_defs = {}
         self.imap_defs = {}
+        self.es_defs = {}
         self.sql_defs = {}
         self.job_defs = {}
         self.confluence_defs = {}
@@ -78,6 +80,7 @@ class EnmasseYAMLImporter:
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
+        self.es_importer = ESImporter(self)
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
@@ -403,6 +406,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_es(self, es_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes ElasticSearch connection definitions from a YAML configuration with the database.
+        """
+        if not es_list:
+            return [], []
+
+        logger.info('Processing %d ElasticSearch connection definitions', len(es_list))
+
+        # Examine each ElasticSearch connection item
+        for idx, item in enumerate(es_list):
+            logger.info('ElasticSearch connection item %d: %s', idx, item)
+
+        es_created, es_updated = self.es_importer.sync_es_definitions(es_list, session)
+
+        # Get ElasticSearch definitions from the ElasticSearch importer
+        self.es_defs = self.es_importer.es_defs
+        logger.info('Processed ElasticSearch connection definitions: created=%d updated=%d', len(es_created), len(es_updated))
+
+        return es_created, es_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
@@ -447,6 +472,9 @@ class EnmasseYAMLImporter:
 
         # Process Microsoft 365 connection definitions
         self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
+
+        # Process ElasticSearch connection definitions
+        self.sync_es(yaml_config.get('search_es', []), session)
 
         logger.info('YAML synchronization completed')
 
