@@ -39,15 +39,15 @@ class SchedulerExporter:
         """ Export scheduler job definitions from the database.
         """
         logger.info('Exporting scheduler jobs from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get scheduler jobs from the database
         jobs = job_list(session, self.exporter.cluster_id)
-        
+
         job_defs = []
-        
+
         for job in jobs:
             logger.info('Processing scheduler job: %s', job.name)
-            
+
             # Create a dictionary representation of the scheduler job
             job_def = {
                 'name': job.name,
@@ -55,11 +55,11 @@ class SchedulerExporter:
                 'is_active': job.is_active,
                 'job_type': job.job_type
             }
-            
+
             # Add start date if present
             if job.start_date:
                 job_def['start_date'] = job.start_date.strftime('%Y-%m-%d %H:%M:%S')
-            
+
             # Add time intervals based on job type
             if job.job_type == 'interval_based':
                 if job.weeks > 0:
@@ -76,16 +76,16 @@ class SchedulerExporter:
                     job_def['repeats'] = job.repeats
             elif job.job_type == 'cron_style':
                 job_def['cron_definition'] = job.cron_definition
-            
+
             # Store in exporter's job definitions
             self.exporter.job_defs[job.name] = {
                 'id': job.id,
                 'name': job.name
             }
-            
+
             # Add to results
             job_defs.append(job_def)
-            
+
         logger.info('Exported %d scheduler jobs', len(job_defs))
         return job_defs
 

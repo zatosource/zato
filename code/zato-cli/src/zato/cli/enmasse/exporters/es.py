@@ -39,15 +39,15 @@ class ElasticSearchExporter:
         """ Export ElasticSearch connection definitions from the database.
         """
         logger.info('Exporting ElasticSearch connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get ElasticSearch connections from the database
         es_connections = es_list(session, self.exporter.cluster_id)
-        
+
         es_defs = []
-        
+
         for conn in es_connections:
             logger.info('Processing ElasticSearch connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the ElasticSearch connection
             es_def = {
                 'name': conn.name,
@@ -56,16 +56,16 @@ class ElasticSearchExporter:
                 'timeout': conn.timeout,
                 'body_as': conn.body_as
             }
-            
+
             # Store in exporter's ES definitions
             self.exporter.es_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             es_defs.append(es_def)
-            
+
         logger.info('Exported %d ElasticSearch connections', len(es_defs))
         return es_defs
 

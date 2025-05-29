@@ -39,15 +39,15 @@ class SQLExporter:
         """ Export SQL connection pool definitions from the database.
         """
         logger.info('Exporting SQL connection pools from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get SQL connection pools from the database
         sql_pools = sql_connection_pool_list(session, self.exporter.cluster_id)
-        
+
         sql_defs = []
-        
+
         for pool in sql_pools:
             logger.info('Processing SQL connection pool: %s', pool.name)
-            
+
             # Create a dictionary representation of the SQL connection pool
             sql_def = {
                 'name': pool.name,
@@ -58,24 +58,24 @@ class SQLExporter:
                 'username': pool.username,
                 'is_active': pool.is_active
             }
-            
+
             # Add pool_size if not default
             if pool.pool_size != 5:  # Assuming 5 is the default
                 sql_def['pool_size'] = pool.pool_size
-                
+
             # Add extra connection parameters if present
             if pool.extra:
                 sql_def['extra'] = pool.extra
-            
+
             # Store in exporter's SQL definitions
             self.exporter.sql_defs[pool.name] = {
                 'id': pool.id,
                 'name': pool.name
             }
-            
+
             # Add to results
             sql_defs.append(sql_def)
-            
+
         logger.info('Exported %d SQL connection pools', len(sql_defs))
         return sql_defs
 

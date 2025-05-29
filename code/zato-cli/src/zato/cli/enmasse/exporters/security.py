@@ -46,7 +46,7 @@ class SecurityExporter:
         for item in basic_auth_list_result:
             name = item.name
             logger.info('Processing basic_auth: %s', name)
-            
+
             # Create a dictionary representation of the basic auth definition
             basic_auth_def = {
                 'name': name,
@@ -54,17 +54,17 @@ class SecurityExporter:
                 'username': item.username,
                 'is_active': item.is_active
             }
-            
+
             # Add to results
             basic_auth_defs.append(basic_auth_def)
-            
+
             # Store in exporter's security definitions
             self.exporter.sec_defs[name] = {
                 'id': item.id,
                 'name': name,
                 'type': 'basic_auth'
             }
-            
+
         return basic_auth_defs
 
 # ################################################################################################################################
@@ -78,7 +78,7 @@ class SecurityExporter:
         for item in apikey_list_result:
             name = item.name
             logger.info('Processing apikey: %s', name)
-            
+
             # Create a dictionary representation of the API key definition
             apikey_def = {
                 'name': name,
@@ -86,17 +86,17 @@ class SecurityExporter:
                 'username': item.username,
                 'is_active': item.is_active
             }
-            
+
             # Add to results
             apikey_defs.append(apikey_def)
-            
+
             # Store in exporter's security definitions
             self.exporter.sec_defs[name] = {
                 'id': item.id,
                 'name': name,
                 'type': 'apikey'
             }
-            
+
         return apikey_defs
 
 # ################################################################################################################################
@@ -110,7 +110,7 @@ class SecurityExporter:
         for item in ntlm_list_result:
             name = item.name
             logger.info('Processing ntlm: %s', name)
-            
+
             # Create a dictionary representation of the NTLM auth definition
             ntlm_def = {
                 'name': name,
@@ -118,17 +118,17 @@ class SecurityExporter:
                 'username': item.username,
                 'is_active': item.is_active
             }
-            
+
             # Add to results
             ntlm_defs.append(ntlm_def)
-            
+
             # Store in exporter's security definitions
             self.exporter.sec_defs[name] = {
                 'id': item.id,
                 'name': name,
                 'type': 'ntlm'
             }
-            
+
         return ntlm_defs
 
 # ################################################################################################################################
@@ -142,7 +142,7 @@ class SecurityExporter:
         for item in oauth_list_result:
             name = item.name
             logger.info('Processing oauth/bearer_token: %s', name)
-            
+
             # Create a dictionary representation of the OAuth definition
             oauth_def = {
                 'name': name,
@@ -155,21 +155,21 @@ class SecurityExporter:
                 'grant_type': item.grant_type,
                 'data_format': item.data_format
             }
-            
+
             # Add extra fields if they exist
             if item.extra_fields:
                 oauth_def['extra_fields'] = [item.extra_fields]
-            
+
             # Add to results
             oauth_defs.append(oauth_def)
-            
+
             # Store in exporter's security definitions
             self.exporter.sec_defs[name] = {
                 'id': item.id,
                 'name': name,
                 'type': 'bearer_token'
             }
-            
+
         return oauth_defs
 
 # ################################################################################################################################
@@ -178,22 +178,22 @@ class SecurityExporter:
         """ Export all security definitions from the database.
         """
         logger.info('Exporting security definitions from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Clear existing security definitions
         self.sec_defs = {}
-        
+
         # Process different security types
         basic_auth_defs = self.process_basic_auth(session)
         apikey_defs = self.process_apikey(session)
         ntlm_defs = self.process_ntlm(session)
         oauth_defs = self.process_oauth(session)
-        
+
         # Combine all security definitions
         all_defs = basic_auth_defs + apikey_defs + ntlm_defs + oauth_defs
-        
+
         logger.info('Exported %d security definitions: basic_auth=%d, apikey=%d, ntlm=%d, oauth=%d',
                     len(all_defs), len(basic_auth_defs), len(apikey_defs), len(ntlm_defs), len(oauth_defs))
-        
+
         return all_defs
 
 # ################################################################################################################################

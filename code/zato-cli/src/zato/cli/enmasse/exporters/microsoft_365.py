@@ -39,22 +39,22 @@ class Microsoft365Exporter:
         """ Export Microsoft 365 connection definitions from the database.
         """
         logger.info('Exporting Microsoft 365 connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get Microsoft 365 connections from the database
         # Try both possible connection types from the alias mapping
         m365_connections = []
         conn_types = ['cloud-microsoft-365', 'zato_generic_connection:cloud-microsoft-365']
-        
+
         for conn_type in conn_types:
             connections = generic_connection_list(session, self.exporter.cluster_id, conn_type)
             if connections:
                 m365_connections.extend(connections)
-        
+
         m365_defs = []
-        
+
         for conn in m365_connections:
             logger.info('Processing Microsoft 365 connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the Microsoft 365 connection
             m365_def = {
                 'name': conn.name,
@@ -62,20 +62,20 @@ class Microsoft365Exporter:
                 'client_id': conn.client_id,
                 'tenant_id': conn.tenant_id
             }
-            
+
             # Add scopes if present
             if conn.scopes:
                 m365_def['scopes'] = conn.scopes
-            
+
             # Store in exporter's Microsoft 365 definitions
             self.exporter.microsoft_365_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             m365_defs.append(m365_def)
-            
+
         logger.info('Exported %d Microsoft 365 connections', len(m365_defs))
         return m365_defs
 

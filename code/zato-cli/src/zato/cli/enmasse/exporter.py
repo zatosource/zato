@@ -122,14 +122,14 @@ class EnmasseYAMLExporter:
         """
         logger.info('Writing YAML configuration to %s', output_path)
         output_dir = os.path.dirname(output_path)
-        
+
         # Create directory if it doesn't exist
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            
+
         with open(output_path, 'w') as f:
             f.write(yaml_string)
-            
+
         logger.info('Successfully wrote YAML configuration to file')
 
 # ################################################################################################################################
@@ -299,7 +299,7 @@ class EnmasseYAMLExporter:
             This is the main entry point for creating a complete YAML export.
         """
         logger.info('Starting export of database objects to YAML configuration')
-        
+
         config = {}
 
         # Export security definitions first
@@ -316,7 +316,7 @@ class EnmasseYAMLExporter:
         channel_list = self.export_channel_rest(session)
         if channel_list:
             config['channel_rest'] = channel_list
-            
+
         # Export outgoing REST
         outgoing_rest_list = self.export_outgoing_rest(session)
         if outgoing_rest_list:
@@ -391,26 +391,26 @@ class EnmasseYAMLExporter:
         """ Exports all objects from a server's database to a YAML configuration file or string.
         """
         logger.info('Exporting enmasse configuration from server directory: %s', server_dir)
-        
+
         # Get a session from the server directory
         session = get_session_from_server_dir(server_dir, stdin_data)
-        
+
         try:
             # Get the cluster
             self.get_cluster(session)
-            
+
             # Export all objects to a YAML configuration
             config = self.export_to_yaml(session)
-            
+
             # Convert to YAML string
             yaml_string = self.to_yaml(config)
-            
+
             # If output path is provided, write to file
             if output_path:
                 self.to_file(yaml_string, output_path)
-            
+
             return yaml_string
-            
+
         finally:
             # Always close the session
             session.close()
@@ -423,13 +423,13 @@ def export_enmasse(server_dir:'str'=None, output_path:'str'=None, stdin_data:'st
     """
     if server_dir is None:
         server_dir = os.path.expanduser('~/env/qs-1/server1')
-        
+
     if output_path is None:
         output_path = os.path.join(os.getcwd(), 'enmasse-export.yaml')
-        
+
     exporter = EnmasseYAMLExporter()
     yaml_string = exporter.export_from_server(server_dir, output_path, stdin_data)
-    
+
     logger.info('Enmasse export completed to %s', output_path)
     return yaml_string
 
@@ -439,14 +439,14 @@ def export_enmasse(server_dir:'str'=None, output_path:'str'=None, stdin_data:'st
 if __name__ == '__main__':
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+
     # Export configuration from the default server path
     server_path = os.path.expanduser('~/env/qs-1/server1')
     output_path = os.path.join(os.getcwd(), 'enmasse-export.yaml')
-    
+
     # Export
     export_enmasse(server_path, output_path)
-    
+
     # Print confirmation
     print(f'Exported enmasse configuration to {output_path}')
 
