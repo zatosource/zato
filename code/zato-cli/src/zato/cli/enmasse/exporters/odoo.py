@@ -39,15 +39,15 @@ class OdooExporter:
         """ Export Odoo connection definitions from the database.
         """
         logger.info('Exporting Odoo connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get Odoo connections from the database
         odoo_connections = out_odoo_list(session, self.exporter.cluster_id)
-        
+
         odoo_defs = []
-        
+
         for conn in odoo_connections:
             logger.info('Processing Odoo connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the Odoo connection
             odoo_def = {
                 'name': conn.name,
@@ -57,24 +57,24 @@ class OdooExporter:
                 'user': conn.user,
                 'database': conn.database
             }
-            
+
             # Add protocol if not default
             if conn.protocol != 'jsonrpc':
                 odoo_def['protocol'] = conn.protocol
-                
+
             # Add pool_size if not default
             if conn.pool_size != 10:
                 odoo_def['pool_size'] = conn.pool_size
-            
+
             # Store in exporter's Odoo definitions
             self.exporter.odoo_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             odoo_defs.append(odoo_def)
-            
+
         logger.info('Exported %d Odoo connections', len(odoo_defs))
         return odoo_defs
 

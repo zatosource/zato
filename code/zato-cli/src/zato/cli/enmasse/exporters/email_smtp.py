@@ -39,15 +39,15 @@ class SMTPExporter:
         """ Export SMTP connection definitions from the database.
         """
         logger.info('Exporting SMTP connections from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get SMTP connections from the database
         smtp_connections = smtp_connection_list(session, self.exporter.cluster_id)
-        
+
         smtp_defs = []
-        
+
         for conn in smtp_connections:
             logger.info('Processing SMTP connection: %s', conn.name)
-            
+
             # Create a dictionary representation of the SMTP connection
             smtp_def = {
                 'name': conn.name,
@@ -56,32 +56,32 @@ class SMTPExporter:
                 'username': conn.username,
                 'is_active': conn.is_active
             }
-            
+
             # Add timeout if not default
             if conn.timeout != 30:
                 smtp_def['timeout'] = conn.timeout
-                
+
             # Add debug level if not default
             if conn.is_debug:
                 smtp_def['is_debug'] = True
-                
+
             # Add mode if not default
             if conn.mode != 'starttls':
                 smtp_def['mode'] = conn.mode
-                
+
             # Add ping address if not default
             if conn.ping_address and conn.ping_address != 'example@example.com':
                 smtp_def['ping_address'] = conn.ping_address
-            
+
             # Store in exporter's SMTP definitions
             self.exporter.smtp_defs[conn.name] = {
                 'id': conn.id,
                 'name': conn.name
             }
-            
+
             # Add to results
             smtp_defs.append(smtp_def)
-            
+
         logger.info('Exported %d SMTP connections', len(smtp_defs))
         return smtp_defs
 

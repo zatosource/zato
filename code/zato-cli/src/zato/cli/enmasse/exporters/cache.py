@@ -39,15 +39,15 @@ class CacheExporter:
         """ Export cache definitions from the database.
         """
         logger.info('Exporting cache definitions from cluster_id=%s', self.exporter.cluster_id)
-        
+
         # Get cache definitions from the database
         cache_items = cache_builtin_list(session, self.exporter.cluster_id)
-        
+
         cache_defs = []
-        
+
         for cache in cache_items:
             logger.info('Processing cache: %s', cache.name)
-            
+
             # Create a dictionary representation of the cache definition
             cache_def = {
                 'name': cache.name,
@@ -60,16 +60,16 @@ class CacheExporter:
                 'sync_method': cache.sync_method,
                 'persistent_storage': cache.persistent_storage
             }
-            
+
             # Store in exporter's cache definitions
             self.exporter.cache_defs[cache.name] = {
                 'id': cache.id,
                 'name': cache.name
             }
-            
+
             # Add to results
             cache_defs.append(cache_def)
-            
+
         logger.info('Exported %d cache definitions', len(cache_defs))
         return cache_defs
 
