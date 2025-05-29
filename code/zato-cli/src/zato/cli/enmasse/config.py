@@ -21,7 +21,7 @@ class _object_type:
     Microsoft_365 = 'cloud_microsoft_365'         # 1
     Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               # 1
-    Outgoing_SOAP = 'outgoing_soap'               #
+    Outgoing_SOAP = 'outgoing_soap'               # 1
     Search_ElasticSearch = 'elastic_search'       # 1
     SQL  = 'sql'                                  # 1
     Scheduler = 'scheduler'                       # 1
