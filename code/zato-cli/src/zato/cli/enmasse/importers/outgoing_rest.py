@@ -120,8 +120,9 @@ class OutgoingRESTImporter:
         if 'security' in outgoing_def:
             security_name = outgoing_def['security']
             if security_name not in self.importer.sec_defs:
-                raise Exception(f'Security definition "{security_name}" not found for outgoing REST connection "{name}"')
-
+                error_msg = f'Security definition "{security_name}" not found for outgoing REST connection "{name}"'
+                logger.error(error_msg)
+                raise Exception(error_msg)
             sec_def = self.importer.sec_defs[security_name]
             outgoing.security_id = sec_def['id']
 
@@ -145,8 +146,9 @@ class OutgoingRESTImporter:
         if 'security' in outgoing_def:
             security_name = outgoing_def['security']
             if security_name not in self.importer.sec_defs:
-                raise Exception(f'Security definition "{security_name}" not found for outgoing REST connection "{name}"')
-
+                error_msg = f'Security definition "{security_name}" not found for outgoing REST connection "{name}"'
+                logger.error(error_msg)
+                raise Exception(error_msg)
             sec_def = self.importer.sec_defs[security_name]
             outgoing.security_id = sec_def['id']
 
