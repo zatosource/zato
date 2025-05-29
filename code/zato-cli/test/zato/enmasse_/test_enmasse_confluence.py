@@ -136,14 +136,14 @@ class TestEnmasseConfluenceFromYAML(TestCase):
         confluence_created, confluence_updated = self.confluence_importer.sync_definitions(confluence_list, self.session)
 
         # Update importer's Confluence definitions
-        self.importer.confluence_defs = self.confluence_importer.confluence_defs
+        self.importer.confluence_defs = self.confluence_importer.connection_defs
 
         # Verify Confluence definitions were created
         self.assertEqual(len(confluence_created), 1)
         self.assertEqual(len(confluence_updated), 0)
 
         # Verify the Confluence definitions dictionary was populated
-        self.assertEqual(len(self.confluence_importer.confluence_defs), 1)
+        self.assertEqual(len(self.confluence_importer.connection_defs), 1)
 
         # Verify that these definitions are accessible from the main importer
         self.assertEqual(len(self.importer.confluence_defs), 1)
