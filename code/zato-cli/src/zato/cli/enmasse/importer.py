@@ -133,14 +133,14 @@ class EnmasseYAMLImporter:
         """
         if not security_list:
             return [], []
-            
+
         logger.info('Processing %d security definitions', len(security_list))
         security_created, security_updated = self.security_importer.sync_security_definitions(security_list, session)
 
         # Get security definitions from the security importer
         self.sec_defs = self.security_importer.sec_defs
         logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
-        
+
         return security_created, security_updated
 
 # ################################################################################################################################
@@ -150,11 +150,11 @@ class EnmasseYAMLImporter:
         """
         if not group_list:
             return [], []
-            
+
         logger.info('Processing %d security groups', len(group_list))
         groups_created, groups_updated = self.group_importer.sync_groups(group_list, session)
         logger.info('Processed security groups: created=%d updated=%d', len(groups_created), len(groups_updated))
-        
+
         return groups_created, groups_updated
 
 # ################################################################################################################################
@@ -164,11 +164,11 @@ class EnmasseYAMLImporter:
         """
         if not channel_list:
             return [], []
-            
+
         logger.info('Processing %d REST channels', len(channel_list))
         channels_created, channels_updated = self.channel_importer.sync_channel_rest(channel_list, session)
         logger.info('Processed REST channels: created=%d updated=%d', len(channels_created), len(channels_updated))
-        
+
         return channels_created, channels_updated
 
 # ################################################################################################################################
@@ -178,7 +178,7 @@ class EnmasseYAMLImporter:
         """
         if not cache_list:
             return [], []
-            
+
         # Examine each cache item in detail
         for idx, item in enumerate(cache_list):
             if not item.get('name'):
@@ -191,7 +191,7 @@ class EnmasseYAMLImporter:
         # Get cache definitions from the cache importer
         self.cache_defs = self.cache_importer.cache_defs
         logger.info('Processed cache definitions: created=%d updated=%d', len(cache_created), len(cache_updated))
-        
+
         return cache_created, cache_updated
 
 # ################################################################################################################################
@@ -201,7 +201,7 @@ class EnmasseYAMLImporter:
         """
         if not odoo_list:
             return [], []
-            
+
         logger.info('Processing %d Odoo connection definitions', len(odoo_list))
 
         # Examine each Odoo item
@@ -213,7 +213,7 @@ class EnmasseYAMLImporter:
         # Get Odoo definitions from the Odoo importer
         self.odoo_defs = self.odoo_importer.odoo_defs
         logger.info('Processed Odoo connection definitions: created=%d updated=%d', len(odoo_created), len(odoo_updated))
-        
+
         return odoo_created, odoo_updated
 
 # ################################################################################################################################
@@ -223,7 +223,7 @@ class EnmasseYAMLImporter:
         """
         if not smtp_list:
             return [], []
-            
+
         logger.info('Processing %d SMTP connection definitions', len(smtp_list))
 
         # Examine each SMTP item
@@ -235,7 +235,7 @@ class EnmasseYAMLImporter:
         # Get SMTP definitions from the SMTP importer
         self.smtp_defs = self.smtp_importer.smtp_defs
         logger.info('Processed SMTP connection definitions: created=%d updated=%d', len(smtp_created), len(smtp_updated))
-        
+
         return smtp_created, smtp_updated
 
 # ################################################################################################################################
@@ -245,7 +245,7 @@ class EnmasseYAMLImporter:
         """
         if not imap_list:
             return [], []
-            
+
         logger.info('Processing %d IMAP connection definitions', len(imap_list))
 
         # Examine each IMAP item
@@ -257,7 +257,7 @@ class EnmasseYAMLImporter:
         # Get IMAP definitions from the IMAP importer
         self.imap_defs = self.imap_importer.imap_defs
         logger.info('Processed IMAP connection definitions: created=%d updated=%d', len(imap_created), len(imap_updated))
-        
+
         return imap_created, imap_updated
 
 # ################################################################################################################################
@@ -267,7 +267,7 @@ class EnmasseYAMLImporter:
         """
         if not sql_list:
             return [], []
-            
+
         logger.info('Processing %d SQL connection pool definitions', len(sql_list))
 
         # Examine each SQL connection pool item
@@ -279,7 +279,7 @@ class EnmasseYAMLImporter:
         # Get SQL definitions from the SQL importer
         self.sql_defs = self.sql_importer.sql_defs
         logger.info('Processed SQL connection pool definitions: created=%d updated=%d', len(sql_created), len(sql_updated))
-        
+
         return sql_created, sql_updated
 
 # ################################################################################################################################
@@ -289,19 +289,19 @@ class EnmasseYAMLImporter:
         """
         if not job_list:
             return [], []
-            
+
         logger.info('Processing %d scheduler job definitions', len(job_list))
-        
+
         # Examine each scheduler job item
         for idx, item in enumerate(job_list):
             logger.info('Scheduler job item %d: %s', idx, item)
-            
+
         job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, session)
-        
+
         # Get scheduler job definitions from the scheduler importer
         self.job_defs = self.scheduler_importer.job_defs
         logger.info('Processed scheduler job definitions: created=%d updated=%d', len(job_created), len(job_updated))
-        
+
         return job_created, job_updated
 
 # ################################################################################################################################
@@ -311,7 +311,7 @@ class EnmasseYAMLImporter:
         """
         if not confluence_list:
             return [], []
-            
+
         logger.info('Processing %d Confluence connection definitions', len(confluence_list))
 
         # Examine each Confluence connection item
@@ -321,9 +321,9 @@ class EnmasseYAMLImporter:
         confluence_created, confluence_updated = self.confluence_importer.sync_confluence_definitions(confluence_list, session)
 
         # Get Confluence definitions from the Confluence importer
-        self.confluence_defs = self.confluence_importer.confluence_defs
+        self.confluence_defs = self.confluence_importer.connection_defs
         logger.info('Processed Confluence connection definitions: created=%d updated=%d', len(confluence_created), len(confluence_updated))
-        
+
         return confluence_created, confluence_updated
 
 # ################################################################################################################################
@@ -336,31 +336,31 @@ class EnmasseYAMLImporter:
 
         # Process security definitions first
         self.sync_security(yaml_config.get('security', []), session)
-        
+
         # Process security groups (depends on security definitions)
         self.sync_groups(yaml_config.get('groups', []), session)
-        
+
         # Process REST channels which may depend on security definitions
         self.sync_channel_rest(yaml_config.get('channel_rest', []), session)
-        
+
         # Process cache definitions
         self.sync_cache(yaml_config.get('cache', []), session)
-        
+
         # Process Odoo connection definitions
         self.sync_odoo(yaml_config.get('odoo', []), session)
-        
+
         # Process SMTP connection definitions
         self.sync_smtp(yaml_config.get('email_smtp', []), session)
-        
+
         # Process IMAP connection definitions
         self.sync_imap(yaml_config.get('email_imap', []), session)
-        
+
         # Process SQL connection pool definitions
         self.sync_sql(yaml_config.get('sql', []), session)
-        
+
         # Process scheduler job definitions
         self.sync_scheduler(yaml_config.get('scheduler', []), session)
-        
+
         # Process Confluence connection definitions
         self.sync_confluence(yaml_config.get('confluence', []), session)
 
