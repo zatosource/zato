@@ -31,6 +31,30 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+connection_defaults = {
+    'is_active': True,
+    'type_': GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE,
+    'is_internal': False,
+    'is_channel': False,
+    'is_outconn': False,
+    'is_outgoing': True,
+    'pool_size': 20,
+    'timeout': 250,
+}
+
+connection_extra_field_defaults = {
+    'site_url': None,
+    'auth_token': None,
+    'is_cloud': True,
+    'api_version': 'v1',
+}
+
+connection_secret_keys = ['password', 'secret', 'api_token']
+connection_required_attrs = ['name', 'address', 'username']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ConfluenceImporter:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
@@ -92,56 +116,33 @@ class ConfluenceImporter:
 
 # ################################################################################################################################
 
-    def create_confluence_definition(self, confluence_def:'anydict', session:'SASession') -> 'any_':
+    def create_confluence_definition(self, connection_config:'anydict', session:'SASession') -> 'any_':
 
         # Get the cluster instance from the importer
         cluster = self.importer.get_cluster(session)
 
-        # Create a new confluence connection instance (using GenericConn)
-        connection = GenericConn(cluster=cluster)
-
-        # Set default values for Confluence connections
-        defaults = {
-            'is_active': True,
-            'type_': GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE,
-            'is_internal': False,
-            'is_channel': False,
-            'is_outconn': False,
-            'is_outgoing': True,
-            'pool_size': 20,
-            'timeout': 250,
-        }
+        # Create a new generic connection
+        connection = GenericConn()
+        connection.cluster = cluster
 
         # Apply defaults unless overridden in YAML
-        for key, default_value in defaults.items():
-            value = confluence_def.get(key, default_value)
+        for key, default_value in connection_defaults.items():
+            value = connection_config.get(key, default_value)
             setattr(connection, key, value)
 
         # Set required fields - they will always exist
-        required_attrs = ['name', 'address', 'username']
-        for attr in required_attrs:
-            setattr(connection, attr, confluence_def[attr])
+        for attr in connection_required_attrs:
+            setattr(connection, attr, connection_config[attr])
 
-        # Set secret - using a list of possible keys with priority order
-        secret_keys = ['password', 'secret', 'api_token']
-        for key in secret_keys:
-            if key in confluence_def and confluence_def[key]:
-                connection.secret = confluence_def[key]
+        for key in connection_secret_keys:
+            if key in connection_config and connection_config[key]:
+                connection.secret = connection_config[key]
                 break
-
-        # Additional Confluence-specific fields for opaque attributes
-        # Define fields with their default values
-        extra_field_defaults = {
-            'site_url': None,
-            'auth_token': None,
-            'is_cloud': True,
-            'api_version': 'v1',
-        }
 
         # Build extra_fields using the defaults
         extra_fields = {}
-        for field, default in extra_field_defaults.items():
-            value = confluence_def.get(field, default)
+        for field, default in connection_extra_field_defaults.items():
+            value = connection_config.get(field, default)
             if value is not None:
                 extra_fields[field] = value
 
@@ -149,7 +150,7 @@ class ConfluenceImporter:
         extra_fields = {key: value for key, value in extra_fields.items() if value is not None}
 
         # Set any opaque attributes from the configuration
-        set_instance_opaque_attrs(connection, confluence_def, extra_fields)
+        set_instance_opaque_attrs(connection, connection_config, extra_fields)
 
         # Add to session and flush to get ID
         session.add(connection)
