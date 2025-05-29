@@ -11,6 +11,7 @@ import logging
 # Zato
 from zato.common.odb.model import to_json
 from zato.common.odb.query import out_odoo_list
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +23,6 @@ if 0:
     from zato.common.odb.model import OutgoingOdoo
     from zato.common.typing_ import anydict, list_
 
-    # Define collection types for type hinting
     odoo_def_list = list_[anydict]
     db_odoo_list = list_[OutgoingOdoo]
 
@@ -50,25 +50,27 @@ class OdooExporter:
             logger.info('No Odoo connection definitions found in DB')
             return []
 
-        # Convert to dictionaries for easier processing
         odoo_connections = to_json(db_odoo_connections, return_as_dict=True)
         logger.info('Processing %d Odoo connection definitions', len(odoo_connections))
 
         exported_odoo_connections = []
 
-        for odoo_obj in odoo_connections:
-            # Start with required name field
-            item = {'name': odoo_obj['name']}
+        for row in odoo_connections:
+            item = {
+                'name': row['name'],
+                'host': row['host'],
+                'port': row['port'],
+                'user': row['user'],
+                'database': row['database']
+            }
 
-            # Add other fields only if they exist
-            for field in ['is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size', 'timeout', 'api_client']:
-                if field in odoo_obj:
-                    item[field] = odoo_obj[field]
+            for field in ['is_active', 'protocol', 'pool_size', 'timeout', 'api_client']:
+                if field in row:
+                    item[field] = row[field]
 
-            # Add any opaque attributes from the connection
-            if 'opaque' in odoo_obj and odoo_obj['opaque']:
-                for key, value in odoo_obj['opaque'].items():
-                    item[key] = value
+            if 'opaque_attr' in row and row['opaque_attr']:
+                opaque = parse_instance_opaque_attr(row)
+                item.update(opaque)
 
             exported_odoo_connections.append(item)
 
