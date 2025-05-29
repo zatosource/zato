@@ -25,6 +25,7 @@ from zato.cli.enmasse.importers.odoo import OdooImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
+from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -61,6 +62,7 @@ class EnmasseYAMLImporter:
         self.sql_defs = {}
         self.job_defs = {}
         self.confluence_defs = {}
+        self.jira_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -75,6 +77,7 @@ class EnmasseYAMLImporter:
         self.sql_importer = SQLImporter(self)
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
+        self.jira_importer = JiraImporter(self)
 
 # ################################################################################################################################
 
@@ -328,6 +331,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_jira(self, jira_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Jira connection definitions from a YAML configuration with the database.
+        """
+        if not jira_list:
+            return [], []
+
+        logger.info('Processing %d Jira connection definitions', len(jira_list))
+
+        # Examine each Jira connection item
+        for idx, item in enumerate(jira_list):
+            logger.info('Jira connection item %d: %s', idx, item)
+
+        jira_created, jira_updated = self.jira_importer.sync_definitions(jira_list, session)
+
+        # Get Jira definitions from the Jira importer
+        self.jira_defs = self.jira_importer.connection_defs
+        logger.info('Processed Jira connection definitions: created=%d updated=%d', len(jira_created), len(jira_updated))
+
+        return jira_created, jira_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
@@ -363,6 +388,9 @@ class EnmasseYAMLImporter:
 
         # Process Confluence connection definitions
         self.sync_confluence(yaml_config.get('confluence', []), session)
+
+        # Process Jira connection definitions
+        self.sync_jira(yaml_config.get('jira', []), session)
 
         logger.info('YAML synchronization completed')
 
