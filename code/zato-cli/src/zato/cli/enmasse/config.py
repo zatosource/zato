@@ -18,7 +18,7 @@ class _object_type:
     Groups = 'groups'                             # 1
     Jira = 'jira'                                 # 1
     LDAP = 'ldap'                                 # 1
-    Microsoft_365 = 'cloud_microsoft_365'         #
+    Microsoft_365 = 'cloud_microsoft_365'         # 1
     Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #
