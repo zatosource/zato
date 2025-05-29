@@ -101,11 +101,17 @@ class TestEnmasseCacheExporter(TestCase):
             exported_def = exported_caches_by_name[name]
 
             # Compare only the fields that are expected to be exported by CacheExporter
-            self.assertEqual(exported_def.get('name'), yaml_def.get('name'))
-            self.assertEqual(exported_def.get('extend_expiry_on_get'), yaml_def.get('extend_expiry_on_get'),
-                             f"Mismatch for 'extend_expiry_on_get' in cache '{name}'")
-            self.assertEqual(exported_def.get('extend_expiry_on_set'), yaml_def.get('extend_expiry_on_set'),
-                             f"Mismatch for 'extend_expiry_on_set' in cache '{name}'")
+            exported_name = exported_def.get('name')
+            yaml_name = yaml_def.get('name')
+            self.assertEqual(exported_name, yaml_name, f"Mismatch for 'name' in cache '{name}'")
+
+            exported_extend_on_get = exported_def.get('extend_expiry_on_get')
+            yaml_extend_on_get = yaml_def.get('extend_expiry_on_get')
+            self.assertEqual(exported_extend_on_get, yaml_extend_on_get, f"Mismatch for 'extend_expiry_on_get' in cache '{name}'")
+
+            exported_extend_on_set = exported_def.get('extend_expiry_on_set')
+            yaml_extend_on_set = yaml_def.get('extend_expiry_on_set')
+            self.assertEqual(exported_extend_on_set, yaml_extend_on_set, f"Mismatch for 'extend_expiry_on_set' in cache '{name}'")
 
 # ################################################################################################################################
 # ################################################################################################################################
