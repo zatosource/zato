@@ -78,7 +78,6 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         # Create security definitions first since outgoing SOAP connections may use them
         security_list = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_list, self.session)
-        self.importer.sec_defs = self.security_importer.sec_defs
 
     def test_outgoing_soap_creation(self):
         """ Test creating outgoing SOAP connections from YAML.
