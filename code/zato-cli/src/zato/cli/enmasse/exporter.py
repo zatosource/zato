@@ -13,6 +13,7 @@ from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.email_imap import IMAPExporter
 from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
+from zato.cli.enmasse.exporters.group import GroupExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
@@ -47,6 +48,7 @@ class EnmasseYAMLExporter:
         self.cache_exporter = CacheExporter(self)
         self.email_imap_exporter = IMAPExporter(self)
         self.email_smtp_exporter = SMTPExporter(self)
+        self.group_exporter = GroupExporter(self)
         self.odoo_exporter = OdooExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
@@ -127,6 +129,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_groups(self, session:'SASession') -> 'list':
+        """ Exports security group definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        group_list = self.group_exporter.export(session, self.cluster_id)
+        return group_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -169,6 +180,11 @@ class EnmasseYAMLExporter:
         email_smtp_defs = self.export_email_smtp(session)
         if email_smtp_defs:
             output_dict['email_smtp'] = email_smtp_defs
+            
+        # Export security group definitions
+        group_defs = self.export_groups(session)
+        if group_defs:
+            output_dict['groups'] = group_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
