@@ -92,19 +92,19 @@ class GroupExporter:
                 member_full_name = member['name']
 
                 if not member_full_name:
-                    logger.warning(f"Member object for group '{group_name}' has an empty name. Skipping member.")
+                    logger.warning(f'Member object for group "{group_name}" has an empty name. Skipping member.')
                     continue
 
                 parts = member_full_name.rsplit('-', 1)
-                
+
                 if len(parts) != 2:
-                    logger.warning(f"Could not parse member name '{member_full_name}' to extract security reference for group '{group_name}'. Skipping member.")
+                    logger.warning(f'Could not parse member name "{member_full_name}" to extract security reference for group "{group_name}". Skipping member.')
                     continue
 
                 security_reference = parts[0]
-                
+
                 if not security_reference:
-                    logger.warning(f"Extracted an empty security reference from member name '{member_full_name}' for group '{group_name}'. Skipping member.")
+                    logger.warning(f'Extracted an empty security reference from member name "{member_full_name}" for group "{group_name}". Skipping member.')
                     continue
 
                 try:
@@ -112,7 +112,7 @@ class GroupExporter:
                     if sec_name:
                         member_names.append(sec_name)
                 except ValueError as e:
-                    logger.warning(f"Could not resolve security reference '{security_reference}' from member name '{member_full_name}' for group '{group_name}': {e}. Skipping member.")
+                    logger.warning(f'Could not resolve security reference "{security_reference}" from member name "{member_full_name}" for group "{group_name}": {e}. Skipping member.')
 
             # Create the group export definition
             group_def = {
@@ -143,16 +143,16 @@ class GroupExporter:
             # The ID is the numeric part after the last hyphen.
             ref_parts = reference.rsplit('-', 1)
             if len(ref_parts) != 2:
-                error_msg = f"Malformed security reference '{reference}'. Expected format like 'type-numeric_id' or 'type-part-numeric_id'."
+                error_msg = f'Malformed security reference "{reference}". Expected format like "type-numeric_id" or "type-part-numeric_id".'
                 logger.error(error_msg)
                 raise ValueError(error_msg)
 
-            sec_type_part, sec_id_str = ref_parts
-            
+            _, sec_id_str = ref_parts
+
             try:
                 sec_id = int(sec_id_str) # Convert to int here and catch potential ValueError
             except ValueError:
-                error_msg = f"Security ID part '{sec_id_str}' in reference '{reference}' is not a valid integer."
+                error_msg = f'Security ID part "{sec_id_str}" in reference "{reference}" is not a valid integer.'
                 logger.error(error_msg)
                 raise ValueError(error_msg)
 
