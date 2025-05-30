@@ -6,6 +6,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 import os
 import tempfile
@@ -79,6 +80,20 @@ class TestEnmasseGroupExporter(TestCase):
         """ Tests the export of group definitions.
         """
         self._setup_test_environment()
+
+        # Initialize the exporter
+        yaml_exporter = EnmasseYAMLExporter()
+
+        # Export the data
+        exported_data = yaml_exporter.export_to_dict(self.session)
+
+        # Get the groups section
+        exported_groups = exported_data.get('groups', [])
+
+        # Print the exported groups
+        print('\n--- Exported Groups ---')
+        print(json.dumps(exported_groups, indent=2))
+        print('-----------------------\n')
 
 # ################################################################################################################################
 
