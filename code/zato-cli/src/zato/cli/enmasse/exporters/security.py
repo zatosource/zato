@@ -36,7 +36,10 @@ class SecurityExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
+# ################################################################################################################################
+
     def _should_skip_item(self, item, excluded_names, excluded_prefixes):
+
         # Skip items in exclude list
         if item['name'] in excluded_names:
             return True
@@ -47,6 +50,8 @@ class SecurityExporter:
                 return True
 
         return False
+
+# ################################################################################################################################
 
     def _process_standard_security(self, items, sec_type, excluded_names, excluded_prefixes):
         result = []
@@ -83,8 +88,7 @@ class SecurityExporter:
 
         # Fields that might be in opaque data
         possible_fields = [
-            'auth_endpoint', 'client_id_field', 'client_secret_field',
-            'grant_type', 'data_format', 'extra_fields'
+            'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format', 'extra_fields'
         ]
 
         for item in items:
@@ -143,12 +147,13 @@ class SecurityExporter:
                     missing_fields.append(field)
 
             if missing_fields:
-                logger.warning('Bearer token %s is missing required fields: %s',
-                              item['name'], missing_fields)
+                logger.warning('Bearer token %s is missing required fields: %s', item['name'], missing_fields)
 
             result.append(oauth)
 
         return result
+
+# ################################################################################################################################
 
     def export(self, session:'SASession', cluster_id:'int') -> 'list_[anydict]':
         """ Exports security definitions.
@@ -173,29 +178,37 @@ class SecurityExporter:
         if basic_auth_defs:
             basic_auth_items = to_json(basic_auth_defs, return_as_dict=True)
             logger.info('Processing %d basic auth definitions', len(basic_auth_items))
-            exported_security.extend(self._process_standard_security(
-                basic_auth_items, 'basic_auth', excluded_names, excluded_prefixes))
+
+            # Process and get basic auth items
+            basic_auth_security = self._process_standard_security(basic_auth_items, 'basic_auth', excluded_names, excluded_prefixes)
+            exported_security.extend(basic_auth_security)
 
         # Process API key definitions
         if apikey_defs:
             apikey_items = to_json(apikey_defs, return_as_dict=True)
             logger.info('Processing %d API key definitions', len(apikey_items))
-            exported_security.extend(self._process_standard_security(
-                apikey_items, 'apikey', excluded_names, excluded_prefixes))
+
+            # Process and get API key items
+            apikey_security = self._process_standard_security(apikey_items, 'apikey', excluded_names, excluded_prefixes)
+            exported_security.extend(apikey_security)
 
         # Process NTLM definitions
         if ntlm_defs:
             ntlm_items = to_json(ntlm_defs, return_as_dict=True)
             logger.info('Processing %d NTLM definitions', len(ntlm_items))
-            exported_security.extend(self._process_standard_security(
-                ntlm_items, 'ntlm', excluded_names, excluded_prefixes))
+
+            # Process and get NTLM items
+            ntlm_security = self._process_standard_security(ntlm_items, 'ntlm', excluded_names, excluded_prefixes)
+            exported_security.extend(ntlm_security)
 
         # Process OAuth bearer token definitions
         if oauth_defs:
             oauth_items = to_json(oauth_defs, return_as_dict=True)
             logger.info('Processing %d bearer token definitions', len(oauth_items))
-            exported_security.extend(self._process_bearer_tokens(
-                oauth_items, excluded_names, excluded_prefixes))
+
+            # Process and get bearer token items
+            bearer_tokens = self._process_bearer_tokens( oauth_items, excluded_names, excluded_prefixes)
+            exported_security.extend(bearer_tokens)
 
         logger.info('Successfully prepared %d security definitions for export', len(exported_security))
         return exported_security

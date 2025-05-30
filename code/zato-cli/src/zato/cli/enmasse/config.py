@@ -25,7 +25,7 @@ class _object_type:
     Search_ElasticSearch = 'elastic_search'       # 1
     SQL  = 'sql'                                  # 1 2
     Scheduler = 'scheduler'                       # 1 2
-    Security = 'security'                         # 1
+    Security = 'security'                         # 1 2
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #
