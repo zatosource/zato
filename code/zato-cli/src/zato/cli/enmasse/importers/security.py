@@ -33,7 +33,6 @@ class SecurityImporter:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
-        self.sec_defs = {}
 
 # ################################################################################################################################
 
@@ -279,15 +278,7 @@ class SecurityImporter:
                 instance = self.create_security_definition(item, session)
                 if instance:
                     logger.info('Created security definition: name=%s id=%s', instance.name, getattr(instance, 'id', None))
-                    out_created.append(instance)
-
-                    instance_dict = {
-                        'id': instance.id,
-                        'name': instance.name,
-                        'type': item['type']
-                    }
-
-                    self.sec_defs[instance.name] = instance_dict
+                out_created.append(instance)
 
             logger.info('Updating %d existing security definitions', len(to_update))
             for item in to_update:
@@ -300,6 +291,27 @@ class SecurityImporter:
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()
             logger.info('Successfully committed all changes')
+
+            # Populate sec_defs after commit, so instance IDs are available
+            for item_in_yaml in to_create: 
+                created_instance = next((inst for inst in out_created if inst.name == item_in_yaml['name']), None)
+                if created_instance:
+                    instance_dict = {
+                        'id': created_instance.id, 
+                        'name': created_instance.name,
+                        'type': item_in_yaml['type'] 
+                    }
+                    self.importer.sec_defs[created_instance.name] = instance_dict
+
+            for item_in_yaml in to_update:
+                updated_instance = next((inst for inst in out_updated if inst.name == item_in_yaml['name']), None)
+                if updated_instance:
+                    instance_dict = {
+                        'id': updated_instance.id, 
+                        'name': updated_instance.name,
+                        'type': item_in_yaml['type']
+                    }
+                    self.importer.sec_defs[updated_instance.name] = instance_dict
 
         except Exception as e:
             logger.error('Error syncing security definitions: %s', e)
