@@ -89,29 +89,30 @@ class GroupExporter:
             # Get security definition names from member references
             member_names = []
             for member in members:
-
-                # The member's 'name' field is in the format 'security_reference-group_id'.
-                # The 'security_reference' itself is in the format 'type-id' (e.g., 'api-client-123').
-                # We need to extract this 'security_reference' to look up the actual security definition name.
                 member_full_name = member['name']
-                if member_full_name:
-                    # The security_reference is everything before the last hyphen (which separates it from group_id)
-                    parts = member_full_name.rsplit('-', 1)
-                    if len(parts) == 2:
-                        security_reference = parts[0] # This is the 'type-id' string e.g. "api-client-123"
-                        if security_reference: # Ensure extracted reference is not empty
-                            try:
-                                sec_name = self._get_security_name_from_reference(session, security_reference, cluster_id)
-                                if sec_name:
-                                    member_names.append(sec_name)
-                            except ValueError as e:
-                                logger.warning(f"Could not resolve security reference '{security_reference}' from member name '{member_full_name}' for group '{group_name}': {e}. Skipping member.")
-                        else:
-                            logger.warning(f"Extracted an empty security reference from member name '{member_full_name}' for group '{group_name}'. Skipping member.")
-                    else:
-                        logger.warning(f"Could not parse member name '{member_full_name}' to extract security reference for group '{group_name}'. Skipping member.")
-                else:
+
+                if not member_full_name:
                     logger.warning(f"Member object for group '{group_name}' has an empty name. Skipping member.")
+                    continue
+
+                parts = member_full_name.rsplit('-', 1)
+                
+                if len(parts) != 2:
+                    logger.warning(f"Could not parse member name '{member_full_name}' to extract security reference for group '{group_name}'. Skipping member.")
+                    continue
+
+                security_reference = parts[0]
+                
+                if not security_reference:
+                    logger.warning(f"Extracted an empty security reference from member name '{member_full_name}' for group '{group_name}'. Skipping member.")
+                    continue
+
+                try:
+                    sec_name = self._get_security_name_from_reference(session, security_reference, cluster_id)
+                    if sec_name:
+                        member_names.append(sec_name)
+                except ValueError as e:
+                    logger.warning(f"Could not resolve security reference '{security_reference}' from member name '{member_full_name}' for group '{group_name}': {e}. Skipping member.")
 
             # Create the group export definition
             group_def = {
@@ -132,7 +133,7 @@ class GroupExporter:
             The reference is typically stored in the format 'type-id'.
         """
         if not reference:
-            error_msg = "Empty security reference provided."
+            error_msg = 'Empty security reference provided.'
             logger.error(error_msg)
             raise ValueError(error_msg)
 
