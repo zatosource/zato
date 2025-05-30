@@ -14,7 +14,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import Groups
-from zato.common.odb.model import GenericObject
+from zato.common.odb.model import GenericObject, SecurityBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,12 +156,12 @@ class GroupExporter:
                 logger.error(error_msg)
                 raise ValueError(error_msg)
 
-            # Query for the security definition
+            # Query for the security definition name from SecurityBase
             query = select([
-                GenericObject.name
+                SecurityBase.name
                 ]).where(and_(
-                    GenericObject.id == int(sec_id),
-                    GenericObject.cluster_id == cluster_id,
+                    SecurityBase.id == sec_id, # sec_id is already an int
+                    SecurityBase.cluster_id == cluster_id,
                 ))
 
             result = session.execute(query).fetchone()
