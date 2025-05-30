@@ -12,6 +12,7 @@ import logging
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.email_imap import IMAPExporter
+from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
@@ -45,6 +46,7 @@ class EnmasseYAMLExporter:
         # Initialize exporters
         self.cache_exporter = CacheExporter(self)
         self.email_imap_exporter = IMAPExporter(self)
+        self.email_smtp_exporter = SMTPExporter(self)
         self.odoo_exporter = OdooExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
@@ -116,6 +118,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_email_smtp(self, session:'SASession') -> 'list':
+        """ Exports email SMTP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        smtp_list = self.email_smtp_exporter.export(session, self.cluster_id)
+        return smtp_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -153,6 +164,11 @@ class EnmasseYAMLExporter:
         email_imap_defs = self.export_email_imap(session)
         if email_imap_defs:
             output_dict['email_imap'] = email_imap_defs
+            
+        # Export email SMTP connection definitions
+        email_smtp_defs = self.export_email_smtp(session)
+        if email_smtp_defs:
+            output_dict['email_smtp'] = email_smtp_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
