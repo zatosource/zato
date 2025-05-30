@@ -12,6 +12,7 @@ import logging
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
+from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -41,6 +42,7 @@ class EnmasseYAMLExporter:
         # Initialize exporters
         self.cache_exporter = CacheExporter(self)
         self.odoo_exporter = OdooExporter(self)
+        self.sql_exporter = SQLExporter(self)
 
         # Other exporters will be added here later
 
@@ -74,6 +76,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_sql(self, session:'SASession') -> 'list':
+        """ Exports SQL connection pool definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        sql_list = self.sql_exporter.export(session, self.cluster_id)
+        return sql_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -91,6 +102,11 @@ class EnmasseYAMLExporter:
         odoo_defs = self.export_odoo(session)
         if odoo_defs:
             output_dict['odoo'] = odoo_defs
+            
+        # Export SQL connection pool definitions
+        sql_defs = self.export_sql(session)
+        if sql_defs:
+            output_dict['sql'] = sql_defs
 
         # Future exporters will add their sections here, e.g.:
         # security_defs = self.export_security(session)

@@ -77,8 +77,7 @@ class TestEnmasseOdooExporter(TestCase):
         created_odoo_connections, _ = self.odoo_importer.sync_odoo_definitions(odoo_list_from_yaml, self.session)
         self.session.commit()
 
-        self.assertTrue(len(created_odoo_connections) > 0, 
-                        'No Odoo connections were created from YAML, cannot test export meaningfully.')
+        self.assertTrue(len(created_odoo_connections) > 0,  'No Odoo connections were created from YAML.')
 
         # 3. Initialize the exporter and export the data
         yaml_exporter = EnmasseYAMLExporter()
@@ -88,8 +87,7 @@ class TestEnmasseOdooExporter(TestCase):
         exported_odoo_list = exported_data['odoo']
 
         # 4. Compare exported data with the original YAML data
-        self.assertEqual(len(exported_odoo_list), len(odoo_list_from_yaml), 
-                         'Number of exported Odoo connections does not match original YAML.')
+        self.assertEqual(len(exported_odoo_list), len(odoo_list_from_yaml), 'Number of exported Odoo connections does not match original YAML.')
 
         # Create dictionaries keyed by name for easier comparison
         yaml_odoo_by_name = {item['name']: item for item in odoo_list_from_yaml}
@@ -104,8 +102,7 @@ class TestEnmasseOdooExporter(TestCase):
             # Note: password is not exported for security reasons
             for field in ['name', 'is_active', 'host', 'port', 'user', 'database', 'protocol']:
                 if field in yaml_def:
-                    self.assertEqual(exported_def.get(field), yaml_def.get(field), 
-                                     f'Mismatch for "{field}" in Odoo connection "{name}"')
+                    self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Mismatch for "{field}" in Odoo connection "{name}"')
 
 # ################################################################################################################################
 # ################################################################################################################################
