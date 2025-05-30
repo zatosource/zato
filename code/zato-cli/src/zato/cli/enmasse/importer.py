@@ -242,8 +242,6 @@ class EnmasseYAMLImporter:
         logger.info('Processing %d security definitions', len(security_list))
         security_created, security_updated = self.security_importer.sync_security_definitions(security_list, session)
 
-        # Get security definitions from the security importer
-        self.sec_defs = self.security_importer.sec_defs
         logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
 
         return security_created, security_updated
