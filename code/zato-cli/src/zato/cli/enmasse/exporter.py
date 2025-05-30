@@ -12,6 +12,7 @@ import logging
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
+from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.common.odb.model import Cluster
 
@@ -42,6 +43,7 @@ class EnmasseYAMLExporter:
         # Initialize exporters
         self.cache_exporter = CacheExporter(self)
         self.odoo_exporter = OdooExporter(self)
+        self.scheduler_exporter = SchedulerExporter(self)
         self.sql_exporter = SQLExporter(self)
 
         # Other exporters will be added here later
@@ -76,6 +78,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_scheduler(self, session:'SASession') -> 'list':
+        """ Exports scheduler job definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        scheduler_list = self.scheduler_exporter.export(session, self.cluster_id)
+        return scheduler_list
+
+# ################################################################################################################################
+
     def export_sql(self, session:'SASession') -> 'list':
         """ Exports SQL connection pool definitions.
         """
@@ -107,6 +118,11 @@ class EnmasseYAMLExporter:
         sql_defs = self.export_sql(session)
         if sql_defs:
             output_dict['sql'] = sql_defs
+            
+        # Export scheduler job definitions
+        scheduler_defs = self.export_scheduler(session)
+        if scheduler_defs:
+            output_dict['scheduler'] = scheduler_defs
 
         # Future exporters will add their sections here, e.g.:
         # security_defs = self.export_security(session)

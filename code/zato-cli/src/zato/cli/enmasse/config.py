@@ -24,7 +24,7 @@ class _object_type:
     Outgoing_SOAP = 'outgoing_soap'               # 1
     Search_ElasticSearch = 'elastic_search'       # 1
     SQL  = 'sql'                                  # 1 2
-    Scheduler = 'scheduler'                       # 1
+    Scheduler = 'scheduler'                       # 1 2
     Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
