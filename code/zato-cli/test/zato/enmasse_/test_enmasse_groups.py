@@ -76,7 +76,7 @@ class TestEnmasseGroups(TestCase):
         # Create a unique group name for this test to avoid conflicts
         unique_suffix = uuid.uuid4().hex[:8]
         group_defs = [self.yaml_config['groups'][0].copy()]
-        group_defs[0]['name'] = f'test_sync_group_{unique_suffix}'
+        group_defs[0]['name'] = f'enmasse.test_sync_group_{unique_suffix}'
 
         # First sync - should create the group
         processed_groups, _ = self.group_importer.sync_groups(group_defs, self.session)

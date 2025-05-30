@@ -90,10 +90,29 @@ class TestEnmasseGroupExporter(TestCase):
         # Get the groups section
         exported_groups = exported_data.get('groups', [])
 
-        # Print the exported groups
-        print('\n--- Exported Groups ---')
-        print(json.dumps(exported_groups, indent=2))
-        print('-----------------------\n')
+        # Get the expected groups from the imported YAML
+        expected_groups_from_yaml = self.yaml_config.get('groups', [])
+
+        # Assert that the number of exported groups matches the expected number
+        self.assertEqual(len(exported_groups), len(expected_groups_from_yaml), \
+            f"Expected {len(expected_groups_from_yaml)} groups, but got {len(exported_groups)}")
+
+        # Convert exported groups to a dictionary keyed by name for easier lookup
+        exported_groups_dict = {item['name']: item for item in exported_groups}
+
+        # Verify each expected group
+        for expected_group in expected_groups_from_yaml:
+            expected_name = expected_group['name']
+            self.assertIn(expected_name, exported_groups_dict, f"Exported groups missing group: {expected_name}")
+
+            exported_group_data = exported_groups_dict[expected_name]
+            self.assertEqual(exported_group_data['name'], expected_name)
+
+            # Compare members as sets to ignore order
+            expected_members = set(expected_group.get('members', []))
+            exported_members = set(exported_group_data.get('members', []))
+            self.assertSetEqual(exported_members, expected_members, \
+                f"Member mismatch for group {expected_name}. Expected: {expected_members}, Got: {exported_members}")
 
 # ################################################################################################################################
 
