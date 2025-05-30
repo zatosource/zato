@@ -13,6 +13,7 @@ from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.cache import CacheExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
+from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.common.odb.model import Cluster
 
@@ -44,9 +45,8 @@ class EnmasseYAMLExporter:
         self.cache_exporter = CacheExporter(self)
         self.odoo_exporter = OdooExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
+        self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
-
-        # Other exporters will be added here later
 
 # ################################################################################################################################
 
@@ -96,6 +96,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_security(self, session:'SASession') -> 'list':
+        """ Exports security definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        security_list = self.security_exporter.export(session, self.cluster_id)
+        return security_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -123,11 +132,11 @@ class EnmasseYAMLExporter:
         scheduler_defs = self.export_scheduler(session)
         if scheduler_defs:
             output_dict['scheduler'] = scheduler_defs
-
-        # Future exporters will add their sections here, e.g.:
-        # security_defs = self.export_security(session)
-        # if security_defs:
-        #     output_dict['security'] = security_defs
+            
+        # Export security definitions
+        security_defs = self.export_security(session)
+        if security_defs:
+            output_dict['security'] = security_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
