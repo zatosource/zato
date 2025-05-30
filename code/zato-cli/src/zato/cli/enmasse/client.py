@@ -72,8 +72,8 @@ def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None':
-    """ Deletes all objects from database tables whose name starts with the given prefix.
+def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -> 'None':
+    """ Deletes all objects from database tables whose name starts with any of the given prefixes.
     Continues deletion until no errors are raised.
     """
     # Get a session from the server directory
@@ -99,19 +99,21 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
 
         # Special handling for sec_base table
         try:
-            # First fetch IDs from sec_base that match the prefix
-            query = f'SELECT id FROM sec_base WHERE name LIKE "{prefix}%"'
+            # First fetch IDs from sec_base that match any of the prefixes
+            like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
+            where_clause = ' OR '.join(like_clauses)
+            query = f'SELECT id FROM sec_base WHERE {where_clause}'
             result = session.execute(query)
             security_ids = [row[0] for row in result.fetchall()]
 
             if security_ids:
-                logger.info(f'Found {len(security_ids)} security ID{"s" if len(security_ids) != 1 else ""} in sec_base with prefix {prefix}')
+                logger.info(f'Found {len(security_ids)} security ID{'s' if len(security_ids) != 1 else ''} in sec_base matching prefixes: {', '.join(prefixes)}')
 
                 # Delete from sec_base
-                delete_query = f'DELETE FROM sec_base WHERE name LIKE "{prefix}%"'
+                delete_query = f'DELETE FROM sec_base WHERE {where_clause}'
                 result = session.execute(delete_query)
                 session.commit()
-                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from sec_base with prefix {prefix}')
+                logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from sec_base matching prefixes: {', '.join(prefixes)}')
         except SQLAlchemyError as e:
             session.rollback()
             logger.debug(f'Error handling sec_base: {e}')
@@ -134,7 +136,7 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
                     session.commit()
 
                     if result.rowcount > 0:
-                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with ID{"s" if len(security_ids) != 1 else ""} from sec_base')
+                        logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} with ID{'s' if len(security_ids) != 1 else ''} from sec_base')
                 except SQLAlchemyError as e:
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
@@ -142,13 +144,15 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
         # Special handling for job_interval_based table - need to handle it before job records are deleted
         # as it doesn't have a name column but depends on job_id from the job table
         try:
-            # First fetch job IDs from the job table that match the prefix
-            query = f'SELECT id FROM job WHERE name LIKE "{prefix}%"'
+            # First fetch job IDs from the job table that match any of the prefixes
+            like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
+            where_clause = ' OR '.join(like_clauses)
+            query = f'SELECT id FROM job WHERE {where_clause}'
             result = session.execute(query)
             job_ids = [row[0] for row in result.fetchall()]
 
             if job_ids:
-                logger.info(f'Found {len(job_ids)} job ID{"s" if len(job_ids) != 1 else ""} in job table with prefix {prefix}')
+                logger.info(f'Found {len(job_ids)} job ID{'s' if len(job_ids) != 1 else ''} in job table matching prefixes: {', '.join(prefixes)}')
 
                 # Delete from job_interval_based using the job_ids
                 ids_string = ', '.join(str(id) for id in job_ids)
@@ -156,7 +160,7 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
 
                 result = session.execute(delete_query)
                 session.commit()
-                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from job_interval_based linked to jobs with prefix {prefix}')
+                logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from job_interval_based linked to jobs matching prefixes: {', '.join(prefixes)}')
         except SQLAlchemyError as e:
             session.rollback()
             logger.debug(f'Error handling job_interval_based cleanup: {e}')
@@ -175,18 +179,25 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
                     continue
 
                 try:
-                    # Execute a delete query for objects with names starting with the prefix
-                    result = session.execute(
-                        f'DELETE FROM {table_name} WHERE name LIKE "{prefix}%"'
-                    )
+                    # Check if the table has a 'name' column
+                    columns = [col['name'] for col in inspector.get_columns(table_name)]
+                    if 'name' in columns:
+                        # Execute a delete query for objects with names starting with any of the prefixes
+                        like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
+                        where_clause = ' OR '.join(like_clauses)
+                        result = session.execute(
+                            f'DELETE FROM {table_name} WHERE {where_clause}'
+                        )
 
-                    # Commit the changes
-                    session.commit()
+                        # Commit the changes
+                        session.commit()
 
-                    # If rows were deleted
-                    if result.rowcount > 0:
-                        changes_made = True
-                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with prefix {prefix}')
+                        # If rows were deleted
+                        if result.rowcount > 0:
+                            changes_made = True
+                            logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} matching prefixes: {', '.join(prefixes)}')
+                    else:
+                        logger.debug(f'Table {table_name} does not have a "name" column, skipping name-based delete.')
 
                 except SQLAlchemyError as e:
                     # Roll back in case of error
@@ -211,13 +222,13 @@ def cleanup(prefix:'str', server_dir:'str', stdin_data:'strnone'=None) -> 'None'
 
                             if result.rowcount > 0:
                                 changes_made = True
-                                logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} using column {name_col}')
+                                logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} using column {name_col}')
                     except SQLAlchemyError:
                         session.rollback()
                         # Just skip this table if we can't determine how to delete by prefix
                         pass
 
-        logger.info(f'Cleanup completed for prefix {prefix}')
+        logger.info(f'Cleanup completed for prefixes: {', '.join(prefixes)}')
 
     finally:
         # Always close the session
@@ -229,8 +240,8 @@ def cleanup_enmasse() -> 'None':
     """ Cleans up all database objects with the 'enmasse' prefix using the default server path.
     """
     server_path = os.path.expanduser('~/env/qs-1/server1')
-    cleanup('enmasse', server_path)
-    logger.info('Enmasse cleanup completed')
+    cleanup(['enmasse', 'test_sync_group'], server_path)
+    logger.info('Enmasse cleanup completed for prefixes: enmasse, test_sync_group')
 
 # ################################################################################################################################
 # ################################################################################################################################
