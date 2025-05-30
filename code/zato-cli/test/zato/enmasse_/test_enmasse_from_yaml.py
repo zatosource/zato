@@ -101,8 +101,7 @@ class TestEnmasseFromYAML(TestCase):
 
         # Process security definitions
         sec_created, _ = self.security_importer.sync_security_definitions(basic_auth_defs, self.session)
-        # Update importer's security definitions for other tests
-        self.importer.sec_defs = self.security_importer.sec_defs
+
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(basic_auth_defs), 'Not all basic_auth definitions were created')
@@ -127,8 +126,7 @@ class TestEnmasseFromYAML(TestCase):
         # Process security definitions
         sec_created, _ = self.security_importer.sync_security_definitions(bearer_token_defs, self.session)
 
-        # Update importer's security definitions for other tests
-        self.importer.sec_defs = self.security_importer.sec_defs
+
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(bearer_token_defs), 'Not all bearer_token definitions were created')
@@ -154,8 +152,7 @@ class TestEnmasseFromYAML(TestCase):
         # Process security definitions
         sec_created, _ = self.security_importer.sync_security_definitions(ntlm_defs, self.session)
 
-        # Update importer's security definitions for other tests
-        self.importer.sec_defs = self.security_importer.sec_defs
+
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(ntlm_defs), 'Not all NTLM definitions were created')
@@ -180,8 +177,7 @@ class TestEnmasseFromYAML(TestCase):
         # Process security definitions
         sec_created, _ = self.security_importer.sync_security_definitions(apikey_defs, self.session)
 
-        # Update importer's security definitions for other tests
-        self.importer.sec_defs = self.security_importer.sec_defs
+
 
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(apikey_defs), 'Not all API key definitions were created')
@@ -203,8 +199,7 @@ class TestEnmasseFromYAML(TestCase):
         # First process security definitions which channels depend on
         _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
 
-        # Update importer's security definitions for channel importer to use
-        self.importer.sec_defs = self.security_importer.sec_defs
+
 
         # Filter only REST channel definitions
         channel_defs = self.yaml_config['channel_rest']
@@ -362,18 +357,15 @@ class TestEnmasseFromYAML(TestCase):
         security_list = self.yaml_config.get('security', [])
         _ = self.security_importer.sync_security_definitions(security_list, self.session)
 
-        # Update importer's security definitions for channel importer to use
-        self.importer.sec_defs = self.security_importer.sec_defs
-
         # Process channels which depend on security definitions
         channel_list = self.yaml_config.get('channel_rest', [])
         _ = self.channel_importer.sync_channel_rest(channel_list, self.session)
 
         # Verify security definitions were created
-        self.assertTrue(len(self.security_importer.sec_defs) >= 5, 'Not all security definitions were created')
+        self.assertTrue(len(self.importer.sec_defs) >= 5, 'Not all security definitions were created')
 
         # Check each security definition type exists
-        security_types = [def_info['type'] for def_info in self.security_importer.sec_defs.values()]
+        security_types = [def_info['type'] for def_info in self.importer.sec_defs.values()]
         self.assertIn('basic_auth', security_types)
         self.assertIn('bearer_token', security_types)
         self.assertIn('ntlm', security_types)
