@@ -172,6 +172,64 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         self.assertEqual(len(job_updated2), 4)
 
 # ################################################################################################################################
+
+    def test_scheduler_configuration(self):
+        """ Test the configuration of scheduled jobs.
+        """
+        self._setup_test_environment()
+
+        # Verify scheduler configurations exist in the YAML
+        scheduler_defs = self.yaml_config['scheduler']
+        self.assertTrue(len(scheduler_defs) > 0, 'No scheduler definitions found in YAML')
+
+        # Check common properties for all scheduler items
+        for item in scheduler_defs:
+            self.assertIn('name', item)
+            self.assertIn('service', item)
+            self.assertIn('job_type', item)
+            self.assertIn('start_date', item)
+            self.assertTrue(item['name'].startswith('enmasse.scheduler.'))
+            self.assertEqual(item['service'], 'demo.ping')
+            self.assertEqual(item['job_type'], 'interval_based')
+
+        # Verify different interval types (seconds, minutes, hours, days)
+        scheduler1 = cast_('any_', None)
+        scheduler2 = cast_('any_', None)
+        scheduler3 = cast_('any_', None)
+        scheduler4 = cast_('any_', None)
+
+        # Find scheduler items by name using a simple loop
+        for item in scheduler_defs:
+            if item['name'] == 'enmasse.scheduler.1':
+                scheduler1 = item
+            elif item['name'] == 'enmasse.scheduler.2':
+                scheduler2 = item
+            elif item['name'] == 'enmasse.scheduler.3':
+                scheduler3 = item
+            elif item['name'] == 'enmasse.scheduler.4':
+                scheduler4 = item
+
+        # Check scheduler with seconds interval
+        self.assertIsNotNone(scheduler1)
+        self.assertIn('seconds', scheduler1)
+        self.assertEqual(scheduler1['seconds'], 2)
+
+        # Check scheduler with minutes interval
+        self.assertIsNotNone(scheduler2)
+        self.assertIn('minutes', scheduler2)
+        self.assertEqual(scheduler2['minutes'], 51)
+
+        # Check scheduler with hours interval
+        self.assertIsNotNone(scheduler3)
+        self.assertIn('hours', scheduler3)
+        self.assertEqual(scheduler3['hours'], 3)
+
+        # Check scheduler with days interval
+        self.assertIsNotNone(scheduler4)
+        self.assertIn('days', scheduler4)
+        self.assertEqual(scheduler4['days'], 10)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
