@@ -105,8 +105,7 @@ class TestEnmasseChannelRESTExporter(TestCase):
             # Import the channel definitions
             self.channel_importer.importer.cluster_id = self.importer.cluster_id
             created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
-            logger.info('Imported %d REST channels (created=%d, updated=%d)',
-                       len(created) + len(updated), len(created), len(updated))
+            logger.info('Imported %d REST channels (created=%d, updated=%d)', len(created) + len(updated), len(created), len(updated))
 
             # Test that the imported channels can be exported correctly
             exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
