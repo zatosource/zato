@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,7 +102,7 @@ class TestEnmasseJiraExporter(TestCase):
         exported_jira_list = exported_data['jira']
 
         # 4. Compare exported data with the original YAML data
-        self.assertEqual(len(exported_jira_list), len(jira_list_from_yaml), 
+        self.assertEqual(len(exported_jira_list), len(jira_list_from_yaml),
                          'Number of exported JIRA connections does not match original YAML.')
 
         # Create dictionaries keyed by name for easier comparison
@@ -117,7 +118,7 @@ class TestEnmasseJiraExporter(TestCase):
             # Note: password and api_token are not exported for security reasons
             for field in ['name', 'is_active', 'address', 'username', 'is_cloud', 'api_version', 'timeout']:
                 if field in yaml_def and yaml_def[field] is not None:
-                    self.assertEqual(exported_def.get(field), yaml_def.get(field), 
+                    self.assertEqual(exported_def.get(field), yaml_def.get(field),
                                      f'Mismatch for "{field}" in JIRA connection "{name}"')
 
 # ################################################################################################################################

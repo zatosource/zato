@@ -207,7 +207,7 @@ class SecurityExporter:
             logger.info('Processing %d bearer token definitions', len(oauth_items))
 
             # Process and get bearer token items
-            bearer_tokens = self._process_bearer_tokens( oauth_items, excluded_names, excluded_prefixes)
+            bearer_tokens = self._process_bearer_tokens(oauth_items, excluded_names, excluded_prefixes)
             exported_security.extend(bearer_tokens)
 
         logger.info('Successfully prepared %d security definitions for export', len(exported_security))

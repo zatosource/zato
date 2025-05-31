@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,8 +32,6 @@ if 0:
 class TestEnmasseConfluenceExport(TestCase):
     """ Tests exporting Confluence definitions to YAML format using enmasse.
     """
-
-# ################################################################################################################################
 
     def setUp(self) -> 'None':
         # Server path for database connection

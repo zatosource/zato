@@ -28,6 +28,8 @@ from zato.common.typing_ import cast_
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import stranydict
+    SASession = SASession
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################

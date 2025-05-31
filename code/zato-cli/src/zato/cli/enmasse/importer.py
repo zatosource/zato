@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from pathlib import Path
 
 # PyYAML
 import yaml
@@ -262,7 +261,7 @@ class EnmasseYAMLImporter:
             logger.info('Group item %d: %s', idx, item)
 
         processed_groups = self.group_importer.sync_groups(group_list, session)
-        
+
         # Get group definitions from the group importer and store them in our instance
         self.group_defs = self.group_importer.group_defs
 
