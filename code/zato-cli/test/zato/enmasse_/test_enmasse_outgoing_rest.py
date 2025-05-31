@@ -165,6 +165,55 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.assertEqual(len(self.importer.outgoing_rest_defs), count)
 
 # ################################################################################################################################
+
+    def test_outgoing_rest_configuration(self):
+        """ Test the configuration of outgoing REST connections.
+        """
+        self._setup_test_environment()
+
+        # Verify outgoing_rest configurations exist in the YAML
+        outgoing_defs = self.yaml_config['outgoing_rest']
+        self.assertTrue(len(outgoing_defs) > 0, 'No outgoing REST definitions found in YAML')
+
+        # Check specific properties in the outgoing connections
+        for item in outgoing_defs:
+            self.assertIn('name', item)
+            self.assertIn('host', item)
+            self.assertIn('url_path', item)
+            self.assertTrue(item['name'].startswith('enmasse.outgoing.rest.'))
+
+        # Verify the specific details for each connection
+        conn1 = cast_('any_', None)
+        conn2 = cast_('any_', None)
+        conn5 = cast_('any_', None)
+
+        # Find connections by name using a simple loop
+        for item in outgoing_defs:
+            if item['name'] == 'enmasse.outgoing.rest.1':
+                conn1 = item
+            elif item['name'] == 'enmasse.outgoing.rest.2':
+                conn2 = item
+            elif item['name'] == 'enmasse.outgoing.rest.5':
+                conn5 = item
+
+        # Check conn1 details
+        self.assertIsNotNone(conn1)
+        self.assertEqual(conn1['host'], 'https://example.com:443')
+        self.assertEqual(conn1['url_path'], '/sso/{type}/hello/{endpoint}')
+        self.assertEqual(conn1['data_format'], 'json')
+        self.assertEqual(conn1['timeout'], 60)
+
+        # Check conn2 security configuration
+        self.assertIsNotNone(conn2)
+        self.assertIn('security', conn2)
+        self.assertEqual(conn2['security'], 'enmasse.bearer_token.1')
+
+        # Check conn5 TLS verification setting
+        self.assertIsNotNone(conn5)
+        self.assertIn('tls_verify', conn5)
+        self.assertEqual(conn5['tls_verify'], False)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
