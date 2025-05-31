@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,12 +101,12 @@ class TestEnmasseEmailIMAPExporter(TestCase):
             self.assertEqual(exported_def.get('name'), yaml_def.get('name'), f'Name mismatch for IMAP connection "{name}"')
             self.assertEqual(exported_def.get('host'), yaml_def.get('host'), f'Host mismatch for IMAP connection "{name}"')
             self.assertEqual(exported_def.get('username'), yaml_def.get('username'), f'Username mismatch for IMAP connection "{name}"')
-            
+
             # Check optional fields if present in YAML
             for field in ['port', 'ssl', 'timeout', 'get_criteria', 'is_active']:
                 if field in yaml_def:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for IMAP connection "{name}"')
-            
+
             # Verify password is not exported
             self.assertNotIn('password', exported_def, f'Password was exported for IMAP connection "{name}"')
 

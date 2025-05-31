@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strnone, boolnone, strdict
+    from zato.common.typing_ import any_, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +107,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             security_ids = [row[0] for row in result.fetchall()]
 
             if security_ids:
-                logger.info(f'Found {len(security_ids)} security ID{'s' if len(security_ids) != 1 else ''} in sec_base matching prefixes: {', '.join(prefixes)}')
+                logger.info(f'Found {len(security_ids)} security ID{'s' if len(security_ids) != 1 else ''} in sec_base matching prefixes: {', '.join(prefixes)}') # type: ignore
 
                 # Delete from sec_base
                 delete_query = f'DELETE FROM sec_base WHERE {where_clause}'
@@ -200,6 +200,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                         logger.debug(f'Table {table_name} does not have a "name" column, skipping name-based delete.')
 
                 except SQLAlchemyError as e:
+
                     # Roll back in case of error
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
