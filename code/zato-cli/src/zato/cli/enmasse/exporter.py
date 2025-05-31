@@ -19,6 +19,7 @@ from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel import ChannelExporter
+from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.common.odb.model import Cluster
@@ -57,6 +58,7 @@ class EnmasseYAMLExporter:
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
+        self.jira_exporter = JiraExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
 
@@ -171,6 +173,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_jira(self, session:'SASession') -> 'list':
+        """ Exports JIRA connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        jira_list = self.jira_exporter.export(session, self.cluster_id)
+        return jira_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -233,6 +244,11 @@ class EnmasseYAMLExporter:
         outgoing_soap_defs = self.export_outgoing_soap(session)
         if outgoing_soap_defs:
             output_dict['outgoing_soap'] = outgoing_soap_defs
+
+        # Export JIRA connection definitions
+        jira_defs = self.export_jira(session)
+        if jira_defs:
+            output_dict['jira'] = jira_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
