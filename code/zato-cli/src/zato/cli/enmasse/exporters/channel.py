@@ -7,10 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from contextlib import closing
+
+# SQLAlchemy
+from sqlalchemy import and_, select
 
 # Zato
-from zato.common.api import CONNECTION, URL_TYPE
-from zato.common.odb.model import to_json
+from zato.common.api import CONNECTION, Groups, URL_TYPE
+from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query import http_soap_list
 from zato.common.util.sql import elems_with_opaque
 
@@ -36,12 +40,44 @@ class ChannelExporter:
 
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
+        self.group_id_to_name = {}
 
+    def _load_security_groups(self, session:'SASession', cluster_id:'int') -> 'None':
+        """Load security groups from the database and build an ID to name mapping.
+        """
+        # Clear existing mapping
+        self.group_id_to_name = {}
+        
+        # Use a direct SQLAlchemy query to get all groups
+        with closing(session) as session:
+            # Build a query for all groups
+            query = select([
+                GenericObject.id,
+                GenericObject.name
+            ]).where(and_(
+                GenericObject.type_ == Groups.Type.Group_Parent,
+                GenericObject.subtype == Groups.Type.API_Clients,
+                GenericObject.cluster_id == cluster_id,
+            ))
+            
+            # Execute the query and get results
+            groups = session.execute(query).fetchall()
+            
+            # Build ID to name mapping
+            for group in groups:
+                self.group_id_to_name[group['id']] = group['name']
+            
+        logger.info('Loaded %d security groups', len(self.group_id_to_name))
+    
     def export(self, session: 'SASession', cluster_id: 'int') -> 'channel_def_list':
         """ Exports REST Channel definitions.
         """
         logger.info('Exporting REST channel definitions')
+        
+        # Load security groups for ID to name conversion
+        self._load_security_groups(session, cluster_id)
 
+        # Get channels from database
         db_channels = http_soap_list(
             session,
             cluster_id,
@@ -76,7 +112,15 @@ class ChannelExporter:
 
             # Export security groups directly assigned to the channel
             if security_groups := channel_row.get('security_groups'):
-                exported_channel['groups'] = security_groups
+                # Convert group IDs to names
+                group_names = []
+                for group_id in security_groups:
+                    if group_id in self.group_id_to_name:
+                        group_names.append(self.group_id_to_name[group_id])
+                    else:
+                        logger.warning('Security group ID %s not found for channel %s', group_id, channel_row.name)
+                
+                exported_channel['groups'] = group_names
 
             optional_fields_from_row = {
                 'data_format': channel_row.data_format,
