@@ -98,6 +98,7 @@ class TestEnmasseGroupExporter(TestCase):
             logger.info('Imported %d REST channels (created=%d, updated=%d)',
                        len(created) + len(updated), len(created), len(updated))
 
+
             # Test that the imported channels can be exported correctly
             exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
 
