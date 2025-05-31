@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseGroupExporter(TestCase):
-    """ Tests exporting Security Group definitions to YAML-compatible dicts using enmasse.
+class TestEnmasseChannelRESTExporter(TestCase):
+    """ Tests exporting REST channels.
     """
 
     def setUp(self) -> 'None':
@@ -97,7 +97,6 @@ class TestEnmasseGroupExporter(TestCase):
             created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
             logger.info('Imported %d REST channels (created=%d, updated=%d)',
                        len(created) + len(updated), len(created), len(updated))
-
 
             # Test that the imported channels can be exported correctly
             exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
