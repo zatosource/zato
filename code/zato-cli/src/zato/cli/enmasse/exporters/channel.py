@@ -12,6 +12,7 @@ import logging
 from zato.common.api import CONNECTION, Groups, URL_TYPE
 from zato.common.odb.model import HTTPSOAP # SecDef and Service will be joined by _http_soap
 from zato.common.odb.query import http_soap_list
+from zato.common.util.sql import elems_with_opaque
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +49,9 @@ class ChannelExporter:
             logger.info('No REST Channel definitions found in DB')
             return []
 
+        # Extract opaque elements including security groups
+        db_channels = elems_with_opaque(db_channels)
+
         exported_channels: 'channel_def_list' = []
         logger.info('Processing %d REST Channel definitions', len(db_channels))
 
@@ -64,8 +68,7 @@ class ChannelExporter:
 
             # Export security groups directly assigned to the channel
             if security_groups := channel_row.get('security_groups'):
-                security_groups
-                security_groups
+                exported_channel['groups'] = security_groups
 
             optional_fields_from_row = {
                 'data_format': channel_row.data_format,
