@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.api import CONNECTION, Groups, URL_TYPE
 from zato.common.odb.model import HTTPSOAP # SecDef and Service will be joined by _http_soap
 from zato.common.odb.query import http_soap_list
 
@@ -41,6 +41,7 @@ class ChannelExporter:
         """
         logger.info('Exporting REST channel definitions')
 
+        # Get all channels with security groups information
         db_channels = http_soap_list(session, cluster_id, connection=CONNECTION.CHANNEL, transport=URL_TYPE.PLAIN_HTTP)
 
         if not db_channels:
@@ -61,6 +62,11 @@ class ChannelExporter:
             if channel_row.security_name:
                 exported_channel['security'] = channel_row.security_name
 
+            # Export security groups directly assigned to the channel
+            if security_groups := channel_row.get('security_groups'):
+                security_groups
+                security_groups
+
             optional_fields_from_row = {
                 'data_format': channel_row.data_format,
                 'is_active': channel_row.is_active,
@@ -73,12 +79,6 @@ class ChannelExporter:
             for field_name, field_value in optional_fields_from_row.items():
                 if field_value is not None:
                     exported_channel[field_name] = field_value
-
-            # Handle security_groups (list of names)
-            if hasattr(channel_row, 'security_groups') and channel_row.security_groups:
-                group_names = sorted([group.name for group in channel_row.security_groups if group and hasattr(group, 'name')])
-                if group_names:
-                    exported_channel['security_groups'] = group_names
 
             exported_channels.append(exported_channel)
 
