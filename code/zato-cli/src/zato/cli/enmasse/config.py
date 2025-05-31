@@ -17,7 +17,7 @@ class _object_type:
     Email_SMTP = 'email_smtp'                     # 1 2
     Groups = 'groups'                             # 1 2
     Jira = 'jira'                                 # 1 2
-    LDAP = 'ldap'                                 # 1
+    LDAP = 'ldap'                                 # 1 2
     Microsoft_365 = 'cloud_microsoft_365'         # 1
     Odoo = 'odoo'                                 # 1 2
     Outgoing_REST = 'outgoing_rest'               # 1 2
