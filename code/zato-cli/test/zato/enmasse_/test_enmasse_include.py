@@ -149,7 +149,7 @@ class TestEnmasseIncludeFromYAML(TestCase):
         # Verify correct number of items in each section
         self.assertEqual(len(yaml_config['security']), 3)  # From common_security.yaml
         self.assertEqual(len(yaml_config['groups']), 1)    # From common_security.yaml
-        self.assertEqual(len(yaml_config['channel_rest']), 3)  # From channels.yaml
+        self.assertEqual(len(yaml_config['channel_rest']), 4)  # From channels.yaml
         self.assertEqual(len(yaml_config['scheduler']), 2)  # From scheduler.yaml
         self.assertEqual(len(yaml_config['outgoing_rest']), 1)  # From main.yaml
 
@@ -276,7 +276,7 @@ include:
         # Verify the template has the expected number of each item
         self.assertEqual(len(complete_config['security']), 7)
         self.assertEqual(len(complete_config['groups']), 2)
-        self.assertEqual(len(complete_config['channel_rest']), 3)
+        self.assertEqual(len(complete_config['channel_rest']), 4)
         self.assertEqual(len(complete_config['scheduler']), 4)
 
 # ################################################################################################################################
