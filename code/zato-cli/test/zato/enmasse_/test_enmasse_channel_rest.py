@@ -28,8 +28,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseFromYAML(TestCase):
-    """ Tests importing configuration from YAML files using enmasse.
+class TestEnmasseChannelRESTImporter(TestCase):
+    """ Tests importing REST channels.
     """
 
     def setUp(self) -> 'None':
@@ -103,9 +103,9 @@ class TestEnmasseFromYAML(TestCase):
                 # Verify that security was configured properly
                 # Find the channel definition in YAML using a loop
                 channel_def = None
-                for c in channel_defs:
-                    if c['name'] == channel.name:
-                        channel_def = c
+                for channel_def in channel_defs:
+                    if channel_def['name'] == channel.name:
+                        channel_def = channel_def
                         break
 
                 self.assertIsNotNone(channel_def, f'Channel definition not found for {channel.name}')
@@ -118,31 +118,6 @@ class TestEnmasseFromYAML(TestCase):
             # Check for channel with data_format
             if channel.name in ['enmasse.channel.rest.2', 'enmasse.channel.rest.3']:
                 self.assertEqual(channel.data_format, 'json', f'Wrong data_format for {channel.name}')
-
-# ################################################################################################################################
-
-    def test_complete_import_flow(self):
-        """ Test the complete flow of importing all definitions from a YAML file.
-        """
-        self._setup_test_environment()
-
-        # Process security definitions
-        security_list = self.yaml_config.get('security', [])
-        _ = self.security_importer.sync_security_definitions(security_list, self.session)
-
-        # Process channels which depend on security definitions
-        channel_list = self.yaml_config.get('channel_rest', [])
-        _ = self.channel_importer.sync_channel_rest(channel_list, self.session)
-
-        # Verify security definitions were created
-        self.assertTrue(len(self.importer.sec_defs) >= 5, 'Not all security definitions were created')
-
-        # Check each security definition type exists
-        security_types = [def_info['type'] for def_info in self.importer.sec_defs.values()]
-        self.assertIn('basic_auth', security_types)
-        self.assertIn('bearer_token', security_types)
-        self.assertIn('ntlm', security_types)
-        self.assertIn('apikey', security_types)
 
 # ################################################################################################################################
 # ################################################################################################################################
