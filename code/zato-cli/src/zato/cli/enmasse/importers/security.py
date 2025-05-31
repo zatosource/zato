@@ -19,6 +19,7 @@ from zato.common.util.sql import set_instance_opaque_attrs
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.typing_ import any_, anydict, anylist, listtuple
 
 # ################################################################################################################################
@@ -293,13 +294,13 @@ class SecurityImporter:
             logger.info('Successfully committed all changes')
 
             # Populate sec_defs after commit, so instance IDs are available
-            for item_in_yaml in to_create: 
+            for item_in_yaml in to_create:
                 created_instance = next((inst for inst in out_created if inst.name == item_in_yaml['name']), None)
                 if created_instance:
                     instance_dict = {
-                        'id': created_instance.id, 
+                        'id': created_instance.id,
                         'name': created_instance.name,
-                        'type': item_in_yaml['type'] 
+                        'type': item_in_yaml['type']
                     }
                     self.importer.sec_defs[created_instance.name] = instance_dict
 
@@ -307,7 +308,7 @@ class SecurityImporter:
                 updated_instance = next((inst for inst in out_updated if inst.name == item_in_yaml['name']), None)
                 if updated_instance:
                     instance_dict = {
-                        'id': updated_instance.id, 
+                        'id': updated_instance.id,
                         'name': updated_instance.name,
                         'type': item_in_yaml['type']
                     }
