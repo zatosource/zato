@@ -52,11 +52,15 @@ class TestEnmasseLDAPFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -66,6 +70,8 @@ class TestEnmasseLDAPFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
 
     def test_ldap_definition_creation(self):
         """ Test creating LDAP connection definitions from YAML.
@@ -91,6 +97,8 @@ class TestEnmasseLDAPFromYAML(TestCase):
         self.assertEqual(ldap.username, 'CN=enmasse,OU=testing,OU=Servers,DC=enmasse')
         self.assertEqual(ldap.server_list, '127.0.0.1:389')
         self.assertTrue(hasattr(ldap, 'secret'))
+
+# ################################################################################################################################
 
     def test_ldap_update(self):
         """ Test updating existing LDAP connection definitions.
@@ -125,6 +133,8 @@ class TestEnmasseLDAPFromYAML(TestCase):
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP)
+
+# ################################################################################################################################
 
     def test_complete_ldap_import_flow(self):
         """ Test the complete flow of importing LDAP connection definitions from a YAML file.

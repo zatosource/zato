@@ -21,6 +21,7 @@ from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel import ChannelExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
+from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.common.odb.model import Cluster
@@ -61,6 +62,7 @@ class EnmasseYAMLExporter:
         self.channel_exporter = ChannelExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
+        self.microsoft_365_exporter = Microsoft365Exporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
 
@@ -193,6 +195,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_microsoft_365(self, session:'SASession') -> 'list':
+        """ Exports Microsoft 365 connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        microsoft_365_list = self.microsoft_365_exporter.export(session, self.cluster_id)
+        return microsoft_365_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -265,6 +276,11 @@ class EnmasseYAMLExporter:
         ldap_defs = self.export_ldap(session)
         if ldap_defs:
             output_dict['ldap'] = ldap_defs
+
+        # Export Microsoft 365 connection definitions
+        microsoft_365_defs = self.export_microsoft_365(session)
+        if microsoft_365_defs:
+            output_dict['microsoft_365'] = microsoft_365_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict

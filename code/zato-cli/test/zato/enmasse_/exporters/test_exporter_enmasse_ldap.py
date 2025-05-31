@@ -92,10 +92,6 @@ class TestEnmasseLDAPExporter(TestCase):
         # 2. Import these definitions into the database to have something to export
         _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_ldap_connections, _ = self.ldap_importer.sync_definitions(ldap_list_from_yaml, self.session)
-        
-        # Debug: Print the created connection details
-        for conn in created_ldap_connections:
-            print(f'DEBUG: Created LDAP connection: {conn}')
 
         self.assertTrue(len(created_ldap_connections) > 0, 'No LDAP connections were created.')
 
@@ -107,13 +103,13 @@ class TestEnmasseLDAPExporter(TestCase):
         exported_ldap_list = exported_data['ldap']
 
         # 4. Compare exported data with the original YAML data
-        self.assertEqual(len(exported_ldap_list), len(ldap_list_from_yaml), 
+        self.assertEqual(len(exported_ldap_list), len(ldap_list_from_yaml),
                          'Number of exported LDAP connections does not match original YAML.')
 
         # Create dictionaries keyed by name for easier comparison
         yaml_ldap_by_name = {item['name']: item for item in ldap_list_from_yaml}
         exported_ldap_by_name = {item['name']: item for item in exported_ldap_list}
-        
+
         # Since server_list is not actually stored in the database by the importer,
         # but the test expects it to be in the export, we need to manually add it
         # to the exported data for test purposes
@@ -130,10 +126,9 @@ class TestEnmasseLDAPExporter(TestCase):
             exported_def = exported_ldap_by_name[name]
 
             # Compare fields that are expected to be exported by LDAPExporter
-            # Note: password is not exported for security reasons
             for field in ['name', 'is_active', 'username', 'server_list', 'pool_size', 'connect_timeout']:
                 if field in yaml_def and yaml_def[field] is not None:
-                    self.assertEqual(exported_def.get(field), yaml_def.get(field), 
+                    self.assertEqual(exported_def.get(field), yaml_def.get(field),
                                      f'Mismatch for "{field}" in LDAP connection "{name}"')
 
 # ################################################################################################################################

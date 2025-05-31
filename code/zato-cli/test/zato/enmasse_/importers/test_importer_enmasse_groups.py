@@ -50,11 +50,15 @@ class TestEnmasseGroups(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -64,6 +68,8 @@ class TestEnmasseGroups(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
 
     def test_sync_groups(self):
         """ Test the new sync_groups implementation that deletes and recreates groups.
