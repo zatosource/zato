@@ -51,11 +51,15 @@ class TestEnmasseSMTPFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -65,6 +69,8 @@ class TestEnmasseSMTPFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
 
     def test_smtp_definition_creation(self):
         """ Test creating SMTP connection definitions from YAML.
@@ -85,6 +91,8 @@ class TestEnmasseSMTPFromYAML(TestCase):
         self.assertEqual(smtp.port, 587)
         self.assertEqual(smtp.username, 'enmasse@example.com')
         self.assertTrue(smtp.password)
+
+# ################################################################################################################################
 
     def test_smtp_update(self):
         """ Test updating existing SMTP connection definitions.
@@ -121,6 +129,8 @@ class TestEnmasseSMTPFromYAML(TestCase):
 
         # Make sure other fields were preserved from the original definition
         self.assertEqual(updated_instance.username, smtp_def['username'])
+
+# ################################################################################################################################
 
     def test_complete_smtp_import_flow(self):
         """ Test the complete flow of importing SMTP definitions using sync_smtp_definitions.
