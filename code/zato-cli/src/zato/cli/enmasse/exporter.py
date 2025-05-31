@@ -28,7 +28,7 @@ from zato.common.odb.model import Cluster
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,7 +150,7 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         channel_list = self.channel_exporter.export(session, self.cluster_id)
         return channel_list
-        
+
 # ################################################################################################################################
 
     def export_outgoing_rest(self, session:'SASession') -> 'list':
@@ -159,7 +159,7 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         outgoing_rest_list = self.outgoing_rest_exporter.export(session, self.cluster_id)
         return outgoing_rest_list
-        
+
 # ################################################################################################################################
 
     def export_outgoing_soap(self, session:'SASession') -> 'list':
@@ -183,37 +183,37 @@ class EnmasseYAMLExporter:
         cache_defs = self.export_cache(session)
         if cache_defs:
             output_dict['cache'] = cache_defs
-            
+
         # Export Odoo connection definitions
         odoo_defs = self.export_odoo(session)
         if odoo_defs:
             output_dict['odoo'] = odoo_defs
-            
+
         # Export SQL connection pool definitions
         sql_defs = self.export_sql(session)
         if sql_defs:
             output_dict['sql'] = sql_defs
-            
+
         # Export scheduler job definitions
         scheduler_defs = self.export_scheduler(session)
         if scheduler_defs:
             output_dict['scheduler'] = scheduler_defs
-            
+
         # Export security definitions
         security_defs = self.export_security(session)
         if security_defs:
             output_dict['security'] = security_defs
-            
+
         # Export email IMAP connection definitions
         email_imap_defs = self.export_email_imap(session)
         if email_imap_defs:
             output_dict['email_imap'] = email_imap_defs
-            
+
         # Export email SMTP connection definitions
         email_smtp_defs = self.export_email_smtp(session)
         if email_smtp_defs:
             output_dict['email_smtp'] = email_smtp_defs
-            
+
         # Export security group definitions
         group_defs = self.export_groups(session)
         if group_defs:
@@ -223,12 +223,12 @@ class EnmasseYAMLExporter:
         channel_rest_defs = self.export_channel_rest(session)
         if channel_rest_defs:
             output_dict['channel_rest'] = channel_rest_defs
-            
+
         # Export outgoing REST connection definitions
         outgoing_rest_defs = self.export_outgoing_rest(session)
         if outgoing_rest_defs:
             output_dict['outgoing_rest'] = outgoing_rest_defs
-            
+
         # Export outgoing SOAP connection definitions
         outgoing_soap_defs = self.export_outgoing_soap(session)
         if outgoing_soap_defs:
