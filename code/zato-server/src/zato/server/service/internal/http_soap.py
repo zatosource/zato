@@ -17,7 +17,7 @@ from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, to_json
+from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
