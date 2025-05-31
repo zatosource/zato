@@ -92,6 +92,16 @@ class TestEnmasseChannelRESTExporter(TestCase):
         if rest_channels := self.yaml_config.get('channel_rest', []):
             logger.info('Importing %d REST channels for test', len(rest_channels))
 
+            # Process security groups which channels depend on
+            group_defs = self.yaml_config.get('groups', [])
+            if group_defs:
+                # Sync the groups first
+                _, _ = self.group_importer.sync_groups(group_defs, self.session)
+
+                # Copy group_defs from group_importer to the main importer
+                # to ensure channel_importer can access them
+                self.importer.group_defs = self.group_importer.group_defs
+
             # Import the channel definitions
             self.channel_importer.importer.cluster_id = self.importer.cluster_id
             created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
