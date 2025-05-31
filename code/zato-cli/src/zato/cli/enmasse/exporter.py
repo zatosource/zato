@@ -20,6 +20,7 @@ from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel import ChannelExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
+from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.common.odb.model import Cluster
@@ -59,6 +60,7 @@ class EnmasseYAMLExporter:
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
         self.jira_exporter = JiraExporter(self)
+        self.ldap_exporter = LDAPExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
 
@@ -182,6 +184,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_ldap(self, session:'SASession') -> 'list':
+        """ Exports LDAP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        ldap_list = self.ldap_exporter.export(session, self.cluster_id)
+        return ldap_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -249,6 +260,11 @@ class EnmasseYAMLExporter:
         jira_defs = self.export_jira(session)
         if jira_defs:
             output_dict['jira'] = jira_defs
+
+        # Export LDAP connection definitions
+        ldap_defs = self.export_ldap(session)
+        if ldap_defs:
+            output_dict['ldap'] = ldap_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
