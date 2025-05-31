@@ -57,11 +57,15 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -71,13 +75,15 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
-            
+
         # Get the cluster instance from the database
         self.importer.cluster = self.importer.get_cluster(self.session)
 
         # Create security definitions first since outgoing SOAP connections may use them
         security_list = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_list, self.session)
+
+# ################################################################################################################################
 
     def test_outgoing_soap_creation(self):
         """ Test creating outgoing SOAP connections from YAML.
@@ -107,6 +113,8 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         self.assertEqual(outgoing.soap_version, '1.1')
         self.assertEqual(outgoing.timeout, 20)
         self.assertFalse(outgoing.tls_verify)
+
+# ################################################################################################################################
 
     def test_outgoing_soap_update(self):
         """ Test updating existing outgoing SOAP connections.
@@ -148,6 +156,8 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.connection, CONNECTION.OUTGOING)
         self.assertEqual(updated_instance.transport, URL_TYPE.SOAP)
+
+# ################################################################################################################################
 
     def test_complete_outgoing_soap_import_flow(self):
         """ Test the complete flow of importing outgoing SOAP connections from a YAML file.

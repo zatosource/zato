@@ -57,11 +57,15 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -75,6 +79,8 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         # Create security definitions first since outgoing REST connections may use them
         security_list = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_list, self.session)
+
+# ################################################################################################################################
 
     def test_outgoing_rest_creation(self):
         """ Test creating outgoing REST connections from YAML.
@@ -102,6 +108,8 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.assertEqual(outgoing.url_path, '/sso/{type}/hello/{endpoint}')
         self.assertEqual(outgoing.data_format, 'json')
         self.assertEqual(outgoing.timeout, 60)
+
+# ################################################################################################################################
 
     def test_outgoing_rest_update(self):
         """ Test updating existing outgoing REST connections.
@@ -140,6 +148,8 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.connection, CONNECTION.OUTGOING)
         self.assertEqual(updated_instance.transport, URL_TYPE.PLAIN_HTTP)
+
+# ################################################################################################################################w
 
     def test_complete_outgoing_rest_import_flow(self):
         """ Test the complete flow of importing outgoing REST connections from a YAML file.

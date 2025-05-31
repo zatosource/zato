@@ -52,11 +52,15 @@ class TestEnmasseMicrosoft365FromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -66,6 +70,8 @@ class TestEnmasseMicrosoft365FromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
 
     def test_microsoft_365_definition_creation(self):
         """ Test creating Microsoft 365 definitions from YAML.
@@ -91,6 +97,8 @@ class TestEnmasseMicrosoft365FromYAML(TestCase):
         self.assertEqual(microsoft_365.client_id, '12345678-1234-1234-1234-123456789abc')
         self.assertEqual(microsoft_365.tenant_id, '87654321-4321-4321-4321-cba987654321')
         self.assertTrue(hasattr(microsoft_365, 'secret'))
+
+# ################################################################################################################################
 
     def test_microsoft_365_update(self):
         """ Test updating existing Microsoft 365 definitions.
@@ -125,6 +133,8 @@ class TestEnmasseMicrosoft365FromYAML(TestCase):
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365)
+
+# ################################################################################################################################
 
     def test_complete_microsoft_365_import_flow(self):
         """ Test the complete flow of importing Microsoft 365 definitions from a YAML file.

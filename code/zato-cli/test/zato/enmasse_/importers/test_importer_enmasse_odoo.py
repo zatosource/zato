@@ -51,11 +51,15 @@ class TestEnmasseOdooFromYAML(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
+
+# ################################################################################################################################
 
     def _setup_test_environment(self):
         """ Set up the test environment by opening a database session and parsing the YAML file.
@@ -65,6 +69,8 @@ class TestEnmasseOdooFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
 
     def test_odoo_definition_creation(self):
         """ Test creating Odoo definitions from YAML.
@@ -88,6 +94,8 @@ class TestEnmasseOdooFromYAML(TestCase):
         self.assertEqual(odoo.user, 'admin')
         self.assertEqual(odoo.database, 'enmasse_db')
         self.assertTrue(hasattr(odoo, 'password'))
+
+# ################################################################################################################################
 
     def test_odoo_update(self):
         """ Test updating existing Odoo definitions.
@@ -123,6 +131,8 @@ class TestEnmasseOdooFromYAML(TestCase):
         # Make sure other fields were preserved from the original YAML definition
         self.assertEqual(updated_instance.user, odoo_def['user'])
         self.assertEqual(updated_instance.database, odoo_def['database'])
+
+# ################################################################################################################################
 
     def test_complete_odoo_import_flow(self):
         """ Test the complete flow of importing Odoo definitions from a YAML file.
