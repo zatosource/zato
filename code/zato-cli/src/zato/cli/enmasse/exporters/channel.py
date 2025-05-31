@@ -9,8 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import CONNECTION, Groups, URL_TYPE
-from zato.common.odb.model import HTTPSOAP # SecDef and Service will be joined by _http_soap
+from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
 from zato.common.util.sql import elems_with_opaque
 
@@ -42,8 +42,14 @@ class ChannelExporter:
         """
         logger.info('Exporting REST channel definitions')
 
-        # Get all channels with security groups information
-        db_channels = http_soap_list(session, cluster_id, connection=CONNECTION.CHANNEL, transport=URL_TYPE.PLAIN_HTTP)
+        db_channels = http_soap_list(
+            session,
+            cluster_id,
+            connection=CONNECTION.CHANNEL,
+            transport=URL_TYPE.PLAIN_HTTP,
+            return_internal=False,
+        )
+        db_channels = to_json(db_channels)
 
         if not db_channels:
             logger.info('No REST Channel definitions found in DB')
@@ -56,6 +62,8 @@ class ChannelExporter:
         logger.info('Processing %d REST Channel definitions', len(db_channels))
 
         for channel_row in db_channels:
+
+            logger.info('Processing REST channel row %s', channel_row.toDict())
 
             exported_channel: 'anydict' = {
                 'name': channel_row.name,

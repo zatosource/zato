@@ -205,7 +205,7 @@ class ElemsWithOpaqueMaker:
                         continue
                     data[name] = value
             else:
-                data = elem._asdict()
+                data = elem if isinstance(elem, dict) else elem._asdict()
             elem = bunchify(data)
             ElemsWithOpaqueMaker._set_opaque(elem)
             out.append(elem)

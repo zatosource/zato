@@ -53,9 +53,9 @@ class _QueryConfig:
     def supports_kwargs(query_func):
         """ Returns True if the given query func supports kwargs, False otherwise.
         """
-        return query_func in (
-            http_soap_list,
-        )
+        return query_func.__name__ in {
+            'http_soap_list',
+        }
 
 # ################################################################################################################################
 
@@ -467,7 +467,9 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
         q = q.filter(
             not_(
                 HTTPSOAP.name.startswith('zato') |
-                HTTPSOAP.name.startswith('pub.zato.service.service-invoker')
+                HTTPSOAP.name.startswith('pub.zato') |
+                HTTPSOAP.name.startswith('admin.invoke') |
+                HTTPSOAP.name.startswith('Rule engine API')
             )
         )
 
