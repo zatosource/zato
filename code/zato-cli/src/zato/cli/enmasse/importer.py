@@ -59,6 +59,7 @@ class EnmasseYAMLImporter:
         self.object_alias = ModuleCtx.ObjectAlias
 
         self.sec_defs = {}
+        self.group_defs = {}
         self.cache_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
@@ -255,10 +256,19 @@ class EnmasseYAMLImporter:
             return [], []
 
         logger.info('Processing %d security groups', len(group_list))
-        groups_created, groups_updated = self.group_importer.sync_groups(group_list, session)
-        logger.info('Processed security groups: created=%d updated=%d', len(groups_created), len(groups_updated))
 
-        return groups_created, groups_updated
+        # Process each group item
+        for idx, item in enumerate(group_list):
+            logger.info('Group item %d: %s', idx, item)
+
+        processed_groups = self.group_importer.sync_groups(group_list, session)
+        
+        # Get group definitions from the group importer and store them in our instance
+        self.group_defs = self.group_importer.group_defs
+
+        logger.info('Processed security groups: %d', len(processed_groups))
+
+        return processed_groups
 
 # ################################################################################################################################
 

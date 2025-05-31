@@ -10,8 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.api import CONNECTION, Groups, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,33 +93,54 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
+    def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
+        """ Convert security group names to IDs.
+        """
+        # This will contain only IDs
+        processed_security_groups = []
+
+        # Security groups are optional
+        if 'groups' in channel_def and channel_def['groups']:
+            # Get information about existing security groups
+            for group_name in channel_def['groups']:
+                # Check if group exists in importer's groups
+                if group_name not in self.importer.group_defs:
+                    raise Exception(f'Security group "{group_name}" not found for REST channel "{channel_def["name"]}"')
+
+                # Get the group ID
+                group_id = self.importer.group_defs[group_name]['id']
+                processed_security_groups.append(group_id)
+
+        # Return what we have to our caller
+        return processed_security_groups
+
     def create_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
         name = channel_def['name']
-        url_path = channel_def['url_path']
+        logger.info('Creating REST channel: %s', name)
+
         service_name = channel_def['service']
-
-        logger.info('Creating channel: name=%s url_path=%s service=%s', name, url_path, service_name)
-
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).first()
         if not service:
-            msg = f'Service not found {service_name} -> REST channel {name}'
-            raise Exception(msg)
+            raise Exception(f'Service not found: {service_name}')
 
         channel = HTTPSOAP()
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.PLAIN_HTTP
-        channel.url_path = url_path
+        channel.url_path = channel_def['url_path']
+        channel.method = channel_def.get('method', '') or ''
         channel.service = service
         channel.cluster = self.importer.get_cluster(session)
         channel.is_active = True
         channel.is_internal = False
         channel.soap_action = 'not-used'
 
+        # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security']:
+            if key not in ['service', 'security', 'groups']:
                 setattr(channel, key, value)
 
+        # Handle security definition
         if 'security' in channel_def:
             security_name = channel_def['security']
             if security_name not in self.importer.sec_defs:
@@ -126,6 +148,13 @@ class ChannelImporter:
 
             sec_def = self.importer.sec_defs[security_name]
             channel.security_id = sec_def['id']
+            
+        # Handle security groups
+        if 'groups' in channel_def and channel_def['groups']:
+            security_groups = self._preprocess_security_groups(channel_def)
+            # Create an object to store in opaque1
+            opaque_attrs = {'security_groups': security_groups}
+            set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel
@@ -145,10 +174,12 @@ class ChannelImporter:
             raise Exception(f'Service not found: {service_name}')
         channel.service = service
 
+        # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security']:
+            if key not in ['id', 'service', 'security', 'groups']:
                 setattr(channel, key, value)
 
+        # Handle security definition
         if 'security' in channel_def:
             security_name = channel_def['security']
             if security_name not in self.importer.sec_defs:
@@ -156,6 +187,13 @@ class ChannelImporter:
 
             sec_def = self.importer.sec_defs[security_name]
             channel.security_id = sec_def['id']
+            
+        # Handle security groups
+        if 'groups' in channel_def and channel_def['groups']:
+            security_groups = self._preprocess_security_groups(channel_def)
+            # Create an object to store in opaque1
+            opaque_attrs = {'security_groups': security_groups}
+            set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
         return channel
