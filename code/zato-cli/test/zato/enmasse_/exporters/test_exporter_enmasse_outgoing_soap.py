@@ -16,9 +16,9 @@ import yaml
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
+from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.importers.security import SecurityImporter
-from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
+from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseOutgoingRESTExporter(TestCase):
-    """ Tests exporting outgoing REST connections.
+class TestEnmasseOutgoingSOAPExporter(TestCase):
+    """ Tests exporting outgoing SOAP connections.
     """
 
     def setUp(self) -> 'None':
@@ -51,11 +51,11 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
         # Importers are needed to set up the database state for export tests
         self.importer = EnmasseYAMLImporter()
         self.security_importer = SecurityImporter(self.importer) # Security might be needed for outgoing connections
-        self.outgoing_rest_importer = OutgoingRESTImporter(self.importer)
+        self.outgoing_soap_importer = OutgoingSOAPImporter(self.importer)
 
         # Exporter is needed to test the export functionality
         self.exporter = EnmasseYAMLExporter()
-        self.outgoing_rest_exporter = OutgoingRESTExporter(self.exporter)
+        self.outgoing_soap_exporter = OutgoingSOAPExporter(self.exporter)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('SASession', None)
@@ -88,32 +88,38 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_outgoing_rest_export(self) -> 'None':
-        """ Tests the export of outgoing REST connection definitions.
+    def test_outgoing_soap_export(self) -> 'None':
+        """ Tests the export of outgoing SOAP connection definitions.
         """
+        # Setup test environment
         self._setup_test_environment()
 
-        # Get outgoing REST connection definitions from the YAML template
-        outgoing_rest_from_yaml = self.yaml_config.get('outgoing_rest', [])
+        # Extract outgoing SOAP connections from YAML template
+        outgoing_soap_list = self.yaml_config.get('outgoing_soap', [])
 
-        if outgoing_rest_from_yaml:
-            logger.info('Found %d outgoing REST connections in test YAML template', len(outgoing_rest_from_yaml))
+        # Skip test if no outgoing SOAP connections in template
+        if outgoing_soap_list:
+            logger.info('Found %d outgoing SOAP connections in test YAML template', len(outgoing_soap_list))
 
-            # Import these definitions into the database to have something to export
-            created, updated = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_from_yaml, self.session)
+            # Clear existing data and create fresh test data
+            cleanup_enmasse()
             _ = self.session.commit()
 
-            # Verify that outgoing REST connections were imported
-            self.assertTrue(len(created) + len(updated) > 0, 'No outgoing REST connections were created or updated from YAML.')
+            # Import outgoing SOAP connections
+            created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
+            _ = self.session.commit()
 
-            # Test that the imported outgoing REST connections can be exported correctly
-            exported_connections = self.outgoing_rest_exporter.export(self.session, self.importer.cluster_id)
+            # Log information about what was imported
+            logger.info('Imported %d outgoing SOAP connections (created=%d, updated=%d)',
+                len(created) + len(updated), len(created), len(updated))
 
-            # Log the exported connections
-            logger.info('Successfully exported %d outgoing REST connections', len(exported_connections))
+            # Export outgoing SOAP connections from database
+            cluster_id = self.importer.cluster_id
+            exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+            logger.info('Successfully exported %d outgoing SOAP connections', len(exported_connections))
 
-            # Verify the number of exported connections matches the number of imported connections
-            self.assertEqual(len(exported_connections), len(created) + len(updated),
+            # Verify the number of exported connections matches the number imported
+            self.assertEqual(len(created) + len(updated), len(exported_connections),
                 f'Expected {len(created) + len(updated)} exported connections, got {len(exported_connections)}')
 
             # Extract expected connection data directly from the YAML template
@@ -122,7 +128,7 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
 
             # Build expected fields dictionary from the template
             required_conn_fields = {}
-            for conn_def in template_dict.get('outgoing_rest', []):
+            for conn_def in template_dict.get('outgoing_soap', []):
                 conn_name = conn_def['name']
 
                 # Create a copy of the connection definition for expected fields
@@ -136,8 +142,15 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
                 if 'security' in conn_def and conn_def['security']:
                     conn_required['security'] = conn_def['security']
 
+                # Add SOAP-specific fields if present
+                if 'soap_action' in conn_def and conn_def['soap_action']:
+                    conn_required['soap_action'] = conn_def['soap_action']
+
+                if 'soap_version' in conn_def and conn_def['soap_version']:
+                    conn_required['soap_version'] = conn_def['soap_version']
+
                 # Add optional fields if present in the template
-                for field in ['data_format', 'is_active', 'timeout', 'method', 'content_type', 'content_encoding', 'pool_size', 'ping_method', 'tls_verify']:
+                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'content_encoding', 'pool_size', 'ping_method', 'tls_verify']:
                     if field in conn_def and conn_def[field] is not None:
                         conn_required[field] = conn_def[field]
 
@@ -166,7 +179,7 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
                         else:
                             logger.info(f'Optional field {field} not found in exported connection {name}, but was in template')
         else:
-            logger.warning('No outgoing REST connections found in test YAML template')
+            logger.warning('No outgoing SOAP connections found in test YAML template')
 
 # ################################################################################################################################
 
