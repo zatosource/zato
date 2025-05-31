@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
@@ -54,7 +55,7 @@ class TestEnmasseJiraFromYAML(TestCase):
 
     def tearDown(self) -> 'None':
         if self.session:
-            self.session.close()
+            _ = self.session.close()
         os.unlink(self.temp_file.name)
         cleanup_enmasse()
 
@@ -103,7 +104,7 @@ class TestEnmasseJiraFromYAML(TestCase):
 
         # Create the JIRA definition
         instance = self.jira_importer.create_definition(jira_def, self.session)
-        self.session.commit()
+        _ = self.session.commit()
         original_address = jira_def['address']
         self.assertEqual(instance.address, original_address)
 
@@ -117,7 +118,7 @@ class TestEnmasseJiraFromYAML(TestCase):
 
         # Update the JIRA definition
         updated_instance = self.jira_importer.update_definition(update_def, self.session)
-        self.session.commit()
+        _ = self.session.commit()
 
         # Verify the update was applied
         self.assertEqual(updated_instance.address, 'https://updated.atlassian.net')
