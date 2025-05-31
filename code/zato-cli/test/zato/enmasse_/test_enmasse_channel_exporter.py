@@ -15,8 +15,10 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
+from zato.cli.enmasse.exporters.channel import ChannelExporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.group import GroupImporter
+from zato.cli.enmasse.importers.channel import ChannelImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -25,6 +27,11 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import stranydict, SASession
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +51,11 @@ class TestEnmasseGroupExporter(TestCase):
         self.importer = EnmasseYAMLImporter()
         self.security_importer = SecurityImporter(self.importer) # Handles all security definition types
         self.group_importer = GroupImporter(self.importer)
+        self.channel_importer = ChannelImporter(self.importer)
+
+        # Exporter is needed to test the export functionality
+        self.exporter = EnmasseYAMLExporter()
+        self.channel_exporter = ChannelExporter(self.exporter)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('SASession', None)
@@ -58,6 +70,15 @@ class TestEnmasseGroupExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
+        # Ensure importer has cluster context
+        _ = self.importer.get_cluster(self.session)
+
+        # Import security definitions first, as channels may depend on them
+        security_defs_from_yaml = self.yaml_config.get('security', [])
+        if security_defs_from_yaml:
+            # SecurityImporter handles all types of security definitions
+            _, _ = self.security_importer.sync_security_definitions(security_defs_from_yaml, self.session)
+
         self.session.commit()
 
 # ################################################################################################################################
@@ -66,6 +87,27 @@ class TestEnmasseGroupExporter(TestCase):
         """ Tests the export of REST channel definitions.
         """
         self._setup_test_environment()
+
+        # Import channels from YAML
+        if rest_channels := self.yaml_config.get('channel_rest', []):
+            logger.info('Importing %d REST channels for test', len(rest_channels))
+
+            # Import the channel definitions
+            self.channel_importer.importer.cluster_id = self.importer.cluster_id
+            created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
+            logger.info('Imported %d REST channels (created=%d, updated=%d)',
+                       len(created) + len(updated), len(created), len(updated))
+
+            # Test that the imported channels can be exported correctly
+            exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
+
+            # Log the exported channels
+            logger.info('Successfully exported %d REST channels', len(exported_channels))
+
+            # Add a simple assertion to verify the export worked
+            self.assertEqual(len(exported_channels), len(created) + len(updated),  f'Expected {len(created) + len(updated)} exported channels, got {len(exported_channels)}')
+        else:
+            logger.warning('No REST channels found in test YAML template')
 
 # ################################################################################################################################
 
