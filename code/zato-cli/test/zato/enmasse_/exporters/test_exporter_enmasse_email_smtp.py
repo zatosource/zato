@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,16 +100,16 @@ class TestEnmasseEmailSMTPExporter(TestCase):
             # Check common fields that should be exported - excluding password
             self.assertEqual(exported_def.get('name'), yaml_def.get('name'), f'Name mismatch for SMTP connection "{name}"')
             self.assertEqual(exported_def.get('host'), yaml_def.get('host'), f'Host mismatch for SMTP connection "{name}"')
-            
+
             # Check username if provided
             if 'username' in yaml_def and yaml_def['username']:
                 self.assertEqual(exported_def.get('username'), yaml_def.get('username'), f'Username mismatch for SMTP connection "{name}"')
-            
+
             # Check optional fields if present in YAML
             for field in ['port', 'timeout', 'ping_address', 'is_tls', 'debug_level', 'mode', 'is_active']:
                 if field in yaml_def and yaml_def[field] is not None:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for SMTP connection "{name}"')
-            
+
             # Verify password is not exported
             self.assertNotIn('password', exported_def, f'Password was exported for SMTP connection "{name}"')
 

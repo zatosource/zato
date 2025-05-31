@@ -22,6 +22,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.typing_ import any_, anydict, anylist, listtuple
+    SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################
