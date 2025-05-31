@@ -23,6 +23,7 @@ from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
+from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.common.odb.model import Cluster
@@ -65,6 +66,7 @@ class EnmasseYAMLExporter:
         self.ldap_exporter = LDAPExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
+        self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
 
@@ -215,6 +217,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_elastic_search(self, session:'SASession') -> 'list':
+        """ Exports ElasticSearch connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        elastic_search_list = self.elastic_search_exporter.export_es(session)
+        return elastic_search_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -297,6 +308,11 @@ class EnmasseYAMLExporter:
         confluence_defs = self.export_confluence(session)
         if confluence_defs:
             output_dict['confluence'] = confluence_defs
+
+        # Export ElasticSearch connection definitions
+        elastic_search_defs = self.export_elastic_search(session)
+        if elastic_search_defs:
+            output_dict['elastic_search'] = elastic_search_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
