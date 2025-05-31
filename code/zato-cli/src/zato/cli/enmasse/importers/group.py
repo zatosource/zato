@@ -295,7 +295,8 @@ class GroupImporter:
                     'name': group_name
                 }
 
-            return processed_groups
+            # Return processed groups and an empty list for updated groups (to match the expected interface)
+            return processed_groups, []
 
         except Exception:
             logger.exception('Error synchronizing groups')
