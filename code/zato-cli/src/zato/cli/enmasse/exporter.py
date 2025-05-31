@@ -19,6 +19,8 @@ from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel import ChannelExporter
+from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
+from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -55,6 +57,8 @@ class EnmasseYAMLExporter:
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
+        self.outgoing_rest_exporter = OutgoingRESTExporter(self)
+        self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
 
 # ################################################################################################################################
 
@@ -146,6 +150,24 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         channel_list = self.channel_exporter.export(session, self.cluster_id)
         return channel_list
+        
+# ################################################################################################################################
+
+    def export_outgoing_rest(self, session:'SASession') -> 'list':
+        """ Exports outgoing REST connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        outgoing_rest_list = self.outgoing_rest_exporter.export(session, self.cluster_id)
+        return outgoing_rest_list
+        
+# ################################################################################################################################
+
+    def export_outgoing_soap(self, session:'SASession') -> 'list':
+        """ Exports outgoing SOAP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        outgoing_soap_list = self.outgoing_soap_exporter.export(session, self.cluster_id)
+        return outgoing_soap_list
 
 # ################################################################################################################################
 
@@ -201,6 +223,16 @@ class EnmasseYAMLExporter:
         channel_rest_defs = self.export_channel_rest(session)
         if channel_rest_defs:
             output_dict['channel_rest'] = channel_rest_defs
+            
+        # Export outgoing REST connection definitions
+        outgoing_rest_defs = self.export_outgoing_rest(session)
+        if outgoing_rest_defs:
+            output_dict['outgoing_rest'] = outgoing_rest_defs
+            
+        # Export outgoing SOAP connection definitions
+        outgoing_soap_defs = self.export_outgoing_soap(session)
+        if outgoing_soap_defs:
+            output_dict['outgoing_soap'] = outgoing_soap_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
