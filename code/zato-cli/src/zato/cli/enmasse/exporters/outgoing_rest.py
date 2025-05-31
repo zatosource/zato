@@ -60,28 +60,38 @@ class OutgoingRESTExporter:
 
         for outgoing_row in db_outgoing:
             
-            logger.info('Processing outgoing REST connection row %s', outgoing_row.toDict())
+            # Handle both object and dictionary types
+            if hasattr(outgoing_row, 'toDict'):
+                logger.info('Processing outgoing REST connection row %s', outgoing_row.toDict())
+                row_data = outgoing_row
+            else:
+                logger.info('Processing outgoing REST connection row %s', outgoing_row)
+                row_data = outgoing_row
 
             exported_conn: 'anydict' = {
-                'name': outgoing_row.name,
-                'host': outgoing_row.host,
-                'url_path': outgoing_row.url_path,
+                'name': row_data['name'] if isinstance(row_data, dict) else row_data.name,
+                'host': row_data['host'] if isinstance(row_data, dict) else row_data.host,
+                'url_path': row_data['url_path'] if isinstance(row_data, dict) else row_data.url_path,
             }
 
-            if outgoing_row.security_name:
-                exported_conn['security'] = outgoing_row.security_name
+            # Check for security_name in either dict or object
+            security_name = row_data.get('security_name') if isinstance(row_data, dict) else getattr(row_data, 'security_name', None)
+            if security_name:
+                exported_conn['security'] = security_name
 
-            optional_fields_from_row = {
-                'data_format': outgoing_row.data_format,
-                'is_active': outgoing_row.is_active,
-                'timeout': outgoing_row.timeout,
-                'method': outgoing_row.method,
-                'content_type': outgoing_row.content_type,
-                'content_encoding': outgoing_row.content_encoding,
-                'pool_size': outgoing_row.pool_size,
-                'ping_method': outgoing_row.ping_method,
-                'tls_verify': outgoing_row.tls_verify,
-            }
+            # Handle optional fields for both dictionary and object types
+            optional_fields_from_row = {}
+            optional_field_names = ['data_format', 'is_active', 'timeout', 'method', 'content_type', 
+                                  'content_encoding', 'pool_size', 'ping_method', 'tls_verify']
+            
+            for field in optional_field_names:
+                if isinstance(row_data, dict):
+                    if field in row_data:
+                        optional_fields_from_row[field] = row_data[field]
+                else:
+                    value = getattr(row_data, field, None)
+                    if value is not None:
+                        optional_fields_from_row[field] = value
 
             for field_name, field_value in optional_fields_from_row.items():
                 if field_value is not None:
