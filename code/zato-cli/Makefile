@@ -6,6 +6,8 @@ Zato_Package_Name=zato-cli
 
 run-tests:
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/enmasse_/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/enmasse_/importers/test_*.py -s
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/enmasse_/exporters/test_*.py -s
 
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
