@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
 import tempfile
 from unittest import TestCase, main
@@ -52,6 +53,9 @@ class TestEnmasseChannelRESTImporter(TestCase):
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
+        # Channel name with security groups
+        self.channel_with_groups = 'enmasse.channel.rest.4'
+
 # ################################################################################################################################
 
     def tearDown(self) -> 'None':
@@ -80,6 +84,9 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
         # First process security definitions which channels depend on
         _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Also process security groups which some channels use
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
 
         # Filter only REST channel definitions
         channel_defs = self.yaml_config['channel_rest']
@@ -121,6 +128,52 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+    def test_channel_rest_security_groups(self):
+        """ Test that security groups are correctly processed during REST channel import.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Verify group definitions are stored correctly
+        self.assertTrue(len(self.importer.group_defs) > 0, 'No group definitions found')
+        self.assertIn('enmasse.group.1', self.importer.group_defs, 'Group 1 not found in group_defs')
+        self.assertIn('enmasse.group.2', self.importer.group_defs, 'Group 2 not found in group_defs')
+
+        # Process channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # Find the channel that should have groups
+        channel_with_groups = cast_('any_', None)
+        for channel in channels_created:
+            if channel.name == self.channel_with_groups:
+                channel_with_groups = channel
+                break
+
+        # Verify the channel with groups was created
+        self.assertIsNotNone(channel_with_groups, f'Channel {self.channel_with_groups} not found')
+
+        # Verify the channel has the opaque1 attribute with security groups
+        self.assertIsNotNone(channel_with_groups.opaque1, 'Channel should have opaque1 attribute')
+
+        opaque_attrs = json.loads(channel_with_groups.opaque1)
+
+        # Verify security groups are in opaque1
+        self.assertIn('security_groups', opaque_attrs, 'security_groups not found in opaque1')
+        self.assertIsInstance(opaque_attrs['security_groups'], list, 'security_groups should be a list')
+        self.assertTrue(len(opaque_attrs['security_groups']) > 0, 'No security groups found in opaque1')
+
+        # Verify the correct number of groups were processed
+        # We expect 2 groups from the YAML: enmasse.group.1 and enmasse.group.2
+        expected_group_count = 2
+        self.assertEqual(len(opaque_attrs['security_groups']), expected_group_count,
+                         f'Expected {expected_group_count} security groups, found {len(opaque_attrs["security_groups"])}')
 
 if __name__ == '__main__':
 
