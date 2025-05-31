@@ -18,6 +18,7 @@ from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
+from zato.cli.enmasse.exporters.channel import ChannelExporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -53,6 +54,7 @@ class EnmasseYAMLExporter:
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
+        self.channel_exporter = ChannelExporter(self)
 
 # ################################################################################################################################
 
@@ -138,6 +140,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_channel_rest(self, session:'SASession') -> 'list':
+        """ Exports REST Channel definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        channel_list = self.channel_exporter.export(session, self.cluster_id)
+        return channel_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -185,6 +196,11 @@ class EnmasseYAMLExporter:
         group_defs = self.export_groups(session)
         if group_defs:
             output_dict['groups'] = group_defs
+
+        # Export REST Channel definitions
+        channel_rest_defs = self.export_channel_rest(session)
+        if channel_rest_defs:
+            output_dict['channel_rest'] = channel_rest_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
