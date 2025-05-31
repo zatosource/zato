@@ -167,7 +167,6 @@ class GetList(_BaseGet):
 
         if needs_security_group_names:
             all_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
-            all_security_groups
         else:
             all_security_groups = []
 

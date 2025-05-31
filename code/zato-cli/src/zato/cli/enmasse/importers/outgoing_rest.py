@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
-from zato.common.odb.model import HTTPSOAP, Service, to_json
+from zato.common.odb.model import HTTPSOAP, to_json
 
 # ################################################################################################################################
 # ################################################################################################################################
