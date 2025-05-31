@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import CONNECTION, Groups, URL_TYPE
+from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -101,8 +101,10 @@ class ChannelImporter:
 
         # Security groups are optional
         if 'groups' in channel_def and channel_def['groups']:
+
             # Get information about existing security groups
             for group_name in channel_def['groups']:
+
                 # Check if group exists in importer's groups
                 if group_name not in self.importer.group_defs:
                     raise Exception(f'Security group "{group_name}" not found for REST channel "{channel_def["name"]}"')
@@ -148,10 +150,11 @@ class ChannelImporter:
 
             sec_def = self.importer.sec_defs[security_name]
             channel.security_id = sec_def['id']
-            
+
         # Handle security groups
         if 'groups' in channel_def and channel_def['groups']:
             security_groups = self._preprocess_security_groups(channel_def)
+
             # Create an object to store in opaque1
             opaque_attrs = {'security_groups': security_groups}
             set_instance_opaque_attrs(channel, opaque_attrs)
@@ -162,10 +165,9 @@ class ChannelImporter:
 # ################################################################################################################################
 
     def update_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
+
         channel_id = channel_def['id']
-
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
-
         channel.url_path = channel_def['url_path']
 
         service_name = channel_def['service']
@@ -187,7 +189,7 @@ class ChannelImporter:
 
             sec_def = self.importer.sec_defs[security_name]
             channel.security_id = sec_def['id']
-            
+
         # Handle security groups
         if 'groups' in channel_def and channel_def['groups']:
             security_groups = self._preprocess_security_groups(channel_def)
