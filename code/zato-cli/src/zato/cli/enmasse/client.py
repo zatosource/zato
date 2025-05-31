@@ -205,30 +205,6 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
 
-                    # If the table doesn't have a name column, try to use an alternate strategy
-                    try:
-                        # Get column information
-                        columns = inspector.get_columns(table_name)
-                        column_names = [col['name'] for col in columns]
-
-                        # Look for potential name-like columns
-                        name_columns = [col for col in column_names if 'name' in col.lower()]
-
-                        if name_columns:
-                            name_col = name_columns[0]  # Use the first name-like column
-                            result = session.execute(
-                                f'DELETE FROM {table_name} WHERE {name_col} LIKE "{prefix}%"'
-                            )
-                            session.commit()
-
-                            if result.rowcount > 0:
-                                changes_made = True
-                                logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} using column {name_col}')
-                    except SQLAlchemyError:
-                        session.rollback()
-                        # Just skip this table if we can't determine how to delete by prefix
-                        pass
-
         logger.info(f'Cleanup completed for prefixes: {', '.join(prefixes)}')
 
     finally:
