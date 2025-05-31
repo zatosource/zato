@@ -75,11 +75,20 @@ class ChannelImporter:
 
                 needs_update = False
 
+                # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key in db_def and db_def[key] != value:
+                    if key not in ['security', 'groups'] and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
+
+                # Check security definition
+                if self._security_needs_update(item, db_def):
+                    needs_update = True
+                
+                # Check security groups
+                if self._groups_need_update(item, db_def):
+                    needs_update = True
 
                 if needs_update:
                     item['id'] = db_def['id']
@@ -90,6 +99,71 @@ class ChannelImporter:
 
         logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
         return to_create, to_update
+        
+    def _security_needs_update(self, item, db_def):
+        """Check if security definition needs update."""
+        # No security in YAML but exists in DB
+        if 'security' not in item and db_def.get('security_id'):
+            logger.info('Removing security from channel %s', item['name'])
+            return True
+            
+        # Security in YAML but not in DB
+        if 'security' in item:
+            yaml_security = item['security']
+            
+            if not db_def.get('security_id'):
+                logger.info('Adding security to channel %s: %s', item['name'], yaml_security)
+                return True
+                
+            # Security definitions need to exist
+            if yaml_security not in self.importer.sec_defs:
+                logger.warning('Security definition %s not found', yaml_security)
+                return False
+                
+            # Check if security name maps to a different ID
+            yaml_sec_def = self.importer.sec_defs[yaml_security]
+            yaml_sec_id = int(yaml_sec_def['id'])
+            db_sec_id = int(db_def['security_id'])
+            
+            if yaml_sec_id != db_sec_id:
+                logger.info('Security changed for channel %s: YAML=%s (id=%s), DB_id=%s', 
+                           item['name'], yaml_security, yaml_sec_id, db_sec_id)
+                return True
+                
+        return False
+        
+    def _groups_need_update(self, item, db_def):
+        """Check if security groups need update."""
+        import json
+        
+        # Get groups from YAML
+        yaml_groups = set(item.get('groups', []))
+        
+        # Get groups from DB
+        db_groups = set()
+        try:
+            if db_def.get('opaque1'):
+                opaque = json.loads(db_def['opaque1'])
+                group_ids = opaque.get('security_groups', [])
+                
+                # Convert IDs to names
+                for group_id in group_ids:
+                    for group_name, group_def in self.importer.group_defs.items():
+                        group_def_id = int(group_def['id'])
+                        group_id_int = int(group_id)
+                        if group_def_id == group_id_int:
+                            db_groups.add(group_name)
+                            break
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+            
+        # Return True if groups differ
+        if yaml_groups != db_groups:
+            logger.info('Groups changed for channel %s: yaml=%s db=%s', 
+                        item['name'], sorted(yaml_groups), sorted(db_groups))
+            return True
+            
+        return False
 
 # ################################################################################################################################
 
