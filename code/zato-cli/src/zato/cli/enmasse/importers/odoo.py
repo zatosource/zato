@@ -11,7 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
-from zato.common.odb.model import OutgoingOdoo, Cluster, to_json
+from zato.common.odb.model import OutgoingOdoo, to_json
 from zato.common.odb.query import out_odoo_list
 from zato.common.util.sql import set_instance_opaque_attrs
 

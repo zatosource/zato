@@ -125,6 +125,8 @@ class CommandStore:
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod
 
+        enmasse_mod = enmasse_mod
+
         # Zato - REST
         from zato.cli.rest import \
             channel              as rest_channel_mod  # noqa: E272
@@ -307,12 +309,12 @@ class CommandStore:
         #
         # enmasse
         #
-        '''
+        """
         enmasse = subs.add_parser('enmasse', description=enmasse_mod.Enmasse.__doc__, parents=[base_parser])
         enmasse.add_argument('path', help='Path to a running Zato server')
         enmasse.set_defaults(command='enmasse')
         self.add_opts(enmasse, enmasse_mod.Enmasse.opts)
-        '''
+        """
 
         #
         # update
