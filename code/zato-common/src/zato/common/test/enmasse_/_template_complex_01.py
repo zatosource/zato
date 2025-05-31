@@ -86,6 +86,14 @@ channel_rest:
     security: enmasse.basic_auth.1
     data_format: json
 
+  - name: enmasse.channel.rest.4
+    service: demo.ping
+    url_path: /enmasse.rest.4
+    data_format: json
+    groups:
+      - enmasse.group.1
+      - enmasse.group.2
+
 outgoing_rest:
 
   - name: enmasse.outgoing.rest.1
