@@ -39,7 +39,7 @@ class ChannelExporter:
     def export(self, session: 'SASession', cluster_id: 'int') -> 'channel_def_list':
         """ Exports REST Channel definitions.
         """
-        logger.info('Exporting REST Channel definitions')
+        logger.info('Exporting REST channel definitions')
 
         db_channels = http_soap_list(session, cluster_id, connection=CONNECTION.CHANNEL, transport=URL_TYPE.PLAIN_HTTP)
 
@@ -65,11 +65,20 @@ class ChannelExporter:
                 'data_format': channel_row.data_format,
                 'is_active': channel_row.is_active,
                 'timeout': channel_row.timeout,
+                'method': channel_row.method,
+                'content_type': channel_row.content_type,
+                'content_encoding': channel_row.content_encoding,
             }
 
             for field_name, field_value in optional_fields_from_row.items():
                 if field_value is not None:
                     exported_channel[field_name] = field_value
+
+            # Handle security_groups (list of names)
+            if hasattr(channel_row, 'security_groups') and channel_row.security_groups:
+                group_names = sorted([group.name for group in channel_row.security_groups if group and hasattr(group, 'name')])
+                if group_names:
+                    exported_channel['security_groups'] = group_names
 
             exported_channels.append(exported_channel)
 
