@@ -77,8 +77,14 @@ class TestEnmasseChannelRESTExporter(TestCase):
         # Import security definitions first, as channels may depend on them
         security_defs_from_yaml = self.yaml_config.get('security', [])
         if security_defs_from_yaml:
-            # SecurityImporter handles all types of security definitions
-            _, _ = self.security_importer.sync_security_definitions(security_defs_from_yaml, self.session)
+
+            # This method already populates self.importer.sec_defs after commit
+            created_sec, updated_sec = self.security_importer.sync_security_definitions(security_defs_from_yaml, self.session)
+            logger.info('Imported %d security definitions (created=%d, updated=%d)',
+                len(created_sec) + len(updated_sec), len(created_sec), len(updated_sec))
+
+            # Verify that security definitions were populated correctly
+            logger.info('Security definitions in importer: %s', list(self.importer.sec_defs.keys()))
 
         self.session.commit()
 
