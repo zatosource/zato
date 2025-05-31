@@ -265,6 +265,7 @@ class GroupImporter:
         """
         # Lists to store processed groups
         processed_groups = []
+        self.group_defs = {}
 
         try:
             # Get existing groups from database
@@ -287,8 +288,14 @@ class GroupImporter:
                 logger.info('Creating group %s with members from YAML', group_name)
                 created_group = self.create_group(group, session)
                 processed_groups.append(created_group)
+                
+                # Store the group definition for later use
+                self.group_defs[group_name] = {
+                    'id': created_group['id'],
+                    'name': group_name
+                }
 
-            return processed_groups, []
+            return processed_groups
 
         except Exception:
             logger.exception('Error synchronizing groups')
