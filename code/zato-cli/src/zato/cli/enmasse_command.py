@@ -208,19 +208,20 @@ class Enmasse(ZatoCommand):
     @staticmethod
     def format_object_name(item):
 
-        # For groups, we want to display name and members but not ID
+        # For groups objects, display name and members but never ID
+        if isinstance(item, dict):
+            if 'members' in item and 'name' in item:
+                return {
+                    'name': item['name'],
+                    'members': item['members']
+                }
+        
+        # For objects with members attribute
         if hasattr(item, 'members'):
-
-            # If it's a dictionary with 'name' and 'members'
-            if isinstance(item, dict) and 'name' in item and 'members' in item:
-                if 'id' in item:
-                    item_copy = item.copy()
-                    del item_copy['id']  # Remove the ID
-                    return item_copy
-                return item
-
-            # If it's an object with name and members attributes
-            return {'name': item.name, 'members': item.members}
+            return {
+                'name': getattr(item, 'name', 'Unknown'),
+                'members': item.members
+            }
 
         # For regular objects, just return the name
         return getattr(item, 'name', str(item))
