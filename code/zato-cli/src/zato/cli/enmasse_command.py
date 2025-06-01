@@ -215,13 +215,7 @@ class Enmasse(ZatoCommand):
                     'name': item['name'],
                     'members': item['members']
                 }
-        
-        # For objects with members attribute
-        if hasattr(item, 'members'):
-            return {
-                'name': getattr(item, 'name', 'Unknown'),
-                'members': item.members
-            }
+
 
         # For regular objects, just return the name
         return getattr(item, 'name', str(item))
