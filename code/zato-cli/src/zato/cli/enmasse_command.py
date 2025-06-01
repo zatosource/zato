@@ -131,7 +131,6 @@ class Enmasse(ZatoCommand):
 
         # Handle import
         elif getattr(args, 'import', False):
-            self.logger.info('Importing objects from YAML')
 
             # Make sure we have an input file
             if not args.input:
@@ -154,12 +153,26 @@ class Enmasse(ZatoCommand):
                 ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
 
                 # Sync objects
-                importer.sync_from_yaml(
+                created_objects, updated_objects = importer.sync_from_yaml(
                     yaml_config,
                     session,
                     server_dir=self.component_dir,
                     wait_for_services_timeout=args.missing_wait_time
                 )
+
+                # Display created objects with the NEW icon
+                for object_type, objects in created_objects.items():
+                    for obj in objects:
+                        # Get name attribute if exists, otherwise use str representation
+                        name = getattr(obj, 'name', str(obj))
+                        self.logger.info('⭐ Created %s: %s', object_type, name)
+
+                # Display updated objects with the GEAR icon
+                for object_type, objects in updated_objects.items():
+                    for obj in objects:
+                        # Get name attribute if exists, otherwise use str representation
+                        name = getattr(obj, 'name', str(obj))
+                        self.logger.info('⚙️  Updated %s: %s', object_type, name)
 
                 self.logger.info('Import completed from %s', args.input)
 
