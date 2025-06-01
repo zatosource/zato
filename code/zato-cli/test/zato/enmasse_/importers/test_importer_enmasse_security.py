@@ -173,7 +173,7 @@ class TestEnmasseSecurity(TestCase):
 
         # Process all security definitions
         security_list = self.yaml_config.get('security', [])
-        sec_created, _ = self.security_importer.sync_security_definitions(security_list, self.session)
+        _ = self.security_importer.sync_security_definitions(security_list, self.session)
 
         # Verify security definitions were created
         self.assertTrue(len(self.importer.sec_defs) >= 5, 'Not all security definitions were created')
