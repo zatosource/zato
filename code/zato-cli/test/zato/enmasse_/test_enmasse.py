@@ -33,9 +33,9 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         return ''
 
     def _cleanup(self, test_suffix:'str') -> 'None':
-
-        # Would clean up test data based on test_suffix
-        pass
+        # Clean up test data based on test_suffix and database objects
+        from zato.cli.enmasse.client import cleanup_enmasse
+        cleanup_enmasse()
 
     def _test_enmasse_ok(self, template:'str') -> 'None':
 
