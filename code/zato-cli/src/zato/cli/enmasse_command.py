@@ -179,17 +179,36 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-                for object_type, objects in created_objects.items():
-                    display_type = type_display_names.get(object_type, object_type)
-                    for obj in objects:
-                        name = self.format_object_name(obj)
-                        self.logger.info('⭐ Created %s: %s', display_type, name)
+                # Count total objects for proper numbering
+                total_created = sum(len(obj_list) for obj_list in created_objects.values()) if created_objects else 0
+                total_updated = sum(len(obj_list) for obj_list in updated_objects.values()) if updated_objects else 0
+                total_objects = total_created + total_updated
+                padding = len(str(total_objects)) if total_objects > 0 else 1
+                counter = 0
 
-                for object_type, objects in updated_objects.items():
-                    display_type = type_display_names.get(object_type, object_type)
-                    for obj in objects:
-                        name = self.format_object_name(obj)
-                        self.logger.info('⚙️  Updated %s: %s', display_type, name)
+                if created_objects:
+
+                    for obj_type, obj_list in created_objects.items():
+
+                        type_name = type_display_names.get(obj_type, obj_type)
+
+                        # Display each created object with a counter
+                        for item in obj_list:
+                            counter += 1
+                            counter_str = str(counter).zfill(padding)
+                            self.logger.info('%s. ⭐ Created %s: %s', counter_str, type_name, self.format_object_name(item))
+
+                if updated_objects:
+
+                    for obj_type, obj_list in updated_objects.items():
+
+                        type_name = type_display_names.get(obj_type, obj_type)
+
+                        # Display each updated object with a counter
+                        for item in obj_list:
+                            counter += 1
+                            counter_str = str(counter).zfill(padding)
+                            self.logger.info('%s. ⚙️  Updated %s: %s', counter_str, type_name, self.format_object_name(item))
 
                 self.logger.info('Import completed from %s', args.input)
 
