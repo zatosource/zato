@@ -74,6 +74,10 @@ class EnmasseYAMLImporter:
         self.objects = {}
         self.cluster = None
 
+        # Track created and updated objects for reporting
+        self.created_objects = {}
+        self.updated_objects = {}
+
         # Initialize importers
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
@@ -529,11 +533,16 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession', server_dir:'str'=None, wait_for_services_timeout:'int'=None) -> 'None':
+    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession', server_dir:'str'=None, wait_for_services_timeout:'int'=None) -> 'tuple':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
+            Returns a tuple of (created_objects, updated_objects) for reporting.
         """
         logger.info('Starting synchronization of YAML configuration')
+
+        # Reset tracking dictionaries
+        self.created_objects = {}
+        self.updated_objects = {}
 
         # Wait for all services referenced in the configuration to be available
         if server_dir:
@@ -544,48 +553,106 @@ class EnmasseYAMLImporter:
                 raise Exception('Expected services not found')
 
         # Process security definitions first
-        self.sync_security(yaml_config.get('security', []), session)
+        sec_created, sec_updated = self.sync_security(yaml_config.get('security', []), session)
+        if sec_created:
+            self.created_objects['security'] = sec_created
+        if sec_updated:
+            self.updated_objects['security'] = sec_updated
 
         # Process security groups (depends on security definitions)
-        self.sync_groups(yaml_config.get('groups', []), session)
+        groups_created, groups_updated = self.sync_groups(yaml_config.get('groups', []), session)
+        if groups_created:
+            self.created_objects['groups'] = groups_created
+        if groups_updated:
+            self.updated_objects['groups'] = groups_updated
 
         # Process REST channels which may depend on security definitions
-        self.sync_channel_rest(yaml_config.get('channel_rest', []), session)
+        channels_created, channels_updated = self.sync_channel_rest(yaml_config.get('channel_rest', []), session)
+        if channels_created:
+            self.created_objects['channel_rest'] = channels_created
+        if channels_updated:
+            self.updated_objects['channel_rest'] = channels_updated
 
         # Process cache definitions
-        self.sync_cache(yaml_config.get('cache', []), session)
+        cache_created, cache_updated = self.sync_cache(yaml_config.get('cache', []), session)
+        if cache_created:
+            self.created_objects['cache'] = cache_created
+        if cache_updated:
+            self.updated_objects['cache'] = cache_updated
 
         # Process Odoo connection definitions
-        self.sync_odoo(yaml_config.get('odoo', []), session)
+        odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)
+        if odoo_created:
+            self.created_objects['odoo'] = odoo_created
+        if odoo_updated:
+            self.updated_objects['odoo'] = odoo_updated
 
         # Process SMTP connection definitions
-        self.sync_smtp(yaml_config.get('email_smtp', []), session)
+        smtp_created, smtp_updated = self.sync_smtp(yaml_config.get('email_smtp', []), session)
+        if smtp_created:
+            self.created_objects['email_smtp'] = smtp_created
+        if smtp_updated:
+            self.updated_objects['email_smtp'] = smtp_updated
 
         # Process IMAP connection definitions
-        self.sync_imap(yaml_config.get('email_imap', []), session)
+        imap_created, imap_updated = self.sync_imap(yaml_config.get('email_imap', []), session)
+        if imap_created:
+            self.created_objects['email_imap'] = imap_created
+        if imap_updated:
+            self.updated_objects['email_imap'] = imap_updated
 
         # Process SQL connection pool definitions
-        self.sync_sql(yaml_config.get('sql', []), session)
+        sql_created, sql_updated = self.sync_sql(yaml_config.get('sql', []), session)
+        if sql_created:
+            self.created_objects['sql'] = sql_created
+        if sql_updated:
+            self.updated_objects['sql'] = sql_updated
 
         # Process scheduler job definitions
-        self.sync_scheduler(yaml_config.get('scheduler', []), session)
+        job_created, job_updated = self.sync_scheduler(yaml_config.get('scheduler', []), session)
+        if job_created:
+            self.created_objects['scheduler'] = job_created
+        if job_updated:
+            self.updated_objects['scheduler'] = job_updated
 
         # Process Confluence connection definitions
-        self.sync_confluence(yaml_config.get('confluence', []), session)
+        confluence_created, confluence_updated = self.sync_confluence(yaml_config.get('confluence', []), session)
+        if confluence_created:
+            self.created_objects['confluence'] = confluence_created
+        if confluence_updated:
+            self.updated_objects['confluence'] = confluence_updated
 
         # Process Jira connection definitions
-        self.sync_jira(yaml_config.get('jira', []), session)
+        jira_created, jira_updated = self.sync_jira(yaml_config.get('jira', []), session)
+        if jira_created:
+            self.created_objects['jira'] = jira_created
+        if jira_updated:
+            self.updated_objects['jira'] = jira_updated
 
         # Process LDAP connection definitions
-        self.sync_ldap(yaml_config.get('ldap', []), session)
+        ldap_created, ldap_updated = self.sync_ldap(yaml_config.get('ldap', []), session)
+        if ldap_created:
+            self.created_objects['ldap'] = ldap_created
+        if ldap_updated:
+            self.updated_objects['ldap'] = ldap_updated
 
         # Process Microsoft 365 connection definitions
-        self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
+        ms365_created, ms365_updated = self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
+        if ms365_created:
+            self.created_objects['microsoft_365'] = ms365_created
+        if ms365_updated:
+            self.updated_objects['microsoft_365'] = ms365_updated
 
         # Process ElasticSearch connection definitions
-        self.sync_es(yaml_config.get('search_es', []), session)
+        es_created, es_updated = self.sync_es(yaml_config.get('search_es', []), session)
+        if es_created:
+            self.created_objects['search_es'] = es_created
+        if es_updated:
+            self.updated_objects['search_es'] = es_updated
 
         logger.info('YAML synchronization completed')
+
+        return self.created_objects, self.updated_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
