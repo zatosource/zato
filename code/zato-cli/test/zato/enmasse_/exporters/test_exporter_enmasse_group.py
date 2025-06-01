@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
@@ -89,6 +90,9 @@ class TestEnmasseGroupExporter(TestCase):
 
         # Get the groups section
         exported_groups = exported_data.get('groups', [])
+
+        # Take into account only our own groups
+        exported_groups = [group for group in exported_groups if group['name'].startswith('enmasse.')]
 
         # Get the expected groups from the imported YAML
         expected_groups_from_yaml = self.yaml_config.get('groups', [])
