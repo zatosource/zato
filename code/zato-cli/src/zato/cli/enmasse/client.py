@@ -17,9 +17,10 @@ from sqlalchemy import MetaData, inspect
 from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
-from zato.cli.enmasse.exporter import service_list
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
+from zato.common.odb.model import to_json
+from zato.common.odb.query import service_list
 from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir, utcnow
 from zato.common.util.cli import read_stdin_data
 
@@ -275,18 +276,24 @@ def wait_for_services(
 
             # Check if timeout has been reached
             elapsed_seconds = (current_time - start_time).total_seconds()
-            if elapsed_seconds > timeout_seconds:
+            # Ensure both are float for comparison
+            if elapsed_seconds > float(timeout_seconds):
                 logger.warning(f'Timeout of {timeout_seconds} seconds reached while waiting for {service_label}')
                 return False
 
             # Determine if we should start logging based on elapsed time
-            if not should_log and elapsed_seconds >= log_after_seconds:
+            # Ensure both are float for comparison
+            if not should_log and elapsed_seconds >= float(log_after_seconds):
                 should_log = True
                 logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
 
             # Get list of all available non-internal services
             db_services = service_list(session, 1, return_internal=False)
-            db_service_names = set(service.name for service in db_services)
+            db_services = to_json(db_services)
+            db_service_names = set()
+
+            for service in db_services:
+                db_service_names.add(service['name'])
 
             # Find missing services
             missing_services = service_names - db_service_names

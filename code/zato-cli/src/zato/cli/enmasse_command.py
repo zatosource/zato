@@ -65,8 +65,8 @@ class Enmasse(ZatoCommand):
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
 
-        # Get server path - this is always the last argument
-        server_path:'str' = self.original_dir
+        # Get server path from the command line arguments
+        server_path = args.path
 
         # Store cluster ID for exporters and importers
         ModuleCtx.Cluster_ID = self.get_cluster_id(args)
