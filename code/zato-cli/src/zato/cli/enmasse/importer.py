@@ -16,7 +16,7 @@ import yaml
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.importers.security import SecurityImporter
-from zato.cli.enmasse.importers.channel import ChannelImporter
+from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
