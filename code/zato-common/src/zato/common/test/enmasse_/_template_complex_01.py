@@ -98,7 +98,7 @@ outgoing_rest:
 
   - name: enmasse.outgoing.rest.1
     host: https://example.com:443
-    url_path: /sso/{type}/hello/{endpoint}
+    url_path: /sso/{{type}}/hello/{{endpoint}}
     data_format: json
     timeout: 60
 
