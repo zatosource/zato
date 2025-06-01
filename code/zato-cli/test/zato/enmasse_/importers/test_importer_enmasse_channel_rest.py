@@ -16,7 +16,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
-from zato.cli.enmasse.importers.channel import ChannelImporter
+from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 

@@ -15,7 +15,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
-from zato.cli.enmasse.importers.channel import ChannelImporter
+from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.cache import CacheImporter
 from zato.common.odb.model import CacheBuiltin, Cluster
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -211,7 +211,7 @@ class TestEnmasseCacheFromYAML(TestCase):
         # Get cache definition from YAML
         cache_defs = self.yaml_config['cache']
         cache_def = cache_defs[0]
-        
+
         # Create the cache definition
         instance = self.cache_importer.create_cache_definition(cache_def, self.session)
         self.session.commit()
