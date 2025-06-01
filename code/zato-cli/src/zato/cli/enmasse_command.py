@@ -7,19 +7,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli import ManageCommand
+from zato.cli import ZatoCommand
 from zato.cli.enmasse.config import ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist
+    from zato.common.typing_ import dictlist, stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Enmasse(ManageCommand):
+class Enmasse(ZatoCommand):
 
     opts:'dictlist' = [
 
@@ -51,7 +51,7 @@ class Enmasse(ManageCommand):
         # zato enmasse --export --include-type=cloud-microsoft-365 --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
     ]
 
-    def execute(self, args):
+    def execute(self, args) -> 'None':
         # stdlib
         import os
         import sys
@@ -64,7 +64,7 @@ class Enmasse(ManageCommand):
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
 
         # Get server path - this is always the last argument
-        server_path = self.original_dir
+        server_path:'str' = self.original_dir
 
         # Store cluster ID for exporters and importers
         ModuleCtx.Cluster_ID = self.get_cluster_id(args)
@@ -100,16 +100,16 @@ class Enmasse(ManageCommand):
             try:
                 # Export to dictionary
                 exporter = EnmasseYAMLExporter()
-                data_dict = exporter.export_to_dict(session)
+                data_dict: 'stranydict' = exporter.export_to_dict(session)
 
                 # Filter by type if specified
                 if args.include_type != 'all':
-                    types = [t.strip() for t in args.include_type.split(',')]
+                    types: 'strlist' = [t.strip() for t in args.include_type.split(',')]
                     data_dict = {k: v for k, v in data_dict.items() if k in types}
 
                 # Filter by name if specified
                 if args.include_name != 'all':
-                    names = [n.strip().lower() for n in args.include_name.split(',')]
+                    names: 'strlist' = [n.strip().lower() for n in args.include_name.split(',')]
                     for key, items in data_dict.items():
                         data_dict[key] = [item for item in items
                                          if any(name in str(item.get('name', '')).lower() for name in names)]
@@ -143,7 +143,7 @@ class Enmasse(ManageCommand):
 
             try:
                 # Load configuration from file
-                yaml_config = importer.from_path(args.input)
+                yaml_config:'stranydict' = importer.from_path(args.input)
 
                 # Set import context
                 ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
