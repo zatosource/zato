@@ -193,7 +193,7 @@ EnmasseApiKey1 = api-key-value-1
             stdout = out.stdout.decode('utf8')
 
             # Look for success message in output
-            self.assertIn('Import completed', stdout)
+            self.assertIn('⭐ Enmasse OK', stdout)
 
         except ErrorReturnCode as e:
             stdout = e.stdout.decode('utf8')
