@@ -166,7 +166,7 @@ command_imports = (
     ('delete_rest_channel', 'zato.cli.rest.channel.DeleteChannel'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
-    ('enmasse', 'zato.cli.enmasse.Enmasse'),
+    ('enmasse', 'zato.cli.enmasse:Enmasse'),
     ('from_config', 'zato.cli.FromConfig'),
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
     ('info', 'zato.cli.info.Info'),

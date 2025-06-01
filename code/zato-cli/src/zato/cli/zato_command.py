@@ -115,7 +115,7 @@ class CommandStore:
              create_web_admin    as create_web_admin_mod,    \
              crypto              as crypto_mod,              \
              delete_odb          as delete_odb_mod,          \
-             enmasse             as enmasse_mod,             \
+             enmasse_command     as enmasse_mod,             \
              FromConfig,                                     \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
@@ -124,8 +124,6 @@ class CommandStore:
              stop                as stop_mod,                \
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod
-
-        enmasse_mod = enmasse_mod
 
         # Zato - REST
         from zato.cli.rest import \
@@ -309,12 +307,10 @@ class CommandStore:
         #
         # enmasse
         #
-        """
         enmasse = subs.add_parser('enmasse', description=enmasse_mod.Enmasse.__doc__, parents=[base_parser])
         enmasse.add_argument('path', help='Path to a running Zato server')
         enmasse.set_defaults(command='enmasse')
         self.add_opts(enmasse, enmasse_mod.Enmasse.opts)
-        """
 
         #
         # update
