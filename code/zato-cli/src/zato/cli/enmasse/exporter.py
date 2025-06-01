@@ -18,7 +18,7 @@ from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
-from zato.cli.enmasse.exporters.channel import ChannelExporter
+from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
@@ -303,7 +303,7 @@ class EnmasseYAMLExporter:
         microsoft_365_defs = self.export_microsoft_365(session)
         if microsoft_365_defs:
             output_dict['microsoft_365'] = microsoft_365_defs
-            
+
         # Export Confluence connection definitions
         confluence_defs = self.export_confluence(session)
         if confluence_defs:
