@@ -145,7 +145,6 @@ class TestEnmasseCacheFromYAML(TestCase):
         """
         self._setup_test_environment()
 
-
         # Get cache definitions from YAML
         cache_defs = self.yaml_config.get('cache', [])
         self.assertTrue(len(cache_defs) > 0, 'No cache definitions found in YAML')

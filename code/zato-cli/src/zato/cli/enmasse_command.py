@@ -54,6 +54,7 @@ class Enmasse(ZatoCommand):
         return 1 # Always this value because there is always going to be one cluster only
 
     def execute(self, args) -> 'None':
+
         # stdlib
         import os
         import sys
@@ -85,7 +86,6 @@ class Enmasse(ZatoCommand):
             env_config = ConfigObj(args.env_file)
 
             # Set environment variables
-            import os
             for section in env_config:
                 for key, value in env_config[section].items():
                     os.environ[key] = value
