@@ -160,19 +160,53 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
+                # Map of object types to their display names
+                type_display_names = {
+                    'security': 'security definition',
+                    'groups': 'security group',
+                    'channel_rest': 'REST channel',
+                    'cache': 'cache',
+                    'odoo': 'Odoo connection',
+                    'email_smtp': 'SMTP connection',
+                    'email_imap': 'IMAP connection',
+                    'sql': 'SQL connection',
+                    'scheduler': 'scheduler job',
+                    'confluence': 'Confluence connection',
+                    'jira': 'Jira connection',
+                    'ldap': 'LDAP connection',
+                    'microsoft_365': 'Microsoft 365 connection',
+                    'search_es': 'ElasticSearch connection'
+                }
+
+                # Helper function to format object name properly
+                def format_object_name(item):
+                    # For groups, we want to display name and members but not ID
+                    if hasattr(item, 'members'):
+                        # If it's a dictionary with 'name' and 'members'
+                        if isinstance(item, dict) and 'name' in item and 'members' in item:
+                            if 'id' in item:
+                                obj_copy = item.copy()
+                                del obj_copy['id']  # Remove the ID
+                                return obj_copy
+                            return item
+                        # If it's an object with name and members attributes
+                        return {'name': item.name, 'members': item.members}
+                    # For regular objects, just return the name
+                    return getattr(item, 'name', str(item))
+
                 # Display created objects with the NEW icon
                 for object_type, objects in created_objects.items():
+                    display_type = type_display_names.get(object_type, object_type)
                     for obj in objects:
-                        # Get name attribute if exists, otherwise use str representation
-                        name = getattr(obj, 'name', str(obj))
-                        self.logger.info('⭐ Created %s: %s', object_type, name)
+                        name = format_object_name(obj)
+                        self.logger.info('⭐ Created %s: %s', display_type, name)
 
                 # Display updated objects with the GEAR icon
                 for object_type, objects in updated_objects.items():
+                    display_type = type_display_names.get(object_type, object_type)
                     for obj in objects:
-                        # Get name attribute if exists, otherwise use str representation
-                        name = getattr(obj, 'name', str(obj))
-                        self.logger.info('⚙️  Updated %s: %s', object_type, name)
+                        name = format_object_name(obj)
+                        self.logger.info('⚙️  Updated %s: %s', display_type, name)
 
                 self.logger.info('Import completed from %s', args.input)
 
