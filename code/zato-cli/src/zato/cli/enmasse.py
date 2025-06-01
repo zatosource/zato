@@ -51,5 +51,122 @@ class Enmasse(ManageCommand):
         # zato enmasse --export --include-type=cloud-microsoft-365 --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
     ]
 
+    def execute(self, args):
+        # stdlib
+        import os
+        import sys
+        import yaml
+
+        # Zato
+        from zato.cli.enmasse.client import get_session_from_server_dir
+        from zato.cli.enmasse.config import ModuleCtx
+        from zato.cli.enmasse.exporter import EnmasseYAMLExporter
+        from zato.cli.enmasse.importer import EnmasseYAMLImporter
+
+        # Get server path - this is always the last argument
+        server_path = self.original_dir
+
+        # Store cluster ID for exporters and importers
+        ModuleCtx.Cluster_ID = self.get_cluster_id(args)
+
+        # Process environment variables if specified
+        if getattr(args, 'env_file', None):
+            self.logger.info('Loading environment variables from %s', args.env_file)
+
+            # ConfigObj for parsing the file
+            from zato.common.ext.configobj_ import ConfigObj
+
+            # Load the environment variables
+            env_config = ConfigObj(args.env_file)
+
+            # Set environment variables
+            import os
+            for section in env_config:
+                for key, value in env_config[section].items():
+                    os.environ[key] = value
+
+        # Get session from server directory
+        session = get_session_from_server_dir(server_path)
+
+        # Handle export
+        if getattr(args, 'export', False) or getattr(args, 'export_odb', False):
+            self.logger.info('Exporting objects to YAML')
+
+            # Make sure we have an output file
+            if not args.output:
+                self.logger.error('Output file path (--output) is required for export')
+                sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
+
+            try:
+                # Export to dictionary
+                exporter = EnmasseYAMLExporter()
+                data_dict = exporter.export_to_dict(session)
+
+                # Filter by type if specified
+                if args.include_type != 'all':
+                    types = [t.strip() for t in args.include_type.split(',')]
+                    data_dict = {k: v for k, v in data_dict.items() if k in types}
+
+                # Filter by name if specified
+                if args.include_name != 'all':
+                    names = [n.strip().lower() for n in args.include_name.split(',')]
+                    for key, items in data_dict.items():
+                        data_dict[key] = [item for item in items
+                                         if any(name in str(item.get('name', '')).lower() for name in names)]
+
+                # Write output to file
+                with open(args.output, 'w') as f:
+                    yaml.dump(data_dict, f, default_flow_style=False, indent=4)
+
+                self.logger.info('Exported configuration to %s', args.output)
+
+            except Exception as e:
+                self.logger.error('Error during export: %s', str(e))
+                sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        # Handle import
+        elif getattr(args, 'import', False):
+            self.logger.info('Importing objects from YAML')
+
+            # Make sure we have an input file
+            if not args.input:
+                self.logger.error('Input file path (--input) is required for import')
+                sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
+
+            # Check if file exists
+            if not os.path.exists(args.input) and args.exit_on_missing_file:
+                self.logger.warning('Input file %s not found, exiting', args.input)
+                sys.exit(0)
+
+            # Import from YAML
+            importer = EnmasseYAMLImporter()
+
+            try:
+                # Load configuration from file
+                yaml_config = importer.from_path(args.input)
+
+                # Set import context
+                ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
+
+                # Sync objects
+                importer.sync_from_yaml(
+                    yaml_config,
+                    session,
+                    server_dir=self.component_dir,
+                    wait_for_services_timeout=args.missing_wait_time
+                )
+
+                self.logger.info('Import completed from %s', args.input)
+
+            except Exception as e:
+                self.logger.error('Error during import: %s', str(e))
+                sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        else:
+            self.logger.error('Either --export or --import must be specified')
+            sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
+
+        session.close()
+
 # ################################################################################################################################
 # ################################################################################################################################
