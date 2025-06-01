@@ -79,6 +79,7 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def compare_security_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
+
         to_create = []
         to_update = []
 
@@ -293,26 +294,23 @@ class SecurityImporter:
             session.commit()
             logger.info('Successfully committed all changes')
 
-            # Populate sec_defs after commit, so instance IDs are available
-            for item_in_yaml in to_create:
-                created_instance = next((inst for inst in out_created if inst.name == item_in_yaml['name']), None)
-                if created_instance:
-                    instance_dict = {
-                        'id': created_instance.id,
-                        'name': created_instance.name,
-                        'type': item_in_yaml['type']
-                    }
-                    self.importer.sec_defs[created_instance.name] = instance_dict
+            # Commit changes to ensure all definitions are in the database
+            logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
+            session.commit()
+            logger.info('Successfully committed all changes')
 
-            for item_in_yaml in to_update:
-                updated_instance = next((inst for inst in out_updated if inst.name == item_in_yaml['name']), None)
-                if updated_instance:
-                    instance_dict = {
-                        'id': updated_instance.id,
-                        'name': updated_instance.name,
-                        'type': item_in_yaml['type']
-                    }
-                    self.importer.sec_defs[updated_instance.name] = instance_dict
+            logger.info('Populating security definitions dictionary from database')
+            db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+
+            # Add each definition from the database to the dictionary
+            for name, def_info in db_defs.items():
+                self.importer.sec_defs[name] = {
+                    'id': def_info['id'],
+                    'name': name,
+                    'type': def_info['type']
+                }
+
+            logger.info('Populated %d security definitions in dictionary', len(self.importer.sec_defs))
 
         except Exception as e:
             logger.error('Error syncing security definitions: %s', e)
