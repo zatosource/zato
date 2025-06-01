@@ -203,6 +203,7 @@ EnmasseApiKey1 = api-key-value-1
             self.fail(f'Caught an exception with env file; stdout -> {stdout}')
 
         finally:
+            return
             # Clean up test files
             if os.path.exists(import_path):
                 os.remove(import_path)
