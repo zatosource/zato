@@ -15,6 +15,7 @@ import yaml
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
+from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Timeout
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.group import GroupImporter
@@ -528,11 +529,19 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession') -> 'None':
+    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession', server_dir:'str'=None, wait_for_services_timeout:'int'=None) -> 'None':
         """ Synchronizes all objects from a YAML configuration with the database.
             This is the main entry point for processing a complete YAML file.
         """
         logger.info('Starting synchronization of YAML configuration')
+
+        # Wait for all services referenced in the configuration to be available
+        if server_dir:
+            timeout = wait_for_services_timeout or Default_Service_Wait_Timeout
+            services_available = wait_for_services(yaml_config, server_dir, timeout_seconds=timeout)
+
+            if not services_available:
+                raise Exception('Expected services not found')
 
         # Process security definitions first
         self.sync_security(yaml_config.get('security', []), session)
