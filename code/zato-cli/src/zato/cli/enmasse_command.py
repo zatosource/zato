@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ZatoCommand
-from zato.cli.enmasse.config import ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,8 +34,8 @@ class Enmasse(ZatoCommand):
         {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
 
-        {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':ModuleCtx.Initial_Wait_Time},
-        {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':ModuleCtx.Missing_Wait_Time},
+        {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':10},
+        {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':1},
 
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
 
@@ -50,6 +49,9 @@ class Enmasse(ZatoCommand):
         # zato enmasse --export --include-type=cache               --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
         # zato enmasse --export --include-type=cloud-microsoft-365 --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
     ]
+
+    def get_cluster_id(self, args):
+        return 1 # Always this value because there is always going to be one cluster only
 
     def execute(self, args) -> 'None':
         # stdlib
@@ -68,6 +70,9 @@ class Enmasse(ZatoCommand):
 
         # Store cluster ID for exporters and importers
         ModuleCtx.Cluster_ID = self.get_cluster_id(args)
+
+        # Set component_dir - needed by importer/exporter
+        self.component_dir = server_path
 
         # Process environment variables if specified
         if getattr(args, 'env_file', None):
