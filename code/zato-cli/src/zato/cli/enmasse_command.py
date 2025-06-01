@@ -172,45 +172,14 @@ class Enmasse(ZatoCommand):
                 ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
 
                 # Sync objects
-                created_objects, updated_objects = importer.sync_from_yaml(
+                _ = importer.sync_from_yaml(
                     yaml_config,
                     session,
                     server_dir=self.component_dir,
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-                # Count total objects for proper numbering
-                total_created = sum(len(obj_list) for obj_list in created_objects.values()) if created_objects else 0
-                total_updated = sum(len(obj_list) for obj_list in updated_objects.values()) if updated_objects else 0
-                total_objects = total_created + total_updated
-                padding = len(str(total_objects)) if total_objects > 0 else 1
-                counter = 0
-
-                if created_objects:
-
-                    for obj_type, obj_list in created_objects.items():
-
-                        type_name = type_display_names.get(obj_type, obj_type)
-
-                        # Display each created object with a counter
-                        for item in obj_list:
-                            counter += 1
-                            counter_str = str(counter).zfill(padding)
-                            self.logger.info('%s. ⭐ Created %s: %s', counter_str, type_name, self.format_object_name(item))
-
-                if updated_objects:
-
-                    for obj_type, obj_list in updated_objects.items():
-
-                        type_name = type_display_names.get(obj_type, obj_type)
-
-                        # Display each updated object with a counter
-                        for item in obj_list:
-                            counter += 1
-                            counter_str = str(counter).zfill(padding)
-                            self.logger.info('%s. ⚙️  Updated %s: %s', counter_str, type_name, self.format_object_name(item))
-
-                self.logger.info('Import completed from %s', args.input)
+                self.logger.info('⭐ Enmasse OK (%s)', args.input)
 
             except Exception as e:
                 self.logger.error('Error during import: %s', str(e))
