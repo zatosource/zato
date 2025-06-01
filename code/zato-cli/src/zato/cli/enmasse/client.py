@@ -9,28 +9,34 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import time
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import MetaData, inspect
 from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
+from zato.cli.enmasse.exporter import service_list
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
-from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
+from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir, utcnow
 from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Set up logging
 logger = logging.getLogger(__name__)
+
+# Default timeout = 30 days in seconds
+Default_Service_Wait_Timeout = 30 * 24 * 60 * 60  # 30 days
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strnone
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, anydict, anylist, bool_, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,6 +225,95 @@ def cleanup_enmasse() -> 'None':
     server_path = os.path.expanduser('~/env/qs-1/server1')
     cleanup(['enmasse', 'test_sync_group'], server_path)
     logger.info('Enmasse cleanup completed for prefixes: enmasse, test_sync_group')
+
+# ################################################################################################################################
+
+def wait_for_services(
+    config_dict:'anydict',
+    server_dir:'str',
+    stdin_data:'strnone'=None,
+    timeout_seconds:'int'=Default_Service_Wait_Timeout,
+    log_after_seconds:'int'=3
+) -> 'bool_':
+    """ Waits for all services defined in the configuration to be available in the database.
+    """
+    # Get a session from the server directory
+    session = get_session_from_server_dir(server_dir, stdin_data)
+
+    # Build list of unique service names from the configuration
+    service_names = set()
+
+    # Extract service names from channel_rest definitions if present
+    if channel_rest := config_dict.get('channel_rest'):
+        for item in channel_rest:
+            if service := item.get('service'):
+                service_names.add(service)
+
+    # Extract service names from scheduler definitions if present
+    if scheduler := config_dict.get('scheduler'):
+        for item in scheduler:
+            if service := item.get('service'):
+                service_names.add(service)
+
+    # If no services to check, return True immediately
+    if not service_names:
+        return True
+
+    service_count = len(service_names)
+    service_label = 'service' if service_count == 1 else 'services'
+    logger.info(f'Waiting for {service_count} {service_label} to be available: {sorted(service_names)}')
+
+    # Track start time for timeout calculation and logging delay
+    start_time = utcnow()
+    should_log = False
+    last_log_time = utcnow()
+
+    try:
+        # Keep checking until all services are found or timeout is reached
+        while True:
+            current_time = utcnow()
+
+            # Check if timeout has been reached
+            elapsed_seconds = (current_time - start_time).total_seconds()
+            if elapsed_seconds > timeout_seconds:
+                logger.warning(f'Timeout of {timeout_seconds} seconds reached while waiting for {service_label}')
+                return False
+
+            # Determine if we should start logging based on elapsed time
+            if not should_log and elapsed_seconds >= log_after_seconds:
+                should_log = True
+                logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
+
+            # Get list of all available non-internal services
+            db_services = service_list(session, 1, return_internal=False)
+            db_service_names = set(service.name for service in db_services)
+
+            # Find missing services
+            missing_services = service_names - db_service_names
+
+            # If no services are missing, return success
+            if not missing_services:
+                logger.info(f'All required {service_label} found in the database')
+                return True
+
+            # Log missing services and wait before retrying (but not too frequently)
+            missing_count = len(missing_services)
+            missing_label = 'service' if missing_count == 1 else 'services'
+
+            if should_log and (current_time - last_log_time).total_seconds() >= 1.0:
+                logger.info(f'Waiting for {missing_count} missing {missing_label}: {sorted(missing_services)}')
+                last_log_time = current_time
+
+            time.sleep(0.1)
+
+    except Exception as e:
+        # Log any exceptions that occur
+        logger.error(f'Exception while waiting for services: {format_exc()}')
+        return False
+
+    finally:
+        # Always close the session
+        session.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
