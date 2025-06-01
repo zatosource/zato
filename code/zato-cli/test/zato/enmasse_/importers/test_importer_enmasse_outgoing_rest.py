@@ -106,7 +106,7 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         ).one()
 
         self.assertEqual(outgoing.host, 'https://example.com:443')
-        self.assertEqual(outgoing.url_path, '/sso/{type}/hello/{endpoint}')
+        self.assertEqual(outgoing.url_path, '/sso/{{type}}/hello/{{endpoint}}')
         self.assertEqual(outgoing.data_format, 'json')
         self.assertEqual(outgoing.timeout, 60)
 
@@ -210,7 +210,7 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         # Check conn1 details
         self.assertIsNotNone(conn1)
         self.assertEqual(conn1['host'], 'https://example.com:443')
-        self.assertEqual(conn1['url_path'], '/sso/{type}/hello/{endpoint}')
+        self.assertEqual(conn1['url_path'], '/sso/{{type}}/hello/{{endpoint}}')
         self.assertEqual(conn1['data_format'], 'json')
         self.assertEqual(conn1['timeout'], 60)
 
