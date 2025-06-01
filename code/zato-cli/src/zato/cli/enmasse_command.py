@@ -15,9 +15,6 @@ from zato.cli import ZatoCommand
 if 0:
     from zato.common.typing_ import dictlist, stranydict, strlist
 
-# ################################################################################################################################
-# ################################################################################################################################
-
 # Map of object types to their display names
 type_display_names = {
     'security': 'security definition',
@@ -36,24 +33,9 @@ type_display_names = {
     'search_es': 'ElasticSearch connection'
 }
 
-def format_object_name(item):
+# ################################################################################################################################
+# ################################################################################################################################
 
-    # For groups, we want to display name and members but not ID
-    if hasattr(item, 'members'):
-
-        # If it's a dictionary with 'name' and 'members'
-        if isinstance(item, dict) and 'name' in item and 'members' in item:
-            if 'id' in item:
-                item_copy = item.copy()
-                del item_copy['id']  # Remove the ID
-                return item_copy
-            return item
-
-        # If it's an object with name and members attributes
-        return {'name': item.name, 'members': item.members}
-
-    # For regular objects, just return the name
-    return getattr(item, 'name', str(item))
 
 class Enmasse(ZatoCommand):
 
@@ -200,13 +182,13 @@ class Enmasse(ZatoCommand):
                 for object_type, objects in created_objects.items():
                     display_type = type_display_names.get(object_type, object_type)
                     for obj in objects:
-                        name = format_object_name(obj)
+                        name = self.format_object_name(obj)
                         self.logger.info('⭐ Created %s: %s', display_type, name)
 
                 for object_type, objects in updated_objects.items():
                     display_type = type_display_names.get(object_type, object_type)
                     for obj in objects:
-                        name = format_object_name(obj)
+                        name = self.format_object_name(obj)
                         self.logger.info('⚙️  Updated %s: %s', display_type, name)
 
                 self.logger.info('Import completed from %s', args.input)
@@ -220,6 +202,28 @@ class Enmasse(ZatoCommand):
             sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
         session.close()
+
+# ################################################################################################################################
+
+    @staticmethod
+    def format_object_name(item):
+
+        # For groups, we want to display name and members but not ID
+        if hasattr(item, 'members'):
+
+            # If it's a dictionary with 'name' and 'members'
+            if isinstance(item, dict) and 'name' in item and 'members' in item:
+                if 'id' in item:
+                    item_copy = item.copy()
+                    del item_copy['id']  # Remove the ID
+                    return item_copy
+                return item
+
+            # If it's an object with name and members attributes
+            return {'name': item.name, 'members': item.members}
+
+        # For regular objects, just return the name
+        return getattr(item, 'name', str(item))
 
 # ################################################################################################################################
 # ################################################################################################################################
