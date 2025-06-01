@@ -36,8 +36,7 @@ Default_Service_Wait_Timeout = 30 * 24 * 60 * 60  # 30 days
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, bool_, strnone
+    from zato.common.typing_ import any_, anydict, bool_, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -313,8 +312,7 @@ def wait_for_services(
 
             time.sleep(0.1)
 
-    except Exception as e:
-        # Log any exceptions that occur
+    except Exception:
         logger.error(f'Exception while waiting for services: {format_exc()}')
         return False
 
