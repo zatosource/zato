@@ -31,11 +31,12 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
     def get_smtp_config(self) -> 'str':
         return ''
-        
+
     def _cleanup(self, test_suffix:'str') -> 'None':
+
         # Would clean up test data based on test_suffix
         pass
-        
+
     def _test_enmasse_ok(self, template:'str') -> 'None':
 
         # sh
@@ -155,7 +156,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         env_path = os.path.join(tmp_dir, env_file_name)
 
         # Create environment variables file
-        env_content = """[env_vars]
+        env_content = """[env]
 BasicAuth1 = secret-password-1
 BasicAuth2 = secret-password-2
 EnmasseApiKey1 = api-key-value-1
@@ -183,7 +184,7 @@ EnmasseApiKey1 = api-key-value-1
                 '--replace',
                 '--verbose',
                 '--env-file', env_path
-            )
+            ) # type: ignore
 
             # Check for successful import
             self.assertEqual(out.exit_code, 0)
