@@ -238,19 +238,21 @@ class GroupImporter:
         member_ids = []
 
         for member_name in member_names:
+
             # Look up the security definition by name
             sec_def = self.importer.sec_defs.get(member_name)
+
+            # Log available definitions for troubleshooting
+            logger.info('Security definitions available: %s', list(self.importer.sec_defs.keys()))
+
             if not sec_def:
-                logger.warning('Security definition %s not found, skipping', member_name)
-                continue
+                msg = f'Security definition "{member_name}" not found among "{self.importer.sec_defs}"'
+                logger.error(msg)
+                raise Exception(msg)
 
             # Get the ID and type from the security definition
-            sec_id = sec_def.get('id')
-            sec_type = sec_def.get('type')
-
-            if not sec_id or not sec_type:
-                logger.warning('Security definition %s has no ID or type, skipping', member_name)
-                continue
+            sec_id = sec_def['id']
+            sec_type = sec_def['type']
 
             # Create a member ID in the format type-id
             member_id = f'{sec_type}-{sec_id}'
@@ -288,7 +290,7 @@ class GroupImporter:
                 logger.info('Creating group %s with members from YAML', group_name)
                 created_group = self.create_group(group, session)
                 processed_groups.append(created_group)
-                
+
                 # Store the group definition for later use
                 self.group_defs[group_name] = {
                     'id': created_group['id'],
