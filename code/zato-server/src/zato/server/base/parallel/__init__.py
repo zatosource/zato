@@ -908,10 +908,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def reload_config(self):
-        logger.info('Config reloading')
+
+        if _needs_details:
+            logger.debug('Config reloading')
+
         self.set_up_config(self)
         self.worker_store.init()
-        logger.info('Config reloaded')
+
+        logger.info('⭐ Config loaded OK')
 
 # ################################################################################################################################
 
