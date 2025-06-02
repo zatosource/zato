@@ -190,8 +190,17 @@ class Ping(AdminService):
     name = 'demo.ping'
 
     def handle(self):
-        self.server.reload_config()
         self.response.payload = '{"pong":"zato"}'
+
+# ################################################################################################################################
+
+class ServerInvoker(AdminService):
+
+    name = 'zato.server.invoker'
+
+    def handle(self):
+        func = getattr(self.server, self.request.raw_request['func_name'])
+        func()
 
 # ################################################################################################################################
 

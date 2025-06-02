@@ -97,7 +97,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
         metadata.reflect(bind=engine)
 
         # Get all table names
-        table_names = inspector.get_table_names()
+        table_names = inspector.get_table_names() # type: ignore
         logger.info(f'Found {len(table_names)} tables in database')
 
         # Store security IDs that need to be cleaned up
@@ -186,7 +186,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 
                 try:
                     # Check if the table has a 'name' column
-                    columns = [col['name'] for col in inspector.get_columns(table_name)]
+                    columns = [col['name'] for col in inspector.get_columns(table_name)] # type: ignore
                     if 'name' in columns:
                         # Execute a delete query for objects with names starting with any of the prefixes
                         like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
