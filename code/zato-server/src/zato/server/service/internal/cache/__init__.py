@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.odb.model import Cache
+from zato.common.odb.model import CacheBuiltin
 
 # ################################################################################################################################
 
@@ -18,9 +18,9 @@ def common_instance_hook(self, input, instance, attrs):
     if attrs.is_create_edit and instance.is_default:
 
         with attrs._meta_session.no_autoflush:
-            attrs._meta_session.query(Cache).\
-                filter(Cache.is_default.is_(True)).\
-                filter(Cache.id != instance.id).\
+            attrs._meta_session.query(CacheBuiltin).\
+                filter(CacheBuiltin.is_default.is_(True)).\
+                filter(CacheBuiltin.id != instance.id).\
                 update({'is_default':False})
 
 # ################################################################################################################################
