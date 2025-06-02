@@ -30,6 +30,7 @@ from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
+from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -71,6 +72,7 @@ class EnmasseYAMLImporter:
         self.jira_defs = {}
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
+        self.outgoing_rest_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -93,6 +95,7 @@ class EnmasseYAMLImporter:
         self.jira_importer = JiraImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
+        self.outgoing_rest_importer = OutgoingRESTImporter(self)
 
 # ################################################################################################################################
 
@@ -141,7 +144,7 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def _process_includes(self, config:'stranydict', base_dir:'str', processed_paths:set=None) -> 'stranydict':
+    def _process_includes(self, config:'stranydict', base_dir:'str', processed_paths:'set | None'=None) -> 'stranydict':
 
         # Initialize set of processed paths to prevent recursive includes
         if processed_paths is None:
@@ -533,10 +536,14 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_from_yaml(self, yaml_config:'stranydict', session:'SASession', server_dir:'str'=None, wait_for_services_timeout:'int'=None) -> 'tuple':
+    def sync_from_yaml(
+        self,
+        yaml_config:'stranydict',
+        session:'SASession',
+        server_dir:'str | None'=None,
+        wait_for_services_timeout:'int | None'=None
+    ) -> 'tuple':
         """ Synchronizes all objects from a YAML configuration with the database.
-            This is the main entry point for processing a complete YAML file.
-            Returns a tuple of (created_objects, updated_objects) for reporting.
         """
         logger.info('Starting synchronization of YAML configuration')
 
@@ -650,9 +657,21 @@ class EnmasseYAMLImporter:
         if es_updated:
             self.updated_objects['search_es'] = es_updated
 
+        # Process outgoing REST connection definitions
+        outgoing_rest_created, outgoing_rest_updated = self.sync_outgoing_rest(yaml_config.get('outgoing_rest', []), session)
+        if outgoing_rest_created:
+            self.created_objects['outgoing_rest'] = outgoing_rest_created
+        if outgoing_rest_updated:
+            self.updated_objects['outgoing_rest'] = outgoing_rest_updated
+
         logger.info('YAML synchronization completed')
 
         return self.created_objects, self.updated_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+    def sync_outgoing_rest(self, outgoing_list:'list', session:'SASession') -> 'tuple':
+        """Synchronizes outgoing REST connection definitions from a YAML configuration with the database.
+        """
+        return self.outgoing_rest_importer.sync_outgoing_rest(outgoing_list, session)

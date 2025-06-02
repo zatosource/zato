@@ -124,14 +124,15 @@ class GenericConnectionImporter:
         extra_fields = {}
         for field, default in self.connection_extra_field_defaults.items():
             value = connection_def.get(field, default)
-            if value is not None:
-                extra_fields[field] = value
+            # Include all values, even None, as None is a valid value for some fields
+            extra_fields[field] = value
 
-        # Filter out None values
-        extra_fields = {key: value for key, value in extra_fields.items() if value is not None}
+        # Merge extra_fields with connection_def to ensure defaults are included
+        merged_def = connection_def.copy()
+        merged_def.update(extra_fields)
 
         # Set any opaque attributes from the configuration
-        set_instance_opaque_attrs(connection, connection_def, extra_fields)
+        set_instance_opaque_attrs(connection, merged_def)
 
         # Add to session and flush to get ID
         session.add(connection)
@@ -163,10 +164,13 @@ class GenericConnectionImporter:
         extra_fields = {}
         for field, default in self.connection_extra_field_defaults.items():
             value = connection_def.get(field, default)
-            if value is not None:
-                extra_fields[field] = value
+            extra_fields[field] = value
 
-        set_instance_opaque_attrs(connection, connection_def, extra_fields)
+        # Merge extra_fields with connection_def to ensure defaults are included
+        merged_def = connection_def.copy()
+        merged_def.update(extra_fields)
+
+        set_instance_opaque_attrs(connection, merged_def)
 
         session.add(connection)
         return connection
