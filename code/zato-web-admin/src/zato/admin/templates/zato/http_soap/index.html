@@ -70,9 +70,8 @@
                 'soap_version',
             {% endif %}
 
-            // 12, 13, 13a
+            // 12, 13
             {% if connection == 'channel' %}
-                '_audit_log',
                 'service',
                 'content_encoding',
             {% endif %}
@@ -87,12 +86,12 @@
             'cache_type',
             'cache_expiry',
 
-            // 20, 21
-            'has_rbac',
+            // 20
             'data_format',
 
             // 22, 23a, 23b, 23c
             'timeout',
+            'validate_tls',
             'match_slash',
             'http_accept',
 
@@ -121,23 +120,7 @@
                 '_ping',
             {% endif %}
 
-            // 34
-            {% if connection == 'outgoing' %}
-              {% if transport == 'soap' %}
-                '_reload_wsdl',
-              {% endif %}
-            {% endif %}
-
-            // 35
-            {% comment %}Empty{% endcomment %}
-
-            // 36a, 36b, 36c
-            {% comment %}Empty{% endcomment %}
-
-            // 37a, 37b, 37c
-            {% comment %}Empty{% endcomment %}
-
-            // 38a, 38b, 38c
+            // 38a
             'data_encoding',
 
         ]
@@ -205,7 +188,6 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <th class='ignore'><a href="#">Message log</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endif %}
@@ -221,12 +203,11 @@
                         <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
 
                         <!-- 20, 21 -->
-                        <th class='ignore'>&nbsp;</th> {% comment %} has_rbac {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
 
                         <!-- 22, 23a, 23b, 23c -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} validate_tls {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} use_tls {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
 
@@ -239,7 +220,12 @@
                         {% endif %}
 
                         <!-- 28, 29, 30, 30a -->
-                        {% comment %}Empty{% endcomment %}
+                        {% if connection == 'channel' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} merge_url_params_req {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} url_params_pri {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} params_pri {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} method {% endcomment %}
+                        {% endif %}
 
                         <!-- 31, 32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
@@ -257,16 +243,7 @@
                           {% endif %}
                         {% endif %}
 
-                        <!-- 35 -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 36a, 36b, 36c -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 37a, 37b, 37c -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 38a, 38b, 38c -->
+                        <!-- 38a -->
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -336,7 +313,7 @@
                             <td>{{ item.soap_version }}</td>
                         {% endif %}
 
-                        <!-- 12, 13, 13a -->
+                        <!-- 12, 13 -->
                         {% if connection == 'channel' %}
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
@@ -352,11 +329,10 @@
                         <td class='ignore'>{{ item.cache_type }}</td>
                         <td class='ignore'>{{ item.cache_expiry }}</td>
 
-                        <!-- 20, 21 -->
-                        <td class='ignore'>{{ item.has_rbac }}</td>
+                        <!-- 20 -->
                         <td class='ignore'>{{ item.data_format }}</td>
 
-                        <!-- 22, 23a, 23b -->
+                        <!-- 22, 23a, 23b, 23c -->
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.validate_tls }}</td>
                         <td class='ignore'>{{ item.match_slash }}</td>
@@ -387,23 +363,7 @@
                             <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         {% endif %}
 
-                        <!-- 34 -->
-                        {% if connection == 'outgoing' %}
-                          {% if transport == 'soap' %}
-                            <td>{% if item.serialization_type == 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endif %}</td>
-                          {% endif %}
-                        {% endif %}
-
-                        <!-- 35 -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 36 -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 37 -->
-                        {% comment %}Empty{% endcomment %}
-
-                        <!-- 38 -->
+                        <!-- 38a -->
                         <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
 
                     </tr>

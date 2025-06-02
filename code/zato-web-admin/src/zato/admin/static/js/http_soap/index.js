@@ -291,16 +291,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
         /* 33 */
         row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
-
-        /* 34 */
-        if(is_soap) {
-            if(item.serialization_type == 'suds') {
-                row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.reload_wsdl({0});'>Reload WSDL</a>", item.id));
-            }
-            else {
-                row += '<td></td>';
-            }
-        }
     }
 
     /* 35 */
@@ -334,20 +324,6 @@ $.fn.zato.http_soap.delete_ = function(id) {
         'Object `{0}` deleted',
         'Are you sure you want to delete object `{0}`?',
         true);
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.http_soap.reload_wsdl = function(id) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-    }
-
-    var url = String.format('./reload-wsdl/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    $.fn.zato.post(url, callback, '', 'text');
-
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
