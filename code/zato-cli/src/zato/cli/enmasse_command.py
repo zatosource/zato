@@ -84,6 +84,7 @@ class Enmasse(ZatoCommand):
         from zato.cli.enmasse.config import ModuleCtx
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
+        from zato.common.util.api import get_client_from_server_conf
 
         # Get server path from the command line arguments
         server_path = args.path
@@ -171,7 +172,7 @@ class Enmasse(ZatoCommand):
                 # Set import context
                 ModuleCtx.ignore_missing_includes = args.ignore_missing_includes
 
-                # Sync objects
+                # Sync objects ..
                 _ = importer.sync_from_yaml(
                     yaml_config,
                     session,
@@ -179,6 +180,19 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
+
+                # .. build an invoker ..
+                client = get_client_from_server_conf(
+                    server_dir=server_path,
+                    require_server=True,
+                    initial_wait_time=int(args.initial_wait_time)
+                )
+
+
+                # .. reload the configuration ..
+                response = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
+
+                # .. and confirm it all went fine.
                 self.logger.info('⭐ Enmasse OK (%s)', args.input)
 
             except Exception as e:
