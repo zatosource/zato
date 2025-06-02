@@ -87,20 +87,7 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', \
                 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
-                'security_group_member_count', 'needs_security_group_names'
-
-# ################################################################################################################################
-
-    def _get_validate_tls_from_item(self, item):
-
-        sec_tls_ca_cert_verify_strategy = item.get('sec_tls_ca_cert_verify_strategy')
-
-        if sec_tls_ca_cert_verify_strategy is False:
-            out = ZATO_NONE
-        else:
-            out = ZATO_DEFAULT
-
-        return out
+                'security_group_member_count', 'needs_security_group_names', Boolean('validate_tls')
 
 # ################################################################################################################################
 
@@ -329,8 +316,8 @@ class Create(_CreateEdit):
             'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
+            'is_active', 'transport', 'is_internal', 'cluster_id', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls')
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -501,8 +488,8 @@ class Edit(_CreateEdit):
             'params_pri', 'serialization_type', 'timeout', 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
+            'cluster_id', 'is_active', 'transport', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls')
         output_optional = 'id', 'name'
 
     def handle(self):

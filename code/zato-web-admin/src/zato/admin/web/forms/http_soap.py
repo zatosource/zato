@@ -29,6 +29,11 @@ url_params_priority = (
     (URL_PARAMS_PRIORITY.PATH_OVER_QS, 'Path over QS'),
 )
 
+validate_tls_choices = (
+    (True, 'Yes'),
+    (False, 'No'),
+)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -58,6 +63,7 @@ class CreateForm(DataFormatForm):
     content_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
+    validate_tls = forms.ChoiceField(widget=forms.Select())
 
     data_encoding = forms.CharField(widget=forms.HiddenInput())
 
@@ -84,6 +90,10 @@ class CreateForm(DataFormatForm):
         self.fields['soap_version'].choices = []
         for name in sorted(soap_versions):
             self.fields['soap_version'].choices.append([name, name])
+
+        self.fields['validate_tls'].choices = []
+        for value, label in validate_tls_choices:
+            self.fields['validate_tls'].choices.append([value, label])
 
         self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE

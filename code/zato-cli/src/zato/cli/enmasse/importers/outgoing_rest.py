@@ -8,10 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
 
 # Zato
-from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,6 +97,16 @@ class OutgoingRESTImporter:
 # ################################################################################################################################
 
     def create_outgoing_rest(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
+
+        connection_extra_field_defaults = {
+            'validate_tls': True,
+            'http_accept': HTTP_SOAP.ACCEPT.ANY,
+            'match_slash': True,
+            'should_parse_on_input': True,
+            'should_validate': True,
+            'should_return_errors': True,
+        }
+
         name = outgoing_def['name']
         logger.info('Creating new outgoing REST connection: %s', name)
 
@@ -125,6 +137,11 @@ class OutgoingRESTImporter:
                 raise Exception(error_msg)
             sec_def = self.importer.sec_defs[security_name]
             outgoing.security_id = sec_def['id']
+
+        outgoing_def = deepcopy(outgoing_def)
+        outgoing_def.update(connection_extra_field_defaults)
+
+        set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing

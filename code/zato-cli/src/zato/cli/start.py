@@ -103,7 +103,7 @@ Examples:
             path = os.path.join(self.component_dir, MISC.PIDFILE)
             os.remove(path)
         except Exception as e:
-            self.logger.info('Pidfile `%s` could not be deleted `%s`', path, e)
+            self.logger.debug('Pidfile `%s` could not be deleted `%s`', path, e)
 
 # ################################################################################################################################
 
