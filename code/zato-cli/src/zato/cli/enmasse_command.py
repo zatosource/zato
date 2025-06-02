@@ -180,7 +180,6 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-
                 # .. build an invoker ..
                 client = get_client_from_server_conf(
                     server_dir=server_path,
@@ -188,9 +187,8 @@ class Enmasse(ZatoCommand):
                     initial_wait_time=int(args.initial_wait_time)
                 )
 
-
                 # .. reload the configuration ..
-                response = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
+                _ = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
 
                 # .. and confirm it all went fine.
                 self.logger.info('⭐ Enmasse OK (%s)', args.input)
@@ -217,7 +215,6 @@ class Enmasse(ZatoCommand):
                     'name': item['name'],
                     'members': item['members']
                 }
-
 
         # For regular objects, just return the name
         return getattr(item, 'name', str(item))
