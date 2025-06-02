@@ -158,6 +158,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
+    var audit_object_type_label = '';
     var is_active = item.is_active == true;
     var merge_url_params_req = item.merge_url_params_req == true;
 
@@ -175,7 +176,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var url_params_pri_tr = '';
     var params_pri_tr = '';
 
-    var json_path = '';
     var data_encoding = '';
 
     var serialization_type = item.serialization_type ? item.serialization_type : 'string';
@@ -244,8 +244,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
-    /* 12, 13, 13a */
-    /* Empty */
+    /* 12, 13 */
+    if(is_channel) {
+        row += String.format('<td>{0}</td>', data.service);
+        row += String.format('<td>{0}</td>', data.content_encoding);
+    }
 
     /* 14, 15, 16 */
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
@@ -257,9 +260,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
     row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
 
-    /* 20, 21 */
+    /* 20 */
     row += String.format("<td class='ignore'>{0}</td>", item.has_rbac);
-    row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
     /* 22, 23a, 23b */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
@@ -288,25 +290,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
 
     if(is_outgoing) {
-
         /* 33 */
         row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
     }
 
-    /* 35 */
-    /* Empty */
-
-    /* 36a, 36b, 36c */
-    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_sent_active);
-    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_received_active);
-    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_sent);
-
-    /* 37a, 37b, 37c */
-    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_received);
-    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_sent);
-    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_received);
-
-    /* 38a, 38b, 38c */
+    /* 38a */
     row += String.format("<td class='ignore'>{0}</td>", data.data_encoding || data_encoding);
 
     if(include_tr) {
