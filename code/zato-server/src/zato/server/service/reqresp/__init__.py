@@ -252,11 +252,10 @@ class Outgoing:
     """
     __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 
-    def __init__(self, amqp=None, ftp=None, odoo=None, plain_http=None, soap=None, sql=None,
+    def __init__(self, amqp=None, odoo=None, plain_http=None, soap=None, sql=None,
             sap=None, ldap=None, mongodb=None, redis=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
-        self.ftp  = cast_('FTPStore', ftp)
 
         self.odoo = cast_('ConfigDict', odoo)
 

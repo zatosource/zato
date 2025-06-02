@@ -317,8 +317,6 @@ class Service:
 
     _worker_store:'WorkerStore'
     _worker_config:'ConfigStore'
-    _out_ftp:'FTPStore'
-    _out_plain_http:'ConfigDict'
 
     _has_before_job_hooks:'bool' = False
     _has_after_job_hooks:'bool' = False
@@ -398,9 +396,8 @@ class Service:
 
         self.out = self.outgoing = Outgoing(
             self.amqp,
-            self._out_ftp,
             self._worker_config.out_odoo,
-            self._out_plain_http,
+            self._worker_store.worker_config.out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
             self._worker_config.out_sap,
@@ -516,11 +513,11 @@ class Service:
         self.cache = self._worker_store.cache_api
 
         # REST facade
-        self.rest.init(self.cid, self._out_plain_http)
+        self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
-        self.keysight.init(self.cid, self._out_plain_http)
+        self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
 # ################################################################################################################################
 
