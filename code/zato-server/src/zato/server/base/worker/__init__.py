@@ -13,22 +13,16 @@ import logging
 import inspect
 import os
 import sys
-from copy import deepcopy
-from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
 from traceback import format_exc
-from urllib.parse import urlparse
 from uuid import uuid4
 
 # Bunch
 from bunch import bunchify
-
-# gevent
-import gevent
 
 # orjson
 from orjson import dumps
@@ -37,7 +31,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, SEC_DEF_TYPE, simple_types, \
+     HTTP_SOAP_SERIALIZATION_TYPE, SEC_DEF_TYPE, simple_types, \
      URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -45,7 +39,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, \
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, utcnow, \
     visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -78,7 +72,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, dictnone, stranydict, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, stranydict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -114,7 +108,7 @@ class _generic_msg:
 class GeventWorker(GunicornGeventWorker):
 
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
+        self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
@@ -1031,7 +1025,7 @@ class WorkerStore(_WorkerStoreBase):
             cb_msg['is_async'] = True
             cb_msg['in_reply_to'] = cid
 
-            self.broker_client.invoke_async(cb_msg)
+            self.broker_client.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
 
@@ -1086,7 +1080,7 @@ class WorkerStore(_WorkerStoreBase):
             self.sql_pool_store.change_password(msg['name'], password)
 
         else:
-            self.logger.warn('SQL connection not found -> `%s` (change-password)', msg['name'])
+            self.logger.warning('SQL connection not found -> `%s` (change-password)', msg['name'])
 
     def on_broker_msg_OUTGOING_SQL_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing SQL connection pool.
@@ -1126,12 +1120,12 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def get_channel_rest(self, name:'str') -> 'bunch_':
-        return self._get_channel_rest(CONNECTION.CHANNEL, name)
+        return self._get_channel_rest(CONNECTION.CHANNEL, name)# type: ignore
 
 # ################################################################################################################################
 
     def get_outconn_rest(self, name:'str') -> 'dictnone':
-        self.wait_for_outconn_rest(name)
+        _ = self.wait_for_outconn_rest(name)
         return self._get_outconn_rest(name)
 
 # ################################################################################################################################
@@ -1253,7 +1247,7 @@ class WorkerStore(_WorkerStoreBase):
         item['config']['password'] = password
 
         # .. and its wrapper's configuration too.
-        self._visit_wrapper_change_password(item['conn'], {'password': password_decrypted}, check_name=False)
+        self._visit_wrapper_change_password(item['conn'], {'password': password_decrypted}, check_name=False) # type: ignore
 
 # ################################################################################################################################
 
@@ -1411,7 +1405,7 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_OUTGOING_ODOO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an Odoo connection.
         """
-        self._on_broker_msg_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
+        _ = self._on_broker_msg_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
 
     on_broker_msg_OUTGOING_ODOO_CHANGE_PASSWORD = on_broker_msg_OUTGOING_ODOO_EDIT = on_broker_msg_OUTGOING_ODOO_CREATE
 
@@ -1425,7 +1419,7 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_OUTGOING_SAP_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an SAP RFC connection.
         """
-        self._on_broker_msg_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
+        _ = self._on_broker_msg_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
 
     on_broker_msg_OUTGOING_SAP_CHANGE_PASSWORD = on_broker_msg_OUTGOING_SAP_EDIT = on_broker_msg_OUTGOING_SAP_CREATE
 
