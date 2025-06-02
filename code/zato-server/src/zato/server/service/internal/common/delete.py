@@ -340,11 +340,11 @@ class DeleteMany(Service):
     def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
 
         # Zato
-        from zato.common.odb.model import Cache, ChannelAMQP, IMAP, OutgoingAMQP, \
+        from zato.common.odb.model import CacheBuiltin, ChannelAMQP, IMAP, OutgoingAMQP, \
             OutgoingFTP, OutgoingOdoo, OutgoingSAP, Service, SMTP
 
         tables:'any_' = {
-            Cache.__table__: [Cache.name],
+            CacheBuiltin.__table__: [CacheBuiltin.name],
             ChannelAMQP.__table__: [ChannelAMQP.name],
             IMAP.__table__: [IMAP.name],
             OutgoingAMQP.__table__: [OutgoingAMQP.name],
