@@ -343,7 +343,7 @@
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
                             <td class='ignore'>{{ item.serialization_type }}</td>
-                            <td class='ignore'>{{ item.content_type }}</td>
+                            <td class='ignore'>{{ item.content_type|default:"" }}</td>
                         {% endif %}
 
                         <!-- 28, 29, 30, 30a -->

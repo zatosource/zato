@@ -101,7 +101,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'cache_id': params.get(prefix + 'cache_id'),
         'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
-
+        'validate_tls': params.get(prefix + 'validate_tls'),
         'data_encoding': params.get(prefix + 'data_encoding'),
     }
 
@@ -256,7 +256,8 @@ def index(req): # type: ignore
                     service_name=item.service_name, security_id=security_id,
                     security_name=security_name, content_type=item.content_type,
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
-                    content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept)
+                    content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept,
+                    validate_tls=item.validate_tls)
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
