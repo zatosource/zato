@@ -573,9 +573,7 @@ class ServiceStore:
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
                 class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
                 class_.cloud.ms365 = service_store.server.worker_store.cloud_microsoft_365
-                class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp # type: ignore
-                class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
-                class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
+                class_.amqp.invoke = service_store.server.worker_store.amqp_invoke
                 class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
                 class_.commands.init(service_store.server)
 
