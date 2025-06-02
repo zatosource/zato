@@ -33,7 +33,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         return ''
 
     def _cleanup(self, test_suffix:'str') -> 'None':
-        # Clean up test data based on test_suffix and database objects
+
+        # Clean up test data
         from zato.cli.enmasse.client import cleanup_enmasse
         cleanup_enmasse()
 
@@ -41,6 +42,9 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         # sh
         from sh import ErrorReturnCode
+
+        # We don't want to require a server
+        os.environ['Zato_Needs_Config_Reload'] = 'False'
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
