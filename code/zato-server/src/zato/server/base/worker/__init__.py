@@ -415,7 +415,9 @@ class WorkerStore(_WorkerStoreBase):
         }
         wrapper_config.update(sec_config)
 
-        raise Exception('TODO: Implement tls_verify True / False')
+        return HTTPSOAPWrapper(self.server, wrapper_config)
+
+        #raise Exception('TODO: Implement tls_verify True / False')
 
         """
         # 3.2+
