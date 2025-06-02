@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ZatoCommand
+from zato.common.util.api import asbool
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,15 +181,18 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-                # .. build an invoker ..
-                client = get_client_from_server_conf(
-                    server_dir=server_path,
-                    require_server=True,
-                    initial_wait_time=int(args.initial_wait_time)
-                )
+                # .. reload the configuration if needed ..
+                if needs_reload := asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
 
-                # .. reload the configuration ..
-                _ = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
+                    # .. build an invoker ..
+                    client = get_client_from_server_conf(
+                        server_dir=server_path,
+                        require_server=True,
+                        initial_wait_time=int(args.initial_wait_time)
+                    )
+
+                    # .. reload configuration ..
+                    _ = client.invoke('zato.server.invoker', {'func_name':'reload_config'})
 
                 # .. and confirm it all went fine.
                 self.logger.info('⭐ Enmasse OK (%s)', args.input)
