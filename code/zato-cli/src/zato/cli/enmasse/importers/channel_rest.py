@@ -11,6 +11,7 @@ from json import loads
 import logging
 
 # Zato
+from zato.cli.enmasse.util import security_needs_update
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -84,7 +85,7 @@ class ChannelImporter:
                         break
 
                 # Check security definition
-                if self._security_needs_update(item, db_def):
+                if security_needs_update(item, db_def, self.importer):
                     needs_update = True
 
                 # Check security groups
@@ -100,39 +101,6 @@ class ChannelImporter:
 
         logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
         return to_create, to_update
-
-    def _security_needs_update(self, item, db_def):
-        """ Check if security definition needs update.
-        """
-
-        # No security in YAML but exists in DB
-        if 'security' not in item and db_def.get('security_id'):
-            logger.info('Removing security from channel %s', item['name'])
-            return True
-
-        # Security in YAML but not in DB
-        if yaml_security := item.get('security'):
-
-            if not db_def.get('security_id'):
-                logger.info('Adding security to channel %s: %s', item['name'], yaml_security)
-                return True
-
-            # Security definitions need to exist
-            if yaml_security not in self.importer.sec_defs:
-                logger.warning('Security definition %s not found', yaml_security)
-                return False
-
-            # Check if security name maps to a different ID
-            yaml_sec_def = self.importer.sec_defs[yaml_security]
-            yaml_sec_id = int(yaml_sec_def['id'])
-            db_sec_id = int(db_def['security_id'])
-
-            if yaml_sec_id != db_sec_id:
-                logger.info('Security changed for channel %s: YAML=%s (id=%s), DB_id=%s',
-                           item['name'], yaml_security, yaml_sec_id, db_sec_id)
-                return True
-
-        return False
 
     def _groups_need_update(self, item, db_def):
         """ Check if security groups need update.
