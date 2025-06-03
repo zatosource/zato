@@ -34,6 +34,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _to_str(item):
+    if isinstance(item, bytes):
+        return item.decode('utf8')
+    else:
+        return str(item)
+
 def _to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
@@ -47,7 +53,7 @@ def _to_json(model:'any_', return_as_dict:'bool'=False) -> 'any_':
     if return_as_dict:
         return out
     else:
-        return json_dumps([out])
+        return json_dumps([out], default=_to_str)
 
 def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
 
@@ -482,7 +488,7 @@ class SQLConnectionPool(Base):
     password = Column(String(200), nullable=False)
     db_name = Column(String(200), nullable=False)
     engine = Column(String(200), nullable=False)
-    extra = Column(LargeBinary(20000), nullable=True)
+    extra = Column(String(200), nullable=True)
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     pool_size = Column(Integer(), nullable=False)
@@ -522,8 +528,6 @@ class Service(Base):
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
-    wsdl = Column(LargeBinary(5000000), nullable=True)
-    wsdl_name = Column(String(200), nullable=True)
 
     slow_threshold = Column(Integer, nullable=False, default=99999)
 
