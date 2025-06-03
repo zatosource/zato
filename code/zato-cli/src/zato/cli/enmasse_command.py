@@ -199,6 +199,7 @@ class Enmasse(ZatoCommand):
 
             except Exception as e:
                 self.logger.error('Error during import: %s', str(e))
+                raise
                 sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         else:
