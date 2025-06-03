@@ -8,11 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from datetime import datetime, timedelta, timezone
 
 # Zato
 from zato.common.odb.model import Job, IntervalBasedJob, Service, to_json
 from zato.common.odb.query import job_list
-from zato.common.util.api import parse_datetime
+from zato.common.util.api import parse_datetime, utcnow
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -32,6 +33,46 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _interval_based_job_attrs = {'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def compute_next_start_date(start_date, job_def):
+    """ Compute the next run time for a job based on its start date and interval settings.
+    """
+
+    # All start dates are in UTC
+    if start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+
+    current_time = datetime.now(timezone.utc)
+
+    seconds = job_def.get('seconds', 0)
+    minutes = job_def.get('minutes', 0)
+    hours = job_def.get('hours', 0)
+    days = job_def.get('days', 0)
+
+    # Calculate the total seconds in the interval
+    interval_seconds = seconds + (minutes * 60) + (hours * 3600) + (days * 86400)
+
+    # Safety check - don't allow zero interval
+    if interval_seconds == 0:
+        return start_date
+
+    # Calculate time elapsed since start_date
+    time_elapsed = (current_time - start_date).total_seconds()
+
+    # Calculate how many intervals have passed
+    intervals_passed = int(time_elapsed / interval_seconds)
+
+    # Calculate the next start date
+    next_start = start_date + timedelta(seconds=intervals_passed * interval_seconds)
+
+    # If the calculated next start is in the past, add one more interval
+    if next_start <= current_time:
+        next_start += timedelta(seconds=interval_seconds)
+
+    return next_start
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +148,10 @@ class SchedulerImporter:
         service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one() # type: ignore
 
         # Parse the start_date from string to datetime object
-        start_date = parse_datetime(job_def['start_date'])
+        original_start_date = parse_datetime(job_def['start_date'])
+
+        # Compute the next start date based on current time
+        start_date = compute_next_start_date(original_start_date, job_def)
 
         # Prepare job parameters
         job_id = None
@@ -154,11 +198,14 @@ class SchedulerImporter:
 
         # Update all attributes provided in YAML
         for key, value in job_def.items():
+
             # Handle start_date conversion from string to datetime if present
             if key == 'start_date' and value:
-                from zato.common.util.api import parse_datetime
-                value = parse_datetime(value)
-                setattr(job, key, value)
+
+                original_start_date = parse_datetime(value)
+                next_start_date = compute_next_start_date(original_start_date, job_def)
+
+                setattr(job, key, next_start_date)
 
             # Handle service specially - it's a relationship, not a string
             elif key == 'service':
