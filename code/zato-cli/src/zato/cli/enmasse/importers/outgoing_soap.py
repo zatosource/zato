@@ -103,7 +103,6 @@ class OutgoingSOAPImporter:
 # ################################################################################################################################
 
     def create_outgoing_soap(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
-        sss
         name = outgoing_def['name']
         logger.info('Creating outgoing SOAP connection: %s', name)
 
