@@ -31,6 +31,7 @@ from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
+from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -73,6 +74,7 @@ class EnmasseYAMLImporter:
         self.ldap_defs = {}
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
+        self.outgoing_soap_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -96,6 +98,7 @@ class EnmasseYAMLImporter:
         self.ldap_importer = LDAPImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
+        self.outgoing_soap_importer = OutgoingSOAPImporter(self)
 
 # ################################################################################################################################
 
@@ -664,6 +667,13 @@ class EnmasseYAMLImporter:
         if outgoing_rest_updated:
             self.updated_objects['outgoing_rest'] = outgoing_rest_updated
 
+        # Process outgoing SOAP connection definitions
+        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(yaml_config.get('outgoing_soap', []), session)
+        if outgoing_soap_created:
+            self.created_objects['outgoing_soap'] = outgoing_soap_created
+        if outgoing_soap_updated:
+            self.updated_objects['outgoing_soap'] = outgoing_soap_updated
+
         logger.info('YAML synchronization completed')
 
         return self.created_objects, self.updated_objects
@@ -675,3 +685,11 @@ class EnmasseYAMLImporter:
         """Synchronizes outgoing REST connection definitions from a YAML configuration with the database.
         """
         return self.outgoing_rest_importer.sync_outgoing_rest(outgoing_list, session)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def sync_outgoing_soap(self, outgoing_list:'list', session:'SASession') -> 'tuple':
+        """Synchronizes outgoing SOAP connection definitions from a YAML configuration with the database.
+        """
+        return self.outgoing_soap_importer.sync_outgoing_soap(outgoing_list, session)

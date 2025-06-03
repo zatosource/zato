@@ -8,10 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
 
 # Zato
 from zato.common.api import CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,12 +100,16 @@ class OutgoingSOAPImporter:
         name = outgoing_def['name']
         logger.info('Creating outgoing SOAP connection: %s', name)
 
+        # No extra fields yet
+        connection_extra_field_defaults = {
+        }
+
         outgoing = HTTPSOAP()
         outgoing.name = name
         outgoing.is_active = outgoing_def.get('is_active', True)
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.SOAP
-        outgoing.cluster = self.importer.cluster
+        outgoing.cluster = self.importer.get_cluster(session)
         outgoing.merge_url_params_req = outgoing_def.get('merge_url_params_req', True)
         outgoing.has_rbac = outgoing_def.get('has_rbac', False)
         outgoing.tls_verify = outgoing_def.get('tls_verify', True)
@@ -113,6 +119,11 @@ class OutgoingSOAPImporter:
         # Required SOAP-specific fields
         outgoing.soap_action = outgoing_def.get('soap_action', '')
         outgoing.soap_version = outgoing_def.get('soap_version', '1.1')
+
+        # Set default values that may not be provided
+        outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
+        outgoing.pool_size = outgoing_def.get('pool_size', 20)
+        outgoing.timeout = outgoing_def.get('timeout', 60)
 
         # Copy other defined attributes
         for key, value in outgoing_def.items():
@@ -127,6 +138,11 @@ class OutgoingSOAPImporter:
                 raise Exception(error_msg)
             sec_def = self.importer.sec_defs[security_name]
             outgoing.security_id = sec_def['id']
+
+        outgoing_def = deepcopy(outgoing_def)
+        outgoing_def.update(connection_extra_field_defaults)
+
+        set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
