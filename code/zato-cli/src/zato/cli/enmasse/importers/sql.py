@@ -108,7 +108,23 @@ class SQLImporter:
         is_active = sql_def.get('is_active', True)
 
         # Accept either 'type' or 'engine' field
-        engine = sql_def['type'] if 'type' in sql_def else sql_def['engine']
+        has_type = 'type' in sql_def
+        raw_type = sql_def['type'] if has_type else sql_def['engine']
+
+        # Map user-friendly database types to internal engine names
+        type_to_engine_map = {
+            'mssql': 'zato+mssql1',
+            'mysql': 'mysql+pymysql',
+            'oracle': 'oracle',
+            'postgresql': 'postgresql+pg8000',
+        }
+
+        # Support both values and keys
+        if raw_type in type_to_engine_map.values():
+            engine = raw_type
+        else:
+            engine = type_to_engine_map[raw_type]
+
         host = sql_def['host']
         port = sql_def['port']
         db_name = sql_def['db_name']
