@@ -60,13 +60,8 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
             for item in data:
-
-                print()
-                print(111, to_json(item))
-                print()
-
                 item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
-                # item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
+                item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
             self.response.payload[:] = data
 
 class Create(AdminService, _SQLService):
