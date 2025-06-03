@@ -19,7 +19,7 @@ from zato.common.py23_.past.builtins import unicode
 from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import Cluster, SQLConnectionPool
+from zato.common.odb.model import Cluster, SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
@@ -60,8 +60,13 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
             for item in data:
+
+                print()
+                print(111, to_json(item))
+                print()
+
                 item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
-                item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
+                # item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
             self.response.payload[:] = data
 
 class Create(AdminService, _SQLService):
