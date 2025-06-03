@@ -15,8 +15,6 @@ import os
 import sys
 from errno import ENOENT
 from inspect import isclass
-from shutil import rmtree
-from tempfile import gettempdir
 from threading import RLock
 from traceback import format_exc
 from uuid import uuid4
@@ -31,8 +29,8 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     HTTP_SOAP_SERIALIZATION_TYPE, SEC_DEF_TYPE, simple_types, \
-     URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     SEC_DEF_TYPE, simple_types, \
+     Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -412,7 +410,9 @@ class WorkerStore(_WorkerStoreBase):
             'serialization_type':config.serialization_type,
             'timeout':config.timeout,
             'content_type':config.content_type,
+            'validate_tls':config.validate_tls,
         }
+
         wrapper_config.update(sec_config)
 
         return HTTPSOAPWrapper(self.server, wrapper_config)
@@ -1174,19 +1174,6 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an outgoing HTTP/SOAP connection.
         """
-        # With outgoing SOAP messages using suds, we need to delete /tmp/suds
-        # before the connection can be created. This is because our method can
-        # also be invoked by ReloadWSDL action and suds will not always reload
-        # the WSDL if /tmp/suds is around.
-        if msg.transport == URL_TYPE.SOAP and msg.serialization_type == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
-
-            # This is how suds obtains the location of its tmp directory in suds/cache.py
-            suds_tmp_dir = os.path.join(gettempdir(), 'suds')
-            if os.path.exists(suds_tmp_dir):
-                try:
-                    rmtree(suds_tmp_dir, True)
-                except Exception:
-                    logger.warning('Could not remove suds directory `%s`, e:`%s`', suds_tmp_dir, format_exc())
 
         # It might be a rename
         old_name = msg.get('old_name')

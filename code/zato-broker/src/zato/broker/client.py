@@ -33,6 +33,7 @@ if 0:
     from requests.models import Response
     from zato.client import AnyServiceInvoker
     from zato.common.typing_ import any_, anydict, strdict, strdictnone
+    from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -66,15 +67,16 @@ from_scheduler_actions = {
 # ################################################################################################################################
 
 class BrokerClient:
-    """ Simulates previous Redis-based RPC.
-    """
+
     def __init__(
         self,
         *,
         scheduler_config: 'strdictnone'              = None,
-        server_rpc:       'ServerRPC | None'         = None,
+        server:            'ParallelServer | None'   = None,
         zato_client:      'AnyServiceInvoker | None' = None,
         ) -> 'None':
+
+        self.server = server
 
         self.zato_client = zato_client
         self.scheduler_address = ''
@@ -222,6 +224,8 @@ class BrokerClient:
             code_name = code_to_name[action]
             if has_debug:
                 logger.info('Invoking %s %s', code_name, msg)
+                func = getattr(self.server.worker_store, 'on_broker_msg_' + code_name)
+                func(msg)
 
         except Exception:
             logger.warning(format_exc())
