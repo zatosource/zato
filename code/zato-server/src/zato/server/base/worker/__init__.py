@@ -417,25 +417,6 @@ class WorkerStore(_WorkerStoreBase):
 
         return HTTPSOAPWrapper(self.server, wrapper_config)
 
-        #raise Exception('TODO: Implement tls_verify True / False')
-
-        """
-        # 3.2+
-        if config.sec_tls_ca_cert_verify_strategy:
-            if sec_tls_ca_cert_verify_strategy is True:
-                tls_verify = True
-
-            elif sec_tls_ca_cert_verify_strategy is False:
-                tls_verify = False
-
-            else:
-                tls_verify = self._get_tls_verify_from_config(config)
-
-        wrapper_config['tls_verify'] = tls_verify
-
-        return HTTPSOAPWrapper(self.server, wrapper_config)
-        """
-
 # ################################################################################################################################
 
     def get_outconn_http_config_dicts(self) -> 'any_':
