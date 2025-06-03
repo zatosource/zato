@@ -58,6 +58,34 @@ class OutgoingSOAPImporter:
 
 # ################################################################################################################################
 
+    def _security_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        # Check if security definition needs update.
+        yaml_security = item.get('security')
+        db_security_id = db_def.get('security_id')
+
+        # If security is not defined in YAML but exists in DB - update needed
+        if yaml_security is None and db_security_id is not None:
+            logger.info('Security removed in YAML but exists in DB')
+            return True
+
+        # If security is defined in YAML but not in DB - update needed
+        elif yaml_security is not None and db_security_id is None:
+            logger.info('Security defined in YAML but missing in DB')
+            return True
+
+        # If security is defined in both, check if they match
+        elif yaml_security is not None and db_security_id is not None:
+            if yaml_security not in self.importer.sec_defs:
+                logger.warning('Security definition %s not found, skipping comparison', yaml_security)
+                return False
+
+            sec_def = self.importer.sec_defs[yaml_security]
+            if sec_def['id'] != db_security_id:
+                logger.info('Security mismatch: YAML=%s DB_ID=%s', yaml_security, db_security_id)
+                return True
+
+        return False
+
     def compare_outgoing_soap(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
         to_create = []
         to_update = []
@@ -78,11 +106,16 @@ class OutgoingSOAPImporter:
 
                 needs_update = False
 
+                # Compare standard attributes (excluding security)
                 for key, value in item.items():
-                    if key in db_def and db_def[key] != value:
+                    if key != 'security' and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
+
+                # Check security definition
+                if self._security_needs_update(item, db_def):
+                    needs_update = True
 
                 if needs_update:
                     item['id'] = db_def['id']
@@ -97,6 +130,7 @@ class OutgoingSOAPImporter:
 # ################################################################################################################################
 
     def create_outgoing_soap(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
+        sss
         name = outgoing_def['name']
         logger.info('Creating outgoing SOAP connection: %s', name)
 
@@ -131,6 +165,8 @@ class OutgoingSOAPImporter:
                 setattr(outgoing, key, value)
 
         if 'security' in outgoing_def or 'security_name' in outgoing_def:
+            print()
+            zzz
             security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
             if security_name not in self.importer.sec_defs:
                 error_msg = f'Security definition "{security_name}" not found for outgoing SOAP connection "{name}"'
