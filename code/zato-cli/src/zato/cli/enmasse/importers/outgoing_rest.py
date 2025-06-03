@@ -59,8 +59,6 @@ class OutgoingRESTImporter:
 
 # ################################################################################################################################
 
-
-
     def compare_outgoing_rest(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
         to_create = []
         to_update = []
