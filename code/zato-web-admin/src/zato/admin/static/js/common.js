@@ -246,7 +246,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var form_elem_name = null;
     var form_elem = null;
     var fields = $.fn.zato.form.serialize(form);
-    var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
+    var skip_boolean = ['in_lb', 'validate_tls']; // A list of boolean fields that should be treated as though they were regular text
 
     /*
     for(item_attr in instance) {
