@@ -162,17 +162,17 @@ class GroupsManager:
             else:
                 raise Exception(f'Unrecognized sec_type: {sec_type}')
 
-            sec_config = get_sec_func(security_id)
+            if sec_config := get_sec_func(security_id):
 
-            item['name'] = sec_config['name']
-            item['security_id'] = sec_config['id']
-            item['sec_type'] = sec_type
+                item['name'] = sec_config['name']
+                item['security_id'] = sec_config['id']
+                item['sec_type'] = sec_type
 
-            # .. build a new business object for the member ..
-            member = Member.from_dict(item)
+                # .. build a new business object for the member ..
+                member = Member.from_dict(item)
 
-            # .. populate our response list ..
-            out.append(member)
+                # .. populate our response list ..
+                out.append(member)
 
         # .. and return the output to our caller.
         return out
