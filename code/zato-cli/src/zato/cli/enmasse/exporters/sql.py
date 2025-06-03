@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util import get_type_from_engine
 from zato.common.odb.model import to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -58,7 +59,7 @@ class SQLExporter:
         for row in sql_connections:
             item = {
                 'name': row['name'],
-                'type': row['engine'],
+                'type': get_type_from_engine(row['engine']),
                 'host': row['host'],
                 'port': row['port'],
                 'db_name': row['db_name'],
