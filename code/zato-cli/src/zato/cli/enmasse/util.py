@@ -24,6 +24,40 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# SQL engine type mappings
+SQL_TYPE_MAP = {
+    'mssql': 'zato+mssql1',
+    'mysql': 'mysql+pymysql',
+    'oracle': 'oracle',
+    'postgresql': 'postgresql+pg8000',
+}
+
+# ################################################################################################################################
+
+def get_engine_from_type(raw_type:'str') -> 'str':
+    """Converts a user-friendly database type to the internal type name.
+    """
+
+    # If raw_type is already an internal type name, use it directly ..
+    if raw_type in SQL_TYPE_MAP.values():
+        return raw_type
+
+    # .. Otherwise, try to map it from user-friendly name to internal engine name
+    else:
+        return SQL_TYPE_MAP[raw_type]
+
+# ################################################################################################################################
+
+def get_type_from_engine(engine:'str') -> 'str':
+    """Converts an internal engine name to a user-friendly database type.
+    """
+    engine_to_type_map = {value: key for key, value in SQL_TYPE_MAP.items()}
+
+    # Return user-friendly type if found, otherwise return the engine name unchanged
+    return engine_to_type_map.get(engine, engine)
+
+# ################################################################################################################################
+
 def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'EnmasseYAMLImporter') -> 'bool_':
 
     yaml_security = yaml_item.get('security')
