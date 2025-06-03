@@ -182,7 +182,7 @@ class Enmasse(ZatoCommand):
                 )
 
                 # .. reload the configuration if needed ..
-                if needs_reload := asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
+                if asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
 
                     # .. build an invoker ..
                     client = get_client_from_server_conf(
