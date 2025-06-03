@@ -232,8 +232,7 @@ class BaseHTTPSOAPWrapper:
         if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
         else:
-            tls_verify = self.config.get('tls_verify', True)
-            tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
+            tls_verify = self.config.get('validate_tls', True)
 
         # This is optional and, if not given, we will use the security configuration from self.config
         sec_def_name = kwargs.pop('sec_def_name', NotGiven)

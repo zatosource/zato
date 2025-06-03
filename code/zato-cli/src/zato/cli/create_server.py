@@ -148,8 +148,6 @@ shadow_password_in_logs=True
 log_connection_info_sleep_time=5 # In seconds
 
 [startup_services_first_worker]
-zato.helpers.input-logger=Sample payload for a startup service (first worker)
-zato.notif.init-notifiers=
 zato.updates.check-updates=
 
 [startup_services_any_worker]
