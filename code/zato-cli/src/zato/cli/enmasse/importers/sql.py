@@ -11,6 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
+from zato.cli.enmasse.util import get_engine_from_type
 from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -111,19 +112,8 @@ class SQLImporter:
         has_type = 'type' in sql_def
         raw_type = sql_def['type'] if has_type else sql_def['engine']
 
-        # Map user-friendly database types to internal engine names
-        type_to_engine_map = {
-            'mssql': 'zato+mssql1',
-            'mysql': 'mysql+pymysql',
-            'oracle': 'oracle',
-            'postgresql': 'postgresql+pg8000',
-        }
-
-        # Support both values and keys
-        if raw_type in type_to_engine_map.values():
-            engine = raw_type
-        else:
-            engine = type_to_engine_map[raw_type]
+        # Convert type to engine using the utility function
+        engine = get_engine_from_type(raw_type)
 
         host = sql_def['host']
         port = sql_def['port']
