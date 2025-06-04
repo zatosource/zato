@@ -16,7 +16,7 @@ import uuid
 
 if 0:
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
-    from zato.common.typing_ import anydict, bool_
+    from zato.common.typing_ import any_, anydict, bool_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +103,16 @@ def get_value_from_environment(value:'str') -> 'str':
 
     value = os.environ.get(env_key, default)
     return value
+
+# ################################################################################################################################
+
+def preprocess_item(item:'strdict') -> 'any_':
+
+    for key, value in item.items():
+        value = get_value_from_environment(value)
+        item[key] = value
+
+    return item
 
 # ################################################################################################################################
 # ################################################################################################################################
