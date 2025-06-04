@@ -110,7 +110,7 @@ class Create(ZatoCommand):
         try:
             session.commit()
         except IntegrityError as e:
-            msg = 'SQL IntegrityError caught `{}`'.format(e.message)
+            msg = 'SQL IntegrityError caught `{}`'.format(e.args[0])
             if self.verbose:
                 msg += '\nDetails:`{}`'.format(format_exc().decode('utf-8'))
                 self.logger.error(msg)

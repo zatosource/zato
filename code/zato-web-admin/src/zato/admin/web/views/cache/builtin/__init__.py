@@ -47,7 +47,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
-        output_required = ('id', 'name', 'id')
+        output_required = ('id', 'name')
 
     def success_message(self, item):
         return 'Successfully {} cache `{}`'.format(self.verb, item.name)
