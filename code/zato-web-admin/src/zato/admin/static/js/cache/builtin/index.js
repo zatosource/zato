@@ -104,7 +104,7 @@ $.fn.zato.cache.builtin.clear = function(id) {
 
     var post_data = {};
     post_data['cluster_id'] = $('#cluster_id').val();
-    post_data['cache_id'] = id;
+    post_data['id'] = id;
 
     var _callback = function() {
         $('#cache_current_size_' + id).html('0');

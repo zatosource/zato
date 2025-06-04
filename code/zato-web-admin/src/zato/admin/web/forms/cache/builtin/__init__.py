@@ -30,7 +30,7 @@ class CreateForm(forms.Form):
     extend_expiry_on_set = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     sync_method = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:50%'}))
     persistent_storage = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:50%'}))
-    cache_id = forms.CharField(widget=forms.HiddenInput())
+    id = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

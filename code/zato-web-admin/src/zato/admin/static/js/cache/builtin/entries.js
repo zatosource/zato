@@ -26,7 +26,7 @@ $.fn.zato.cache.builtin.entries.delete_ = function(id) {
 
     var post_data = {};
     post_data['cluster_id'] = $('#cluster_id').val();
-    post_data['cache_id'] = $('#cache_id').val();
+    post_data['id'] = $('#id').val();
     post_data['key'] = id;
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
