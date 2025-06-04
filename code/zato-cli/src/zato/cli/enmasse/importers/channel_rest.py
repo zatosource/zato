@@ -11,7 +11,7 @@ from json import loads
 import logging
 
 # Zato
-from zato.cli.enmasse.util import security_needs_update
+from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -64,7 +64,10 @@ class ChannelImporter:
         logger.info('Comparing %d YAML channels with %d DB channels', len(yaml_defs), len(db_defs))
 
         for item in yaml_defs:
+
+            item = preprocess_item(item)
             name = item['name']
+
             logger.info('Checking YAML channel: name=%s', name)
 
             db_def = db_defs.get(name)
@@ -93,9 +96,9 @@ class ChannelImporter:
                     needs_update = True
 
                 if needs_update:
-                    item['id'] = db_def['id']
+                    item['id'] = db_def['id']  # Add ID to original item
                     logger.info('Will update %s with id=%s', name, db_def['id'])
-                    to_update.append(item)
+                    to_update.append(item)  # Keep original item with env vars for update
                 else:
                     logger.info('No update needed for %s', name)
 
