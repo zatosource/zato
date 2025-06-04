@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'                               #
+    Cache = 'cache'                               # 1
     Confluence = 'confluence'                     #
     Channel_REST = 'channel_rest'                 # 1
     Email_IMAP = 'email_imap'                     #
@@ -24,7 +24,7 @@ class _object_type:
     Outgoing_SOAP = 'outgoing_soap'               # 1
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
-    Scheduler = 'scheduler'                       #
+    Scheduler = 'scheduler'                       # 1
     Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
