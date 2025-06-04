@@ -27,7 +27,7 @@ from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 
-def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA_TYPE):
+def _create_edit(req, action, id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA_TYPE):
 
     out = {}
 
@@ -40,7 +40,7 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
 
         entry = bunchify(req.zato.client.invoke('zato.cache.builtin.entry.get', {
                 'cluster_id': req.zato.cluster_id,
-                'cache_id': cache_id,
+                'id': id,
                 'key': key
             }).data.response)
 
@@ -62,10 +62,10 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
         'form': form,
         'form_action': 'cache-builtin-{}-entry-action'.format(action),
         'action': action,
-        'cache_id': cache_id,
+        'id': id,
         'cache': req.zato.client.invoke('zato.cache.builtin.get', {
                 'cluster_id': req.zato.cluster_id,
-                'cache_id': cache_id,
+                'id': id,
             }).data.response
     })
 
@@ -74,20 +74,20 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
 # ################################################################################################################################
 
 @method_allowed('GET')
-def create(req, cache_id, cluster_id):
-    return _create_edit(req, 'create', cache_id, cluster_id)
+def create(req, id, cluster_id):
+    return _create_edit(req, 'create', id, cluster_id)
 
 # ################################################################################################################################
 
 @method_allowed('GET')
-def edit(req, cache_id, cluster_id):
-    return _create_edit(req, 'edit', cache_id, cluster_id)
+def edit(req, id, cluster_id):
+    return _create_edit(req, 'edit', id, cluster_id)
 
 # ################################################################################################################################
 
-def _create_edit_action_message(action, post, cache_id, cluster_id):
+def _create_edit_action_message(action, post, id, cluster_id):
     message = {
-        'cache_id': cache_id,
+        'id': id,
         'cluster_id': cluster_id,
     }
 
@@ -104,16 +104,16 @@ def _create_edit_action_message(action, post, cache_id, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def create_action(req, cache_id, cluster_id):
+def create_action(req, id, cluster_id):
 
     return invoke_service_with_json_response(
-        req, 'zato.cache.builtin.entry.create', _create_edit_action_message('create', req.POST, cache_id, cluster_id),
+        req, 'zato.cache.builtin.entry.create', _create_edit_action_message('create', req.POST, id, cluster_id),
         'OK, entry created successfully.', 'Entry could not be created, e:{e}')
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def edit_action(req, cache_id, cluster_id):
+def edit_action(req, id, cluster_id):
 
     key = req.POST['key']
     key = key.encode('utf8') if isinstance(key, unicode) else key
@@ -124,7 +124,7 @@ def edit_action(req, cache_id, cluster_id):
     extra = {'new_path': new_path}
 
     return invoke_service_with_json_response(
-        req, 'zato.cache.builtin.entry.update', _create_edit_action_message('edit', req.POST, cache_id, cluster_id),
+        req, 'zato.cache.builtin.entry.update', _create_edit_action_message('edit', req.POST, id, cluster_id),
         'OK, entry updated successfully.', 'Entry could not be updated, e:{e}', extra=extra)
 
 # ################################################################################################################################
