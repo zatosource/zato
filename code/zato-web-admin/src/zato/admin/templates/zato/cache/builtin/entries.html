@@ -41,7 +41,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache_name }}</a></h2>
+<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -54,7 +54,7 @@
     {% if cluster_id %}
 
 <div class='page_prompt' style="clear:left">
-    <a href="{% url "cache-builtin-create-entry" cache_id cluster_id %}">Add a new entry</a>
+    <a href="{% url "cache-builtin-create-entry" id cluster_id %}">Add a new entry</a>
 </div>
 
         <div id="markup">
@@ -85,7 +85,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.key }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.cache_id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
                         <td>{{ item.value|default:'<span class="form_hint">---</span>' }}{% if item.value and item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.expiry_op|default:'<span class="form_hint">---</span>' }}</td>
@@ -111,7 +111,7 @@
             </table>
             <form>
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
-                <input type="hidden" name="cache_id" id="cache_id" value="{{ cache_id }}" />
+                <input type="hidden" name="id" id="id" value="{{ id }}" />
             </form>
         </div>
 

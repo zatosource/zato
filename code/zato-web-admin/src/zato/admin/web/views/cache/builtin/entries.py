@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class CacheEntry:
-    def __init__(self, cache_id=None, key=None, value=None, last_read=None, prev_read=None, prev_write=None, expiry_op=None,
+    def __init__(self, id=None, key=None, value=None, last_read=None, prev_read=None, prev_write=None, expiry_op=None,
             expires_at=None, hits=None, position=None, server=None):
-        self.cache_id = cache_id
+        self.id = id
         self.key = key
         self._value = value
         self.last_read = last_read
@@ -68,19 +68,19 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'cache_id')
-        output_required = ('cache_id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
+        input_required = ('cluster_id', 'id')
+        output_required = ('id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
             'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted', 'server')
         output_repeated = True
 
     def handle(self) -> 'strdict':
         return {
             'cluster_id': self.cluster_id,
-            'cache_id': self.input.cache_id,
+            'id': self.input.id,
             'show_search_form': True,
             'cache_name': self.req.zato.client.invoke('zato.cache.builtin.get', {
                 'cluster_id': self.cluster_id,
-                'cache_id': self.input.cache_id
+                'id': self.input.id
             }).data.response.name
         }
 
@@ -114,7 +114,7 @@ class Delete(_Delete):
 
     def get_input_dict(self, *args, **kwargs):
         return {
-            'cache_id': self.req.POST['cache_id'],
+            'id': self.req.POST['id'],
             'key': b64decode(self.req.POST['key']),
             'cluster_id': self.cluster_id
         }

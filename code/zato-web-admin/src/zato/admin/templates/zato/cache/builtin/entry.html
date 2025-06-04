@@ -19,7 +19,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache.name }}</a></h2>
+<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache.name }}</a></h2>
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
@@ -30,7 +30,7 @@
         </tr>
         <tr>
             <td>
-                <form novalidate id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
+                <form novalidate id="cache_entry_form" action="{% url form_action id cluster_id %}" method="post">
                 {% csrf_token %}
                     Key
                     <br/>
@@ -66,7 +66,7 @@
                         </tr>
                     </table>
 
-                    <input type="hidden" id="cache_id" name="cache_id" value="{{ cache_id }}" />
+                    <input type="hidden" id="id" name="id" value="{{ id }}" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
 
                     <input type="hidden" id="action" name="action" value="{{ action }}" />
