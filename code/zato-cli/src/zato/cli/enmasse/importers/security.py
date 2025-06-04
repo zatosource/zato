@@ -70,6 +70,14 @@ class SecurityImporter:
         logger.info('Getting oauth/bearer_token definitions: %s', oauth_json)
         self._process_security_defs(oauth, 'bearer_token', out)
 
+        # Filter out specified keys from each security definition
+        to_remove = ['cluster_name']
+
+        for item in out.values():
+            for key in to_remove:
+                if key in item:
+                    del item[key]
+
         logger.info('Total security definitions from DB: %d', len(out))
         for name, details in out.items():
             logger.info('DB security def: name=%s type=%s', name, details.get('type'))
@@ -216,6 +224,11 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
+
+        print()
+        print(111, security_def)
+        print()
+
         for key, value in security_def.items():
             if key in ('type', 'name', 'id'):
                 continue
@@ -225,7 +238,8 @@ class SecurityImporter:
             else:
                 def_type = security_def['type']
                 def_name = security_def['name']
-                logger.warning(f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}')
+                msg = f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}'
+                raise Exception(msg)
 
         set_instance_opaque_attrs(definition, security_def)
         return definition
