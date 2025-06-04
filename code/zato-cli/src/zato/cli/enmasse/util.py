@@ -11,11 +11,16 @@ import logging
 import os
 import uuid
 
+# Zato
+from zato.common.util.sql import get_security_by_id
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
+    from zato.common.odb.model import HTTPSOAP
     from zato.common.typing_ import any_, anydict, bool_, strdict
 
 # ################################################################################################################################
@@ -116,6 +121,24 @@ def preprocess_item(item:'strdict') -> 'any_':
         item[key] = value
 
     return item
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def assign_security(item:'HTTPSOAP', item_def:'anydict', importer:'EnmasseYAMLImporter', session:'SASession') -> 'None':
+
+    if 'security' in item_def or 'security_name' in item_def:
+        name = item_def['name']
+        security_name = item_def.get('security') or item_def.get('security_name')
+
+        if security_name not in importer.sec_defs:
+            error_msg = f'Security definition "{security_name}" not found for "{name}"'
+            logger.error(error_msg)
+            return
+
+        sec_def = importer.sec_defs[security_name]
+        security_id = sec_def['id']
+        item.security = get_security_by_id(session, security_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
