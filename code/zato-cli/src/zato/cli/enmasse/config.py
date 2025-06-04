@@ -20,7 +20,7 @@ class _object_type:
     LDAP = 'ldap'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
     Odoo = 'odoo'                                 #
-    Outgoing_REST = 'outgoing_rest'               #
+    Outgoing_REST = 'outgoing_rest'               # 1
     Outgoing_SOAP = 'outgoing_soap'               #
     Search_ElasticSearch = 'elastic_search'       #
     SQL  = 'sql'                                  #
