@@ -91,7 +91,10 @@ def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'Enmas
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_value_from_environment(value:'str') -> 'str':
+def get_value_from_environment(value:'any_') -> 'str':
+
+    if not isinstance(value, str):
+        return value
 
     prefix = 'Zato_Enmasse_Env.'
 
