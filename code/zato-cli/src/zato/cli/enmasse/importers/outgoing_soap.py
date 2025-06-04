@@ -14,7 +14,7 @@ from copy import deepcopy
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
-from zato.common.util.sql import set_instance_opaque_attrs
+from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,11 +107,23 @@ class OutgoingSOAPImporter:
         name = outgoing_def['name']
         logger.info('Creating outgoing SOAP connection: %s', name)
 
-        # No extra fields yet
         connection_extra_field_defaults = {
+            'validate_tls': True,
         }
 
         outgoing = HTTPSOAP()
+
+        if 'security' in outgoing_def or 'security_name' in outgoing_def:
+            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
+            if security_name not in self.importer.sec_defs:
+                error_msg = f'Security definition "{security_name}" not found for connection "{name}"'
+                logger.error(error_msg)
+                raise Exception(error_msg)
+
+            sec_def = self.importer.sec_defs[security_name]
+            security_id = sec_def['id']
+            outgoing.security = get_security_by_id(session, security_id)
+
         outgoing.name = name
         outgoing.is_active = outgoing_def.get('is_active', True)
         outgoing.connection = CONNECTION.OUTGOING
@@ -136,15 +148,6 @@ class OutgoingSOAPImporter:
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
-
-        if 'security' in outgoing_def or 'security_name' in outgoing_def:
-            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
-            if security_name not in self.importer.sec_defs:
-                error_msg = f'Security definition "{security_name}" not found for outgoing SOAP connection "{name}"'
-                logger.error(error_msg)
-                raise Exception(error_msg)
-            sec_def = self.importer.sec_defs[security_name]
-            outgoing.security_id = sec_def['id']
 
         outgoing_def = deepcopy(outgoing_def)
         outgoing_def.update(connection_extra_field_defaults)
@@ -171,11 +174,12 @@ class OutgoingSOAPImporter:
         if 'security' in outgoing_def or 'security_name' in outgoing_def:
             security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
             if security_name not in self.importer.sec_defs:
-                error_msg = f'Security definition "{security_name}" not found for outgoing SOAP connection "{name}"'
+                error_msg = f'Security definition "{security_name}" not found "{name}"'
                 logger.error(error_msg)
-                raise Exception(error_msg)
+
             sec_def = self.importer.sec_defs[security_name]
-            outgoing.security_id = sec_def['id']
+            security_id = sec_def['id']
+            outgoing.security = get_security_by_id(session, security_id)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
