@@ -278,11 +278,17 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def sync_security_definitions(self, security_list:'anylist', session:'SASession') -> 'listtuple':
-        security_yaml_defs = [item for item in security_list if 'type' in item]
-        logger.info('Processing %d security definitions from YAML', len(security_yaml_defs))
+
+        logger.info('Processing %d security definitions from YAML', len(security_list))
+
+        valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey'}
+
+        for item in security_list:
+            if item['type'] not in valid_types:
+                raise ValueError(f'Invalid security definition type: {item["type"]}. Must be one of {valid_types} -> {item}')
 
         db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
-        to_create, to_update = self.compare_security_defs(security_yaml_defs, db_defs)
+        to_create, to_update = self.compare_security_defs(security_list, db_defs)
 
         out_created = []
         out_updated = []
