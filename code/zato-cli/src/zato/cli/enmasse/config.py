@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 class _object_type:
     Cache = 'cache'                               # 1 2 -
     Confluence = 'confluence'                     # 1 2 - - passwords
-    Channel_REST = 'channel_rest'                 # 1 2 3 - change security - change groups
+    Channel_REST = 'channel_rest'                 # 1 2 3 4 (sec + groups)
     Email_IMAP = 'email_imap'                     # 1 2 - - passwords
     Email_SMTP = 'email_smtp'                     # 1 2 - - passwords
     Groups = 'groups'                             # 1 2 - - change members
