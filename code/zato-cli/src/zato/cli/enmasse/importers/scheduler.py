@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from zato.cli.enmasse.util import preprocess_item
 from zato.common.odb.model import Job, IntervalBasedJob, Service, to_json
 from zato.common.odb.query import job_list
-from zato.common.util.api import parse_datetime, utcnow
+from zato.common.util.api import parse_datetime
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -48,6 +48,10 @@ def compute_next_start_date(start_date, job_def):
 
     current_time = datetime.now(timezone.utc)
 
+    # If the start date is in the future, respect it and return as is
+    if start_date > current_time:
+        return start_date
+
     seconds = job_def.get('seconds', 0)
     minutes = job_def.get('minutes', 0)
     hours = job_def.get('hours', 0)
@@ -63,8 +67,8 @@ def compute_next_start_date(start_date, job_def):
     # Calculate time elapsed since start_date
     time_elapsed = (current_time - start_date).total_seconds()
 
-    # Calculate how many intervals have passed
-    intervals_passed = int(time_elapsed / interval_seconds)
+    # Calculate how many intervals have passed (must be non-negative)
+    intervals_passed = max(0, int(time_elapsed / interval_seconds))
 
     # Calculate the next start date
     next_start = start_date + timedelta(seconds=intervals_passed * interval_seconds)
