@@ -11,7 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
-from zato.cli.enmasse.util import get_engine_from_type
+from zato.cli.enmasse.util import get_engine_from_type, preprocess_item
 from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -75,6 +75,7 @@ class SQLImporter:
         to_update = []
 
         for yaml_def in yaml_defs:
+            yaml_def = preprocess_item(yaml_def)
             name = yaml_def['name']
 
             # Update existing definition
