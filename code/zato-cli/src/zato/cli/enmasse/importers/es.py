@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util import preprocess_item
 from zato.common.odb.model import ElasticSearch, to_json
 from zato.common.odb.query import search_es_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -73,6 +74,7 @@ class ElasticSearchImporter:
         to_update = []
 
         for yaml_def in yaml_defs:
+            yaml_def = preprocess_item(yaml_def)
             name = yaml_def['name']
 
             # Update existing definition
