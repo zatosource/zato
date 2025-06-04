@@ -11,7 +11,7 @@ import logging
 from copy import deepcopy
 
 # Zato
-from zato.cli.enmasse.util import security_needs_update
+from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -66,6 +66,7 @@ class OutgoingSOAPImporter:
         logger.info('Comparing %d YAML outgoing SOAP connections with %d DB outgoing SOAP connections', len(yaml_defs), len(db_defs))
 
         for item in yaml_defs:
+            item = preprocess_item(item)
             name = item['name']
             logger.info('Checking YAML outgoing SOAP connection: name=%s', name)
 
