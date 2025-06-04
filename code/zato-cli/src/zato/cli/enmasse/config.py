@@ -10,22 +10,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class _object_type:
-    Cache = 'cache'                               # 1 2 -
-    Confluence = 'confluence'                     # 1 2 - - passwords
-    Channel_REST = 'channel_rest'                 # 1 2 3 4 (sec + groups)
-    Email_IMAP = 'email_imap'                     # 1 2 - - passwords
-    Email_SMTP = 'email_smtp'                     # 1 2 - - passwords
-    Groups = 'groups'                             # 1 2 - - change members
-    Jira = 'jira'                                 # 1 2 - - passwords
-    LDAP = 'ldap'                                 # 1 2 - - passwords
-    Microsoft_365 = 'cloud_microsoft_365'         # 1 2 - - passwords
-    Odoo = 'odoo'                                 # 1 2 - - passwords
-    Outgoing_REST = 'outgoing_rest'               # 1 2 3 - change security
-    Outgoing_SOAP = 'outgoing_soap'               # 1 2 3 - change security
-    Search_ElasticSearch = 'elastic_search'       # 1 2 - - passwords
-    SQL  = 'sql'                                  # 1 2 3 - passwords
-    Scheduler = 'scheduler'                       # 1 2 3 - exports
-    Security = 'security'                         # 1 2 3 4 (passwords)
+    Cache = 'cache'                               #
+    Confluence = 'confluence'                     #
+    Channel_REST = 'channel_rest'                 # 1
+    Email_IMAP = 'email_imap'                     #
+    Email_SMTP = 'email_smtp'                     #
+    Groups = 'groups'                             #
+    Jira = 'jira'                                 #
+    LDAP = 'ldap'                                 #
+    Microsoft_365 = 'cloud_microsoft_365'         #
+    Odoo = 'odoo'                                 #
+    Outgoing_REST = 'outgoing_rest'               #
+    Outgoing_SOAP = 'outgoing_soap'               #
+    Search_ElasticSearch = 'elastic_search'       #
+    SQL  = 'sql'                                  #
+    Scheduler = 'scheduler'                       #
+    Security = 'security'                         # 1
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #
