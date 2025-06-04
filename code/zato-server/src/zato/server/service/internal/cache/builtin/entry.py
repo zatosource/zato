@@ -35,7 +35,7 @@ class _Base(AdminService):
     """ Base class for services that access the contents of a given cache.
     """
     def _get_cache_by_input(self, needs_odb=False):
-        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
 
         if needs_odb:
             return odb_cache
@@ -50,9 +50,9 @@ class GetList(_Base):
     _filter_by = ('name',)
 
     class SimpleIO(GetListAdminSIO):
-        input_required = (AsIs('cache_id'),)
+        input_required = (AsIs('id'),)
         input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
-        output_required = (AsIs('cache_id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
+        output_required = (AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
             'last_read', 'prev_read', 'last_write', 'prev_write', 'server')
         output_optional = ('value', 'chars_omitted')
         output_repeated = True
@@ -108,7 +108,7 @@ class GetList(_Base):
                 item['value'] = value
                 item['chars_omitted'] = chars_omitted
 
-            item['cache_id'] = self.request.input.cache_id
+            item['id'] = self.request.input.id
             item['server'] = '{} ({})'.format(self.server.name, self.server.pid)
             out.append(item)
 
@@ -187,7 +187,7 @@ class _CreateEdit(_Base):
     new_key_elem = 'key'
 
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id', 'key', 'value', Bool('replace_existing'))
+        input_required = ('cluster_id', 'id', 'key', 'value', Bool('replace_existing'))
         input_optional = ('key_data_type', 'value_data_type', Float('expiry'))
 
     def handle(self):
@@ -250,7 +250,7 @@ class Get(_Base):
     """ Returns an individual entry from the cache given on input.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id', 'key')
+        input_required = ('cluster_id', 'id', 'key')
         output_required = (Bool('key_found'),)
         output_optional = ('key', 'value', 'is_key_integer', 'is_value_integer', Float('expiry'))
 
@@ -277,7 +277,7 @@ class Delete(_Base):
     """ Deletes an entry from the cache given on input.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id', 'key')
+        input_required = ('cluster_id', 'id', 'key')
         output_required = (Bool('key_found'),)
 
     def handle(self):

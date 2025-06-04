@@ -425,22 +425,22 @@ urlpatterns += [
     url(r'^zato/cache/builtin/clear/$',
         login_required(cache_builtin.clear), name='cache-builtin-clear'),
 
-    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/delete/$',
+    url(r'^zato/cache/builtin/entries/(?P<id>.*)/delete/$',
         login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
 
-    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/$',
+    url(r'^zato/cache/builtin/entries/(?P<id>.*)/$',
         login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
 
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
         login_required(cache_builtin_entry.create_action), name='cache-builtin-create-entry-action'),
 
-    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin_entry.create), name='cache-builtin-create-entry'),
 
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/action/$',
         login_required(cache_builtin_entry.edit_action), name='cache-builtin-edit-entry-action'),
 
-    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
 
     ]
