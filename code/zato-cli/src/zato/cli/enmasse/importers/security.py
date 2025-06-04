@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.cli.enmasse.util import preprocess_item
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json
 from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -95,6 +96,7 @@ class SecurityImporter:
         logger.info('DB definition keys: %s', list(db_defs.keys()))
 
         for item in yaml_defs:
+            item = preprocess_item(item)
             name = item['name']
             sec_type = item['type']
 
