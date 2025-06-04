@@ -168,18 +168,15 @@ class ChannelImporter:
         logger.info('Creating REST channel: %s', name)
 
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).first()
-        if not service:
-            raise Exception(f'Service not found: {service_name}')
+        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
+        cluster = self.importer.get_cluster(session)
 
-        channel = HTTPSOAP()
+        channel = HTTPSOAP(cluster=cluster, service=service)
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.PLAIN_HTTP
         channel.url_path = channel_def['url_path']
         channel.method = channel_def.get('method', '') or ''
-        channel.service = service
-        channel.cluster = self.importer.get_cluster(session)
         channel.is_active = True
         channel.is_internal = False
         channel.soap_action = 'not-used'
