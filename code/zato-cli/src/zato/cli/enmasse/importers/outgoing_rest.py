@@ -11,10 +11,10 @@ import logging
 from copy import deepcopy
 
 # Zato
-from zato.cli.enmasse.util import preprocess_item, security_needs_update
-from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
+from zato.cli.enmasse.util import assign_security, preprocess_item, security_needs_update
+from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
-from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,15 +131,7 @@ class OutgoingRESTImporter:
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
 
-        if 'security' in outgoing_def or 'security_name' in outgoing_def:
-            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
-            if security_name not in self.importer.sec_defs:
-                error_msg = f'Security definition "{security_name}" not found for connection "{name}"'
-                logger.error(error_msg)
-
-            sec_def = self.importer.sec_defs[security_name]
-            security_id = sec_def['id']
-            outgoing.security = get_security_by_id(session, security_id)
+        assign_security(outgoing, outgoing_def, self.importer, session)
 
         outgoing_def = deepcopy(outgoing_def)
         outgoing_def.update(connection_extra_field_defaults)
@@ -163,15 +155,7 @@ class OutgoingRESTImporter:
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
 
-        if 'security' in outgoing_def or 'security_name' in outgoing_def:
-            security_name = outgoing_def.get('security') or outgoing_def.get('security_name')
-            if security_name not in self.importer.sec_defs:
-                error_msg = f'Security definition "{security_name}" not found for "{name}"'
-                logger.error(error_msg)
-
-            sec_def = self.importer.sec_defs[security_name]
-            security_id = sec_def['id']
-            outgoing.security = get_security_by_id(session, security_id)
+        assign_security_to_outgoing(outgoing, outgoing_def, self.importer, session)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing

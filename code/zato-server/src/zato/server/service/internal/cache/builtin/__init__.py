@@ -34,7 +34,7 @@ list_func = cache_builtin_list
 skip_create_integrity_error = True
 skip_if_exists = True
 skip_input_params = ['cache_id']
-output_optional_extra = ['current_size', 'cache_id']
+output_optional_extra = ['current_size', 'id', 'cache_id']
 
 # ################################################################################################################################
 

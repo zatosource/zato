@@ -40,7 +40,7 @@
             'is_default',
             'extend_expiry_on_get',
             'extend_expiry_on_set',
-            'cache_id',
+            'id',
         ]
     }
     </script>
@@ -97,30 +97,30 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.cache_id }}'>
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "cache-builtin-get-entries" item.cache_id %}?cluster=1">{{ item.name }}</a></td>
+                        <td><a href="{% url "cache-builtin-get-entries" item.id %}?cluster=1">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
 
-                        <td id="cache_current_size_{{ item.cache_id }}">{{ item.current_size }}</td>
+                        <td id="cache_current_size_{{ item.id }}">{{ item.current_size }}</td>
                         <td>{{ item.max_size }}</td>
                         <td>{{ item.max_item_size }}</td>
                         <td>{{ item.extend_expiry_on_get|yesno:'Yes,No' }}</td>
                         <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
 
-                        <td><a href="{% url "cache-builtin-create-entry" item.cache_id cluster_id %}">Add a new entry</a></td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.clear('{{ item.cache_id }}')">Clear</a></td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.cache_id }}')">Edit</a></td>
-                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.cache_id }}')">Delete</a>{% endif %}</td>
-                        <td class='ignore item_id_{{ item.cache_id }}'>{{ item.cache_id }}</td>
+                        <td><a href="{% url "cache-builtin-create-entry" item.id cluster_id %}">Add a new entry</a></td>
+                        <td><a href="javascript:$.fn.zato.cache.builtin.clear('{{ item.id }}')">Clear</a></td>
+                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.id }}')">Edit</a></td>
+                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a>{% endif %}</td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_get }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_set }}</td>
-                        <td class='ignore'>{{ item.cache_id }}</td>
+                        <td class='ignore'>{{ item.id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -192,7 +192,7 @@
                     <input type="hidden" id="id_sync_method" name="sync_method" value="in-background" />
                     <input type="hidden" id="id_persistent_storage" name="persistent_storage" value="no-persistent-storage" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    {{ create_form.cache_id }}
+                    {{ create_form.id }}
                 </form>
             </div>
         </div>
@@ -255,7 +255,7 @@
                     <input type="hidden" id="id_edit-persistent_storage" name="edit-persistent_storage" value="no-persistent-storage" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
-                    {{ edit_form.cache_id }}
+                    {{ edit_form.id }}
                 </form>
             </div>
         </div>

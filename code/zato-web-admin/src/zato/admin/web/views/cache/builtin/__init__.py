@@ -27,7 +27,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('cache_id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
+        output_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
         output_repeated = True
 
@@ -45,9 +45,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cache_id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
+        input_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
-        output_required = ('cache_id', 'name', 'id')
+        output_required = ('id', 'name', 'id')
 
     def success_message(self, item):
         return 'Successfully {} cache `{}`'.format(self.verb, item.name)
@@ -77,7 +77,7 @@ class Delete(_Delete):
 @method_allowed('POST')
 def clear(req):
     return invoke_service_with_json_response(
-        req, 'zato.cache.builtin.clear', {'cluster_id':req.POST['cluster_id'], 'cache_id':req.POST['cache_id']},
+        req, 'zato.cache.builtin.clear', {'cluster_id':req.POST['cluster_id'], 'id':req.POST['id']},
         'OK, cache cleared.', 'Cache could not be cleared, e:{e}')
 
 # ################################################################################################################################
