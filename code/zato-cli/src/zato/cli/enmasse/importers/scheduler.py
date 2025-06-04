@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 # Zato
+from zato.cli.enmasse.util import preprocess_item
 from zato.common.odb.model import Job, IntervalBasedJob, Service, to_json
 from zato.common.odb.query import job_list
 from zato.common.util.api import parse_datetime, utcnow
@@ -120,6 +121,7 @@ class SchedulerImporter:
         to_update = []
 
         for yaml_def in yaml_defs:
+            yaml_def = preprocess_item(yaml_def)
             name = yaml_def['name']
 
             # Update existing definition
