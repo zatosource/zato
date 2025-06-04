@@ -822,7 +822,7 @@ def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_te
     try:
         req.zato.client.invoke(service, input_dict)
     except Exception as e:
-        return HttpResponseServerError(e.message, content_type=content_type)
+        return HttpResponseServerError(e.args[0], content_type=content_type)
     else:
         response = {'msg': ok_msg}
         response.update(extra or {})

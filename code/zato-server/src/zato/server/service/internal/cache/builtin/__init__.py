@@ -33,8 +33,7 @@ broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
 skip_create_integrity_error = True
 skip_if_exists = True
-skip_input_params = ['cache_id']
-output_optional_extra = ['current_size', 'id', 'cache_id']
+output_optional_extra = ['current_size', 'id']
 
 # ################################################################################################################################
 
@@ -44,26 +43,23 @@ def instance_hook(self, input, instance, attrs):
     common_instance_hook(self, input, instance, attrs)
 
     # .. now, if this is an update, we need to ensure that we have
-    # a handle to cache_id. It will be provided on input from web-admin
+    # a handle to cache ID. It will be provided on input from Dashboard
     # but enmasse will not have it so we need to look it up ourselfves.
-    if not input.get('cache_id'):
+    if not input.get('id'):
         if attrs.is_edit:
             with attrs._meta_session.no_autoflush:
-                result = attrs._meta_session.query(CacheBuiltin.cache_id).\
+                result = attrs._meta_session.query(CacheBuiltin.id).\
                     filter(CacheBuiltin.id==input.id).\
                     filter(CacheBuiltin.cluster_id==self.server.cluster_id).\
                     one()
 
-            instance.cache_id = result.cache_id
+            instance.id = result.id
 
 # ################################################################################################################################
 
 def response_hook(self, input, _ignored, attrs, service_type):
 
-    if service_type == 'create_edit':
-        self.response.payload.cache_id = self.response.payload.id
-
-    elif service_type == 'get_list':
+    if service_type == 'get_list':
 
         for item in self.response.payload:
 
@@ -91,13 +87,13 @@ class Get(AdminService):
     """ Returns configuration of a cache definition.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id')
+        input_required = ('cluster_id', 'id')
         output_required = ('name', 'is_active', 'is_default', 'cache_type', Int('max_size'), Int('max_item_size'),
             Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', 'persistent_storage',
             Int('current_size'))
 
     def handle(self):
-        response = asdict(self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id))
+        response = asdict(self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id))
         response['current_size'] = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, response['name'])
 
         self.response.payload = response
@@ -132,10 +128,10 @@ class Clear(AdminService):
     """ Clears out a cache by its ID - deletes all keys and values.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id')
+        input_required = ('cluster_id', 'id')
 
     def handle(self):
-        cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
         self.cache.clear(_COMMON_CACHE.TYPE.BUILTIN, cache.name)
 
 # ################################################################################################################################
