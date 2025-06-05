@@ -11,9 +11,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 class _object_type:
 
-    Security = 'security'                         # 1
+    Security = 'security'                         # 1 2
 
-    Channel_REST = 'channel_rest'                 # 1
+    Channel_REST = 'channel_rest'                 # 1 2
     Outgoing_REST = 'outgoing_rest'               # 1
     Outgoing_SOAP = 'outgoing_soap'               # 1
 
@@ -26,7 +26,7 @@ class _object_type:
     Email_IMAP = 'email_imap'                     # 1
     Email_SMTP = 'email_smtp'                     # 1
 
-    Groups = 'groups'                             # 1
+    Groups = 'groups'                             # 1 2
 
     LDAP = 'ldap'                                 # 1
     Confluence = 'confluence'                     # 1
