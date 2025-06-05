@@ -113,6 +113,7 @@ class IMAPImporter:
         username = imap_def.get('username', '')
         mode = imap_def.get('mode', 'plain')
         get_criteria = imap_def.get('get_criteria', '{}')
+        filter_criteria = imap_def.get('filter_criteria', 'isRead ne true')
 
         imap_conn.name = name
         imap_conn.is_active = is_active
@@ -123,6 +124,7 @@ class IMAPImporter:
         imap_conn.username = username
         imap_conn.mode = mode
         imap_conn.get_criteria = get_criteria
+        imap_conn.filter_criteria = filter_criteria
 
         # Remap IMAP server type
         if 'type' in imap_def:
@@ -154,6 +156,10 @@ class IMAPImporter:
 
         imap_id = imap_def['id']
         def_name = imap_def['name']
+        
+        # Set default filter_criteria if not provided
+        if 'filter_criteria' not in imap_def:
+            imap_def['filter_criteria'] = 'isRead ne true'
 
         logger.info('Updating IMAP connection definition: name=%s id=%s', def_name, imap_id)
 
