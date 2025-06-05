@@ -23,7 +23,7 @@ class _object_type:
     Outgoing_REST = 'outgoing_rest'               # 1
     Outgoing_SOAP = 'outgoing_soap'               # 1
     Search_ElasticSearch = 'elastic_search'       #
-    SQL  = 'sql'                                  #
+    SQL  = 'sql'                                  # 1
     Scheduler = 'scheduler'                       # 1
     Security = 'security'                         # 1
 
