@@ -19,7 +19,7 @@ class _object_type:
     Jira = 'jira'                                 #
     LDAP = 'ldap'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
-    Odoo = 'odoo'                                 #
+    Odoo = 'odoo'                                 # 1
     Outgoing_REST = 'outgoing_rest'               # 1
     Outgoing_SOAP = 'outgoing_soap'               # 1
     Search_ElasticSearch = 'elastic_search'       #
