@@ -98,6 +98,9 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.host ? item.host : "");
     row += String.format("<td class='ignore'>{0}</td>", item.port ? item.port : "993");
 
+    // 9
+    row += String.format("<td class='ignore'>{0}</td>", item.filter_criteria ? item.filter_criteria : "");
+
     if(include_tr) {
         row += '</tr>';
     }
