@@ -13,7 +13,7 @@ class _object_type:
     Cache = 'cache'                               # 1
     Confluence = 'confluence'                     #
     Channel_REST = 'channel_rest'                 # 1
-    Email_IMAP = 'email_imap'                     #
+    Email_IMAP = 'email_imap'                     # 1
     Email_SMTP = 'email_smtp'                     #
     Groups = 'groups'                             #
     Jira = 'jira'                                 #

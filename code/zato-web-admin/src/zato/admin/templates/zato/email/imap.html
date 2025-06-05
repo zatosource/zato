@@ -58,6 +58,9 @@
             'client_id',
             'host',
             'port',
+
+            // 9
+            'filter_criteria',
         ]
     }
     </script>
@@ -126,6 +129,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -190,11 +196,14 @@
                         <td class='ignore'>{{ item.client_id|default:"" }}</td>
                         <td class='ignore'>{{ item.host|default:"" }}</td>
                         <td class='ignore'>{{ item.port|default:"993" }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.filter_criteria|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='8'>No results</td>
+                        <td colspan='9'>No results</td>
                     </tr>
                 {% endif %}
 

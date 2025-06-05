@@ -12,6 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.common.api import EMAIL as EMail_Common
 from zato.common.odb.model import IMAP, to_json
 from zato.common.odb.query import email_imap_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -122,6 +123,15 @@ class IMAPImporter:
         imap_conn.username = username
         imap_conn.mode = mode
         imap_conn.get_criteria = get_criteria
+
+        # Remap IMAP server type
+        if 'type' in imap_def:
+            if imap_def['type'] == 'microsoft-365':
+                imap_def['server_type'] = EMail_Common.IMAP.ServerType.Microsoft365
+            else:
+                imap_def['server_type'] = imap_def['type']
+        else:
+            imap_def['server_type'] = EMail_Common.IMAP.ServerType.Generic
 
         # Set password if provided, otherwise generate one
         if 'password' in imap_def:
