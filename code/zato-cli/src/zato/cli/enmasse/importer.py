@@ -654,11 +654,11 @@ class EnmasseYAMLImporter:
             self.updated_objects['microsoft_365'] = ms365_updated
 
         # Process ElasticSearch connection definitions
-        es_created, es_updated = self.sync_es(yaml_config.get('search_es', []), session)
+        es_created, es_updated = self.sync_es(yaml_config.get('elastic_search', []), session)
         if es_created:
-            self.created_objects['search_es'] = es_created
+            self.created_objects['elastic_search'] = es_created
         if es_updated:
-            self.updated_objects['search_es'] = es_updated
+            self.updated_objects['elastic_search'] = es_updated
 
         # Process outgoing REST connection definitions
         outgoing_rest_created, outgoing_rest_updated = self.sync_outgoing_rest(yaml_config.get('outgoing_rest', []), session)

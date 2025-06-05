@@ -93,7 +93,24 @@ class ElasticSearchImporter:
 
 # ################################################################################################################################
 
+    def _process_host_field(self, es_def:'anydict') -> 'anydict':
+
+        # If there's a 'host' key but no 'hosts', convert it to 'hosts'
+        if 'host' in es_def and 'hosts' not in es_def:
+            es_def['hosts'] = es_def.pop('host')
+
+        # Handle hosts as a list by joining with newlines
+        if isinstance(es_def['hosts'], list):
+            es_def['hosts'] = '\n'.join(es_def['hosts'])
+
+        return es_def
+
+# ################################################################################################################################
+
     def create_es_definition(self, es_def:'anydict', session:'SASession') -> 'any_':
+
+        # Process host/hosts fields
+        es_def = self._process_host_field(es_def)
 
         # Get the cluster instance from the importer
         cluster = self.importer.get_cluster(session)
@@ -106,10 +123,10 @@ class ElasticSearchImporter:
         logger.info('Creating ElasticSearch connection definition: %s', name)
 
         es_conn.name = name
+        es_conn.hosts = es_def['hosts']
         es_conn.is_active = es_def.get('is_active', True)
-        es_conn.hosts = es_def.get('hosts', '')
         es_conn.timeout = es_def.get('timeout', 90)
-        es_conn.body_as = es_def.get('body_as', 'json')
+        es_conn.body_as = es_def.get('body_as', 'POST')
 
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(es_conn, es_def)
@@ -123,6 +140,9 @@ class ElasticSearchImporter:
 # ################################################################################################################################
 
     def update_es_definition(self, es_def:'anydict', session:'SASession') -> 'any_':
+
+        # Process host/hosts fields
+        es_def = self._process_host_field(es_def)
 
         es_id = es_def['id']
         def_name = es_def['name']
