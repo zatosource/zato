@@ -31,7 +31,7 @@ type_display_names = {
     'jira': 'Jira connection',
     'ldap': 'LDAP connection',
     'microsoft_365': 'Microsoft 365 connection',
-    'search_es': 'ElasticSearch connection'
+    'elastic_search': 'ElasticSearch connection'
 }
 
 # ################################################################################################################################
