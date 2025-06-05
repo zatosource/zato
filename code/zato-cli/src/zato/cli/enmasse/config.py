@@ -30,9 +30,9 @@ class _object_type:
 
     LDAP = 'ldap'                                 # 1
     Confluence = 'confluence'                     # 1
-    Jira = 'jira'                                 # 2
-    Microsoft_365 = 'cloud_microsoft_365'         #
-    Search_ElasticSearch = 'elastic_search'       #
+    Jira = 'jira'                                 # 1
+    Microsoft_365 = 'cloud_microsoft_365'         # 1
+    Search_ElasticSearch = 'elastic_search'       # 1
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #
