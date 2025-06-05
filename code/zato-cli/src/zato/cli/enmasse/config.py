@@ -28,8 +28,8 @@ class _object_type:
 
     Groups = 'groups'                             # 1
 
-    LDAP = 'ldap'                                 #
-    Confluence = 'confluence'                     #
+    LDAP = 'ldap'                                 # 1
+    Confluence = 'confluence'                     # 1
     Jira = 'jira'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
     Search_ElasticSearch = 'elastic_search'       #
