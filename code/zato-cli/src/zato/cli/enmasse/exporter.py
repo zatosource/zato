@@ -77,7 +77,7 @@ class EnmasseYAMLExporter:
         """
         if not self.cluster:
             logger.info('Getting cluster by id=%s', self.cluster_id)
-            self.cluster = session.query(Cluster).filter(Cluster.id == self.cluster_id).one()
+            self.cluster = session.query(Cluster).filter(Cluster.id == self.cluster_id).one() # type: ignore
         return self.cluster
 
 # ################################################################################################################################
