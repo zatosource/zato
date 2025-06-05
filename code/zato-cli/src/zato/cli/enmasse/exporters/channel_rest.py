@@ -47,7 +47,7 @@ class ChannelExporter:
         """
         # Clear existing mapping
         self.group_id_to_name = {}
-        
+
         # Use a direct SQLAlchemy query to get all groups
         with closing(session) as session:
             # Build a query for all groups
@@ -59,21 +59,21 @@ class ChannelExporter:
                 GenericObject.subtype == Groups.Type.API_Clients,
                 GenericObject.cluster_id == cluster_id,
             ))
-            
+
             # Execute the query and get results
             groups = session.execute(query).fetchall()
-            
+
             # Build ID to name mapping
             for group in groups:
                 self.group_id_to_name[group['id']] = group['name']
-            
+
         logger.info('Loaded %d security groups', len(self.group_id_to_name))
-    
+
     def export(self, session: 'SASession', cluster_id: 'int') -> 'channel_def_list':
         """ Exports REST Channel definitions.
         """
         logger.info('Exporting REST channel definitions')
-        
+
         # Load security groups for ID to name conversion
         self._load_security_groups(session, cluster_id)
 
@@ -105,6 +105,7 @@ class ChannelExporter:
                 'name': channel_row.name,
                 'url_path': channel_row.url_path,
                 'service': channel_row.service_name,
+                'is_active': channel_row.is_active,
             }
 
             if channel_row.security_name:
@@ -119,12 +120,21 @@ class ChannelExporter:
                         group_names.append(self.group_id_to_name[group_id])
                     else:
                         logger.warning('Security group ID %s not found for channel %s', group_id, channel_row.name)
-                
+
                 exported_channel['groups'] = group_names
 
+            # Define default values for fields to avoid exporting them
+            default_values = {
+                'timeout': 10,
+                'method': '',
+                'content_type': None,
+                'content_encoding': None,
+                'data_format': None,
+            }
+
+            # Process other optional fields, skipping those with default values
             optional_fields_from_row = {
                 'data_format': channel_row.data_format,
-                'is_active': channel_row.is_active,
                 'timeout': channel_row.timeout,
                 'method': channel_row.method,
                 'content_type': channel_row.content_type,
@@ -132,7 +142,8 @@ class ChannelExporter:
             }
 
             for field_name, field_value in optional_fields_from_row.items():
-                if field_value is not None:
+                # Skip None values or values that match defaults
+                if field_value is not None and field_value != default_values.get(field_name):
                     exported_channel[field_name] = field_value
 
             exported_channels.append(exported_channel)
