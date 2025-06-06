@@ -199,6 +199,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['odoo'] = 'name',
     order['elastic_search'] = 'name',
 
+    return order[object_type]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -221,8 +223,17 @@ class FileWriter:
 
                 # Check if this element exists on input
                 if element in data_dict:
+                    # Get the field order dictionary
+                    fields = get_object_order(element)
+
+                    # Process each item in the data
                     for item in data_dict[element]:
-                        _ = f.write(f'  - name: {item["name"]}\n\n')
+                        # For each field in the proper order
+                        for field in fields:
+                            if field in item:
+                                # Write the field with proper indentation
+                                _ = f.write(f'  - {field}: {item[field]}\n\n')
+
 
 # ################################################################################################################################
 # ################################################################################################################################
