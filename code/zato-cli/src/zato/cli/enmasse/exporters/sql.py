@@ -52,11 +52,12 @@ class SQLExporter:
             return []
 
         sql_connections = to_json(db_sql_connections, return_as_dict=True)
-        logger.info('Processing %d SQL connection pool definitions', len(sql_connections))
+        logger.debug('Processing %d SQL connection pool definitions', len(sql_connections))
 
         exported_sql_connections = []
 
         for row in sql_connections:
+
             item = {
                 'name': row['name'],
                 'type': get_type_from_engine(row['engine']),
@@ -66,28 +67,16 @@ class SQLExporter:
                 'username': row['username']
             }
 
-            # Add optional fields if they exist and aren't empty
-            for field in ['is_active', 'pool_size', 'timeout']:
-                if field in row and row[field] is not None:
-                    item[field] = row[field]
+            if extra := row.get('extra'):
+                extra = extra.decode('utf8') if isinstance(extra, bytes) else extra
+                if extra.strip():
+                    item['extra'] = extra.splitlines()
 
-            # Handle the extra field (connection options)
-            if 'extra' in row and row['extra']:
-                try:
-                    # Extra field might be bytes or string
-                    extra_str = row['extra'].decode('utf8') if isinstance(row['extra'], bytes) else row['extra']
-                    if extra_str.strip():
-                        item['extra'] = extra_str
-                except (UnicodeDecodeError, AttributeError):
-                    # Skip on errors
-                    pass
+            if (pool_size := row.get('pool_size')) and pool_size != 10:
+                item['pool_size'] = pool_size
 
-            # Process any opaque attributes
-            if 'opaque_attr' in row and row['opaque_attr']:
-                opaque = parse_instance_opaque_attr(row)
-                item.update(opaque)
-
-            # Note: We deliberately do not export passwords for security reasons
+            if timeout := row.get('timeout'):
+                item['timeout'] = timeout
 
             exported_sql_connections.append(item)
 
