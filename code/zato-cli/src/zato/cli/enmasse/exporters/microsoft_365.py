@@ -73,7 +73,7 @@ class Microsoft365Exporter:
                 del row[GENERIC.ATTR_NAME]
 
             item = {
-                'name': row['name']
+                'name': row['name'],
             }
 
             if client_id := row.get('client_id'):

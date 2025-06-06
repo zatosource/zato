@@ -182,24 +182,24 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
 
-    order['security'] = 'name', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
-        'data_format', 'extra_fields:list'
+    order['security'] = 'name', 'is_active', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
+        'data_format', 'extra_fields:list',
 
-    order['groups'] = 'name', 'members:list'
-    order['channel_rest'] = 'name', 'service', 'url_path', 'security', 'data_format', 'groups:list'
-    order['outgoing_rest'] = 'name', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify'
-    order['scheduler'] = 'name', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list'
-    order['ldap'] = 'name', 'username', 'auth_type', 'server_list:list'
-    order['sql'] = 'name', 'type', 'host', 'port', 'db_name', 'username'
-    order['outgoing_soap'] = 'name',
-    order['microsoft_365'] = 'name',
-    order['cache'] = 'name',
-    order['confluence'] = 'name',
-    order['jira'] = 'name',
-    order['email_imap'] = 'name',
-    order['email_smtp'] = 'name',
-    order['odoo'] = 'name',
-    order['elastic_search'] = 'name',
+    order['groups'] = 'name', 'is_active', 'members:list',
+    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list',
+    order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
+    order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
+    order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
+    order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
+    order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
+    order['microsoft_365'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
+    order['cache'] = 'name', 'is_active', 'extend_expiry_on_get', 'extend_expiry_on_set',
+    order['confluence'] = 'name', 'is_active', 'address', 'username',
+    order['jira'] = 'name', 'is_active', 'address', 'username',
+    order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
+    order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
+    order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'
+    order['elastic_search'] = 'name', 'is_active', 'hosts:list', 'timeout', 'body_as'
 
     return order[object_type]
 
@@ -248,15 +248,15 @@ class FileWriter:
 
                                 # Check if the actual field exists in the item
                                 if actual_field in item:
-                                    
+
                                     # Get the field value
                                     field_value = item[actual_field]
-                                    
+
                                     # Check if it's actually a list
                                     if isinstance(field_value, list):
                                         # Write the field name as a list header
                                         _ = f.write(f'    {actual_field}:\n')
-                                        
+
                                         # Write each list item with proper indentation
                                         for list_item in field_value:
                                             _ = f.write(f'      - {list_item}\n')
