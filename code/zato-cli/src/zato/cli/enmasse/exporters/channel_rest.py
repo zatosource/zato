@@ -13,7 +13,7 @@ from contextlib import closing
 from sqlalchemy import and_, select
 
 # Zato
-from zato.common.api import CONNECTION, Groups, URL_TYPE
+from zato.common.api import CONNECTION, Groups, MISC, URL_TYPE
 from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query import http_soap_list
 from zato.common.util.sql import elems_with_opaque
@@ -99,17 +99,21 @@ class ChannelExporter:
 
         for channel_row in db_channels:
 
-            logger.info('Processing REST channel row %s', channel_row.toDict())
+            logger.debug('Processing REST channel row %s', channel_row.toDict())
 
             exported_channel: 'anydict' = {
                 'name': channel_row.name,
-                'url_path': channel_row.url_path,
                 'service': channel_row.service_name,
-                'is_active': channel_row.is_active,
+                'url_path': channel_row.url_path,
             }
 
+            # Add security definition if present
             if channel_row.security_name:
                 exported_channel['security'] = channel_row.security_name
+
+            # Add data_format if not None
+            if channel_row.data_format:
+                exported_channel['data_format'] = channel_row.data_format
 
             # Export security groups directly assigned to the channel
             if security_groups := channel_row.get('security_groups'):
@@ -121,30 +125,21 @@ class ChannelExporter:
                     else:
                         logger.warning('Security group ID %s not found for channel %s', group_id, channel_row.name)
 
-                exported_channel['groups'] = group_names
+                # Only add groups if there are any
+                if group_names:
+                    exported_channel['groups'] = group_names
 
-            # Define default values for fields to avoid exporting them
-            default_values = {
-                'timeout': 10,
-                'method': '',
-                'content_type': None,
-                'content_encoding': None,
-                'data_format': None,
-            }
+            if channel_row.method and channel_row.method != MISC.DEFAULT_HTTP_METHOD:
+                exported_channel['method'] = channel_row.method
 
-            # Process other optional fields, skipping those with default values
-            optional_fields_from_row = {
-                'data_format': channel_row.data_format,
-                'timeout': channel_row.timeout,
-                'method': channel_row.method,
-                'content_type': channel_row.content_type,
-                'content_encoding': channel_row.content_encoding,
-            }
+            if channel_row.timeout is not None and channel_row.timeout != MISC.DEFAULT_HTTP_TIMEOUT:
+                exported_channel['timeout'] = channel_row.timeout
 
-            for field_name, field_value in optional_fields_from_row.items():
-                # Skip None values or values that match defaults
-                if field_value is not None and field_value != default_values.get(field_name):
-                    exported_channel[field_name] = field_value
+            if channel_row.content_type:
+                exported_channel['content_type'] = channel_row.content_type
+
+            if channel_row.content_encoding:
+                exported_channel['content_encoding'] = channel_row.content_encoding
 
             exported_channels.append(exported_channel)
 
