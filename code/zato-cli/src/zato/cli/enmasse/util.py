@@ -185,12 +185,12 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['security'] = 'name', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
         'data_format', 'extra_fields:list'
 
-    order['groups'] = 'name',
-    order['channel_rest'] = 'name',
-    order['outgoing_rest'] = 'name',
-    order['scheduler'] = 'name',
-    order['ldap'] = 'name',
-    order['sql'] = 'name',
+    order['groups'] = 'name', 'members:list'
+    order['channel_rest'] = 'name', 'service', 'url_path', 'security', 'data_format', 'groups:list'
+    order['outgoing_rest'] = 'name', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify'
+    order['scheduler'] = 'name', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list'
+    order['ldap'] = 'name', 'username', 'auth_type', 'server_list:list'
+    order['sql'] = 'name', 'type', 'host', 'port', 'db_name', 'username'
     order['outgoing_soap'] = 'name',
     order['microsoft_365'] = 'name',
     order['cache'] = 'name',
@@ -241,8 +241,32 @@ class FileWriter:
                         # .. write remaining fields with indentation but no dash ..
                         for field in fields[1:]:
 
-                            # .. check if the optional field exists ..
-                            if field in item:
+                            # Check if this is a list field notation
+                            if ':list' in field:
+                                # Extract the actual field name without the suffix
+                                actual_field = field.split(':')[0]
+
+                                # Check if the actual field exists in the item
+                                if actual_field in item:
+                                    
+                                    # Get the field value
+                                    field_value = item[actual_field]
+                                    
+                                    # Check if it's actually a list
+                                    if isinstance(field_value, list):
+                                        # Write the field name as a list header
+                                        _ = f.write(f'    {actual_field}:\n')
+                                        
+                                        # Write each list item with proper indentation
+                                        for list_item in field_value:
+                                            _ = f.write(f'      - {list_item}\n')
+                                    else:
+                                        # It's a string or other non-list value, treat as a regular field
+                                        _ = f.write(f'    {actual_field}: {field_value}\n')
+
+                            # For regular fields
+                            elif field in item:
+                                # Regular field
                                 _ = f.write(f'    {field}: {item[field]}\n')
 
                         # .. and add blank line after each item.
