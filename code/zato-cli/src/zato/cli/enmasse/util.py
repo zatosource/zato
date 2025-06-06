@@ -182,7 +182,7 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
 
-    order['security'] = 'name',
+    order['security'] = 'name', 'type',
     order['groups'] = 'name',
     order['channel_rest'] = 'name',
     order['outgoing_rest'] = 'name',
@@ -213,11 +213,16 @@ class FileWriter:
 
         top_level = get_top_level_order()
 
-        print(111, data_dict)
-
         with open(self.path, 'w') as f:
             for element in top_level:
+
+                # Write the element header
                 _ = f.write(f'{element}:\n\n')
+
+                # Check if this element exists on input
+                if element in data_dict:
+                    for item in data_dict[element]:
+                        _ = f.write(f'  - name: {item["name"]}\n\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
