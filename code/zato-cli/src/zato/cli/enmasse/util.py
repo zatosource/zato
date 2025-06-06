@@ -142,3 +142,14 @@ def assign_security(item:'HTTPSOAP', item_def:'anydict', importer:'EnmasseYAMLIm
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def reorder_fields(fields:'anydict') -> 'anydict':
+
+    field_order = {}
+    field_order['security'] = 'name', 'type', 'username', 'auth_endpoint', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', 'extra_fields'
+    field_order['groups'] = 'name', 'members'
+    field_order['channel_rest'] = 'name', 'service', 'url_path', 'security', 'groups', 'data_format'
+
+# ################################################################################################################################
+# ################################################################################################################################

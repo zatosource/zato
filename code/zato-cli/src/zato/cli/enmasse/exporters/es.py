@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query import search_es_list
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,27 +60,35 @@ class ElasticSearchExporter:
         # Get all ElasticSearch connection definitions from the database
         es_list = search_es_list(session, cluster_id)
 
+        if not es_list:
+            logger.info('No ElasticSearch connection definitions found in DB')
+            return []
+
         # Convert the search results to a list of dictionaries
         es_definitions = to_json(es_list, return_as_dict=True)
-
-        logger.info('Processing %d ElasticSearch connection definitions', len(es_definitions))
+        logger.debug('Processing %d ElasticSearch connection definitions', len(es_definitions))
 
         out = []
 
-        # Process each ElasticSearch connection definition
         for es_item in es_definitions:
 
-            # Create a dictionary with the basic fields
-            es_dict = {
+            if GENERIC.ATTR_NAME in es_item:
+                opaque = parse_instance_opaque_attr(es_item)
+                es_item.update(opaque)
+                del es_item[GENERIC.ATTR_NAME]
+
+            item = {
                 'name': es_item['name'],
-                'is_active': es_item.get('is_active', True),
-                'hosts': es_item.get('hosts', ''),
-                'timeout': es_item.get('timeout', 90),
-                'body_as': es_item.get('body_as', 'json'),
+                'hosts': es_item['hosts'],
             }
 
-            # Add the connection definition to the output list
-            out.append(es_dict)
+            if (body_as := es_item.get('body_as')) and body_as != 'json':
+                item['body_as'] = body_as
+
+            if (timeout := es_item.get('timeout')) and timeout != 90:
+                item['timeout'] = timeout
+
+            out.append(item)
 
         logger.info('Successfully prepared %d ElasticSearch connection definitions for export', len(out))
 
