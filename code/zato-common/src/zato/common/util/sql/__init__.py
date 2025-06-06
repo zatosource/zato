@@ -241,7 +241,10 @@ def elems_with_opaque(elems):
 # ################################################################################################################################
 
 def parse_instance_opaque_attr(instance:'any_') -> 'Bunch':
-    opaque = getattr(instance, GENERIC.ATTR_NAME)
+    if isinstance(instance, dict):
+        opaque = instance[GENERIC.ATTR_NAME]
+    else:
+        opaque = getattr(instance, GENERIC.ATTR_NAME)
     opaque = loads(opaque) if opaque else None
     if not opaque:
         return {}

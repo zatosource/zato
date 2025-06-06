@@ -23,7 +23,7 @@ class _object_type:
     SQL  = 'sql'                                  # 1 2
     Scheduler = 'scheduler'                       # 1 2
 
-    Email_IMAP = 'email_imap'                     # 1
+    Email_IMAP = 'email_imap'                     # 1 2
     Email_SMTP = 'email_smtp'                     # 1
 
     Groups = 'groups'                             # 1 2
