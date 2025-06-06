@@ -51,28 +51,30 @@ class JiraExporter:
             return []
 
         jira_connections = to_json(db_jira, return_as_dict=True)
-        logger.info('Processing %d JIRA connection definitions', len(jira_connections))
+        logger.debug('Processing %d JIRA connection definitions', len(jira_connections))
 
         exported_jira = []
 
         for row in jira_connections:
-            # Get the base connection details
+
+            if GENERIC.ATTR_NAME in row:
+                opaque = parse_instance_opaque_attr(row)
+                row.update(opaque)
+                del row[GENERIC.ATTR_NAME]
+
+            # Create connection entry with proper field order
             item = {
                 'name': row['name'],
-                'is_active': row['is_active'],
                 'address': row['address'],
                 'username': row['username'],
+                'api_version': row['api_version']
             }
 
-            # Add optional fields if present
-            for field in ['timeout', 'is_cloud', 'api_version']:
-                if field in row and row[field] is not None:
-                    item[field] = row[field]
+            if row.get('is_cloud') is True:
+                item['is_cloud'] = True
 
-            # Process any opaque attributes
-            if 'opaque_attr' in row and row['opaque_attr']:
-                opaque = parse_instance_opaque_attr(row)
-                item.update(opaque)
+            if (timeout := row.get('timeout')) and timeout != 600:
+                item['timeout'] = timeout
 
             exported_jira.append(item)
 
