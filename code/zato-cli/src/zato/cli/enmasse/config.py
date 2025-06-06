@@ -11,28 +11,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 class _object_type:
 
-    Security = 'security'                         # 1 2
+    Security = 'security'                         #
 
-    Channel_REST = 'channel_rest'                 # 1 2
-    Outgoing_REST = 'outgoing_rest'               # 1 2
-    Outgoing_SOAP = 'outgoing_soap'               # 1 2
+    Channel_REST = 'channel_rest'                 #
+    Outgoing_REST = 'outgoing_rest'               #
+    Outgoing_SOAP = 'outgoing_soap'               #
 
-    Cache = 'cache'                               # 1 2
+    Cache = 'cache'                               #
 
-    Odoo = 'odoo'                                 # 1 2
-    SQL  = 'sql'                                  # 1 2
-    Scheduler = 'scheduler'                       # 1 2
+    Odoo = 'odoo'                                 #
+    SQL  = 'sql'                                  #
+    Scheduler = 'scheduler'                       #
 
-    Email_IMAP = 'email_imap'                     # 1 2
-    Email_SMTP = 'email_smtp'                     # 1 2
+    Email_IMAP = 'email_imap'                     #
+    Email_SMTP = 'email_smtp'                     #
 
-    Groups = 'groups'                             # 1 2
+    Groups = 'groups'                             #
 
-    LDAP = 'ldap'                                 # 1 2
-    Confluence = 'confluence'                     # 1 2
-    Jira = 'jira'                                 # 1 2
-    Microsoft_365 = 'cloud_microsoft_365'         # 1 2
-    Search_ElasticSearch = 'elastic_search'       # 1
+    LDAP = 'ldap'                                 #
+    Confluence = 'confluence'                     #
+    Jira = 'jira'                                 #
+    Microsoft_365 = 'cloud_microsoft_365'         #
+    Search_ElasticSearch = 'elastic_search'       #
 
     # Channel_AMQP = 'channel_amqp'               #
     # Channel_WebSockets = 'channel_websockets'   #
