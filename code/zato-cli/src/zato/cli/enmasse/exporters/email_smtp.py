@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query import email_smtp_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -19,7 +20,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    
+
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
 
@@ -69,35 +70,42 @@ class SMTPExporter:
         # Get all SMTP connection definitions from the database
         smtp_defs = email_smtp_list(session, cluster_id)
 
-        if smtp_defs:
-            smtp_items = to_json(smtp_defs, return_as_dict=True)
-            logger.info('Processing %d SMTP connection definitions', len(smtp_items))
+        smtp_items = to_json(smtp_defs, return_as_dict=True)
 
-            for item in smtp_items:
-                if self._should_skip_item(item, excluded_names, excluded_prefixes):
-                    continue
+        for item in smtp_items:
+            if self._should_skip_item(item, excluded_names, excluded_prefixes):
+                continue
 
-                # Create base SMTP connection entry
-                smtp_conn = {
-                    'name': item['name'],
-                    'host': item['host'],
-                }
+            if GENERIC.ATTR_NAME in item:
+                opaque = parse_instance_opaque_attr(item)
+                item.update(opaque)
+                del item[GENERIC.ATTR_NAME]
 
-                # Add username if it's not empty
-                if 'username' in item and item['username']:
-                    smtp_conn['username'] = item['username']
+            smtp_conn = {
+                'name': item['name'],
+                'host': item['host'],
+                'port': item['port'],
+            }
 
-                # Add standard fields if present
-                for field in ['port', 'timeout', 'ping_address', 'is_tls', 'debug_level', 'mode', 'is_active']:
-                    if field in item and item[field] is not None:
-                        smtp_conn[field] = item[field]
+            if username := item.get('username'):
+                smtp_conn['username'] = username
 
-                # Handle opaque attributes
-                if 'opaque_attr' in item and item['opaque_attr']:
-                    opaque = parse_instance_opaque_attr(item)
-                    smtp_conn.update(opaque)
+            if item['mode'] != 'plain':
+                smtp_conn['mode'] = item['mode']
 
-                exported_smtp.append(smtp_conn)
+            if item['ping_address'].strip():
+                smtp_conn['ping_address'] = item['ping_address']
+
+            if item['timeout'] != 60:
+                smtp_conn['timeout'] = item['timeout']
+
+            if item.get('is_tls') is True:
+                smtp_conn['is_tls'] = True
+
+            if item.get('is_debug') and (debug_level := item.get('debug_level')):
+                smtp_conn['debug_level'] = debug_level
+
+            exported_smtp.append(smtp_conn)
 
         logger.info('Successfully prepared %d SMTP connection definitions for export', len(exported_smtp))
         return exported_smtp
