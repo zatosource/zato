@@ -148,7 +148,7 @@ class Enmasse(ZatoCommand):
 
             except Exception as e:
                 self.logger.error('Error during export: %s', str(e))
-                sys.exit(self.SYS_ERROR.INVALID_INPUT)
+                raise
 
         # Handle import
         elif getattr(args, 'import', False):
