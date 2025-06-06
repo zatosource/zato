@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import ODOO
 from zato.common.odb.model import to_json
 from zato.common.odb.query import out_odoo_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -51,11 +52,12 @@ class OdooExporter:
             return []
 
         odoo_connections = to_json(db_odoo_connections, return_as_dict=True)
-        logger.info('Processing %d Odoo connection definitions', len(odoo_connections))
+        logger.debug('Processing %d Odoo connection definitions', len(odoo_connections))
 
         exported_odoo_connections = []
 
         for row in odoo_connections:
+            # Start with required fields in the same order as import
             item = {
                 'name': row['name'],
                 'host': row['host'],
@@ -64,10 +66,18 @@ class OdooExporter:
                 'database': row['database']
             }
 
-            for field in ['is_active', 'protocol', 'pool_size', 'timeout', 'api_client']:
-                if field in row:
+            if (protocol := row.get('protocol')):
+                item['protocol'] = protocol
+
+            if (pool_size := row.get('pool_size')) and pool_size != ODOO.DEFAULT.POOL_SIZE:
+                item['pool_size'] = pool_size
+
+            # Include any non-default timeout or api_client if present
+            for field in ['timeout', 'api_client']:
+                if field in row and row[field]:
                     item[field] = row[field]
 
+            # Handle any opaque attributes
             if 'opaque_attr' in row and row['opaque_attr']:
                 opaque = parse_instance_opaque_attr(row)
                 item.update(opaque)

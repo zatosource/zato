@@ -52,14 +52,16 @@ class CacheExporter:
         exported_caches:'cache_def_list' = []
 
         for cache_obj in db_caches.result:
-            item = {'name': cache_obj.name,
+
+            item = {
+                'name': cache_obj.name,
                 'extend_expiry_on_get': cache_obj.extend_expiry_on_get,
                 'extend_expiry_on_set': cache_obj.extend_expiry_on_set,
             }
 
             exported_caches.append(item)
 
-        logger.info('Successfully prepared %d cache definitions for export')
+        logger.info('Successfully prepared %d cache definitions for export', len(exported_caches))
 
         return exported_caches
 
