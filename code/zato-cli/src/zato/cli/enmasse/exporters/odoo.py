@@ -77,11 +77,6 @@ class OdooExporter:
                 if field in row and row[field]:
                     item[field] = row[field]
 
-            # Handle any opaque attributes
-            if 'opaque_attr' in row and row['opaque_attr']:
-                opaque = parse_instance_opaque_attr(row)
-                item.update(opaque)
-
             exported_odoo_connections.append(item)
 
         logger.info('Successfully prepared %d Odoo connection definitions for export', len(exported_odoo_connections))
