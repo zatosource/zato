@@ -155,7 +155,7 @@ class OutgoingRESTImporter:
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
 
-        assign_security_to_outgoing(outgoing, outgoing_def, self.importer, session)
+        assign_security(outgoing, outgoing_def, self.importer, session)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
