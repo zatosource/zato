@@ -19,7 +19,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    
+
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
 
@@ -69,32 +69,46 @@ class IMAPExporter:
         # Get all IMAP connection definitions from the database
         imap_defs = email_imap_list(session, cluster_id)
 
-        if imap_defs:
-            imap_items = to_json(imap_defs, return_as_dict=True)
-            logger.info('Processing %d IMAP connection definitions', len(imap_items))
+        imap_items = to_json(imap_defs, return_as_dict=True)
 
-            for item in imap_items:
-                if self._should_skip_item(item, excluded_names, excluded_prefixes):
-                    continue
+        for item in imap_items:
+            if self._should_skip_item(item, excluded_names, excluded_prefixes):
+                continue
 
-                # Create base IMAP connection entry
-                imap_conn = {
-                    'name': item['name'],
-                    'host': item['host'],
-                    'username': item['username'],
-                }
+            # Create base IMAP connection entry with fields in import order
+            imap_conn = {
+                'name': item['name'],
+            }
 
-                # Add standard fields if present
-                for field in ['port', 'timeout', 'ssl', 'get_criteria', 'is_active']:
-                    if field in item:
-                        imap_conn[field] = item[field]
+            # Handle different server types
+            server_type = item['server_type']
+            imap_conn['server_type'] = server_type
 
-                # Handle opaque attributes
-                if 'opaque_attr' in item and item['opaque_attr']:
-                    opaque = parse_instance_opaque_attr(item)
-                    imap_conn.update(opaque)
+            if server_type == 'microsoft_365':
+                if tenant_id := item.get('tenant_id'):
+                    imap_conn['tenant_id'] = tenant_id
+                if client_id := item.get('client_id'):
+                    imap_conn['client_id'] = client_id
+            else:
+                # For standard IMAP, include host and port
+                if host := item.get('host'):
+                    imap_conn['host'] = host
+                if port := item.get('port'):
+                    imap_conn['port'] = port
 
-                exported_imap.append(imap_conn)
+            # Username is common for both types
+            if username := item.get('username'):
+                imap_conn['username'] = username
+
+            # Skip empty get_criteria
+            if (get_criteria := item.get('get_criteria')) and get_criteria != '{}':
+                imap_conn['get_criteria'] = get_criteria
+
+            # Only include timeout if not the default (30)
+            if (timeout := item.get('timeout')) and timeout != 30:
+                imap_conn['timeout'] = timeout
+
+            exported_imap.append(imap_conn)
 
         logger.info('Successfully prepared %d IMAP connection definitions for export', len(exported_imap))
         return exported_imap
