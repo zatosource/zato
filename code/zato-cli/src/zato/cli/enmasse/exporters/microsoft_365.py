@@ -14,6 +14,7 @@ from json import loads
 from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -61,63 +62,42 @@ class Microsoft365Exporter:
             return []
 
         microsoft_365_connections = to_json(db_microsoft_365, return_as_dict=True)
-        logger.info('Processing %d Microsoft 365 connection definitions', len(microsoft_365_connections))
-        
-        # For debugging purposes, log the structure of the first connection
-        if microsoft_365_connections:
-            logger.debug('Found Microsoft 365 connections: %s', len(microsoft_365_connections))
-            if logger.isEnabledFor(logging.DEBUG) and microsoft_365_connections:
-                logger.debug('First connection structure: %s', microsoft_365_connections[0])
+        logger.debug('Processing %d Microsoft 365 connection definitions', len(microsoft_365_connections))
 
         exported_microsoft_365 = []
 
         for row in microsoft_365_connections:
-            # Get the base connection details
+
+            if GENERIC.ATTR_NAME in row:
+                opaque = parse_instance_opaque_attr(row)
+                row.update(opaque)
+                del row[GENERIC.ATTR_NAME]
+
             item = {
-                'name': row['name'],
-                'is_active': row['is_active']
+                'name': row['name']
             }
 
-            # Fields like client_id and tenant_id are stored in opaque1, not as direct columns
-            
-            # Add optional fields if present
-            for field in OPTIONAL_FIELDS:
-                if (value := row.get(field)) is not None:
-                    item[field] = value
+            if client_id := row.get('client_id'):
+                item['client_id'] = client_id
 
-            # Process any opaque attributes using walrus operator
-            # When working with a dictionary, we need to extract opaque fields directly
-            if (opaque_json := row.get('opaque1')):
-                try:
-                    opaque = loads(opaque_json)
-                    # Add relevant fields from opaque data
-                    for field in OPAQUE_FIELDS:
-                        if (value := opaque.get(field)) is not None:
-                            item[field] = value
-                except Exception as e:
-                    logger.warning('Error processing opaque attributes: %s', e)
-            
-            # Special handling for client_id and tenant_id which might be stored in different places
-            # depending on the database structure
-            
-            # Extract directly from the record if present, or try attributes column
-            if 'client_id' not in item:
-                if (client_id := row.get('client_id')):
-                    item['client_id'] = client_id
-                # For testing environments, if we're dealing with a test record and client_id is still missing
-                elif 'enmasse' in row.get('name', ''):
-                    item['client_id'] = '12345678-1234-1234-1234-123456789abc'
-                    
-            if 'tenant_id' not in item:
-                if (tenant_id := row.get('tenant_id')):
-                    item['tenant_id'] = tenant_id
-                # For testing environments, if we're dealing with a test record and tenant_id is still missing
-                elif 'enmasse' in row.get('name', ''):
-                    item['tenant_id'] = '87654321-4321-4321-4321-cba987654321'
-                    
-            # For testing environments, ensure scopes are present
-            if 'scopes' not in item and 'enmasse' in row.get('name', ''):
-                item['scopes'] = 'Mail.Read Mail.Send'
+            if tenant_id := row.get('tenant_id'):
+                item['tenant_id'] = tenant_id
+
+            if scopes := row.get('scopes'):
+                lines = scopes.splitlines()
+                clean_scopes = [line.strip() for line in lines if line.strip()]
+
+                if clean_scopes:
+                    item['scopes'] = clean_scopes
+
+            if (pool_size := row.get('pool_size')) and pool_size != 10:
+                item['pool_size'] = pool_size
+
+            if (timeout := row.get('timeout')) and timeout != 600:
+                item['timeout'] = timeout
+
+            if recv_timeout := row.get('recv_timeout'):
+                item['recv_timeout'] = recv_timeout
 
             exported_microsoft_365.append(item)
 
