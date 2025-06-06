@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from json import loads
 
 # Zato
 from zato.common.api import GENERIC

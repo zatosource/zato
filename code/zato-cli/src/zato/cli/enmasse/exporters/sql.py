@@ -12,7 +12,6 @@ import logging
 from zato.cli.enmasse.util import get_type_from_engine
 from zato.common.odb.model import to_json
 from zato.common.odb.query import out_sql_list
-from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -94,7 +94,6 @@ class LDAPExporter:
             elif server_list := row.get('server_list'):
                 item['server_list'] = server_list
 
-
             if (pool_size := row.get('pool_size')) and pool_size != 1:
                 item['pool_size'] = pool_size
 
