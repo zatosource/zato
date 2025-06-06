@@ -17,7 +17,7 @@ class _object_type:
     Outgoing_REST = 'outgoing_rest'               # 1 2
     Outgoing_SOAP = 'outgoing_soap'               # 1 2
 
-    Cache = 'cache'                               # 1
+    Cache = 'cache'                               # 1 2
 
     Odoo = 'odoo'                                 # 1
     SQL  = 'sql'                                  # 1
