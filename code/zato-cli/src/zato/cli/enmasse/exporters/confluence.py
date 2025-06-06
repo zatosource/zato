@@ -79,23 +79,16 @@ class ConfluenceExporter:
 
             item = {
                 'name': row['name'],
+                'username': row['username'],
+                'address': row['address'],
+                'api_version': row['api_version']
             }
 
             if site_url := row.get('site_url'):
                 item['site_url'] = site_url
 
-            # Only include username if present
-            if username := row.get('username'):
-                item['username'] = username
-
             if row.get('is_cloud') is True:
                 item['is_cloud'] = True
-
-            if address := row.get('address'):
-                item['address'] = address
-
-            if api_version := row.get('api_version'):
-                item['api_version'] = api_version
 
             if (pool_size := row.get('pool_size')) and pool_size != 10:
                 item['pool_size'] = pool_size
