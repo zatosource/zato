@@ -204,17 +204,19 @@ def get_object_order(object_type:'str') -> 'strlist':
 
 class FileWriter:
 
-    def __init__(self, path:'str') -> 'None:
+    def __init__(self, path:'str') -> 'None':
         self.path = path
 
 # ################################################################################################################################
 
-    def write(self):
+    def write(self, data_dict:'anydict') -> 'None':
 
-        elements = get_top_level_order()
+        top_level = get_top_level_order()
+
+        print(111, data_dict)
 
         with open(self.path, 'w') as f:
-            for element in elements:
+            for element in top_level:
                 _ = f.write(f'{element}:\n\n')
 
 # ################################################################################################################################
