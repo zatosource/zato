@@ -28,10 +28,10 @@ class _object_type:
 
     Groups = 'groups'                             # 1 2
 
-    LDAP = 'ldap'                                 # 1
+    LDAP = 'ldap'                                 # 1 2
     Confluence = 'confluence'                     # 1
     Jira = 'jira'                                 # 1
-    Microsoft_365 = 'cloud_microsoft_365'         # 1
+    Microsoft_365 = 'cloud_microsoft_365'         # 1 2
     Search_ElasticSearch = 'elastic_search'       # 1
 
     # Channel_AMQP = 'channel_amqp'               #
