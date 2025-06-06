@@ -19,8 +19,8 @@ class _object_type:
 
     Cache = 'cache'                               # 1 2
 
-    Odoo = 'odoo'                                 # 1
-    SQL  = 'sql'                                  # 1
+    Odoo = 'odoo'                                 # 1 2
+    SQL  = 'sql'                                  # 1 2
     Scheduler = 'scheduler'                       # 1
 
     Email_IMAP = 'email_imap'                     # 1
