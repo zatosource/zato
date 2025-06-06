@@ -78,13 +78,13 @@ class Enmasse(ZatoCommand):
         # stdlib
         import os
         import sys
-        import yaml
 
         # Zato
         from zato.cli.enmasse.client import get_session_from_server_dir
         from zato.cli.enmasse.config import ModuleCtx
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
+        from zato.cli.enmasse.util import FileWriter
         from zato.common.util.api import get_client_from_server_conf
 
         # Get server path from the command line arguments
@@ -140,9 +140,8 @@ class Enmasse(ZatoCommand):
                         data_dict[key] = [item for item in items
                                          if any(name in str(item.get('name', '')).lower() for name in names)]
 
-                # Write output to file
-                with open(args.output, 'w') as f:
-                    yaml.dump(data_dict, f, default_flow_style=False, indent=4)
+                file_writer = FileWriter(args.output)
+                file_writer.write(data_dict)
 
                 self.logger.info('Exported configuration to %s', args.output)
 
