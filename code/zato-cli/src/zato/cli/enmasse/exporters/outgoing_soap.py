@@ -59,49 +59,38 @@ class OutgoingSOAPExporter:
         logger.info('Processing %d outgoing SOAP connection definitions', len(db_outgoing))
 
         for outgoing_row in db_outgoing:
-            # Handle both dict and object types safely
-            if hasattr(outgoing_row, 'toDict'):
-                logger.info('Processing outgoing SOAP connection row %s', outgoing_row.toDict())
-            else:
-                logger.info('Processing outgoing SOAP connection row %s', outgoing_row)
-            
-            # Get fields safely from either object or dict
-            def get_value(obj, field):
-                if isinstance(obj, dict):
-                    return obj.get(field)
-                else:
-                    return getattr(obj, field, None)
-            
+            logger.debug('Processing outgoing SOAP connection row %s', outgoing_row)
+
             exported_conn: 'anydict' = {
-                'name': get_value(outgoing_row, 'name'),
-                'host': get_value(outgoing_row, 'host'),
-                'url_path': get_value(outgoing_row, 'url_path'),
+                'name': outgoing_row['name'],
+                'host': outgoing_row['host'],
+                'url_path': outgoing_row['url_path'],
             }
 
-            # Add security if present
-            security_name = get_value(outgoing_row, 'security_name')
-            if security_name:
+            if security_name := outgoing_row.get('security_name'):
                 exported_conn['security'] = security_name
 
-            # Add SOAP-specific fields
-            soap_action = get_value(outgoing_row, 'soap_action')
-            if soap_action:
+            if soap_action := outgoing_row.get('soap_action'):
                 exported_conn['soap_action'] = soap_action
-            
-            soap_version = get_value(outgoing_row, 'soap_version')
-            if soap_version:
+
+            if soap_version := outgoing_row.get('soap_version'):
                 exported_conn['soap_version'] = soap_version
 
-            # Handle optional fields
-            optional_fields = ['data_format', 'is_active', 'timeout', 'content_type', 
-                             'content_encoding', 'pool_size', 'ping_method', 'tls_verify']
-            
-            for field in optional_fields:
-                value = get_value(outgoing_row, field)
-                if value is not None:
-                    exported_conn[field] = value
+            if data_format := outgoing_row.get('data_format'):
+                exported_conn['data_format'] = data_format
 
-            # Optional fields are already processed above
+            if (timeout := outgoing_row.get('timeout')) is not None and timeout != 60:
+                exported_conn['timeout'] = timeout
+
+            if (ping_method := outgoing_row.get('ping_method')) and ping_method != 'GET':
+                exported_conn['ping_method'] = ping_method
+
+            if outgoing_row.get('tls_verify') is False:
+                exported_conn['tls_verify'] = False
+
+            for field in ['content_type', 'content_encoding']:
+                if outgoing_row.get(field):
+                    exported_conn[field] = outgoing_row[field]
 
             exported_outgoing.append(exported_conn)
 
