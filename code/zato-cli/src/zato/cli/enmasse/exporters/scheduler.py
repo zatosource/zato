@@ -69,8 +69,8 @@ class SchedulerExporter:
             }
 
             for attr in ['weeks', 'days', 'hours', 'minutes', 'seconds']:
-                if attr in row and row[attr] is not None:
-                    item[attr] = row[attr]
+                if value := row.get(attr):
+                    item[attr] = value
 
             if repeats := row.get('repeats'):
                 item['repeats'] = repeats
