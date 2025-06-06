@@ -21,7 +21,7 @@ class _object_type:
 
     Odoo = 'odoo'                                 # 1 2
     SQL  = 'sql'                                  # 1 2
-    Scheduler = 'scheduler'                       # 1
+    Scheduler = 'scheduler'                       # 1 2
 
     Email_IMAP = 'email_imap'                     # 1
     Email_SMTP = 'email_smtp'                     # 1
