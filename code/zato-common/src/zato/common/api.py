@@ -530,7 +530,8 @@ class BROKER:
 # ################################################################################################################################
 
 class MISC:
-    DEFAULT_HTTP_TIMEOUT=10
+    DEFAULT_HTTP_METHOD = ''
+    DEFAULT_HTTP_TIMEOUT = 10
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
