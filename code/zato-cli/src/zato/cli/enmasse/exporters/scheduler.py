@@ -55,37 +55,35 @@ class SchedulerExporter:
             return []
 
         jobs = to_json(db_jobs, return_as_dict=True)
-        logger.info('Processing %d scheduler job definitions', len(jobs))
+        logger.debug('Processing %d scheduler job definitions', len(jobs))
 
         exported_jobs = []
 
         for row in jobs:
-            # Basic job information
+            # Start with name and service, matching import order
             item = {
                 'name': row['name'],
-                'is_active': row['is_active'],
+                'service': row['service_name'],
                 'job_type': row['job_type'],
-                'service': row['service_name']
+                'start_date': row['start_date'],
             }
 
-            # Include start_date if present
-            if 'start_date' in row and row['start_date']:
-                item['start_date'] = row['start_date']
-
-            # Include interval-based job attributes if present
-            for attr in _interval_based_job_attrs:
+            for attr in ['weeks', 'days', 'hours', 'minutes', 'seconds']:
                 if attr in row and row[attr] is not None:
                     item[attr] = row[attr]
 
+            if repeats := row.get('repeats'):
+                item['repeats'] = repeats
+
             # Include any extra fields that might be present
             for field in ['extra', 'max_repeats']:
-                if field in row and row[field]:
-                    item[field] = row[field]
+                if field_value := row.get(field):
+                    item[field] = field_value
 
-            # Process any opaque attributes
-            if 'opaque_attr' in row and row['opaque_attr']:
-                opaque = parse_instance_opaque_attr(row)
-                item.update(opaque)
+            if extra := row.get('extra'):
+                extra = extra.decode('utf8') if isinstance(extra, bytes) else extra
+                if extra.strip():
+                    item['extra'] = extra.splitlines()
 
             exported_jobs.append(item)
 
