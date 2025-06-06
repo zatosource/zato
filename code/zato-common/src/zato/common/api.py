@@ -623,8 +623,8 @@ class EMAIL:
                 return iter((self.SSL, self.PLAIN))
 
         class ServerType:
-            Generic = 'generic-imap'
-            Microsoft365 = 'microsoft-365'
+            Generic = 'generic'
+            Microsoft365 = 'microsoft_365'
 
         ServerTypeHuman = {
             ServerType.Generic: 'Generic IMAP',

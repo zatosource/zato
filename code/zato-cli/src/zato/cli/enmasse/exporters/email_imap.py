@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query import email_imap_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -72,17 +73,22 @@ class IMAPExporter:
         imap_items = to_json(imap_defs, return_as_dict=True)
 
         for item in imap_items:
+
             if self._should_skip_item(item, excluded_names, excluded_prefixes):
                 continue
+
+            if GENERIC.ATTR_NAME in item:
+                opaque = parse_instance_opaque_attr(item)
+                item.update(opaque)
+                del item[GENERIC.ATTR_NAME]
 
             # Create base IMAP connection entry with fields in import order
             imap_conn = {
                 'name': item['name'],
             }
 
-            # Handle different server types
-            server_type = item['server_type']
-            imap_conn['server_type'] = server_type
+            server_type = item.get('server_type')
+            imap_conn['type'] = server_type # We export the server type as "type"
 
             if server_type == 'microsoft_365':
                 if tenant_id := item.get('tenant_id'):
