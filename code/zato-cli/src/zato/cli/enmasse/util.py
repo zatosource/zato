@@ -182,7 +182,9 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
 
-    order['security'] = 'name', 'type',
+    order['security'] = 'name', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
+        'data_format', 'extra_fields:list'
+
     order['groups'] = 'name',
     order['channel_rest'] = 'name',
     order['outgoing_rest'] = 'name',
@@ -232,11 +234,14 @@ class FileWriter:
 
                         # Write the first field with dash ..
                         first_field = fields[0]
+
                         if first_field in item:
                             _ = f.write(f'  - {first_field}: {item[first_field]}\n')
 
                         # .. write remaining fields with indentation but no dash ..
                         for field in fields[1:]:
+
+                            # .. check if the optional field exists ..
                             if field in item:
                                 _ = f.write(f'    {field}: {item[field]}\n')
 
