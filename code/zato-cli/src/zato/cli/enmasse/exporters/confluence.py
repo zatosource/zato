@@ -14,6 +14,7 @@ from json import loads
 from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,30 +65,43 @@ class ConfluenceExporter:
             return []
 
         confluence_connections = to_json(db_confluence, return_as_dict=True)
-        logger.info('Processing %d Confluence connection definitions', len(confluence_connections))
+        logger.debug('Processing %d Confluence connection definitions', len(confluence_connections))
 
         exported_confluence = []
 
         for row in confluence_connections:
-            # Get all direct fields from the connection definition
-            item = {}
 
-            # Extract all direct fields that exist in the database model
-            for field in DIRECT_FIELDS:
-                if (value := row.get(field)) is not None:
-                    item[field] = value
+            # Process opaque attributes first
+            if GENERIC.ATTR_NAME in row:
+                opaque = parse_instance_opaque_attr(row)
+                row.update(opaque)
+                del row[GENERIC.ATTR_NAME]
 
-            # Process any opaque attributes using walrus operator
-            # When working with a dictionary, we need to extract opaque fields directly
-            if (opaque_json := row.get('opaque1')):
-                try:
-                    opaque = loads(opaque_json)
-                    # Add relevant fields from opaque data
-                    for field in OPAQUE_FIELDS:
-                        if (value := opaque.get(field)) is not None:
-                            item[field] = value
-                except Exception as e:
-                    logger.warning('Error processing opaque attributes: %s', e)
+            item = {
+                'name': row['name'],
+            }
+
+            if site_url := row.get('site_url'):
+                item['site_url'] = site_url
+
+            # Only include username if present
+            if username := row.get('username'):
+                item['username'] = username
+
+            if row.get('is_cloud') is True:
+                item['is_cloud'] = True
+
+            if address := row.get('address'):
+                item['address'] = address
+
+            if api_version := row.get('api_version'):
+                item['api_version'] = api_version
+
+            if (pool_size := row.get('pool_size')) and pool_size != 10:
+                item['pool_size'] = pool_size
+
+            if (timeout := row.get('timeout')) and timeout != 600:
+                item['timeout'] = timeout
 
             exported_confluence.append(item)
 
