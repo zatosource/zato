@@ -14,8 +14,8 @@ class _object_type:
     Security = 'security'                         # 1 2
 
     Channel_REST = 'channel_rest'                 # 1 2
-    Outgoing_REST = 'outgoing_rest'               # 1
-    Outgoing_SOAP = 'outgoing_soap'               # 1
+    Outgoing_REST = 'outgoing_rest'               # 1 2
+    Outgoing_SOAP = 'outgoing_soap'               # 1 2
 
     Cache = 'cache'                               # 1
 
