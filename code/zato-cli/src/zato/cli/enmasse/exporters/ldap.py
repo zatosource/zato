@@ -8,12 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from json import loads
 
 # Zato
 from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.sql import parse_instance_opaque_attr
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
@@ -63,40 +66,59 @@ class LDAPExporter:
             return []
 
         ldap_connections = to_json(db_ldap, return_as_dict=True)
-        logger.info('Processing %d LDAP connection definitions', len(ldap_connections))
+        logger.debug('Processing %d LDAP connection definitions', len(ldap_connections))
 
         exported_ldap = []
 
         for row in ldap_connections:
-            # Get the base connection details
+
+            if GENERIC.ATTR_NAME in row:
+                opaque = parse_instance_opaque_attr(row)
+                row.update(opaque)
+                del row[GENERIC.ATTR_NAME]
+
+            # Create base LDAP connection entry with fields in import order
             item = {
                 'name': row['name'],
-                'is_active': row['is_active'],
-                'username': row['username']
             }
 
-            # Extract server_list from different possible locations using walrus operator
-            if (address := row.get('address')) not in (None, ''):
+            if username := row.get('username'):
+                item['username'] = username
+
+            if auth_type := row.get('auth_type'):
+                item['auth_type'] = auth_type
+
+            if (address := row.get('address')) and address.strip():
                 item['server_list'] = address
-            elif (server_list := row.get('server_list')) is not None:
+
+            elif server_list := row.get('server_list'):
                 item['server_list'] = server_list
 
-            # Add optional fields if present
-            for field in OPTIONAL_FIELDS:
-                if (value := row.get(field)) is not None:
-                    item[field] = value
 
-            # Process any opaque attributes using walrus operator
-            # When working with a dictionary, we need to extract opaque fields directly
-            if (opaque_json := row.get('opaque1')):
-                try:
-                    opaque = loads(opaque_json)
-                    # Add relevant fields from opaque data
-                    for field in OPAQUE_FIELDS:
-                        if (value := opaque.get(field)) is not None:
-                            item[field] = value
-                except Exception as e:
-                    logger.warning('Error processing opaque attributes: %s', e)
+            if (pool_size := row.get('pool_size')) and pool_size != 1:
+                item['pool_size'] = pool_size
+
+            # Add other optional fields only if they have non-default values
+            defaults = {
+                'connect_timeout': 10,
+                'pool_exhaust_timeout': 5,
+                'pool_keep_alive': 30,
+                'pool_max_cycles': 1,
+                'pool_lifetime': 3600,
+                'pool_ha_strategy': 'ROUND_ROBIN',
+                'use_auto_range': True,
+                'should_return_empty_attrs': True,
+                'auto_bind': 'DEFAULT',
+                'get_info': 'SCHEMA',
+                'ip_mode': 'IP_SYSTEM_DEFAULT'
+            }
+
+            # Only add fields that aren't default values
+            for field in OPTIONAL_FIELDS:
+                if value := row.get(field):
+                    default = defaults.get(field)
+                    if default is None or value != default:
+                        item[field] = value
 
             exported_ldap.append(item)
 
