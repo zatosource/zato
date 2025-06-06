@@ -11,7 +11,6 @@ import logging
 # Zato
 from zato.common.odb.model import to_json
 from zato.common.odb.query import job_list
-from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
