@@ -223,16 +223,25 @@ class FileWriter:
 
                 # Check if this element exists on input
                 if element in data_dict:
+
                     # Get the field order dictionary
                     fields = get_object_order(element)
 
                     # Process each item in the data
                     for item in data_dict[element]:
-                        # For each field in the proper order
-                        for field in fields:
+
+                        # Write the first field with dash ..
+                        first_field = fields[0]
+                        if first_field in item:
+                            _ = f.write(f'  - {first_field}: {item[first_field]}\n')
+
+                        # .. write remaining fields with indentation but no dash ..
+                        for field in fields[1:]:
                             if field in item:
-                                # Write the field with proper indentation
-                                _ = f.write(f'  - {field}: {item[field]}\n\n')
+                                _ = f.write(f'    {field}: {item[field]}\n')
+
+                        # .. and add blank line after each item.
+                        _ = f.write('\n')
 
 
 # ################################################################################################################################
