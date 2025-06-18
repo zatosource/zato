@@ -24,25 +24,20 @@ from gevent import sleep, spawn
 from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
-# Python 2/3 compatibility
-from zato.common.ext.future.utils import itervalues
-from zato.common.py23_.past.builtins import xrange
-
 # Zato
 from zato.common.api import AMQP, CHANNEL, SECRET_SHADOW
 from zato.common.version import get_version
 from zato.common.util.api import get_component_name
+from zato.common.typing_ import cast_
 from zato.server.connection.connector import Connector, Inactive
 
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from typing import Any, Callable
-
-    Any = Any
+    from kombu.connection import Connection as KombuAMQPConnection
+    from zato.common.typing_ import any_, callable_, strdict
     Bunch = Bunch
-    Callable = Callable
 
 # ################################################################################################################################
 
@@ -62,8 +57,7 @@ no_ack = {
 
 # ################################################################################################################################
 
-def _is_tls_config(config):
-    # type: (Bunch) -> bool
+def _is_tls_config(config:'Bunch') -> 'bool':
     return config.conn_url.startswith('amqps://')
 
 # ################################################################################################################################
@@ -81,8 +75,7 @@ class _AMQPProducers:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one _AMQPProducers object assigned.
     """
-    def __init__(self, config):
-        # type: (dict)
+    def __init__(self, config:'strdict') -> 'None':
         self.config = config
         self.name = self.config.name
         self.get_conn_class_func = config.get_conn_class_func
@@ -106,7 +99,7 @@ class _AMQPProducers:
         return self.pool[self.conn].acquire(*args, **kwargs)
 
     def stop(self):
-        for pool in itervalues(self.pool):
+        for pool in self.pool.values():
             pool.connections.force_close_all()
 
 # ################################################################################################################################
@@ -114,8 +107,7 @@ class _AMQPProducers:
 class Consumer:
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
-    def __init__(self, config, on_amqp_message):
-        # type: (dict, Callable)
+    def __init__(self, config:'strdict', on_amqp_message:'callable_') -> 'None':
         self.config = config
         self.name = self.config.name
         self.queue = [Queue(self.config.queue)]
@@ -152,7 +144,7 @@ class Consumer:
                 consumer = _Consumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
                     no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
-                consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
+                _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
             except Exception:
                 err_conn_attempts += 1
@@ -178,7 +170,7 @@ class Consumer:
         """
         try:
 
-            connection = None
+            connection = cast_('KombuAMQPConnection', None)
             consumer = self._get_consumer()
             self.is_connected = True
 
@@ -193,7 +185,7 @@ class Consumer:
             while self.keep_running:
                 try:
 
-                    connection = consumer.connection
+                    connection = cast_('KombuAMQPConnection', consumer.connection)
 
                     # Do not assume the consumer still has the connection, it may have been already closed, we don't know.
                     # Unfortunately, the only way to check it is to invoke the method and catch AttributeError
@@ -207,7 +199,7 @@ class Consumer:
                 except AMQPConnectionError:
                     logger.warning('Caught AMQP connection error in mainloop e:`%s`', format_exc())
                     if connection:
-                        connection.close()
+                        _ = connection.close()
                         consumer = self._get_consumer()
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
@@ -300,8 +292,12 @@ class ConnectorAMQP(Connector):
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
 
-        class _AMQPTransport(SSLTransport if is_tls else Transport):
-            Connection = _PyAMQPConnection
+        if is_tls:
+            class _AMQPTransport(SSLTransport): # type: ignore
+                Connection = _PyAMQPConnection
+        else:
+            class _AMQPTransport(Transport):
+                Connection = _PyAMQPConnection
 
         class _AMQPConnection(Connection):
             def get_transport_cls(self):
@@ -320,7 +316,7 @@ class ConnectorAMQP(Connector):
 
         test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(
             self.config.conn_url, frame_max=self.config.frame_max)
-        test_conn.connect()
+        _ = test_conn.connect()
         self.is_connected = test_conn.connected
 
         # Close the connection object which was needed only to confirm that the remote end can be reached.
@@ -394,10 +390,10 @@ class ConnectorAMQP(Connector):
     def create_channels(self):
         """ Sets up AMQP consumers for all channels.
         """
-        for config in itervalues(self.channels):
+        for config in self.channels.values():
             self._enrich_channel_config(config)
 
-            for _x in xrange(config.pool_size):
+            for _x in range(config.pool_size):
                 spawn(self._create_consumer, config)
 
 # ################################################################################################################################
@@ -407,7 +403,7 @@ class ConnectorAMQP(Connector):
         because self.outconns entries are already available.
         """
         with self.lock:
-            for config in itervalues(self.outconns):
+            for config in self.outconns.values():
                 self._create_producers(config)
 
 # ################################################################################################################################
@@ -442,7 +438,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _stop_producers(self):
-        for producer in itervalues(self._producers):
+        for producer in self._producers.values():
             try:
                 producer.stop()
             except Exception:
@@ -459,7 +455,7 @@ class ConnectorAMQP(Connector):
         self.channels[config.name] = config
         self._enrich_channel_config(config)
 
-        for _x in xrange(config.pool_size):
+        for _x in range(config.pool_size):
             spawn(self._create_consumer, config)
 
 # ################################################################################################################################
