@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pylint: disable=attribute-defined-outside-init
-
 # stdlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 from logging import getLogger
 from socket import error as socket_error
 from traceback import format_exc
@@ -27,7 +25,7 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 # Zato
 from zato.common.api import AMQP, CHANNEL, SECRET_SHADOW
 from zato.common.version import get_version
-from zato.common.util.api import get_component_name
+from zato.common.util.api import get_component_name, utcnow
 from zato.common.typing_ import cast_
 from zato.server.connection.connector import Connector, Inactive
 
@@ -36,7 +34,7 @@ from zato.server.connection.connector import Connector, Inactive
 if 0:
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
-    from zato.common.typing_ import any_, callable_, strdict
+    from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple
     Bunch = Bunch
 
 # ################################################################################################################################
@@ -251,13 +249,13 @@ class Consumer:
 
             # self.timeout is multiplied by 2 because it's used twice in the main loop in self.start
             # plus a bit of additional time is added.
-            now = datetime.utcnow()
+            now = utcnow()
             delta = (self.timeout * 2) + 0.2
             until = now + timedelta(seconds=delta)
 
             while now < until:
                 sleep(0.1)
-                now = datetime.utcnow()
+                now = utcnow()
                 if self.is_stopped:
                     return
 
@@ -381,7 +379,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _enrich_channel_config(self, config):
+    def _enrich_channel_config(self, config:'strdict') -> 'None':
         config.conn_class = self._get_conn_class('channel/{}'.format(config.name), _is_tls_config(self.config))
         config.conn_url = self.config.conn_url
 
@@ -393,8 +391,8 @@ class ConnectorAMQP(Connector):
         for config in self.channels.values():
             self._enrich_channel_config(config)
 
-            for _x in range(config.pool_size):
-                spawn(self._create_consumer, config)
+            for _ in range(config.pool_size):
+                _ = spawn(self._create_consumer, config)
 
 # ################################################################################################################################
 
@@ -408,8 +406,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_consumer(self, config):
-        # type: (str)
+    def _create_consumer(self, config:'strdict') -> 'None':
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
         consumer = Consumer(config, self.on_amqp_message)
@@ -420,8 +417,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_producers(self, config):
-        # type: (dict)
+    def _create_producers(self, config:'strdict') -> 'None':
         """ Creates outgoing AMQP producers using kombu.
         """
         config.conn_url = self.config.conn_url
@@ -448,19 +444,18 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_channel(self, config):
-        # type: (dict)
+    def _create_channel(self, config:'strdict') -> 'None':
         """ Creates a channel. Must be called with self.lock held.
         """
         self.channels[config.name] = config
         self._enrich_channel_config(config)
 
         for _x in range(config.pool_size):
-            spawn(self._create_consumer, config)
+            _ = spawn(self._create_consumer, config)
 
 # ################################################################################################################################
 
-    def create_channel(self, config):
+    def create_channel(self, config:'strdict') -> 'None':
         """ Creates a channel.
         """
         with self.lock:
@@ -470,8 +465,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_channel(self, config):
-        # type: (dict)
+    def edit_channel(self, config:'strdict') -> 'None':
         """ Obtains self.lock and updates a channel
         """
         with self.lock:
@@ -484,7 +478,6 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _delete_channel(self, config, delete_from_channels=True):
-        # type: (dict)
         """ Deletes a channel. Must be called with self.lock held.
         """
         # Closing consumers may take time so we report the progress after about each 5% of consumers is closed,
@@ -517,8 +510,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def delete_channel(self, config):
-        # type: (dict)
+    def delete_channel(self, config:'strdict') -> 'None':
         """ Obtains self.lock and deletes a channel.
         """
         with self.lock:
@@ -528,8 +520,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_outconn(self, config):
-        # type: (dict)
+    def _create_outconn(self, config:'strdict') -> 'None':
         """ Creates an outgoing connection. Must be called with self.lock held.
         """
         self.outconns[config.name] = config
@@ -537,8 +528,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def create_outconn(self, config):
-        # type: (dict)
+    def create_outconn(self, config:'strdict') -> 'None':
         """ Creates an outgoing connection.
         """
         with self.lock:
@@ -548,8 +538,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_outconn(self, config):
-        # type: (dict)
+    def edit_outconn(self, config:'strdict') -> 'None':
         """ Obtains self.lock and updates an outgoing connection.
         """
         with self.lock:
@@ -561,8 +550,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _delete_outconn(self, config):
-        # type: (dict)
+    def _delete_outconn(self, config:'strdict') -> 'None':
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
         # It will be old_name if this is an edit and name if it a deletion.
@@ -574,8 +562,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def delete_outconn(self, config):
-        # type: (dict)
+    def delete_outconn(self, config:'strdict') -> 'None':
         """ Obtains self.lock and deletes an outgoing connection.
         """
         with self.lock:
@@ -585,9 +572,17 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def invoke(self, out_name, msg, exchange='/', routing_key=None, properties=None, headers=None,
-            _default_out_keys=_default_out_keys, **kwargs):
-        # type: (str, str, str, str, dict, dict, Any, Any)
+    def invoke(
+        self,
+        out_name:'str',
+        msg:'str',
+        exchange:'str'='/',
+        routing_key:'str | None'=None,
+        properties:'strdictnone'=None,
+        headers:'strdictnone'=None,
+        _default_out_keys:'strtuple'=_default_out_keys,
+        **kwargs:'any_',
+    ):
         """ Synchronously publishes a message to an AMQP broker.
         """
         with self.lock:
