@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}AMQP outconns{% endblock %}
+{% block html_title %}AMQP outgoing connections{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -204,11 +204,6 @@
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Definition</td>
-                            <td>{{ create_form.def_id }}</td>
                         </tr>
 
                         <tr>
