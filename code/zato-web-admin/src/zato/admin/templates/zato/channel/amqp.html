@@ -125,20 +125,20 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }} | <label>Pool size {{ create_form.pool_size }}</label> | <label>Data format {{ create_form.data_format }}</label></td>
-                        </tr>
-
-                        <tr>
                             <td style="vertical-align:middle">Address</td>
-                            <td>{{ create_form.queue }}</td>
+                            <td>{{ create_form.queue }} | <label>Pool size {{ create_form.pool_size }}</label></td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Username</td>
+                            <td>{{ create_form.username }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Constumer tag prefix</td>
                             <td>{{ create_form.consumer_tag_prefix }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Password</td>
                             <td>{{ create_form.password }}</td>
@@ -166,6 +166,11 @@
                             <td>{{ create_form.service }}</td>
                         </tr>
 
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }} | <label>Data format {{ create_form.data_format }}</label></td>
+                        </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -188,20 +193,15 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }} | <label>Pool size {{ edit_form.pool_size }}</label> | <label>Data format {{ edit_form.data_format }}</label></td>
-                        </tr>
-
-                        <tr>
                             <td style="vertical-align:middle">Address</td>
-                            <td>{{ edit_form.queue }}</td>
+                            <td>{{ edit_form.queue }} | <label>Pool size {{ edit_form.pool_size }}</label></td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ edit_form.consumer_tag_prefix }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Password</td>
                             <td>{{ edit_form.password }}</td>
@@ -227,6 +227,11 @@
                         <tr class="more-options-block hidden">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }} | <label>Data format {{ edit_form.data_format }}</label></td>
                         </tr>
 
                         <tr>
