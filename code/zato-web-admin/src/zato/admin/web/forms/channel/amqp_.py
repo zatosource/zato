@@ -33,7 +33,7 @@ class CreateForm(DataFormatForm):
 
         self.fields['ack_mode'].choices = []
         for item in AMQP.ACK_MODE():
-            self.fields['ack_mode'].choices.append([item.id, item.name])
+            self.fields['ack_mode'].choices.append([item.id, item.name]) # type: ignore
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
