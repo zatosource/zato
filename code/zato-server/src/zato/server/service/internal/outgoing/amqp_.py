@@ -52,7 +52,8 @@ class Create(AdminService):
         request_elem = 'zato_outgoing_amqp_create_request'
         response_elem = 'zato_outgoing_amqp_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
+        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding', 
+            'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -80,6 +81,9 @@ class Create(AdminService):
                 item = OutgoingAMQP()
                 item.name = input.name
                 item.is_active = input.is_active
+                item.address = input.address
+                item.username = input.username
+                item.password = input.password
                 item.delivery_mode = input.delivery_mode
                 item.priority = input.priority
                 item.content_type = input.content_type
@@ -116,7 +120,8 @@ class Edit(AdminService):
         request_elem = 'zato_outgoing_amqp_edit_request'
         response_elem = 'zato_outgoing_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
+        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding', 
+            'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -147,6 +152,9 @@ class Edit(AdminService):
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
+                item.address = input.address
+                item.username = input.username
+                item.password = input.password
                 item.delivery_mode = input.delivery_mode
                 item.priority = input.priority
                 item.content_type = input.content_type
