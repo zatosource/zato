@@ -50,10 +50,10 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_create_request'
         response_elem = 'zato_channel_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
+        input_required = ('cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
             'ack_mode','prefetch_count')
-        input_optional = ('data_format',)
-        output_required = ('id', 'name')
+        input_optional = 'data_format'
+        output_required = 'id', 'name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -84,6 +84,8 @@ class Create(AdminService):
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue
+                item.username = input.username
+                item.password = input.password
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
                 item.pool_size = input.pool_size
@@ -119,9 +121,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_edit_request'
         response_elem = 'zato_channel_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'service',
-            'pool_size', 'ack_mode','prefetch_count')
-        input_optional = ('data_format',)
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue',
+            'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode','prefetch_count')
+        input_optional = 'data_format'
         output_required = ('id', 'name')
 
     def handle(self):
@@ -155,6 +157,8 @@ class Edit(AdminService):
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue
+                item.username = input.username
+                item.password = input.password
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
                 item.pool_size = input.pool_size

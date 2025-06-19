@@ -32,6 +32,9 @@ def _get_edit_create_message(params, prefix=''):
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'queue': params[prefix + 'queue'],
+        'address': params[prefix + 'address'],
+        'username': params.get(prefix + 'username'),
+        'password': params.get(prefix + 'password'),
         'consumer_tag_prefix': params[prefix + 'consumer_tag_prefix'],
         'service': params[prefix + 'service'],
         'pool_size': params.get(prefix + 'pool_size'),
@@ -41,9 +44,7 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(client, verb, id, name):
-    return_data = {'id': id,
-                   'message': 'Successfully {} the AMQP channel `{}`'.format(verb, name),
-                }
+    return_data = {'id': id, 'message': 'Successfully {} the AMQP channel `{}`'.format(verb, name)}
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 class Index(_Index):
