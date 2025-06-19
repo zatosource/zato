@@ -86,12 +86,10 @@
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 
-
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.amqp.create()">Create a new outgoing AMQP connection</a>
         </div>
-
 
         <div id="markup">
             <table id="data-table">
@@ -235,12 +233,12 @@
 
                         <tr class="more-options-block hidden">
                             <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }} | <label>Pool size {{ create_form.pool_size }}</label> | <label>Expiration <span class='form_hint'>(ms)</span> {{ create_form.expiration }}</label></td>
+                            <td>{{ create_form.is_active }} | <label>Pool size {{ create_form.pool_size }}</label> | <label>Priority <span class='form_hint'>(0-9)</span> {{ create_form.priority }}</label></td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
-                            <td>{{ create_form.priority }} | <label>Delivery mode {{ create_form.delivery_mode }}</label></td>
+                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
+                            <td>{{ create_form.expiration }} | <label>Delivery {{ create_form.delivery_mode }}</label></td>
                         </tr>
 
                         <tr class="more-options-block hidden">
@@ -252,10 +250,6 @@
                             <td style="vertical-align:middle">Encoding</td>
                             <td>{{ create_form.content_encoding }}</td>
                         </tr>
-
-
-
-
 
                         <tr class="more-options-block hidden">
                             <td style="vertical-align:middle">App ID</td>
@@ -309,12 +303,12 @@
 
                         <tr class="more-options-block hidden">
                             <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }} | <label>Pool size {{ edit_form.pool_size }}</label> | <label>Expiration <span class='form_hint'>(ms)</span> {{ edit_form.expiration }}</label></td>
+                            <td>{{ edit_form.is_active }} | <label>Pool size {{ edit_form.pool_size }}</label> | <label>Priority <span class='form_hint'>(0-9)</span> {{ edit_form.priority }}</label></td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
-                            <td>{{ edit_form.priority }} | <label>Delivery mode {{ edit_form.delivery_mode }}</label></td>
+                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
+                            <td>{{ edit_form.expiration }} | <label>Delivery {{ edit_form.delivery_mode }}</label></td>
                         </tr>
 
                         <tr class="more-options-block hidden">
@@ -326,10 +320,6 @@
                             <td style="vertical-align:middle">Encoding</td>
                             <td>{{ edit_form.content_encoding }}</td>
                         </tr>
-
-
-
-
 
                         <tr class="more-options-block hidden">
                             <td style="vertical-align:middle">App ID</td>
