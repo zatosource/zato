@@ -22,6 +22,9 @@ from zato.common.api import AMQP
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:50%'}))
     delivery_mode = forms.ChoiceField(widget=forms.Select())
     priority = forms.CharField(initial=AMQP.DEFAULT.PRIORITY, widget=forms.TextInput(attrs={'style':'width:5%'}))
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
@@ -41,7 +44,7 @@ class CreateForm(forms.Form):
         modes = sorted(iteritems(delivery_friendly_name), key=itemgetter(1))
 
         for mode, friendly_name in modes:
-            self.fields['delivery_mode'].choices.append([mode, friendly_name])
+            self.fields['delivery_mode'].choices.append([mode, friendly_name]) # type: ignore
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
