@@ -98,7 +98,6 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = CHANNEL.AMQP_CREATE.value
-                input.def_name = item.def_.name
                 input.id = item.id
                 input.service_name = service.name
                 self.broker_client.publish(input)
@@ -172,7 +171,6 @@ class Edit(AdminService):
                 session.commit()
 
                 input.action = CHANNEL.AMQP_EDIT.value
-                input.def_name = item.def_.name
                 input.id = item.id
                 input.old_name = old_name
                 input.service_name = service.name
@@ -207,7 +205,6 @@ class Delete(AdminService):
                     one()
 
                 item_id = item.id
-                def_name = item.def_.name
 
                 session.delete(item)
                 session.commit()
@@ -216,7 +213,6 @@ class Delete(AdminService):
                     'action': CHANNEL.AMQP_DELETE.value,
                     'name': item.name,
                     'id':item_id,
-                    'def_name':def_name,
                 })
 
             except Exception:
