@@ -714,8 +714,6 @@ class OutgoingAMQP(Base):
     address = Column(String(200), nullable=False)
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
-    frame_max = Column(Integer(), nullable=False)
-    heartbeat = Column(Integer(), nullable=False)
 
     delivery_mode = Column(SmallInteger(), nullable=False)
     priority = Column(SmallInteger(), server_default=str(AMQP.DEFAULT.PRIORITY), nullable=False)
@@ -726,6 +724,9 @@ class OutgoingAMQP(Base):
     user_id = Column(String(200), nullable=True)
     app_id = Column(String(200), nullable=True)
     pool_size = Column(SmallInteger(), nullable=False)
+
+    frame_max = Column(Integer(), nullable=True)
+    heartbeat = Column(Integer(), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
@@ -862,8 +863,6 @@ class ChannelAMQP(Base):
     address = Column(String(200), nullable=False)
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
-    frame_max = Column(Integer(), nullable=False)
-    heartbeat = Column(Integer(), nullable=False)
 
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=True)
@@ -871,6 +870,9 @@ class ChannelAMQP(Base):
     ack_mode = Column(String(20), nullable=False)
     prefetch_count = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
+
+    frame_max = Column(Integer(), nullable=True)
+    heartbeat = Column(Integer(), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
