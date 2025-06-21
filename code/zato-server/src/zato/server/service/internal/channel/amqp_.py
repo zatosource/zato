@@ -83,9 +83,10 @@ class Create(AdminService):
                 item = ChannelAMQP()
                 item.name = input.name
                 item.is_active = input.is_active
-                item.queue = input.queue
+                item.address = input.address
                 item.username = input.username
                 item.password = input.password
+                item.queue = input.queue
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
                 item.pool_size = input.pool_size
@@ -156,9 +157,10 @@ class Edit(AdminService):
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
-                item.queue = input.queue
+                item.address = input.address
                 item.username = input.username
                 item.password = input.password
+                item.queue = input.queue
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
                 item.pool_size = input.pool_size
