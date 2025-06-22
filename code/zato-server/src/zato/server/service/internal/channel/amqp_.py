@@ -29,8 +29,8 @@ class GetList(AdminService):
         request_elem = 'zato_channel_amqp_get_list_request'
         response_elem = 'zato_channel_amqp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'service_name',
-            'pool_size', 'ack_mode','prefetch_count')
+        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix',
+            'service_name', 'pool_size', 'ack_mode','prefetch_count')
         output_optional = ('data_format',)
 
     def get_data(self, session):

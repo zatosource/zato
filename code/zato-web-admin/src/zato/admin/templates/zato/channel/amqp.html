@@ -34,11 +34,9 @@
             '_selection',
             'name',
             '_is_active',
+            'address',
+            'username',
             'queue',
-            'consumer_tag_prefix',
-            'pool_size',
-            'ack_mode',
-            'prefetch_count',
             'service',
             '_edit',
             '_delete',
@@ -77,11 +75,9 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Username</a></th>
                         <th><a href="#">Queue</a></th>
-                        <th><a href="#">Consumer tag prefix</a></th>
-                        <th><a href="#">Pool size</a></th>
-                        <th><a href="#">Ack mode</a></th>
-                        <th><a href="#">Prefetch count</a></th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -97,11 +93,9 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.username }}</td>
                         <td>{{ item.queue }}</td>
-                        <td>{{ item.consumer_tag_prefix }}</td>
-                        <td>{{ item.pool_size }}</td>
-                        <td>{{ item.ack_mode }}</td>
-                        <td>{{ item.prefetch_count }}</td>
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.delete_('{{ item.id }}')">Delete</a></td>
