@@ -40,13 +40,11 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.address || '');
+    row += String.format('<td>{0}</td>', item.username || '');
     row += String.format('<td>{0}</td>', item.queue);
-    row += String.format('<td>{0}</td>', item.consumer_tag_prefix);
-    row += String.format('<td>{0}</td>', item.pool_size);
-    row += String.format('<td>{0}</td>', item.ack_mode);
-    row += String.format('<td>{0}</td>', item.prefetch_count);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.edit('{0}')\">", item.id) + "Edit</a>");
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.amqp.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
@@ -60,7 +58,7 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.channel.amqp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'AMQP channel [{0}] deleted',
-        'Are you sure you want to delete the AMQP channel [{0}]?',
+        'AMQP channel `{0}` deleted',
+        'Are you sure you want to delete AMQP channel [{0}]?',
         true);
 }
