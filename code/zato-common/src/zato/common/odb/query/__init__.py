@@ -331,10 +331,21 @@ def oauth_list(session, cluster_id, needs_columns=False):
 
 def _out_amqp(session, cluster_id):
     return session.query(
-        OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active,
-        OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, OutgoingAMQP.content_type,
-        OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.pool_size, OutgoingAMQP.user_id,
-        OutgoingAMQP.app_id).\
+        OutgoingAMQP.id,
+        OutgoingAMQP.name,
+        OutgoingAMQP.is_active,
+        OutgoingAMQP.address,
+        OutgoingAMQP.username,
+        OutgoingAMQP.password,
+        OutgoingAMQP.delivery_mode,
+        OutgoingAMQP.priority,
+        OutgoingAMQP.content_type,
+        OutgoingAMQP.content_encoding,
+        OutgoingAMQP.expiration,
+        OutgoingAMQP.pool_size,
+        OutgoingAMQP.user_id,
+        OutgoingAMQP.app_id
+        ).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingAMQP.name)
 
@@ -355,9 +366,17 @@ def out_amqp_list(session, cluster_id, needs_columns=False):
 
 def _channel_amqp(session, cluster_id):
     return session.query(
-        ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active,
-        ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix,
-        ChannelAMQP.pool_size, ChannelAMQP.ack_mode, ChannelAMQP.prefetch_count,
+        ChannelAMQP.id,
+        ChannelAMQP.name,
+        ChannelAMQP.is_active,
+        ChannelAMQP.address,
+        ChannelAMQP.username,
+        ChannelAMQP.password,
+        ChannelAMQP.queue,
+        ChannelAMQP.consumer_tag_prefix,
+        ChannelAMQP.pool_size,
+        ChannelAMQP.ack_mode,
+        ChannelAMQP.prefetch_count,
         ChannelAMQP.data_format,
         Service.name.label('service_name'),
         Service.impl_name.label('service_impl_name')).\
