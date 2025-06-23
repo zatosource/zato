@@ -79,9 +79,9 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
-                        <th><a href="#">Username</a></th>
-                        <th><a href="#">App ID</a></th>
+                        <th style="text-align:center"><a href="#">Address</a></th>
+                        <th style="text-align:center"><a href="#">Username</a></th>
+                        <th style="text-align:center"><a href="#">App ID</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -105,9 +105,9 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address|no_value_indicator }}</td>
-                        <td>{{ item.username|no_value_indicator }}</td>
-                        <td>{{ item.app_id|no_value_indicator }}</td>
+                        <td style="text-align:center">{{ item.address }}</td>
+                        <td style="text-align:center">{{ item.username }}</td>
+                        <td style="text-align:center">{{ item.app_id }}</td>
                         <td>
                             <a href="{% url "out-amqp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
                         </td>
