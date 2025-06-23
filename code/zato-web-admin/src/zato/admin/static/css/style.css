@@ -835,9 +835,11 @@ div.page_prompt a.current {
     margin-left: 2px;
 }
 
-#data-table * tr.odd:hover,
-#data-table * tr.even:hover,
-table.multi-select-table tr:hover
+/* Only apply hover effect when there are 2 or more rows */
+#data-table tbody tr:nth-child(1):hover:nth-last-child(n+2),
+#data-table tbody tr:nth-child(2):hover:nth-last-child(n+1),
+table.multi-select-table tbody tr:nth-child(1):hover:nth-last-child(n+2),
+table.multi-select-table tbody tr:nth-child(2):hover:nth-last-child(n+1)
 {
     background-color: rgb(211, 229, 238);
     border-top:1px solid #222 !important;
