@@ -287,7 +287,7 @@ span.like-a {
     background-color: #fff
 }
 
-/* Conditional hover effect - only apply if table has 3+ rows */
+/* Conditional hover effect - only apply if table has 3+ rows - DISABLED to always use lighter hover effect
 #data-table tbody tr:nth-child(1):hover:nth-last-child(n+3),
 #data-table tbody tr:nth-child(2):hover:nth-last-child(n+2),
 #data-table tbody tr:nth-child(3) ~ tr:hover,
@@ -295,6 +295,7 @@ span.like-a {
     background-color: var(--zato-seablue-light2) !important;
     color: #fff !important;
 }
+*/
 
 
 #data-table tr.updated {
