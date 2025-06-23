@@ -3,11 +3,10 @@
 
 $.fn.zato.data_table.OutgoingAMQP = new Class({
     toString: function() {
-        var s = '<OutgoingAMQP id:{0} name:{1} is_active:{2} def_id:{3} content_encoding:{4}>';
+        var s = '<OutgoingAMQP id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
-                                this.is_active ? this.is_active : '(none)',
-                                this.content_encoding ? this.content_encoding : '(none)');
+                            );
     }
 });
 
@@ -18,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingAMQP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.amqp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'delivery_mode', 'priority', 'pool_size', 'def_id']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'username', 'password', 'delivery_mode', 'priority', 'pool_size']);
 })
 
 $.fn.zato.outgoing.amqp.create = function() {
@@ -26,7 +25,7 @@ $.fn.zato.outgoing.amqp.create = function() {
 }
 
 $.fn.zato.outgoing.amqp.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing AMQP connection', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update outgoing AMQP connection', id);
 }
 
 $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
@@ -39,43 +38,31 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
 
-    // 1
+    // Numbering and checkbox
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
-    // 2
+    // Visible columns: name, active, address, username, app ID
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-
-    // 3
-    row += String.format('<td>{0}</td>', data.delivery_mode_text || $.fn.zato.empty_value);
-
-    // 4
-    row += String.format('<td>{0}</td>', item.expiration || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.pool_size || $.fn.zato.empty_value);
-
-    // 5
-    row += String.format('<td>{0}</td>', item.user_id || $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.address || $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.username || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.app_id || $.fn.zato.empty_value);
+
+    // Action buttons
     row += String.format('<td><a href="/zato/outgoing/amqp/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
         item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.edit('{0}')\">Edit</a>", item.id));
-
-    // 6
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.amqp.delete_({0});'>Delete</a>", item.id));
+
+    // Hidden columns
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-
-    // 7
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_mode || '');
     row += String.format("<td class='ignore'>{0}</td>", item.priority || '');
-
-    // 8
     row += String.format("<td class='ignore'>{0}</td>", item.content_type || '');
     row += String.format("<td class='ignore'>{0}</td>", item.content_encoding || '');
     row += String.format("<td class='ignore'>{0}</td>", item.expiration || '');
-
-    // 9
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size || '');
     row += String.format("<td class='ignore'>{0}</td>", item.user_id || '');
     row += String.format("<td class='ignore'>{0}</td>", item.app_id || '');

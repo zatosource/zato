@@ -128,7 +128,7 @@ def edit(req):
 
 class Delete(_Delete):
     url_name = 'out-amqp-delete'
-    error_message = 'Could not delete the outgoing AMQP connection'
+    error_message = 'Could not delete outgoing AMQP connection'
     service_name = 'zato.outgoing.amqp.delete'
 
 # ################################################################################################################################
