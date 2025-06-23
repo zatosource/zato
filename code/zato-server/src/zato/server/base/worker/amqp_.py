@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,8 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.model.amqp_ import AMQPConnectorConfig
-from zato.common.util.api import spawn_greenlet, start_connectors
+from zato.common.util.api import spawn_greenlet
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -36,7 +35,7 @@ class AMQP(WorkerImpl):
     """
     def amqp_connection_create(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         msg.is_active = True
         with self.update_lock:
@@ -46,7 +45,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_OUTGOING_AMQP_CREATE(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             self.amqp_out_name_to_def[msg.name] = msg.def_name
@@ -56,7 +55,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_OUTGOING_AMQP_EDIT(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             del self.amqp_out_name_to_def[msg.old_name]
@@ -67,7 +66,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_OUTGOING_AMQP_DELETE(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             del self.amqp_out_name_to_def[msg.name]
@@ -77,7 +76,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_CHANNEL_AMQP_CREATE(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             self.amqp_api.create_channel(msg.def_name, msg)
@@ -86,7 +85,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_CHANNEL_AMQP_EDIT(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             self.amqp_api.edit_channel(msg.def_name, msg)
@@ -95,7 +94,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_CHANNEL_AMQP_DELETE(
         self:'WorkerStore', # type: ignore
-        msg, # type: Bunch
+        msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
             self.amqp_api.delete_channel(msg.def_name, msg)
@@ -104,13 +103,13 @@ class AMQP(WorkerImpl):
 
     def amqp_invoke(
         self:'WorkerStore', # type: ignore
-        msg,          # type: Bunch
-        out_name,     # type: str
-        exchange='/', # type: str
-        routing_key=None, # type: strnone
-        properties=None,  # type: dictnone
-        headers=None,     # type: dictnone
-        **kwargs          # type: any_
+        msg:'Bunch',
+        out_name:'str',
+        exchange:'str'='/',
+        routing_key:'strnone'=None,
+        properties:'dictnone'=None,
+        headers:'dictnone'=None,
+        **kwargs:'any_',
     ) -> 'any_':
         """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
@@ -123,8 +122,8 @@ class AMQP(WorkerImpl):
 
     def _amqp_invoke_async(
         self:'WorkerStore', # type: ignore
-        *args,   # type: any_
-        **kwargs # type: any_
+        *args:'any_',
+        **kwargs:'any_',
     ) -> 'None':
         try:
             self.amqp_invoke(*args, **kwargs)
@@ -133,8 +132,8 @@ class AMQP(WorkerImpl):
 
     def amqp_invoke_async(
         self:'WorkerStore', # type: ignore
-        *args,   # type: any_
-        **kwargs # type: any_
+        *args:'any_',
+        **kwargs:'any_',
     ) -> 'None':
         spawn_greenlet(self._amqp_invoke_async, *args, **kwargs)
 
