@@ -287,17 +287,15 @@ span.like-a {
     background-color: #fff
 }
 
-#data-table tr:hover {
+/* Conditional hover effect - only apply if table has 3+ rows */
+#data-table tbody tr:nth-child(1):hover:nth-last-child(n+3),
+#data-table tbody tr:nth-child(2):hover:nth-last-child(n+2),
+#data-table tbody tr:nth-child(3) ~ tr:hover,
+#data-table tbody tr:nth-child(3):hover {
     background-color: var(--zato-seablue-light2) !important;
     color: #fff !important;
 }
 
-#data-table tr:hover a,
-#data-table tr:hover td,
-#data-table tr:hover span,
-#data-table tr:hover td.numbering:before {
-    color: #fff !important;
-}
 
 #data-table tr.updated {
     background-color: rgba(255, 243, 205, 0.7)
