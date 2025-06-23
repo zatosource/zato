@@ -75,8 +75,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority', 'content_type', 'content_encoding',
-            'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text')
+        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority',
+            'content_type', 'content_encoding', 'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text')
         output_repeated = True
 
     def handle(self):
