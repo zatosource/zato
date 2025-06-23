@@ -44,7 +44,7 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(client, verb, id, name):
-    return_data = {'id': id, 'message': 'Successfully {} the AMQP channel `{}`'.format(verb, name)}
+    return_data = {'id': id, 'message': 'Successfully {} AMQP channel `{}`'.format(verb, name)}
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 class Index(_Index):
@@ -76,7 +76,7 @@ def create(req):
         response = req.zato.client.invoke('zato.channel.amqp.create', _get_edit_create_message(req.POST))
         return _edit_create_response(req.zato.client, 'created', response.data.id, req.POST['name'])
     except Exception:
-        msg = 'Could not create an AMQP channel, e:`{}`'.format(format_exc())
+        msg = 'Could not create AMQP channel, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -88,11 +88,11 @@ def edit(req):
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'])
 
     except Exception:
-        msg = 'Could not update the AMQP channel, e:`{}`'.format(format_exc())
+        msg = 'Could not update AMQP channel, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 class Delete(_Delete):
     url_name = 'channel-amqp-delete'
-    error_message = 'Could not delete the AMQP channel'
+    error_message = 'Could not delete AMQP channel'
     service_name = 'zato.channel.amqp.delete'
