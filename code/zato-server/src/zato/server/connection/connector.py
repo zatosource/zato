@@ -366,6 +366,7 @@ class ConnectorStore:
     def create_channel(self, name, config):
         # type: (str, dict)
         with self.lock:
+            zz
             self.connectors[name].create_channel(config)
 
 # ################################################################################################################################
@@ -373,6 +374,7 @@ class ConnectorStore:
     def edit_channel(self, name, config):
         # type: (str, dict)
         with self.lock:
+            zz
             self.connectors[name].edit_channel(config)
 
 # ################################################################################################################################
