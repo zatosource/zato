@@ -31,7 +31,7 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_amqp_get_list_request'
         response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority', 'def_name', 'pool_size')
+        output_required = ('id', 'name', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size')
         output_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
 
     def get_data(self, session):
@@ -52,7 +52,7 @@ class Create(AdminService):
         request_elem = 'zato_outgoing_amqp_create_request'
         response_elem = 'zato_outgoing_amqp_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding', 
+        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding',
             'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -97,7 +97,6 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.AMQP_CREATE.value
-                input.def_name = item.def_.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -120,7 +119,7 @@ class Edit(AdminService):
         request_elem = 'zato_outgoing_amqp_edit_request'
         response_elem = 'zato_outgoing_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size')
-        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding', 
+        input_optional = ('address', 'username', 'password', 'content_type', 'content_encoding',
             'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -168,7 +167,6 @@ class Edit(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.AMQP_EDIT.value
-                input.def_name = item.def_.name
                 input.old_name = old_name
                 self.broker_client.publish(input)
 
@@ -201,7 +199,6 @@ class Delete(AdminService):
                     one()
 
                 item_id = item.id
-                def_name = item.def_.name
 
                 session.delete(item)
                 session.commit()
@@ -210,7 +207,6 @@ class Delete(AdminService):
                     'action': OUTGOING.AMQP_DELETE.value,
                     'name': item.name,
                     'id':item_id,
-                    'def_name':def_name,
                 })
 
             except Exception:
