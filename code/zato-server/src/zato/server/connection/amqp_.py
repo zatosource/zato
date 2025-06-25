@@ -105,7 +105,7 @@ class _AMQPProducers:
 class Consumer:
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
-    def __init__(self, config:'strdict', on_amqp_message:'callable_') -> 'None':
+    def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
         self.config = config
         self.name = self.config.name
         self.queue = [Queue(self.config.queue)]
@@ -139,6 +139,7 @@ class Consumer:
 
             try:
                 conn = self.config.conn_class(self.config.conn_url)
+
                 consumer = _Consumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
                     no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))

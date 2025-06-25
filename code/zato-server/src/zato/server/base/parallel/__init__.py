@@ -15,8 +15,6 @@ from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
 from random import seed as random_seed
-from tempfile import mkstemp
-from traceback import format_exc
 from uuid import uuid4
 
 # gevent
@@ -31,17 +29,18 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDepl
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
+from zato.common.broker_message import HOT_DEPLOY
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
-from zato.common.json_internal import dumps, loads
+from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
+from zato.common.pubsub.internal import start_internal_consumer
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
-    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
+    fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
     register_diag_handlers, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
@@ -68,7 +67,7 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, intset, strdict, strbytes, \
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -128,6 +127,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
+
+    work_dir:'str'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -724,16 +725,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.work_dir = self.fs_server_config.main.get('work_dir') or self.fs_server_config.hot_deploy.get('work_dir')
         self.work_dir = os.path.normpath(os.path.join(self.repo_location, self.work_dir))
 
-        # Make sure the directories for events exists
-        events_dir_v1 = os.path.join(self.work_dir, 'events', 'v1')
-
         for name in 'v1', 'v2':
             full_path = os.path.join(self.work_dir, 'events', name)
             if not os.path.exists(full_path):
                 os.makedirs(full_path, mode=0o770, exist_ok=True)
-
-        # Set for later use - this is the version that we currently employ and we know that it exists.
-        self.events_dir = events_dir_v1
 
         # Will be None if we are not running in background.
         if not zato_deployment_key:
@@ -868,6 +863,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
+        # Configure internal pub/sub
+        start_internal_consumer(self.on_pubsub_message)
+
         self.broker_client = BrokerClient(server=self, zato_client=None, scheduler_config=self.fs_server_config.scheduler)
         self.worker_store.set_broker_client(self.broker_client)
 
@@ -912,7 +910,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if _needs_details:
             logger.debug('Config reloading')
 
-        self.set_up_config(self)
+        self.set_up_config(self) # type: ignore
         self.worker_store.init()
 
         logger.info('⭐ Config loaded OK')
@@ -1091,58 +1089,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         return data
 
-# ################################################################################################################################
+    def on_pubsub_message(self, body:'any_', msg:'any_', name:'str', config:'dict') -> 'None':
 
-    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'dictlist':
-        """ Invokes a given service in each of processes current server has.
-        """
+        # Print what we received ..
+        print(msg)
 
-        # A list of dict responses, one for each PID
-        out:'dictlist' = []
-
-        try:
-            # Get all current PIDs
-            all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
-            pids = all_pids_response['pids']
-
-            # Use current PID if none were received (this is required on Mac)
-            pids = pids or [self.pid]
-
-            # Invoke each of them
-            for pid in pids:
-                pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                if pid_response.data is not None:
-
-                    # If this is an internal service, we want to remove its root-level response element.
-                    if service.startswith('zato'):
-                        pid_response.data = self._remove_response_elem(pid_response.data)
-                    out.append(cast_('anydict', pid_response.data))
-
-        except Exception:
-            logger.warning('PID invocation error `%s`', format_exc())
-        finally:
-            return out
+        # .. and acknowledge the message so we can read more of them.
+        msg.ack()
 
 # ################################################################################################################################
 
     def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
-        target_pid = kwargs.pop('pid', None)
-        if target_pid and target_pid != self.pid:
-
-            # This cannot be used by self.invoke_by_pid
-            data_format = kwargs.pop('data_format', None)
-
-            data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
-            return dumps(data) if data_format == DATA_FORMAT.JSON else data
-        else:
-            response = self.worker_store.invoke(
-                service, request,
-                data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
-                serialize=kwargs.pop('serialize', True),
-                *args, **kwargs)
-            return response
+        response = self.worker_store.invoke(
+            service, request,
+            data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
+            serialize=kwargs.pop('serialize', True),
+            *args, **kwargs)
+        return response
 
 # ################################################################################################################################
 

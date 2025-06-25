@@ -11,7 +11,8 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.util.api import spawn_greenlet
+from zato.common.model.amqp_ import AMQPConnectorConfig
+from zato.common.util.api import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -79,7 +80,8 @@ class AMQP(WorkerImpl):
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
-            self.amqp_api.create_channel(msg.def_name, msg)
+            start_connectors(self, 'zato.connector.amqp_.start', msg)
+            # self.amqp_api.create_channel(msg.def_name, msg)
 
 # ################################################################################################################################
 
