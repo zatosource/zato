@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from json import dumps
 
 # Bunch
 from bunch import bunchify
@@ -37,12 +38,8 @@ class BrokerClient:
         broker_username = os.environ['Zato_Broker_Username']
         broker_password = os.environ['Zato_Broker_Password']
 
-        if ':' in broker_address:
-            host, port = broker_address.split(':')
-            port = int(port)
-        else:
-            host = broker_address
-            port = 5672  # Default AMQP port
+        host, port = broker_address.split(':')
+        port = int(port)
 
         conn_url = f'{broker_protocol}://{broker_username}:{broker_password}@{host}:{port}/{broker_vhost}'
 
@@ -73,10 +70,12 @@ class BrokerClient:
 
     def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
 
+        msg = dumps(msg)
+
         with self.producer.acquire() as client:
 
             client.publish(
-                str(msg),
+                msg,
                 exchange='components',
                 routing_key='server',
                 content_type='text/plain',
