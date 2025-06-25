@@ -11,11 +11,15 @@ import logging
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
+from json import loads
 from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
 from random import seed as random_seed
 from uuid import uuid4
+
+# Bunch
+from bunch import bunchify
 
 # gevent
 from gevent import sleep, spawn
@@ -991,8 +995,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services_first_worker' if self.is_starting_first else 'startup_services_any_worker'
-        _invoke_startup_services('Parallel', stanza,
-            self.fs_server_config, self.repo_location, self.broker_client, None)
+        _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.broker_client, None)
 
 # ################################################################################################################################
 
@@ -1093,8 +1096,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def on_pubsub_message(self, body:'any_', msg:'any_', name:'str', config:'dict') -> 'None':
 
-        # Print what we received ..
-        print(msg)
+        body = loads(body)
+        body = bunchify(body)
+
+        self.on_broker_msg(body)
 
         # .. and acknowledge the message so we can read more of them.
         msg.ack()

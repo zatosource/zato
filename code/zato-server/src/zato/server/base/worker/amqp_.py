@@ -11,7 +11,6 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.util.api import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
@@ -49,8 +48,8 @@ class AMQP(WorkerImpl):
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
-            self.amqp_out_name_to_def[msg.name] = msg.def_name
-            self.amqp_api.create_outconn(msg.def_name, msg)
+            self.amqp_out_name_to_def[msg.name] = msg.name
+            self.amqp_api.create_outconn(msg.name, msg)
 
 # ################################################################################################################################
 
@@ -60,8 +59,8 @@ class AMQP(WorkerImpl):
     ) -> 'None':
         with self.update_lock:
             del self.amqp_out_name_to_def[msg.old_name]
-            self.amqp_out_name_to_def[msg.name] = msg.def_name
-            self.amqp_api.edit_outconn(msg.def_name, msg)
+            self.amqp_out_name_to_def[msg.name] = msg.name
+            self.amqp_api.edit_outconn(msg.name, msg)
 
 # ################################################################################################################################
 
@@ -71,7 +70,7 @@ class AMQP(WorkerImpl):
     ) -> 'None':
         with self.update_lock:
             del self.amqp_out_name_to_def[msg.name]
-            self.amqp_api.delete_outconn(msg.def_name, msg)
+            self.amqp_api.delete_outconn(msg.name, msg)
 
 # ################################################################################################################################
 
@@ -81,7 +80,7 @@ class AMQP(WorkerImpl):
     ) -> 'None':
         with self.update_lock:
             start_connectors(self, 'zato.connector.amqp_.start', msg)
-            # self.amqp_api.create_channel(msg.def_name, msg)
+            # self.amqp_api.create_channel(msg.name, msg)
 
 # ################################################################################################################################
 
@@ -90,7 +89,7 @@ class AMQP(WorkerImpl):
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
-            self.amqp_api.edit_channel(msg.def_name, msg)
+            self.amqp_api.edit_channel(msg.name, msg)
 
 # ################################################################################################################################
 
@@ -99,7 +98,7 @@ class AMQP(WorkerImpl):
         msg:'Bunch',
     ) -> 'None':
         with self.update_lock:
-            self.amqp_api.delete_channel(msg.def_name, msg)
+            self.amqp_api.delete_channel(msg.name, msg)
 
 # ################################################################################################################################
 
