@@ -18,7 +18,7 @@ from random import seed as random_seed
 from uuid import uuid4
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
@@ -864,9 +864,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         # Configure internal pub/sub
-        start_internal_consumer(self.on_pubsub_message)
+        _ = spawn(start_internal_consumer, self.on_pubsub_message)
 
-        self.broker_client = BrokerClient(server=self, zato_client=None, scheduler_config=self.fs_server_config.scheduler)
+        self.broker_client = BrokerClient(server=self)
         self.worker_store.set_broker_client(self.broker_client)
 
         self._after_init_accepted(locally_deployed)
@@ -918,7 +918,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def set_scheduler_address(self, scheduler_address:'str') -> 'None':
-        self.broker_client.set_scheduler_address(scheduler_address)
+        pass
 
 # ################################################################################################################################
 
