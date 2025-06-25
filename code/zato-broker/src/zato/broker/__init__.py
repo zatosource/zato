@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -64,7 +64,6 @@ class BrokerMessageReceiver:
 
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages prior to invoking the actual message handler.
-        Default implementation always returns False which rejects all the incoming messages.
         """
         return True
 
