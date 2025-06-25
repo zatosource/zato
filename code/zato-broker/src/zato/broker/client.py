@@ -29,7 +29,7 @@ if 0:
 
 class BrokerClient:
 
-    def __init__(self, *, server:'ParallelServer | None'   = None) -> 'None':
+    def __init__(self, *, server:'ParallelServer | None'=None) -> 'None':
 
         broker_protocol = os.environ['Zato_Broker_Protocol']
         broker_address  = os.environ['Zato_Broker_Address']
