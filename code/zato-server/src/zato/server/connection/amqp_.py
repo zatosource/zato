@@ -69,9 +69,9 @@ class _AMQPMessage:
 
 # ################################################################################################################################
 
-class _AMQPProducers:
+class Producer:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
-    Each outgoing connection has one _AMQPProducers object assigned.
+    Each outgoing connection has one Producer object assigned.
     """
     def __init__(self, config:'strdict') -> 'None':
         self.config = config
@@ -83,7 +83,7 @@ class _AMQPProducers:
 
         # Kombu uses a global object to keep all connections in (pools.connections) but we cannot use it
         # because multiple channels or outgoing connections may be using the same definition,
-        # thus we need to create a new connection group for each _AMQPProducers object.
+        # thus we need to create a new connection group for each Producer object.
 
         connections = pools.register_group(pools.Connections(limit=self.config.pool_size))
 
@@ -424,7 +424,7 @@ class ConnectorAMQP(Connector):
         config.conn_url = self.config.conn_url
         config.frame_max = self.config.frame_max
         config.get_conn_class_func = self._get_conn_class
-        self._producers[config.name] = _AMQPProducers(config)
+        self._producers[config.name] = Producer(config)
 
 # ################################################################################################################################
 
