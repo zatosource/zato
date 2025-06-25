@@ -43,12 +43,14 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
     broker_username = os.environ['Zato_Broker_Username']
     broker_password = os.environ['Zato_Broker_Password']
 
+    queue_name = 'server'
+
     conn_url = f'{broker_protocol}://{broker_username}:{broker_password}@{broker_address}/{broker_vhost}'
     conn_url_no_password = f'{broker_protocol}://{broker_username}:********@{broker_address}/{broker_vhost}'
 
     config = bunchify({
         'name': 'zato.server',
-        'queue': 'server',
+        'queue': queue_name,
         'consumer_tag_prefix': 'zato-server',
         'ack_mode': AMQP.ACK_MODE.ACK.id,
         'prefetch_count': 5,
@@ -59,13 +61,13 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
 
     consumer = Consumer(config, on_msg_callback)
 
-    logger.info(f'Starting internal pub/sub server consumer for {conn_url_no_password}')
+    logger.info(f'Starting internal pub/sub server consumer for {conn_url_no_password} (queue={queue_name})')
 
     try:
         consumer.start()
     except KeyboardInterrupt:
         consumer.stop()
-        logger.info(f'Stopped internal pub/sub server consumer for {conn_url_no_password}')
+        logger.info(f'Stopped internal pub/sub server consumer for {conn_url_no_password} (queue={queue_name})')
 
 # ################################################################################################################################
 # ################################################################################################################################
