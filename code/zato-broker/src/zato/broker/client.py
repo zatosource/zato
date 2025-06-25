@@ -8,14 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sys
-from logging import getLogger
 
 # Bunch
 from bunch import bunchify
 
 # Kombu
 from kombu.entity import PERSISTENT_DELIVERY_MODE
+
+# Zato
+from zato.server.connection.amqp_ import get_connection_class, Producer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,12 +76,14 @@ class BrokerClient:
         with self.producer.acquire() as client:
 
             client.publish(
-                message,
+                str(msg),
                 exchange='components',
                 routing_key='server',
                 content_type='text/plain',
                 delivery_mode=PERSISTENT_DELIVERY_MODE
             )
+
+    invoke_async = publish
 
 # ################################################################################################################################
 # ################################################################################################################################
