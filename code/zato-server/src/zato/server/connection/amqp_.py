@@ -34,13 +34,39 @@ from zato.server.connection.connector import Connector, Inactive
 if 0:
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
-    from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple
+    from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple, type_
     Bunch = Bunch
 
 # ################################################################################################################################
 
 version = get_version()
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+def get_connection_class(object_name:'str', suffix:'str', is_tls:'bool') -> 'type_[KombuAMQPConnection]':
+
+    class _PyAMQPConnection(PyAMQPConnection):
+        def __init__(_py_amqp_self, *args, **kwargs):
+            kwargs['client_properties'] = {
+                'zato.component': '{}/{}'.format(get_component_name('amqp-conn'), suffix),
+                'zato.version': version,
+                'zato.object.name': object_name,
+            }
+            super(_PyAMQPConnection, _py_amqp_self).__init__(*args, **kwargs)
+
+    if is_tls:
+        class _AMQPTransport(SSLTransport): # type: ignore
+            Connection = _PyAMQPConnection
+    else:
+        class _AMQPTransport(Transport):
+            Connection = _PyAMQPConnection
+
+    class _AMQPConnection(Connection):
+        def get_transport_cls(self):
+            return _AMQPTransport
+
+    return _AMQPConnection
 
 # ################################################################################################################################
 
@@ -277,32 +303,10 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _get_conn_class(self, suffix, is_tls):
-        """ Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
-        information in an AMQP connection's zato.* properties and, except for zato.version,
-        this information is not available on module level hence the classes are declared here,
-        in particular, we need access to self.config.name and suffix which are available only in run-time.
+        """ Returns a custom connection class for AMQP producers and consumers.
+        Uses the top-level get_producer_class function to create the connection class.
         """
-
-        class _PyAMQPConnection(PyAMQPConnection):
-            def __init__(_py_amqp_self, *args, **kwargs):
-                super(_PyAMQPConnection, _py_amqp_self).__init__(client_properties={
-                    'zato.component':'{}/{}'.format(get_component_name('amqp-conn'), suffix),
-                    'zato.version':version,
-                    'zato.definition.name':self.config.name,
-                }, *args, **kwargs)
-
-        if is_tls:
-            class _AMQPTransport(SSLTransport): # type: ignore
-                Connection = _PyAMQPConnection
-        else:
-            class _AMQPTransport(Transport):
-                Connection = _PyAMQPConnection
-
-        class _AMQPConnection(Connection):
-            def get_transport_cls(self):
-                return _AMQPTransport
-
-        return _AMQPConnection
+        return get_connection_class(self.config.name, suffix, is_tls)
 
 # ################################################################################################################################
 
