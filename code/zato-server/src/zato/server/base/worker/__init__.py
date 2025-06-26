@@ -542,6 +542,11 @@ class WorkerStore(_WorkerStoreBase):
             self.amqp_api.create(name, item, self.invoke, needs_start=True)
             self.amqp_api.create_channel(name, item)
 
+        for item in outconns:
+            name = item['name']
+            self.amqp_api.create(name, item, self.invoke, needs_start=True)
+            self.amqp_api.create_outconn(name, item)
+
 # ################################################################################################################################
 
     def init_odoo(self) -> 'None':

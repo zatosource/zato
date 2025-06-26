@@ -107,7 +107,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td style="text-align:center">{{ item.address }}</td>
                         <td style="text-align:center">{{ item.username }}</td>
-                        <td style="text-align:center">{{ item.app_id }}</td>
+                        <td style="text-align:center">{{ item.app_id|no_value_indicator }}</td>
                         <td>
                             <a href="{% url "out-amqp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
                         </td>

@@ -65,7 +65,7 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.expiration || '');
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size || '');
     row += String.format("<td class='ignore'>{0}</td>", item.user_id || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.app_id || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.app_id || '---');
 
     if(include_tr) {
         row += '</tr>';
