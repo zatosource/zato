@@ -65,7 +65,7 @@ class Create(AdminService):
 
             input.address = 'amqp://localhost:5672//zato/internal'
             input.username = 'guest'
-            input.password = self.crypto.encrypt('guest').decode('utf8')
+            input.password = self.crypto.encrypt('guest').decode('utf8') # type: ignore
             input.queue = 'server'
 
             # Let's see if we already have a channel of that name before committing
@@ -92,18 +92,18 @@ class Create(AdminService):
                 item = ChannelAMQP()
                 item.name = input.name
                 item.is_active = input.is_active
-                item.address = input.address
-                item.username = input.username
+                item.address = input.address # type: ignore
+                item.username = input.username # type: ignore
                 item.password = input.password
-                item.queue = input.queue
+                item.queue = input.queue # type: ignore
                 item.consumer_tag_prefix = input.consumer_tag_prefix
                 item.service = service
                 item.pool_size = input.pool_size
                 item.ack_mode = input.ack_mode
                 item.prefetch_count = input.prefetch_count
                 item.data_format = input.data_format
-                item.frame_max = input.frame_max
-                item.heartbeat = input.heartbeat
+                item.frame_max = input.frame_max # type: ignore
+                item.heartbeat = input.heartbeat # type: ignore
 
                 session.add(item)
                 session.commit()
