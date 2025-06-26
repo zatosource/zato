@@ -23,7 +23,7 @@ from zato.common.util.api import spawn_greenlet
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, dict_, dictnone, callnone, type_
+    from zato.common.typing_ import any_, dict_, dictnone, callable_, callnone, type_
     from zato.common.model.connector import ConnectorConfig
     from zato.server.base.parallel import ParallelServer
     ConnectorConfig = ConnectorConfig
@@ -76,8 +76,8 @@ class Connector:
         self,
         name:'str',
         type:'str',
-        config:'ConnectorConfig',
-        on_message_callback:'callnone'=None,
+        config:'Bunch',
+        on_message_callback:'callable_',
         auth_func:'callnone'=None,
         channels:'dictnone'=None,
         outconns:'dictnone'=None,
@@ -89,6 +89,10 @@ class Connector:
         self.config.parallel_server = parallel_server # type: ignore
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
+
+        if 'password' in self.config:
+            if self.config.parallel_server:
+                self.config.password = self.config.parallel_server.decrypt(self.config.password)
 
         # Service to invoke by channels for each message received
         self.service = getattr(config, 'service_name', None)
