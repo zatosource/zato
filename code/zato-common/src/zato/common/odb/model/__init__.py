@@ -72,7 +72,7 @@ def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
 
         for item in data:
             as_dict_func = getattr(item, '_asdict', None) or getattr(item, 'asdict', None)
-            _item = as_dict_func()
+            _item = as_dict_func() # type: ignore
 
             out.append(_item)
         return out
