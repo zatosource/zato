@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -24,12 +22,12 @@ from zato.common.util.api import spawn_greenlet
 # ################################################################################################################################
 
 if 0:
-    from typing import Any, Callable, Dict as dict_
+    from bunch import Bunch
+    from zato.common.typing_ import any_, dict_, dictnone, callnone, type_
     from zato.common.model.connector import ConnectorConfig
-
-    Any = Any
-    Callable = Callable
+    from zato.server.base.parallel import ParallelServer
     ConnectorConfig = ConnectorConfig
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
@@ -74,25 +72,33 @@ class Connector:
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
-    def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None,
-            parallel_server=None):
-        # type: (str, str, ConnectorConfig, Callable, Callable, dict, dict, Callable) -> None
+    def __init__(
+        self,
+        name:'str',
+        type:'str',
+        config:'ConnectorConfig',
+        on_message_callback:'callnone'=None,
+        auth_func:'callnone'=None,
+        channels:'dictnone'=None,
+        outconns:'dictnone'=None,
+        parallel_server:'ParallelServer | None'=None
+    ) -> 'None':
         self.name = name
         self.type = type
         self.config = config
-        self.config.parallel_server = parallel_server
+        self.config.parallel_server = parallel_server # type: ignore
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
 
         # Service to invoke by channels for each message received
         self.service = getattr(config, 'service_name', None)
 
-        self.channels = channels or {} # type: dict
-        self.outconns = outconns or {} # type: dict
+        self.channels = channels or {}
+        self.outconns = outconns or {}
 
         self.id = self.config.id
-        self.is_active = self.config.is_active # type: bool
-        self.is_inactive = not self.is_active # type: bool
+        self.is_active = self.config.is_active
+        self.is_inactive = not self.is_active
         self.is_connected = False
 
         self.keep_connecting = True
@@ -105,7 +111,7 @@ class Connector:
 
 # ################################################################################################################################
 
-    def get_log_details(self):
+    def get_log_details(self) -> 'str':
         """ Can be overridden in subclasses.
         """
         return ''
@@ -114,7 +120,7 @@ class Connector:
 
 # ################################################################################################################################
 
-    def _start_loop(self):
+    def _start_loop(self) -> 'None':
         """ Establishes a connection to the external resource in a loop that keeps running as long as self.is_connected is False.
         The flag must be set to True in a subclass's self._start method.
         """
@@ -167,49 +173,49 @@ class Connector:
 
 # ################################################################################################################################
 
-    def create_channels(self):
+    def create_channels(self) -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def create_outconns(self):
+    def create_outconns(self) -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def create_channel(self, config):
+    def create_channel(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
-    def edit_channel(self, config):
+    def edit_channel(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
-    def delete_channel(self, config):
-        raise NotImplementedError('May be implemented in subclasses')
-
-# ################################################################################################################################
-
-    def create_outconn(self, config):
-        raise NotImplementedError('May be implemented in subclasses')
-
-    def edit_outconn(self, config):
-        raise NotImplementedError('May be implemented in subclasses')
-
-    def delete_outconn(self, config):
+    def delete_channel(self, config:'Bunch') -> 'None':
         raise NotImplementedError('May be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def _start(self):
+    def create_outconn(self, config:'Bunch') -> 'None':
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def edit_outconn(self, config:'Bunch') -> 'None':
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def delete_outconn(self, config:'Bunch') -> 'None':
+        raise NotImplementedError('May be implemented in subclasses')
+
+# ################################################################################################################################
+
+    def _start(self) -> 'None':
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def _send(self):
+    def _send(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def send(self, msg, *args, **kwargs):
+    def send(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         with self.lock:
             if self.is_inactive:
                 raise Inactive('Connection `{}` is inactive ({})'.format(self.name, self.type))
@@ -217,10 +223,12 @@ class Connector:
 
 # ################################################################################################################################
 
-    def _start_stop_logger(self, enter_verb, exit_verb, predicate_func=None):
+    def _start_stop_logger(self, enter_verb:'str', exit_verb:'str', predicate_func:'callnone'=None) -> 'EventLogger':
         return EventLogger(enter_verb, exit_verb, self._info_start_stop, self._info_start_stop, predicate_func)
 
-    def _info_start_stop(self, verb, predicate=None):
+# ################################################################################################################################
+
+    def _info_start_stop(self, verb:'str', predicate:'callnone'=None) -> 'None':
         log_details = self.get_prev_log_details() if 'Stop' in verb else self.get_log_details()
 
         # We cannot always log that the connector started or stopped because actions take place asynchronously,
@@ -236,26 +244,26 @@ class Connector:
 
 # ################################################################################################################################
 
-    def _wait_until_connected(self):
+    def _wait_until_connected(self) -> 'bool':
         """ Sleeps undefinitely until self.is_connected is True. Used as a predicate in self._start_stop_logger.
         Returns True if self.is_connected is True at the time of this method's completion. It may be False if we are
         told to stop connecting from layers above us.
         """
         while not self.is_connected:
-            sleep(0.1)
+            sleep(0.1) # type: ignore
             if not self.keep_connecting:
-                return
+                return False
 
         return True
 
 # ################################################################################################################################
 
-    def _spawn_start(self):
-        spawn(self._start_loop).get()
+    def _spawn_start(self) -> 'None':
+        _ = spawn(self._start_loop).get()
 
 # ################################################################################################################################
 
-    def start(self, needs_log=True):
+    def start(self, needs_log:'bool'=True) -> 'None':
         if self.is_inactive:
             logger.info('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
             return
@@ -274,7 +282,7 @@ class Connector:
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> 'None':
         with self._start_stop_logger('Stopping',' Stopped'):
             self._stop()
             self.keep_connecting = False # Set to False in case .stop is called before the connection was established
@@ -282,13 +290,13 @@ class Connector:
 
 # ################################################################################################################################
 
-    def _stop(self):
-        """ Can be, but does not have to, overwritten by subclasses to customize the behaviour.
+    def _stop(self) -> 'None':
+        """ Can be potentially overwritten by subclasses to customize the behaviour.
         """
 
 # ################################################################################################################################
 
-    def get_conn_report(self):
+    def get_conn_report(self) -> 'None':
         raise NotImplementedError('Needs to be implemented by subclasses')
 
 # ################################################################################################################################
@@ -296,34 +304,53 @@ class Connector:
 class ConnectorStore:
     """ Base container for all connectors.
     """
-    def __init__(self, type, connector_class, parallel_server=None):
+    def __init__(
+        self,
+        type:'str',
+        connector_class:'type_',
+        parallel_server:'ParallelServer | None'=None
+    ) -> 'None':
         self.type = type
         self.connector_class = connector_class
         self.parallel_server = parallel_server
-        self.connectors = {} # type: dict_[str, Connector]
+        self.connectors:'dict_[str, any_]' = {}
         self.lock = RLock()
 
 # ################################################################################################################################
 
-    def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
-        connector = self.connector_class(
-            name, self.type, config, on_message_callback, auth_func, channels, outconns, self.parallel_server)
+    def _create(
+        self,
+        name:'str',
+        config:'Bunch',
+        on_message_callback:'callnone'=None,
+        auth_func:'callnone'=None,
+        channels:'dictnone'=None,
+        outconns:'dictnone'=None,
+        needs_start:'bool'=False
+    ) -> 'None':
+        connector = self.connector_class(name, self.type, config, on_message_callback, auth_func, channels, outconns, self.parallel_server)
         self.connectors[name] = connector
         if needs_start:
             connector.start()
 
 # ################################################################################################################################
 
-    def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
+    def create(
+        self,
+        name:'str',
+        config:'Bunch',
+        on_message_callback:'callnone'=None,
+        auth_func:'callnone'=None,
+        channels:'dictnone'=None,
+        outconns:'dictnone'=None,
+        needs_start:'bool'=False
+    ) -> 'None':
         with self.lock:
             self._create(name, config, on_message_callback, auth_func, channels, outconns, needs_start)
 
 # ################################################################################################################################
 
-    def _edit(self, old_name, config):
-        # type: (str, ConnectorConfig)
+    def _edit(self, old_name:'str', config:'Bunch') -> 'None':
         connector = self._delete(old_name)
         self._create(
             config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
@@ -331,15 +358,13 @@ class ConnectorStore:
 
 # ################################################################################################################################
 
-    def edit(self, old_name, config, *ignored_args):
-        # type: (str, Any)
+    def edit(self, old_name:'str', config:'Bunch', *ignored_args) -> 'None':
         with self.lock:
             self._edit(old_name, config)
 
 # ################################################################################################################################
 
-    def _delete(self, name):
-        # type: (str)
+    def _delete(self, name:'str') -> 'Connector':
         connector = self.connectors[name]
         connector.stop()
         del self.connectors[name]
@@ -347,15 +372,13 @@ class ConnectorStore:
 
 # ################################################################################################################################
 
-    def delete(self, name):
-        # type: (str)
+    def delete(self, name:'str') -> 'Connector':
         with self.lock:
-            self._delete(name)
+            return self._delete(name)
 
 # ################################################################################################################################
 
-    def change_password(self, name, config):
-        # type: (str, ConnectorConfig)
+    def change_password(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             new_config = deepcopy(self.connectors[name].config)
             new_config.password = config.password
@@ -363,52 +386,43 @@ class ConnectorStore:
 
 # ################################################################################################################################
 
-    def create_channel(self, name, config):
-        # type: (str, dict)
+    def create_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            zz
             self.connectors[name].create_channel(config)
 
 # ################################################################################################################################
 
-    def edit_channel(self, name, config):
-        # type: (str, dict)
+    def edit_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            zz
             self.connectors[name].edit_channel(config)
 
 # ################################################################################################################################
 
-    def delete_channel(self, name, config):
-        # type: (str, dict)
+    def delete_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             self.connectors[name].delete_channel(config)
 
 # ################################################################################################################################
 
-    def create_outconn(self, name, config):
-        # type: (str, dict)
+    def create_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             self.connectors[name].create_outconn(config)
 
 # ################################################################################################################################
 
-    def edit_outconn(self, name, config):
-        # type: (str, dict)
+    def edit_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             self.connectors[name].edit_outconn(config)
 
 # ################################################################################################################################
 
-    def delete_outconn(self, name, config):
-        # type: (str, dict)
+    def delete_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
             self.connectors[name].delete_outconn(config)
 
 # ################################################################################################################################
 
-    def start(self, name=None):
-        # type: (str)
+    def start(self, name:'str | None'=None) -> 'None':
         with self.lock:
             for c in self.connectors.values():
 
@@ -420,14 +434,12 @@ class ConnectorStore:
 
 # ################################################################################################################################
 
-    def invoke(self, name, *args, **kwargs):
-        # type: (str, Any, Any)
+    def invoke(self, name:'str', *args:'any_', **kwargs:'any_') -> 'None':
         return self.connectors[name].invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def notify_pubsub_message(self, name, *args, **kwargs):
-        # type: (str, Any, Any)
+    def notify_pubsub_message(self, name:'str', *args:'any_', **kwargs:'any_') -> 'None':
         return self.connectors[name].notify_pubsub_message(*args, **kwargs)
 
 # ################################################################################################################################
