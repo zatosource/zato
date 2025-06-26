@@ -33,7 +33,7 @@ broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
 skip_create_integrity_error = True
 skip_if_exists = True
-output_optional_extra = ['current_size', 'id']
+output_optional_extra = ['current_size']
 
 # ################################################################################################################################
 

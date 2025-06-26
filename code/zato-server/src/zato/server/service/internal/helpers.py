@@ -105,7 +105,7 @@ class Echo(Service):
 
 class PubInputLogger(Service):
 
-    name = 'built-in.input-logger'
+    name = 'demo.input-logger'
 
     def handle(self):
         self.logger.info('Received request: `%s`', self.request.raw_request)
