@@ -994,7 +994,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def invoke_startup_services(self) -> 'None':
-        stanza = 'startup_services_first_worker' if self.is_starting_first else 'startup_services_any_worker'
+        stanza = 'startup_services'
         _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.broker_client, None)
 
 # ################################################################################################################################

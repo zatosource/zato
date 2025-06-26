@@ -147,11 +147,9 @@ redis_sentinels_master=
 shadow_password_in_logs=True
 log_connection_info_sleep_time=5 # In seconds
 
-[startup_services_first_worker]
+[startup_services]
 zato.updates.check-updates=
-
-[startup_services_any_worker]
-zato.helpers.input-logger=Sample payload for a startup service (any worker)
+demo.input-logger=Sample payload for a startup service
 
 [user_config]
 # All paths are either absolute or relative to the directory server.conf is in
