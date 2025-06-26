@@ -44,10 +44,10 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 
     // Visible columns: name, active, address, username, app ID
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.username || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.app_id || $.fn.zato.empty_value);
+    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', item.address || $.fn.zato.empty_value);
+    row += String.format('<td style="text-align:center">{0}</td>', item.username || $.fn.zato.empty_value);
+    row += String.format('<td style="text-align:center">{0}</td>', item.app_id || $.fn.zato.empty_value);
 
     // Action buttons
     row += String.format('<td><a href="/zato/outgoing/amqp/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
