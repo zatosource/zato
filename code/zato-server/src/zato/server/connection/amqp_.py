@@ -298,6 +298,7 @@ class ConnectorAMQP(Connector):
     """ An AMQP connector under which channels or outgoing connections run.
     """
     start_in_greenlet = True
+    should_log_started_stopped = False
 
 # ################################################################################################################################
 
@@ -342,7 +343,9 @@ class ConnectorAMQP(Connector):
         """ Invoked each time a message is taken off an AMQP queue.
         """
         self.on_message_callback(
-            channel_config['service_name'], body, channel=_CHANNEL_AMQP,
+            channel_config['service_name'],
+            body,
+            channel=_CHANNEL_AMQP,
             data_format=channel_config['data_format'],
             zato_ctx={'zato.channel_item': {  # noqa: JS101
                 'id': channel_config.id,
@@ -465,7 +468,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._create_channel(config)
 
-        logger.info('Added channel `%s` to AMQP connector `%s`', config.name, self.config.name)
+        logger.info('Started AMQP channel `%s` -> %s', config.name, self.get_log_details())
 
 # ################################################################################################################################
 
@@ -477,7 +480,7 @@ class ConnectorAMQP(Connector):
             self._create_channel(config)
 
         old_name = ' ({})'.format(config.old_name) if config.old_name != config.name else ''
-        logger.info('Updated channel `%s`%s in AMQP connector `%s`', config.name, old_name, config.def_name)
+        logger.info('Updated AMQP channel `%s` -> `%s` -> %s', old_name or config.name, config.name, self.get_log_details())
 
 # ################################################################################################################################
 
@@ -520,7 +523,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._delete_channel(config)
 
-        logger.info('Deleted channel `%s` from AMQP connector `%s`', config.name, self.config.name)
+        logger.info('Deleted AMQP channel `%s` -> `%s`', config.name, self.get_log_details())
 
 # ################################################################################################################################
 
