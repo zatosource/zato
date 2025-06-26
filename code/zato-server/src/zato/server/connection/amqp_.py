@@ -99,7 +99,7 @@ class Producer:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one Producer object assigned.
     """
-    def __init__(self, config:'strdict') -> 'None':
+    def __init__(self, config:'Bunch') -> 'None':
         self.config = config
         self.name = self.config.name
         self.get_conn_class_func = config.get_conn_class_func
@@ -361,19 +361,21 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _get_conn_string(self, needs_password=True, _amqp_prefix=('amqp://', 'amqps://')):
+    def _add_auth_placeholders(self, address:'str') -> 'str':
 
-        host = self.config.host
-        for name in _amqp_prefix:
-            if host.startswith(name):
-                host = host.replace(name, '')
-                prefix = name
-                break
-        else:
-            prefix = 'amqp://'
+        protocol_part, server_part = address.split('://', 1)
+        return f'{protocol_part}://' + '{username}:{password}@' + server_part
 
-        conn_string = '{}{}:{}@{}:{}/{}'.format(prefix, self.config.username,
-            self.config.password if needs_password else SECRET_SHADOW, host, self.config.port, self.config.vhost)
+# ################################################################################################################################
+
+    def _get_conn_string(self, needs_password:'bool'=True) -> 'str':
+
+        conn_string = self.config.address
+        conn_string = self._add_auth_placeholders(conn_string) # type: ignore
+        conn_string = conn_string.format(
+            username=self.config.username, # type: ignore
+            password=self.config.password if needs_password else SECRET_SHADOW
+        )
 
         return conn_string
 

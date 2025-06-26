@@ -188,7 +188,7 @@ class WorkerStore(_WorkerStoreBase):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # AMQP
-        self.amqp_api = ConnectorStore(Connector_Type.duplex.amqp, ConnectorAMQP)
+        self.amqp_api = ConnectorStore(Connector_Type.duplex.amqp, ConnectorAMQP, self.server)
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
 
         # Caches
