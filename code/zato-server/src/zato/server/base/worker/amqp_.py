@@ -79,7 +79,7 @@ class AMQP(WorkerImpl):
     ) -> 'None':
         with self.update_lock:
             self.amqp_connection_create(msg)
-            self.amqp_api.create_channel(msg.name, msg)
+            # self.amqp_api.create_channel(msg.name, msg)
 
 # ################################################################################################################################
 

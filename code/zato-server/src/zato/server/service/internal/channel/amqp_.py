@@ -57,7 +57,16 @@ class Create(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
+
             input = self.request.input
+
+            input.frame_max = 131072
+            input.heartbeat = 30
+
+            input.address = 'amqp://localhost:5672//zato/internal'
+            input.username = 'guest'
+            input.password = self.crypto.encrypt('guest').decode('utf8')
+            input.queue = 'server'
 
             # Let's see if we already have a channel of that name before committing
             # any stuff into the database.
@@ -93,6 +102,8 @@ class Create(AdminService):
                 item.ack_mode = input.ack_mode
                 item.prefetch_count = input.prefetch_count
                 item.data_format = input.data_format
+                item.frame_max = input.frame_max
+                item.heartbeat = input.heartbeat
 
                 session.add(item)
                 session.commit()

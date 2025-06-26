@@ -317,8 +317,7 @@ class ConnectorAMQP(Connector):
 
         self.is_connected = True
 
-        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(
-            self.config.conn_url, frame_max=self.config.frame_max)
+        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url, frame_max=self.config.frame_max)
         _ = test_conn.connect()
         self.is_connected = test_conn.connected
 

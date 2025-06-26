@@ -57,11 +57,15 @@ class Create(AdminService):
         output_required = ('id', 'name')
 
     def handle(self):
+
         input = self.request.input
 
         input.delivery_mode = int(input.delivery_mode)
         input.priority = int(input.priority)
         input.expiration = int(input.expiration) if input.expiration else None
+
+        input.frame_max = 131072
+        input.heartbeat = 30
 
         if not(input.priority >= 0 and input.priority <= 9):
             msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
@@ -92,6 +96,8 @@ class Create(AdminService):
                 item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
+                item.frame_max = input.frame_max
+                item.heartbeat = input.heartbeat
 
                 session.add(item)
                 session.commit()
