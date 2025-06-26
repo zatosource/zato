@@ -34,7 +34,7 @@ from zato.server.connection.connector import Connector, Inactive
 if 0:
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
-    from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple, type_
+    from zato.common.typing_ import any_, callable_, strdictnone, strtuple, type_
     Bunch = Bunch
 
 # ################################################################################################################################
@@ -243,7 +243,7 @@ class Consumer:
                             self.is_connected = False
 
                         if self.keep_running:
-                            _gevent_sleep(timeout)
+                            _gevent_sleep(timeout) # type: ignore
                     else:
                         # Reset heartbeat errors counter since we have apparently succeeded.
                         hb_errors_so_far = 0
@@ -281,7 +281,7 @@ class Consumer:
             until = now + timedelta(seconds=delta)
 
             while now < until:
-                sleep(0.1)
+                sleep(0.1) # type: ignore
                 now = utcnow()
                 if self.is_stopped:
                     return
@@ -385,7 +385,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _enrich_channel_config(self, config:'strdict') -> 'None':
+    def _enrich_channel_config(self, config:'Bunch') -> 'None':
         config.conn_class = self._get_conn_class('channel/{}'.format(config.name), _is_tls_config(self.config))
         config.conn_url = self.config.conn_url
 
@@ -412,7 +412,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_consumer(self, config:'strdict') -> 'None':
+    def _create_consumer(self, config:'Bunch') -> 'None':
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
         consumer = Consumer(config, self.on_amqp_message)
@@ -423,7 +423,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_producers(self, config:'strdict') -> 'None':
+    def _create_producers(self, config:'Bunch') -> 'None':
         """ Creates outgoing AMQP producers using kombu.
         """
         config.conn_url = self.config.conn_url
@@ -450,7 +450,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_channel(self, config:'strdict') -> 'None':
+    def _create_channel(self, config:'Bunch') -> 'None':
         """ Creates a channel. Must be called with self.lock held.
         """
         self.channels[config.name] = config
@@ -461,7 +461,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def create_channel(self, config:'strdict') -> 'None':
+    def create_channel(self, config:'Bunch') -> 'None':
         """ Creates a channel.
         """
         with self.lock:
@@ -471,7 +471,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_channel(self, config:'strdict') -> 'None':
+    def edit_channel(self, config:'Bunch') -> 'None':
         """ Obtains self.lock and updates a channel
         """
         with self.lock:
@@ -516,7 +516,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def delete_channel(self, config:'strdict') -> 'None':
+    def delete_channel(self, config:'Bunch') -> 'None':
         """ Obtains self.lock and deletes a channel.
         """
         with self.lock:
@@ -526,7 +526,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _create_outconn(self, config:'strdict') -> 'None':
+    def _create_outconn(self, config:'Bunch') -> 'None':
         """ Creates an outgoing connection. Must be called with self.lock held.
         """
         self.outconns[config.name] = config
@@ -534,7 +534,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def create_outconn(self, config:'strdict') -> 'None':
+    def create_outconn(self, config:'Bunch') -> 'None':
         """ Creates an outgoing connection.
         """
         with self.lock:
@@ -544,7 +544,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def edit_outconn(self, config:'strdict') -> 'None':
+    def edit_outconn(self, config:'Bunch') -> 'None':
         """ Obtains self.lock and updates an outgoing connection.
         """
         with self.lock:
@@ -556,7 +556,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _delete_outconn(self, config:'strdict') -> 'None':
+    def _delete_outconn(self, config:'Bunch') -> 'None':
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
         # It will be old_name if this is an edit and name if it a deletion.
@@ -568,7 +568,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def delete_outconn(self, config:'strdict') -> 'None':
+    def delete_outconn(self, config:'Bunch') -> 'None':
         """ Obtains self.lock and deletes an outgoing connection.
         """
         with self.lock:
