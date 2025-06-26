@@ -53,7 +53,7 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
         'queue': queue_name,
         'consumer_tag_prefix': 'zato-server',
         'ack_mode': AMQP.ACK_MODE.ACK.id,
-        'prefetch_count': 5,
+        'prefetch_count': 1,
         'conn_url': conn_url,
         'conn_class': KombuAMQPConnection,
         'is_active': True
