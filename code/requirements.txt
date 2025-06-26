@@ -13,7 +13,7 @@ dacite==1.6.0
 dateparser==0.7.6
 decorator==5.1.0
 distro==1.5.0
-Django==4.2.21
+Django==4.2.22
 django-csp==3.8
 docformatter==0.8
 elasticsearch==9.0.1
@@ -69,7 +69,7 @@ pytz==2025.2
 pyyaml==6.0.2
 redis==6.1.0
 regex==2022.3.2
-requests==2.32.3
+requests==2.32.4
 requests-ntlm==1.2.0
 requests-toolbelt==0.9.1
 rule-engine==4.5.3
