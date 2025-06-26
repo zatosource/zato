@@ -104,8 +104,7 @@ class Producer:
         self.name = self.config.name
         self.get_conn_class_func = config.get_conn_class_func
         self.name = config.name
-        self.conn = self.get_conn_class_func(
-            'out/{}'.format(self.config.name), _is_tls_config(self.config))(self.config.conn_url, frame_max=self.config.frame_max)
+        self.conn = self.get_conn_class_func('out/{}'.format(self.config.name), _is_tls_config(self.config))(self.config.conn_url)
 
         # Kombu uses a global object to keep all connections in (pools.connections) but we cannot use it
         # because multiple channels or outgoing connections may be using the same definition,
@@ -317,7 +316,7 @@ class ConnectorAMQP(Connector):
 
         self.is_connected = True
 
-        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url, frame_max=self.config.frame_max)
+        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
         _ = test_conn.connect()
         self.is_connected = test_conn.connected
 
@@ -427,7 +426,6 @@ class ConnectorAMQP(Connector):
         """ Creates outgoing AMQP producers using kombu.
         """
         config.conn_url = self.config.conn_url
-        config.frame_max = self.config.frame_max
         config.get_conn_class_func = self._get_conn_class
         self._producers[config.name] = Producer(config)
 
