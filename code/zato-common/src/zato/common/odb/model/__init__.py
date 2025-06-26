@@ -725,8 +725,8 @@ class OutgoingAMQP(Base):
     app_id = Column(String(200), nullable=True)
     pool_size = Column(SmallInteger(), nullable=False)
 
-    frame_max = Column(Integer(), nullable=True)
-    heartbeat = Column(Integer(), nullable=True)
+    frame_max = Column(Integer(), nullable=True, server_default='131072')
+    heartbeat = Column(Integer(), nullable=True, server_default='30')
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
@@ -871,8 +871,8 @@ class ChannelAMQP(Base):
     prefetch_count = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
 
-    frame_max = Column(Integer(), nullable=True)
-    heartbeat = Column(Integer(), nullable=True)
+    frame_max = Column(Integer(), nullable=True, server_default='131072')
+    heartbeat = Column(Integer(), nullable=True, server_default='30')
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
