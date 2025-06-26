@@ -63,11 +63,6 @@ class Create(AdminService):
             input.frame_max = 131072
             input.heartbeat = 30
 
-            input.address = 'amqp://localhost:5672//zato/internal'
-            input.username = 'guest'
-            input.password = self.crypto.encrypt('guest').decode('utf8') # type: ignore
-            input.queue = 'server'
-
             # Let's see if we already have a channel of that name before committing
             # any stuff into the database.
             existing_one = session.query(ChannelAMQP.id).\
@@ -138,6 +133,7 @@ class Edit(AdminService):
         output_required = ('id', 'name')
 
     def handle(self):
+
         input = self.request.input
 
         with closing(self.odb.session()) as session:

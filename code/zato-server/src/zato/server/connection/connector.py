@@ -72,6 +72,9 @@ class Connector:
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
+    # Whether to show in logs information that this connection has started or stopped
+    should_log_started_stopped = True
+
     def __init__(
         self,
         name:'str',
@@ -241,10 +244,11 @@ class Connector:
             if not predicate():
                 return
 
-        if self.is_active:
-            logger.info(
-                '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-                '({})'.format(log_details if log_details else self.get_log_details()))
+        if self.should_log_started_stopped:
+            if self.is_active:
+                logger.info(
+                    '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
+                    '({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
