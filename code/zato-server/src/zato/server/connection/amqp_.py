@@ -430,7 +430,8 @@ class ConnectorAMQP(Connector):
         """
         config.conn_url = self.config.conn_url
         config.get_conn_class_func = self._get_conn_class
-        self._producers[config.name] = Producer(config)
+        producer = Producer(config)
+        self._producers[config.name] = producer
 
 # ################################################################################################################################
 
@@ -581,7 +582,6 @@ class ConnectorAMQP(Connector):
 
     def invoke(
         self,
-        out_name:'str',
         msg:'str',
         exchange:'str'='/',
         routing_key:'str | None'=None,
@@ -592,6 +592,7 @@ class ConnectorAMQP(Connector):
     ):
         """ Synchronously publishes a message to an AMQP broker.
         """
+        out_name = self.config['name']
         with self.lock:
             outconn_config = self.outconns[out_name]
 
