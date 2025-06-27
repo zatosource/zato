@@ -573,8 +573,7 @@ class ServiceStore:
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
                 class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
                 class_.cloud.ms365 = service_store.server.worker_store.cloud_microsoft_365
-                class_.amqp.invoke = service_store.server.worker_store.amqp_invoke
-                class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+                class_.amqp.publish = service_store.server.worker_store.amqp_invoke
                 class_.commands.init(service_store.server)
 
                 class_._worker_config = service_store.server.worker_store.worker_config

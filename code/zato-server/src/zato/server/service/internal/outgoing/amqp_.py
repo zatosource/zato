@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -88,16 +86,16 @@ class Create(AdminService):
                 item.address = input.address
                 item.username = input.username
                 item.password = input.password
-                item.delivery_mode = input.delivery_mode
-                item.priority = input.priority
+                item.delivery_mode = input.delivery_mode # type: ignore
+                item.priority = input.priority # type: ignore
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
-                item.expiration = input.expiration
+                item.expiration = input.expiration # type: ignore
                 item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
-                item.frame_max = input.frame_max
-                item.heartbeat = input.heartbeat
+                item.frame_max = input.frame_max # type: ignore
+                item.heartbeat = input.heartbeat # type: ignore
 
                 session.add(item)
                 session.commit()
@@ -220,23 +218,6 @@ class Delete(AdminService):
                 self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc())
 
                 raise
-
-# ################################################################################################################################
-
-class Publish(AdminService):
-    """ Publishes a message to an AMQP broker.
-    """
-    name = 'zato.outgoing.amqp.publish'
-
-    class SimpleIO:
-        input_required = 'request_data', 'conn_name', 'exchange', 'routing_key'
-        output_optional = 'response_data'
-        response_elem = None
-
-    def handle(self):
-        input = self.request.input
-        self.out.amqp.send(input.request_data, input.conn_name, input.exchange, input.routing_key)
-        self.response.payload.response_data = '{"result": "OK"}'
 
 # ################################################################################################################################
 # ################################################################################################################################

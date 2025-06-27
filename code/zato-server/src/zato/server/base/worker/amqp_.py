@@ -103,8 +103,8 @@ class AMQP(WorkerImpl):
 
     def amqp_invoke(
         self:'WorkerStore', # type: ignore
-        msg:'Bunch',
         out_name:'str',
+        msg:'Bunch',
         exchange:'str'='/',
         routing_key:'strnone'=None,
         properties:'dictnone'=None,
@@ -115,10 +115,7 @@ class AMQP(WorkerImpl):
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
         provided directly to the underlying AMQP library (kombu). Headers are AMQP headers attached to each message.
         """
-        with self.update_lock:
-            def_name = self.amqp_out_name_to_def[out_name]
-
-        return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers, **kwargs)
+        return self.amqp_api.invoke(out_name, msg, exchange, routing_key, properties, headers, **kwargs)
 
     def _amqp_invoke_async(
         self:'WorkerStore', # type: ignore
