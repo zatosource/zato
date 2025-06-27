@@ -18,6 +18,7 @@ from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
@@ -39,6 +40,7 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(AdminService):
@@ -113,6 +115,7 @@ class Create(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
@@ -184,6 +187,7 @@ class Edit(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
@@ -218,6 +222,24 @@ class Delete(AdminService):
                 self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Publish(AdminService):
+    """ Publishes a message to an AMQP broker.
+    """
+    name = 'zato.outgoing.amqp.publish'
+
+    class SimpleIO:
+        input_required = 'request_data', 'conn_name', 'exchange', 'routing_key'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+        input = self.request.input
+        self.out.amqp.publish(input.conn_name, input.request_data, input.exchange, input.routing_key)
+        self.response.payload.response_data = '{"result": "OK"}'
 
 # ################################################################################################################################
 # ################################################################################################################################
