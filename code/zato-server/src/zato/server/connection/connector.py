@@ -361,8 +361,14 @@ class ConnectorStore:
     def _edit(self, old_name:'str', config:'Bunch') -> 'None':
         connector = self._delete(old_name)
         self._create(
-            config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
-            connector.outconns, True)
+            config.name,
+            config,
+            connector.on_message_callback,
+            connector.auth_func,
+            connector.channels,
+            connector.outconns,
+            True
+        )
 
 # ################################################################################################################################
 
@@ -388,7 +394,7 @@ class ConnectorStore:
 
     def change_password(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            new_config = deepcopy(self.connectors[name].config)
+            new_config = deepcopy(connector.config)
             new_config.password = config.password
             self._edit(new_config.name, new_config)
 
@@ -396,7 +402,8 @@ class ConnectorStore:
 
     def create_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            self.connectors[name].create_channel(config)
+            connector = self.connectors[name]
+            connector.create_channel(config)
 
 # ################################################################################################################################
 
@@ -408,25 +415,29 @@ class ConnectorStore:
 
     def delete_channel(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            self.connectors[name].delete_channel(config)
+            connector = self.connectors[name]
+            connector.delete_channel(config)
 
 # ################################################################################################################################
 
     def create_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            self.connectors[name].create_outconn(config)
+            connector = self.connectors[name]
+            connector.create_outconn(config)
 
 # ################################################################################################################################
 
     def edit_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            self.connectors[name].edit_outconn(config)
+            connector = self.connectors[name]
+            connector.edit_outconn(config)
 
 # ################################################################################################################################
 
     def delete_outconn(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
-            self.connectors[name].delete_outconn(config)
+            connector = self.connectors[name]
+            connector.delete_outconn(config)
 
 # ################################################################################################################################
 
@@ -443,11 +454,13 @@ class ConnectorStore:
 # ################################################################################################################################
 
     def invoke(self, name:'str', *args:'any_', **kwargs:'any_') -> 'None':
-        return self.connectors[name].invoke(*args, **kwargs)
+        connector = self.connectors[name]
+        return connector.invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
     def notify_pubsub_message(self, name:'str', *args:'any_', **kwargs:'any_') -> 'None':
-        return self.connectors[name].notify_pubsub_message(*args, **kwargs)
+        connector = self.connectors[name]
+        return connector.notify_pubsub_message(*args, **kwargs)
 
 # ################################################################################################################################

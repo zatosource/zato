@@ -270,10 +270,7 @@ class ChannelSecurityInfo:
 # ################################################################################################################################
 
 class AMQPFacade:
-    """ Introduced solely to let service access outgoing connections through self.amqp.invoke/_async
-    rather than self.out.amqp_invoke/_async. The .send method is kept for pre-3.0 backward-compatibility.
-    """
-    __slots__ = ('send', 'invoke', 'invoke_async')
+    __slots__ = ('publish',)
 
 # ################################################################################################################################
 
