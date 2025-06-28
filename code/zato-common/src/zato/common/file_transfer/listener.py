@@ -10,6 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import glob
 import os
 import sys
+import time
+
+# watchdog
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,6 +205,69 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ZatoFileSystemEventHandler(FileSystemEventHandler):
+    """ Custom event handler that filters events based on matching directories.
+    Only processes events that occur within directories returned by find_matching_items,
+    with special exception for enmasse files which are never ignored.
+    """
+    def __init__(self, matching_dirs:'list[str]'):
+        self.matching_dirs = matching_dirs
+        super().__init__()
+
+    def _is_event_relevant(self, event_path:'str') -> 'bool':
+        """ Returns True if the event is relevant based on the path.
+        Events are considered relevant if:
+        - They occur within a directory returned by find_matching_items
+        - They relate to enmasse files (which are never ignored)
+        """
+        # Always process enmasse events
+        if 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path):
+            return True
+
+        # Check if event path is within any of the matching directories
+        for dir_path in self.matching_dirs:
+            if event_path.startswith(dir_path):
+                return True
+
+        # Event is not in any of the matching directories
+        return False
+
+    def on_any_event(self, event:'FileSystemEvent'):
+        """ Called for any event, filters based on paths.
+        """
+        # Get normalized path
+        event_path = event.src_path.rstrip(os.path.sep)
+
+        # Process only relevant events
+        if self._is_event_relevant(event_path):
+            event_type = event.event_type
+            print(f'Event detected: {event_type} - {event_path}')
+
+def watch_directory(directory_path:'str', matching_items:'list[str]') -> 'Observer':
+    """ Sets up a watchdog observer to monitor changes in the deepest common directory.
+    Only processes events that occur within directories returned by find_matching_items,
+    with special exception for enmasse files which are never ignored.
+    
+    Returns the observer instance, which must be started by the caller.
+    """
+    # Find the deepest common directory to watch
+    watch_directory = find_deepest_common_directory(matching_items)
+    
+    if not watch_directory:
+        raise ValueError('No common directory to watch could be determined')
+
+    # Create observer and event handler
+    observer = Observer()
+    event_handler = ZatoFileSystemEventHandler(matching_items)
+    
+    # Schedule the observer
+    observer.schedule(event_handler, watch_directory, recursive=True)
+    
+    return observer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # Check if a directory path was provided
@@ -237,6 +305,23 @@ if __name__ == '__main__':
             common_dir = find_deepest_common_directory(matching_items)
             if common_dir:
                 print(f'\nDeepest common directory: {common_dir}')
+                
+                # Automatically watch for changes
+                try:
+                    observer = watch_directory(directory_path, matching_items)
+                    observer.start()
+                    print(f'\nWatching for changes, press Ctrl+C to stop...')
+                    
+                    try:
+                        while True:
+                            time.sleep(1)
+                    except KeyboardInterrupt:
+                        observer.stop()
+                        
+                    observer.join()
+                    print('\nWatching stopped.')
+                except Exception as e:
+                    print(f'\nError setting up file watching: {e}')
 
     except Exception as e:
         print(f'Error: {e}')
