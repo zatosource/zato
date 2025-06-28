@@ -219,29 +219,29 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
-        """ Returns True if the event is relevant based on the path and event type.
-        Events are considered relevant if:
-        - Event type is in the allowed types list
-        - They occur within a directory returned by find_matching_items
-        - They relate to enmasse files (which are never ignored)
+        """ Check if the event is relevant based on our matching directories.
         """
         # Check if this is a type of event we care about
         if event_type not in self.event_types:
             return False
 
-        # Skip directory modification events (too noisy)
-        if event_type == 'modified' and os.path.isdir(event_path):
+        # Ignore all directory events (not just modified ones)
+        # But make an exception for enmasse files which we always want to process
+        is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+        
+        # Skip all directory events (unless it's enmasse-related)
+        if os.path.isdir(event_path) and not is_enmasse:
             return False
 
         # Always process enmasse events
-        if 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path):
+        if is_enmasse:
             return True
-
-        # Check if event path is within any of the matching directories
+        
+        # For file events, check if the path is in one of our matching directories
         for dir_path in self.matching_dirs:
             if event_path.startswith(dir_path):
                 return True
-
+        
         # Event is not in any of the matching directories
         return False
 
