@@ -212,7 +212,10 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """
     def __init__(self, matching_dirs:'list[str]', event_types:list=None):
         self.matching_dirs = matching_dirs
-        self.event_types = event_types or ['created', 'deleted', 'modified']
+        # Include closed and closed_no_write events to detect fully written files
+        self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
+        self.file_sizes = {}  # Track file sizes for stability checking
+        self.file_checks = {}  # Track how many times we've checked file size
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
@@ -242,16 +245,107 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Event is not in any of the matching directories
         return False
 
-    def on_any_event(self, event:'FileSystemEvent'):
-        """ Called for any event, filters based on paths and event types.
+    def _check_file_stability(self, event_path:'str') -> None:
+        """ Check if a file size has stabilized to determine if writing is complete.
+        For files that are created by copying rather than direct writing.
+        """
+        # Ensure the file exists
+        if not os.path.exists(event_path) or os.path.isdir(event_path):
+            return
+            
+        current_size = os.path.getsize(event_path)
+        
+        if event_path in self.file_sizes:
+            # If size hasn't changed, increment check counter
+            if current_size == self.file_sizes[event_path]:
+                self.file_checks[event_path] += 1
+                # After 3 checks of stable size, consider file complete
+                if self.file_checks[event_path] >= 3:
+                    print(f'File fully written (size stable): {event_path}')
+                    # Clean up tracking
+                    del self.file_sizes[event_path]
+                    del self.file_checks[event_path]
+            else:
+                # Size changed, update and reset counter
+                self.file_sizes[event_path] = current_size
+                self.file_checks[event_path] = 1
+        else:
+            # First time seeing this file, initialize tracking
+            self.file_sizes[event_path] = current_size
+            self.file_checks[event_path] = 1
+
+    def on_created(self, event):
+        """ Handle created events and start stability checking.
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        event_type = event.event_type
+        
+        if self._is_event_relevant(event_path, 'created'):
+            print(f'Event detected: created - {event_path}')
+            
+            # Start stability checking for this file
+            self._check_file_stability(event_path)
+    
+    def on_modified(self, event):
+        """ Handle modified events and update stability checking.
+        """
+        # Get normalized path
+        event_path = event.src_path.rstrip(os.path.sep)
+        
+        if self._is_event_relevant(event_path, 'modified'):
+            print(f'Event detected: modified - {event_path}')
+            
+            # Continue stability checking if it's a file
+            if not os.path.isdir(event_path):
+                self._check_file_stability(event_path)
+                
+    def on_closed(self, event):
+        """ Handle closed events (file was written to and closed).
+        """
+        # Get normalized path
+        event_path = event.src_path.rstrip(os.path.sep)
+        
+        if self._is_event_relevant(event_path, 'closed'):
+            print(f'File fully written (closed): {event_path}')
+            
+            # Clean up any stability checks for this file
+            if event_path in self.file_sizes:
+                del self.file_sizes[event_path]
+                del self.file_checks[event_path]
+    
+    def on_closed_no_write(self, event):
+        """ Handle closed_no_write events (file was opened but not modified).
+        """
+        # Get normalized path
+        event_path = event.src_path.rstrip(os.path.sep)
+        
+        # Filter more strictly for closed_no_write events
+        # First check if it's within our directory structure
+        is_in_matching_dir = False
+        for dir_path in self.matching_dirs:
+            if event_path.startswith(dir_path):
+                is_in_matching_dir = True
+                break
+                
+        # Only process if it's in our directories or is an enmasse file
+        is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+        
+        if is_in_matching_dir or is_enmasse:
+            print(f'File closed (no write): {event_path}')
 
-        # Process only relevant events
-        if self._is_event_relevant(event_path, event_type):
-            print(f'Event detected: {event_type} - {event_path}')
+    def on_deleted(self, event):
+        """ Handle deleted events and clean up tracking.
+        """
+        # Get normalized path
+        event_path = event.src_path.rstrip(os.path.sep)
+        
+        if self._is_event_relevant(event_path, 'deleted'):
+            print(f'Event detected: deleted - {event_path}')
+            
+            # Clean up any tracking for this file
+            if event_path in self.file_sizes:
+                del self.file_sizes[event_path]
+                del self.file_checks[event_path]
 
 def watch_directory(directory_path:'str', matching_items:'list[str]', event_types:list=None) -> 'Observer':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
