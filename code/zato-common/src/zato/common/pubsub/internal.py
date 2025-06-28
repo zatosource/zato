@@ -55,6 +55,7 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
         'is_active': True
     })
 
+
     consumer = Consumer(config, on_msg_callback)
 
     logger.info(f'Starting internal pub/sub server consumer for {conn_url_no_password} (queue={queue_name})')
