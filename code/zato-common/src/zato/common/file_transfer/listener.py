@@ -1,24 +1,31 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import glob
+import logging
 import os
 import sys
 import time
 from os.path import abspath, commonpath, dirname, join
 
-# watchdog
+# Watchdog
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 # Zato
 from zato.broker.client import BrokerClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Logger for this module
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,9 +278,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 
                 # If file size has been stable for several checks, consider it complete
                 if self.file_checks[event_path] >= self.stability_threshold:
-                    print(f'File ready: {event_path}')
-                    # Publish the event
-                    self.publish_event('file_ready', event_path)
+                    logger.info('File ready: %s', event_path)
+                    # Publish the file-ready event
+                    self.publish_file_ready_event(event_path)
                     del self.file_sizes[event_path]
                     del self.file_checks[event_path]
             else:
@@ -306,11 +313,11 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             if not os.path.isdir(event_path):
                 _ = self._check_file_stability(event_path)
 
-    def publish_event(self, event_type:'str', event_path:'str') -> 'None':
-        """ Publish file event to the broker.
+    def publish_file_ready_event(self, event_path:'str') -> 'None':
+        """ Publish file-ready event to the broker.
         """
         msg = {
-            'event_type': event_type,
+            'event_type': 'file_ready',
             'path': event_path,
             'timestamp': time.time(),
         }
@@ -320,7 +327,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             self.broker_client.publish(msg)
         except Exception as e:
             # Don't let broker issues interrupt file handling
-            print(f'Warning: Could not publish event to broker: {e}')
+            logger.warning('Could not publish event to broker: %s', e)
         
     def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
@@ -329,9 +336,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'closed'):
-            print(f'File ready: {event_path}')
-            # Publish the event
-            self.publish_event('file_ready', event_path)
+            logger.info('File ready: %s', event_path)
+            # Publish the file-ready event
+            self.publish_file_ready_event(event_path)
             
             # Clean up any stability checks for this file
             if event_path in self.file_sizes:
@@ -356,9 +363,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
 
         if is_in_matching_dir or is_enmasse:
-            print(f'File ready (reopened): {event_path}')
-            # Publish the event
-            self.publish_event('file_reopened', event_path)
+            logger.info('File ready (reopened): %s', event_path)
+            # Publish the file-ready event
+            self.publish_file_ready_event(event_path)
 
     def on_deleted(self, event:'FileSystemEvent') -> 'None':
         """ Handle deleted events and clean up tracking.
@@ -367,10 +374,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'deleted'):
-            print(f'File deleted: {event_path}')
-            # Publish the event
-            self.publish_event('file_deleted', event_path)
-
+            logger.info('File deleted: %s', event_path)
+            
             # Clean up any tracking for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
@@ -409,23 +414,22 @@ def watch_directory(directory_path:'str', matching_items:'list[str]', event_type
 if __name__ == '__main__':
 
     # Check if a directory path was provided
-    if len(sys.argv) < 2:
-        print(f'Usage: {os.path.basename(sys.argv[0])} <directory_path>')
-        sys.exit(1)
-
-    # Get the directory path from command line
-    directory_path = sys.argv[1]
+    if len(sys.argv) > 1:
+        base_dir = sys.argv[1]
+    else:
+        base_dir = os.getcwd()
+        logger.info('Using current directory: %s', base_dir)
 
     try:
         # Find matching items
-        matching_items = find_matching_items(directory_path)
+        matching_items = find_matching_items(base_dir)
 
         # Print results
         if not matching_items:
-            print(f'No "src" directory found in {directory_path} or no matching items within src directory.')
+            logger.info('No "src" directory found in %s or no matching items within src directory.', base_dir)
         else:
             # Find the src directory that was used
-            src_pattern = os.path.join(directory_path, '**/src')
+            src_pattern = os.path.join(base_dir, '**/src')
             src_directories = glob.glob(src_pattern, recursive=True)
             filtered_src_directories = []
             for d in src_directories:
@@ -434,21 +438,21 @@ if __name__ == '__main__':
             src_directories = filtered_src_directories
             src_directory = src_directories[0] if src_directories else 'Unknown'
 
-            print(f'Using src directory: {src_directory}')
-            print(f'Found {len(matching_items)} matching items:')
+            logger.info('Using src directory: %s', src_directory)
+            logger.info('Found %s matching items:', len(matching_items))
             for item in matching_items:
-                print(f'  {item}')
+                logger.info('  %s', item)
 
             # Find and display the deepest common directory
             common_dir = find_deepest_common_directory(matching_items)
             if common_dir:
-                print(f'\nDeepest common directory: {common_dir}')
+                logger.info('Deepest common directory: %s', common_dir)
 
                 # Automatically watch for changes
                 try:
-                    observer = watch_directory(directory_path, matching_items)
+                    observer = watch_directory(base_dir, matching_items)
                     observer.start()
-                    print(f'\nWatching for changes, press Ctrl+C to stop...')
+                    logger.info('Watching for changes, press Ctrl+C to stop...')
 
                     try:
                         while True:
