@@ -84,6 +84,7 @@ texttable==1.6.1
 typing-utils==0.1.0
 tzlocal==5.3.1
 urllib3==1.26.20
+watchdog==6.0.0
 
 zato-ext-concurrent-log-handler==0.9.1
 zato-ext-inotifyx==0.3.1; sys_platform == 'linux'
