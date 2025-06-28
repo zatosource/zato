@@ -62,7 +62,11 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
     src_directories = glob.glob(src_pattern, recursive=True)
 
     # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
-    src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
+    filtered_src_directories = []
+    for d in src_directories:
+        if os.path.basename(d) == 'src' and os.path.isdir(d):
+            filtered_src_directories.append(d)
+    src_directories = filtered_src_directories
 
     # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
     # Use sets to ensure uniqueness
@@ -171,7 +175,11 @@ if __name__ == '__main__':
             # Find the src directory that was used
             src_pattern = os.path.join(directory_path, '**/src')
             src_directories = glob.glob(src_pattern, recursive=True)
-            src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
+            filtered_src_directories = []
+            for d in src_directories:
+                if os.path.basename(d) == 'src' and os.path.isdir(d):
+                    filtered_src_directories.append(d)
+            src_directories = filtered_src_directories
             src_directory = src_directories[0] if src_directories else 'Unknown'
 
             print(f'Using src directory: {src_directory}')
