@@ -154,8 +154,8 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def find_deepest_common_directory(directories):
-    """ Returns the deepest directory that is common to all input directories.
+def find_deepest_common_directory(directories:'list[str]') -> 'str':
+    ''' Returns the deepest directory that is common to all input directories.
     
     For instance, given directories:
     /home/user/projects/app/src/module1
@@ -165,24 +165,13 @@ def find_deepest_common_directory(directories):
     This will return '/home/user/projects/app/src'
     
     If no common directory is found, returns an empty string.
-    """
+    '''
     if not directories:
-        return ""
-        
-    # Get only non-enmasse directories
-    non_enmasse_dirs = []
-    for path in directories:
-        # Skip paths that look like enmasse files
-        if 'enmasse' in path and ('.yml' in path or '.yaml' in path):
-            continue
-        non_enmasse_dirs.append(path)
+        return ''
     
-    if not non_enmasse_dirs:
-        return ""
-        
     # Split each path into components
     paths_components = []
-    for path in non_enmasse_dirs:
+    for path in directories:
         components = path.split(os.path.sep)
         paths_components.append(components)
     
@@ -191,22 +180,22 @@ def find_deepest_common_directory(directories):
     
     # Find the common prefix
     common_components = []
-    for i in range(min_length):
-        component = paths_components[0][i]
-        if all(components[i] == component for components in paths_components):
+    for idx in range(min_length):
+        component = paths_components[0][idx]
+        if all(components[idx] == component for components in paths_components):
             common_components.append(component)
         else:
             break
     
     # Convert back to path
     if common_components:
-        common_path = os.path.sep.join(common_components)
-        # Add leading path separator if it was there originally
-        if non_enmasse_dirs[0].startswith(os.path.sep):
-            common_path = os.path.sep + common_path
-        return common_path
+        out = os.path.sep.join(common_components)
+        # Add leading path separator if it was there originally, but ensure only one
+        if directories[0].startswith(os.path.sep):
+            out = os.path.sep + out.lstrip(os.path.sep)
+        return out
     else:
-        return ""
+        return ''
 
 # ################################################################################################################################
 # ################################################################################################################################
