@@ -229,7 +229,6 @@ class Consumer:
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
                 # as an opportunity to perform the heartbeat.
                 except conn_errors:
-
                     try:
                         connection.heartbeat_check()
                     except Exception:
