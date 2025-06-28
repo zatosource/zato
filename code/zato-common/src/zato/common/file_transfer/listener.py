@@ -63,25 +63,29 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 
     # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
     src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
-    
+
     # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
-    enmasse_matches = []
-    other_directories = []
-    
+    # Use sets to ensure uniqueness
+    enmasse_matches = set()
+    other_dir_matches = set()
+
     # Process any patterns containing "enmasse" - these can be anywhere in the input directory
     for pattern in pickup_order_patterns:
         if 'enmasse' in pattern:
-            # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
-            full_pattern = os.path.join(directory_path, '**/' + pattern)
-            
+            # Get the full pattern path - avoid double-prepending **/ to patterns
+            if pattern.startswith('**/'):
+                full_pattern = os.path.join(directory_path, pattern)
+            else:
+                full_pattern = os.path.join(directory_path, '**/' + pattern)
+
             # Find matching items
             matches = glob.glob(full_pattern, recursive=True)
-            
+
             # Add normalized full paths to enmasse matches
             for match in matches:
                 # Normalize the path by removing trailing slashes
                 normalized_match = match.rstrip(os.path.sep)
-                enmasse_matches.append(normalized_match)
+                enmasse_matches.add(normalized_match)
 
     # Continue only if src directory was found for the other patterns
     if src_directories:
@@ -96,7 +100,7 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 
                 # Find matching items
                 matches = glob.glob(full_pattern, recursive=True)
-                
+
                 # Extract only the directories for non-enmasse matches
                 for match in matches:
                     if os.path.isfile(match):
@@ -105,15 +109,15 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
                     else:
                         # For directories, use as is
                         directory = match
-                    
+
                     # Normalize the path by removing trailing slashes
                     directory = directory.rstrip(os.path.sep)
-                        
-                    other_directories.append(directory)
-    
+
+                    other_dir_matches.add(directory)
+
     # Combine enmasse full paths with unique directories from other matches
-    out = enmasse_matches + list(set(other_directories))
-    
+    out = list(enmasse_matches) + list(other_dir_matches)
+
     # Sort the combined results
     out = sorted(out)
 
