@@ -210,16 +210,26 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     Only processes events that occur within directories returned by find_matching_items,
     with special exception for enmasse files which are never ignored.
     """
-    def __init__(self, matching_dirs:'list[str]'):
+    def __init__(self, matching_dirs:'list[str]', event_types:list=None):
         self.matching_dirs = matching_dirs
+        self.event_types = event_types or ['created', 'deleted', 'modified']
         super().__init__()
 
-    def _is_event_relevant(self, event_path:'str') -> 'bool':
-        """ Returns True if the event is relevant based on the path.
+    def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
+        """ Returns True if the event is relevant based on the path and event type.
         Events are considered relevant if:
+        - Event type is in the allowed types list
         - They occur within a directory returned by find_matching_items
         - They relate to enmasse files (which are never ignored)
         """
+        # Check if this is a type of event we care about
+        if event_type not in self.event_types:
+            return False
+            
+        # Skip directory modification events (too noisy)
+        if event_type == 'modified' and os.path.isdir(event_path):
+            return False
+            
         # Always process enmasse events
         if 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path):
             return True
@@ -233,20 +243,25 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         return False
 
     def on_any_event(self, event:'FileSystemEvent'):
-        """ Called for any event, filters based on paths.
+        """ Called for any event, filters based on paths and event types.
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
+        event_type = event.event_type
 
         # Process only relevant events
-        if self._is_event_relevant(event_path):
-            event_type = event.event_type
+        if self._is_event_relevant(event_path, event_type):
             print(f'Event detected: {event_type} - {event_path}')
 
-def watch_directory(directory_path:'str', matching_items:'list[str]') -> 'Observer':
+def watch_directory(directory_path:'str', matching_items:'list[str]', event_types:list=None) -> 'Observer':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
     Only processes events that occur within directories returned by find_matching_items,
     with special exception for enmasse files which are never ignored.
+    
+    Args:
+        directory_path: Base directory path to search in
+        matching_items: List of directories/files to watch for changes
+        event_types: Types of events to monitor (default: created, deleted, modified)
     
     Returns the observer instance, which must be started by the caller.
     """
@@ -258,7 +273,7 @@ def watch_directory(directory_path:'str', matching_items:'list[str]') -> 'Observ
 
     # Create observer and event handler
     observer = Observer()
-    event_handler = ZatoFileSystemEventHandler(matching_items)
+    event_handler = ZatoFileSystemEventHandler(matching_items, event_types)
     
     # Schedule the observer
     observer.schedule(event_handler, watch_directory, recursive=True)
