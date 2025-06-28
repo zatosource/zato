@@ -155,29 +155,29 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 # ################################################################################################################################
 
 def find_deepest_common_directory(directories:'list[str]') -> 'str':
-    ''' Returns the deepest directory that is common to all input directories.
-    
+    """ Returns the deepest directory that is common to all input directories.
+
     For instance, given directories:
     /home/user/projects/app/src/module1
     /home/user/projects/app/src/module2
     /home/user/projects/app/src/lib/common
-    
+
     This will return '/home/user/projects/app/src'
-    
+
     If no common directory is found, returns an empty string.
-    '''
+    """
     if not directories:
         return ''
-    
+
     # Split each path into components
     paths_components = []
     for path in directories:
         components = path.split(os.path.sep)
         paths_components.append(components)
-    
+
     # Find the minimum length to avoid index errors
     min_length = min(len(components) for components in paths_components)
-    
+
     # Find the common prefix
     common_components = []
     for idx in range(min_length):
@@ -186,7 +186,7 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
             common_components.append(component)
         else:
             break
-    
+
     # Convert back to path
     if common_components:
         out = os.path.sep.join(common_components)
@@ -232,7 +232,7 @@ if __name__ == '__main__':
             print(f'Found {len(matching_items)} matching items:')
             for item in matching_items:
                 print(f'  {item}')
-                
+
             # Find and display the deepest common directory
             common_dir = find_deepest_common_directory(matching_items)
             if common_dir:
