@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from json import dumps
 
 # Bunch
@@ -17,6 +16,7 @@ from bunch import bunchify
 from kombu.entity import PERSISTENT_DELIVERY_MODE
 
 # Zato
+from zato.common.pubsub.util import get_broker_config
 from zato.server.connection.amqp_ import get_connection_class, Producer
 
 # ################################################################################################################################
@@ -32,16 +32,12 @@ class BrokerClient:
 
     def __init__(self, *, server:'ParallelServer | None'=None) -> 'None':
 
-        broker_protocol = os.environ['Zato_Broker_Protocol']
-        broker_address  = os.environ['Zato_Broker_Address']
-        broker_vhost    = os.environ['Zato_Broker_Virtual_Host']
-        broker_username = os.environ['Zato_Broker_Username']
-        broker_password = os.environ['Zato_Broker_Password']
-
-        host, port = broker_address.split(':')
+        broker_config = get_broker_config()
+        
+        host, port = broker_config.address.split(':')
         port = int(port)
 
-        conn_url = f'{broker_protocol}://{broker_username}:{broker_password}@{host}:{port}/{broker_vhost}'
+        conn_url = f'{broker_config.protocol}://{broker_config.username}:{broker_config.password}@{host}:{port}/{broker_config.vhost}'
 
         producer_name = 'internal'
 
@@ -57,9 +53,9 @@ class BrokerClient:
             'heartbeat': 30,
             'host': host,
             'port': port,
-            'vhost': broker_vhost,
-            'username': broker_username,
-            'password': broker_password,
+            'vhost': broker_config.vhost,
+            'username': broker_config.username,
+            'password': broker_config.password,
             'pool_size': 10,
             'get_conn_class_func': get_conn_class_func
         })

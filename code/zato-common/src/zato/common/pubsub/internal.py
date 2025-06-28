@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from logging import getLogger
 
 # Bunch
@@ -18,6 +17,7 @@ from kombu.connection import Connection as KombuAMQPConnection
 
 # Zato
 from zato.common.api import AMQP
+from zato.common.pubsub.util import get_broker_config
 from zato.server.connection.amqp_ import Consumer
 
 # ################################################################################################################################
@@ -36,17 +36,13 @@ logger = getLogger(__name__)
 
 def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
 
-    # Get broker configuration from environment variables
-    broker_protocol = os.environ['Zato_Broker_Protocol']
-    broker_address  = os.environ['Zato_Broker_Address']
-    broker_vhost    = os.environ['Zato_Broker_Virtual_Host']
-    broker_username = os.environ['Zato_Broker_Username']
-    broker_password = os.environ['Zato_Broker_Password']
+    # Get broker configuration from the utility function
+    config = get_broker_config()
 
     queue_name = 'server'
 
-    conn_url = f'{broker_protocol}://{broker_username}:{broker_password}@{broker_address}/{broker_vhost}'
-    conn_url_no_password = f'{broker_protocol}://{broker_username}:********@{broker_address}/{broker_vhost}'
+    conn_url = f'{config.protocol}://{config.username}:{config.password}@{config.address}/{config.vhost}'
+    conn_url_no_password = f'{config.protocol}://{config.username}:********@{config.address}/{config.vhost}'
 
     config = bunchify({
         'name': 'zato.server',
