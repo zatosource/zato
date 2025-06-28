@@ -7,216 +7,109 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import fnmatch
-import logging
+import glob
 import os
 import sys
-import time
-from collections import defaultdict
-from pathlib import Path
-
-# watchdog
-from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileSystemEventHandler
-from watchdog.observers import Observer
-
-# typing
-if 0:
-    from typing import Dict, List, Set
-    Dict = Dict
-    List = List
-    Set = Set
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger('zato.file_transfer.listener')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Patterns for file pickup, ordered by importance
 pickup_order_patterns = [
-    '  common*/**',
-    '  util*/**',
-    '  model*/**',
-    '  core*/**',
-    '  channel*/**',
-    '  adapter*/**',
-    '  api*/**',
-    '  services*/**',
-    '  **/enmasse*.y*ml',
+
+    'common*/**',
+    'util*/**',
+    'model*/**',
+    'core*/**',
+    'channel*/**',
+    'adapter*/**',
+    'api*/**',
+    'services*/**',
+    '**/enmasse*.y*ml',
 ]
 
-# Clean up the patterns (remove leading/trailing whitespace)
-pickup_order_patterns = [pattern.strip() for pattern in pickup_order_patterns]
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ZatoFileSystemEventHandler(FileSystemEventHandler):
-    """ Custom file system event handler for Zato projects.
+def find_matching_items(directory_path:'str') -> 'list[str]':
+    """ Finds all files and directories matching pickup_order_patterns in the given directory,
+    but only after locating a "src" directory inside it. Returns a list of matching paths sorted alphabetically.
     """
+    # Make sure we have the absolute path
+    directory_path = os.path.abspath(directory_path)
 
-    def __init__(self, root_dir:'str', patterns:'List[str]') -> 'None':
-        super().__init__()
-        self.root_dir = Path(root_dir)
-        self.patterns = patterns
+    # Check if the directory exists
+    if not os.path.isdir(directory_path):
+        raise ValueError(f'Directory does not exist: {directory_path}')
 
-    def _is_path_matching_patterns(self, path:'Path') -> 'bool':
-        """ Check if the path matches any of the defined patterns.
-        """
-        rel_path_str = str(path.relative_to(self.root_dir))
-        for pattern in self.patterns:
-            if fnmatch.fnmatch(rel_path_str, pattern):
-                return True
-        return False
+    # First, find the "src" directory (exact match) inside the provided directory
+    src_pattern = os.path.join(directory_path, '**/src')
+    src_directories = glob.glob(src_pattern, recursive=True)
 
-    def on_created(self, event:'FileSystemEventHandler') -> 'None':
-        path = Path(event.src_path)
-        if self._is_path_matching_patterns(path):
-            event_type = "directory" if isinstance(event, DirCreatedEvent) else "file"
-            logger.info(f'Created {event_type}: {path}')
+    # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
+    src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
 
-    def on_modified(self, event:'FileSystemEventHandler') -> 'None':
-        path = Path(event.src_path)
-        if self._is_path_matching_patterns(path):
-            event_type = "directory" if isinstance(event, DirModifiedEvent) else "file"
-            logger.info(f'Modified {event_type}: {path}')
+    # If no src directory found, return empty list
+    if not src_directories:
+        return []
 
-    def on_deleted(self, event:'FileSystemEventHandler') -> 'None':
-        path = Path(event.src_path)
-        if self._is_path_matching_patterns(path):
-            event_type = "directory" if hasattr(event, 'is_directory') and event.is_directory else "file"
-            logger.info(f'Deleted {event_type}: {path}')
+    # Use the first found src directory as our base for pattern matching
+    src_directory = src_directories[0]
 
-# ################################################################################################################################
-# ################################################################################################################################
+    # Store all matching items
+    out = []
 
-class ZatoDirectoryWatcher:
-    """ Watches directories specified by Zato_Project_Root* environment variables.
-    """
+    # Process each pattern within the src directory
+    for pattern in pickup_order_patterns:
+        # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
+        full_pattern = os.path.join(src_directory, '**/' + pattern)
 
-    def __init__(self, patterns:'List[str]'=None) -> 'None':
-        self.patterns = patterns or pickup_order_patterns
-        self.observers = {}
-        self.watched_paths = defaultdict(set)
+        # Find matching items
+        matches = glob.glob(full_pattern, recursive=True)
 
-    def _get_project_root_dirs(self) -> 'dict':
-        """ Get all environment variables starting with Zato_Project_Root.
-        """
-        project_roots = {}
-        for key, value in os.environ.items():
-            if key.startswith('Zato_Project_Root'):
-                if os.path.exists(value) and os.path.isdir(value):
-                    project_roots[key] = value
-                else:
-                    logger.warning(f'Directory specified by {key} doesn\'t exist: {value}')
-        return project_roots
+        # Add to result list
+        out.extend(matches)
 
-    def _find_matching_paths(self, root_dir:'str') -> 'list':
-        """ Find all paths under root_dir that match any of the patterns.
-        """
-        matching_paths = []
-        root_path = Path(root_dir)
+    # Remove duplicates and sort
+    out = sorted(set(out))
 
-        for pattern in self.patterns:
-            # Use Path.glob() for recursive pattern matching
-            if '**' in pattern:
-                # Handle recursive patterns correctly
-                matching_paths.extend([str(p) for p in root_path.glob(pattern)])
-            else:
-                # Handle non-recursive patterns
-                matching_paths.extend([str(p) for p in root_path.glob(pattern)])
+    # Filter out __pycache__ directories and *.pyc files
+    out = [item for item in out
+        if not ('__pycache__' in item or item.endswith('.pyc'))]
 
-        return matching_paths
-
-    def start_watching(self) -> 'list':
-        """ Start watching all project root directories.
-        """
-        project_roots = self._get_project_root_dirs()
-
-        if not project_roots:
-            logger.warning("No Zato_Project_Root* environment variables found")
-            return []
-
-        initially_matched = []
-
-        for env_var, root_dir in project_roots.items():
-            logger.info(f'Setting up watcher for {env_var}: {root_dir}')
-            matching_paths = self._find_matching_paths(root_dir)
-            initially_matched.extend(matching_paths)
-
-            # Set up the observer for this root directory
-            observer = Observer()
-            event_handler = ZatoFileSystemEventHandler(root_dir, self.patterns)
-            _ = observer.schedule(event_handler, root_dir, recursive=True)
-            observer.start()
-
-            self.observers[env_var] = observer
-            self.watched_paths[env_var] = set(matching_paths)
-
-            logger.info(f'Watching {len(matching_paths)} paths in {root_dir}')
-
-        return initially_matched
-
-    def stop_watching(self) -> 'None':
-        """ Stop all file system observers.
-        """
-        for env_var, observer in self.observers.items():
-            logger.info(f'Stopping observer for {env_var}')
-            observer.stop()
-            observer.join()
-
-    def check_for_new_directories(self) -> 'None':
-        """ Check if there are any new directories to watch.
-        """
-        current_roots = self._get_project_root_dirs()
-
-        # Check for new roots
-        for env_var, root_dir in current_roots.items():
-            if env_var not in self.observers:
-                logger.info(f'New project root detected: {env_var} -> {root_dir}')
-                observer = Observer()
-                event_handler = ZatoFileSystemEventHandler(root_dir, self.patterns)
-                _ = observer.schedule(event_handler, root_dir, recursive=True)
-                observer.start()
-
-                self.observers[env_var] = observer
-                matching_paths = self._find_matching_paths(root_dir)
-                self.watched_paths[env_var] = set(matching_paths)
-
-                logger.info(f'Now watching {len(matching_paths)} paths in {root_dir}')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # Check if a directory path was provided
+    if len(sys.argv) < 2:
+        print(f'Usage: {os.path.basename(sys.argv[0])} <directory_path>')
+        sys.exit(1)
+
+    # Get the directory path from command line
+    directory_path = sys.argv[1]
+
     try:
-        logger.info("Starting Zato file system watcher")
-        watcher = ZatoDirectoryWatcher()
-        initially_matched = watcher.start_watching()
+        # Find matching items
+        matching_items = find_matching_items(directory_path)
 
-        # Print initially matched paths
-        if initially_matched:
-            logger.info(f'\nInitially matched {len(initially_matched)} paths:')
-            for path in sorted(initially_matched):
-                logger.info(f'  - {path}')
+        # Print results
+        if not matching_items:
+            print(f'No "src" directory found in {directory_path} or no matching items within src directory.')
         else:
-            logger.info("No paths initially matched the patterns")
+            # Find the src directory that was used
+            src_pattern = os.path.join(directory_path, '**/src')
+            src_directories = glob.glob(src_pattern, recursive=True)
+            src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
+            src_directory = src_directories[0] if src_directories else 'Unknown'
 
-        try:
-            # Keep the main thread running to process file system events
-            logger.info("\nWatcher is running. Press Ctrl+C to stop.")
-            while True:
-                # Check for new directories every minute
-                watcher.check_for_new_directories()
-                time.sleep(60)
-        except KeyboardInterrupt:
-            logger.info("\nStopping watcher due to keyboard interrupt")
-            watcher.stop_watching()
+            print(f'Using src directory: {src_directory}')
+            print(f'Found {len(matching_items)} matching items:')
+            for item in matching_items:
+                print(f'  {item}')
 
     except Exception as e:
-        logger.exception(f'Error in Zato file system watcher: {e}')
+        print(f'Error: {e}')
         sys.exit(1)
