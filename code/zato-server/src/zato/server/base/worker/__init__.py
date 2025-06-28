@@ -532,11 +532,6 @@ class WorkerStore(_WorkerStoreBase):
         channels = self.worker_config.channel_amqp.get_config_list()
         outconns = self.worker_config.out_amqp.get_config_list()
 
-        print()
-        print(111, channels)
-        print(222, outconns)
-        print()
-
         for item in channels:
             name = item['name']
             self.amqp_api.create(name, item, self.invoke, needs_start=True)
