@@ -225,12 +225,14 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """ Custom event handler that processes file system events.
     """
-    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None):
+    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None, file_patterns:'list[str]'=None):
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
         # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
+        # File patterns to match (e.g. ['*.py', '*.txt'])
+        self.file_patterns = file_patterns or ['*.py']
         # For tracking file size stability
         self.file_sizes = {}
         self.file_checks = {}
@@ -241,9 +243,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
-        """ Check if the event is relevant based on our matching directories.
+        """ Check if event should be processed based on path and type.
         """
-        # Check if this is a type of event we care about
+        # Skip if event type is not in our list of tracked events
         if event_type not in self.event_types:
             return False
 
@@ -258,6 +260,17 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Always process enmasse events
         if is_enmasse:
             return True
+
+        # Check if the file matches any of our file patterns
+        matches_pattern = False
+        for pattern in self.file_patterns:
+            if glob.fnmatch.fnmatch(os.path.basename(event_path), pattern):
+                matches_pattern = True
+                break
+
+        # If file doesn't match any patterns, skip it
+        if not matches_pattern:
+            return False
 
         # For file events, check if the path is in one of our matching directories
         for dir_path in self.matching_dirs:
@@ -387,27 +400,23 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 del self.file_sizes[event_path]
                 del self.file_checks[event_path]
 
-def watch_directory(directory_path:'str', matching_items:'list[str]', event_types:list=None) -> 'Observer':
+def watch_directory(directory_path:'str', matching_items:'list[str]', event_types:'list[str]'=None, file_patterns:'list[str]'=None) -> 'Observer':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
-    Only processes events that occur within directories returned by find_matching_items,
-    with special exception for enmasse files which are never ignored.
-
-    Args:
-        directory_path: Base directory path to search in
-        matching_items: List of directories/files to watch for changes
-        event_types: Types of events to monitor (default: created, deleted, modified)
-
-    Returns the observer instance, which must be started by the caller.
     """
-    # Find the deepest common directory to watch
-    watch_directory = find_deepest_common_directory(matching_items)
-
-    if not watch_directory:
-        raise ValueError('No common directory to watch could be determined')
-
-    # Create observer and event handler
+    # Create a watchdog observer
     observer = Observer()
-    event_handler = ZatoFileSystemEventHandler(matching_items, event_types)
+
+    # Find the deepest common directory to watch
+    # This optimizes the observer to watch from the appropriate level
+    non_enmasse_dirs = [d for d in matching_items if 'enmasse' not in d]
+    if non_enmasse_dirs:
+        watch_directory = find_deepest_common_directory(non_enmasse_dirs)
+    else:
+        # If there are no non-enmasse directories, watch the base directory
+        watch_directory = directory_path
+
+    # Create event handler
+    event_handler = ZatoFileSystemEventHandler(matching_items, event_types, file_patterns)
 
     # Schedule the observer
     _ = observer.schedule(event_handler, watch_directory, recursive=True)
@@ -454,9 +463,20 @@ if __name__ == '__main__':
             if common_dir:
                 logger.info('Deepest common directory: %s', common_dir)
 
+                # Use default pattern or override with command line args
+                # Default to only Python files (*.py)
+                file_patterns = ['*.py']
+                
+                # Check if file patterns were provided as additional command line arguments
+                if len(sys.argv) > 2:
+                    file_patterns = sys.argv[2:]
+                    logger.info('Using file patterns: %s', file_patterns)
+                else:
+                    logger.info('Using default file pattern: %s', file_patterns)
+                    
                 # Automatically watch for changes
                 try:
-                    observer = watch_directory(base_dir, matching_items)
+                    observer = watch_directory(base_dir, matching_items, file_patterns=file_patterns)
                     observer.start()
                     logger.info('Watching for changes, press Ctrl+C to stop...')
 
