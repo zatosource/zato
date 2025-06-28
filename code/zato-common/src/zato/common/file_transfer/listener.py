@@ -27,6 +27,21 @@ pickup_order_patterns = [
     '**/enmasse*.y*ml',
 ]
 
+# Names to ignore in paths
+ignored_names = [
+    '__pycache__',
+    '.git',
+    '.svn',
+]
+
+# File suffixes to ignore
+ignored_suffixes = [
+    '.pyc',
+    '.pyo',
+    '.so',
+    '.pyd',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -72,9 +87,29 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
     # Remove duplicates and sort
     out = sorted(set(out))
 
-    # Filter out __pycache__ directories and *.pyc files
-    out = [item for item in out
-        if not ('__pycache__' in item or item.endswith('.pyc'))]
+    # Filter out items based on ignored_names and ignored_suffixes
+    filtered_out = []
+    for item in out:
+        should_ignore = False
+        
+        # Check if any ignored name is in the path
+        for name in ignored_names:
+            if name in item:
+                should_ignore = True
+                break
+                
+        # If not already ignored, check for ignored suffixes
+        if not should_ignore:
+            for suffix in ignored_suffixes:
+                if item.endswith(suffix):
+                    should_ignore = True
+                    break
+        
+        # Add to filtered list if not ignored
+        if not should_ignore:
+            filtered_out.append(item)
+            
+    out = filtered_out
 
     return out
 
