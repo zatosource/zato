@@ -46,9 +46,9 @@ ignored_suffixes = [
 
 def find_matching_items(directory_path:'str') -> 'list[str]':
     """ Finds all files and directories matching pickup_order_patterns in the given directory.
-    Most patterns are only matched under a "src" directory, but patterns containing "enmasse" 
-    are matched anywhere under the input directory.
-    Returns a list of matching paths sorted alphabetically.
+    For non-enmasse patterns, returns only the directories containing matches (under "src").
+    For enmasse patterns, returns the full paths to matching files (anywhere in the directory).
+    Returns a list of unique paths sorted alphabetically.
     """
     # Make sure we have the absolute path
     directory_path = os.path.abspath(directory_path)
@@ -64,8 +64,9 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
     # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
     src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
     
-    # Store all matching items
-    out = []
+    # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
+    enmasse_matches = []
+    other_directories = []
     
     # Process any patterns containing "enmasse" - these can be anywhere in the input directory
     for pattern in pickup_order_patterns:
@@ -76,8 +77,11 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
             # Find matching items
             matches = glob.glob(full_pattern, recursive=True)
             
-            # Add to result list
-            out.extend(matches)
+            # Add normalized full paths to enmasse matches
+            for match in matches:
+                # Normalize the path by removing trailing slashes
+                normalized_match = match.rstrip(os.path.sep)
+                enmasse_matches.append(normalized_match)
 
     # Continue only if src directory was found for the other patterns
     if src_directories:
@@ -92,12 +96,26 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 
                 # Find matching items
                 matches = glob.glob(full_pattern, recursive=True)
-
-                # Add to result list
-                out.extend(matches)
-
-    # Remove duplicates and sort
-    out = sorted(set(out))
+                
+                # Extract only the directories for non-enmasse matches
+                for match in matches:
+                    if os.path.isfile(match):
+                        # For files, get the parent directory
+                        directory = os.path.dirname(match)
+                    else:
+                        # For directories, use as is
+                        directory = match
+                    
+                    # Normalize the path by removing trailing slashes
+                    directory = directory.rstrip(os.path.sep)
+                        
+                    other_directories.append(directory)
+    
+    # Combine enmasse full paths with unique directories from other matches
+    out = enmasse_matches + list(set(other_directories))
+    
+    # Sort the combined results
+    out = sorted(out)
 
     # Filter out items based on ignored_names and ignored_suffixes
     filtered_out = []
