@@ -31,7 +31,6 @@ pickup_order_patterns = [
 ignored_names = [
     '__pycache__',
     '.git',
-    '.svn',
 ]
 
 # File suffixes to ignore
@@ -46,8 +45,10 @@ ignored_suffixes = [
 # ################################################################################################################################
 
 def find_matching_items(directory_path:'str') -> 'list[str]':
-    """ Finds all files and directories matching pickup_order_patterns in the given directory,
-    but only after locating a "src" directory inside it. Returns a list of matching paths sorted alphabetically.
+    """ Finds all files and directories matching pickup_order_patterns in the given directory.
+    Most patterns are only matched under a "src" directory, but patterns containing "enmasse" 
+    are matched anywhere under the input directory.
+    Returns a list of matching paths sorted alphabetically.
     """
     # Make sure we have the absolute path
     directory_path = os.path.abspath(directory_path)
@@ -62,27 +63,38 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
 
     # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
     src_directories = [d for d in src_directories if os.path.basename(d) == 'src' and os.path.isdir(d)]
-
-    # If no src directory found, return empty list
-    if not src_directories:
-        return []
-
-    # Use the first found src directory as our base for pattern matching
-    src_directory = src_directories[0]
-
+    
     # Store all matching items
     out = []
-
-    # Process each pattern within the src directory
+    
+    # Process any patterns containing "enmasse" - these can be anywhere in the input directory
     for pattern in pickup_order_patterns:
-        # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
-        full_pattern = os.path.join(src_directory, '**/' + pattern)
+        if 'enmasse' in pattern:
+            # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
+            full_pattern = os.path.join(directory_path, '**/' + pattern)
+            
+            # Find matching items
+            matches = glob.glob(full_pattern, recursive=True)
+            
+            # Add to result list
+            out.extend(matches)
 
-        # Find matching items
-        matches = glob.glob(full_pattern, recursive=True)
+    # Continue only if src directory was found for the other patterns
+    if src_directories:
+        # Use the first found src directory as our base for pattern matching
+        src_directory = src_directories[0]
 
-        # Add to result list
-        out.extend(matches)
+        # Process each non-enmasse pattern within the src directory
+        for pattern in pickup_order_patterns:
+            if 'enmasse' not in pattern:
+                # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
+                full_pattern = os.path.join(src_directory, '**/' + pattern)
+
+                # Find matching items
+                matches = glob.glob(full_pattern, recursive=True)
+
+                # Add to result list
+                out.extend(matches)
 
     # Remove duplicates and sort
     out = sorted(set(out))
@@ -91,24 +103,24 @@ def find_matching_items(directory_path:'str') -> 'list[str]':
     filtered_out = []
     for item in out:
         should_ignore = False
-        
+
         # Check if any ignored name is in the path
         for name in ignored_names:
             if name in item:
                 should_ignore = True
                 break
-                
+
         # If not already ignored, check for ignored suffixes
         if not should_ignore:
             for suffix in ignored_suffixes:
                 if item.endswith(suffix):
                     should_ignore = True
                     break
-        
+
         # Add to filtered list if not ignored
         if not should_ignore:
             filtered_out.append(item)
-            
+
     out = filtered_out
 
     return out
