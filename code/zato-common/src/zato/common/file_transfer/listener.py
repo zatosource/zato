@@ -206,16 +206,19 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 # ################################################################################################################################
 
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
-    """ Custom event handler that filters events based on matching directories.
-    Only processes events that occur within directories returned by find_matching_items,
-    with special exception for enmasse files which are never ignored.
+    """ Custom event handler that processes file system events.
     """
-    def __init__(self, matching_dirs:'list[str]', event_types:list=None):
+    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None):
+        """ Initialize with matching directories and event types to track.
+        """
         self.matching_dirs = matching_dirs
-        # Include closed and closed_no_write events to detect fully written files
+        # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
-        self.file_sizes = {}  # Track file sizes for stability checking
-        self.file_checks = {}  # Track how many times we've checked file size
+        # For tracking file size stability
+        self.file_sizes = {}
+        self.file_checks = {}
+        # Number of checks with stable size required to consider a file complete
+        self.stability_threshold = 3
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
@@ -259,10 +262,10 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             # If size hasn't changed, increment check counter
             if current_size == self.file_sizes[event_path]:
                 self.file_checks[event_path] += 1
-                # After 3 checks of stable size, consider file complete
-                if self.file_checks[event_path] >= 3:
-                    print(f'File fully written (size stable): {event_path}')
-                    # Clean up tracking
+                
+                # If file size has been stable for several checks, consider it complete
+                if self.file_checks[event_path] >= self.stability_threshold:
+                    print(f'File ready: {event_path}')
                     del self.file_sizes[event_path]
                     del self.file_checks[event_path]
             else:
@@ -270,7 +273,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 self.file_sizes[event_path] = current_size
                 self.file_checks[event_path] = 1
         else:
-            # First time seeing this file, initialize tracking
+            # Start tracking this file
             self.file_sizes[event_path] = current_size
             self.file_checks[event_path] = 1
 
@@ -281,9 +284,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'created'):
-            print(f'Event detected: created - {event_path}')
-
-            # Start stability checking for this file
+            # Silent - start stability checking for this file
             _ = self._check_file_stability(event_path)
 
     def on_modified(self, event:'FileSystemEvent') -> 'None':
@@ -293,9 +294,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'modified'):
-            print(f'Event detected: modified - {event_path}')
-
-            # Continue stability checking if it's a file
+            # Silent - continue stability checking if it's a file
             if not os.path.isdir(event_path):
                 _ = self._check_file_stability(event_path)
 
@@ -306,7 +305,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'closed'):
-            print(f'File fully written (closed): {event_path}')
+            print(f'File ready: {event_path}')
 
             # Clean up any stability checks for this file
             if event_path in self.file_sizes:
@@ -331,7 +330,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
 
         if is_in_matching_dir or is_enmasse:
-            print(f'File closed (no write): {event_path}')
+            print(f'File ready (reopened): {event_path}')
 
     def on_deleted(self, event:'FileSystemEvent') -> 'None':
         """ Handle deleted events and clean up tracking.
@@ -340,7 +339,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path = event.src_path.rstrip(os.path.sep)
 
         if self._is_event_relevant(event_path, 'deleted'):
-            print(f'Event detected: deleted - {event_path}')
+            print(f'File deleted: {event_path}')
 
             # Clean up any tracking for this file
             if event_path in self.file_sizes:
