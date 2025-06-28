@@ -11,10 +11,14 @@ import glob
 import os
 import sys
 import time
+from os.path import abspath, commonpath, dirname, join
 
 # watchdog
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+# Zato
+from zato.broker.client import BrokerClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -208,7 +212,7 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """ Custom event handler that processes file system events.
     """
-    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None):
+    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None, server:'object'=None):
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
@@ -219,6 +223,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         self.file_checks = {}
         # Number of checks with stable size required to consider a file complete
         self.stability_threshold = 3
+        # Initialize broker client for publishing events
+        self.broker_client = BrokerClient(server=server)
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
@@ -266,6 +272,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 # If file size has been stable for several checks, consider it complete
                 if self.file_checks[event_path] >= self.stability_threshold:
                     print(f'File ready: {event_path}')
+                    # Publish the event
+                    self.publish_event('file_ready', event_path)
                     del self.file_sizes[event_path]
                     del self.file_checks[event_path]
             else:
@@ -298,6 +306,22 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             if not os.path.isdir(event_path):
                 _ = self._check_file_stability(event_path)
 
+    def publish_event(self, event_type:'str', event_path:'str') -> 'None':
+        """ Publish file event to the broker.
+        """
+        msg = {
+            'event_type': event_type,
+            'path': event_path,
+            'timestamp': time.time(),
+        }
+        
+        # Publish the event to the broker
+        try:
+            self.broker_client.publish(msg)
+        except Exception as e:
+            # Don't let broker issues interrupt file handling
+            print(f'Warning: Could not publish event to broker: {e}')
+        
     def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
         """
@@ -306,7 +330,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         if self._is_event_relevant(event_path, 'closed'):
             print(f'File ready: {event_path}')
-
+            # Publish the event
+            self.publish_event('file_ready', event_path)
+            
             # Clean up any stability checks for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
@@ -331,6 +357,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         if is_in_matching_dir or is_enmasse:
             print(f'File ready (reopened): {event_path}')
+            # Publish the event
+            self.publish_event('file_reopened', event_path)
 
     def on_deleted(self, event:'FileSystemEvent') -> 'None':
         """ Handle deleted events and clean up tracking.
@@ -340,6 +368,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         if self._is_event_relevant(event_path, 'deleted'):
             print(f'File deleted: {event_path}')
+            # Publish the event
+            self.publish_event('file_deleted', event_path)
 
             # Clean up any tracking for this file
             if event_path in self.file_sizes:
