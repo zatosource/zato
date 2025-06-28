@@ -228,11 +228,11 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Check if this is a type of event we care about
         if event_type not in self.event_types:
             return False
-            
+
         # Skip directory modification events (too noisy)
         if event_type == 'modified' and os.path.isdir(event_path):
             return False
-            
+
         # Always process enmasse events
         if 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path):
             return True
@@ -245,16 +245,16 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Event is not in any of the matching directories
         return False
 
-    def _check_file_stability(self, event_path:'str') -> None:
+    def _check_file_stability(self, event_path:'str') -> 'None':
         """ Check if a file size has stabilized to determine if writing is complete.
         For files that are created by copying rather than direct writing.
         """
         # Ensure the file exists
         if not os.path.exists(event_path) or os.path.isdir(event_path):
             return
-            
+
         current_size = os.path.getsize(event_path)
-        
+
         if event_path in self.file_sizes:
             # If size hasn't changed, increment check counter
             if current_size == self.file_sizes[event_path]:
@@ -274,51 +274,51 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             self.file_sizes[event_path] = current_size
             self.file_checks[event_path] = 1
 
-    def on_created(self, event):
+    def on_created(self, event:'FileSystemEvent') -> 'None':
         """ Handle created events and start stability checking.
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        
+
         if self._is_event_relevant(event_path, 'created'):
             print(f'Event detected: created - {event_path}')
-            
+
             # Start stability checking for this file
-            self._check_file_stability(event_path)
-    
-    def on_modified(self, event):
+            _ = self._check_file_stability(event_path)
+
+    def on_modified(self, event:'FileSystemEvent') -> 'None':
         """ Handle modified events and update stability checking.
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        
+
         if self._is_event_relevant(event_path, 'modified'):
             print(f'Event detected: modified - {event_path}')
-            
+
             # Continue stability checking if it's a file
             if not os.path.isdir(event_path):
-                self._check_file_stability(event_path)
-                
-    def on_closed(self, event):
+                _ = self._check_file_stability(event_path)
+
+    def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        
+
         if self._is_event_relevant(event_path, 'closed'):
             print(f'File fully written (closed): {event_path}')
-            
+
             # Clean up any stability checks for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
                 del self.file_checks[event_path]
-    
-    def on_closed_no_write(self, event):
+
+    def on_closed_no_write(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed_no_write events (file was opened but not modified).
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        
+
         # Filter more strictly for closed_no_write events
         # First check if it's within our directory structure
         is_in_matching_dir = False
@@ -326,22 +326,22 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             if event_path.startswith(dir_path):
                 is_in_matching_dir = True
                 break
-                
+
         # Only process if it's in our directories or is an enmasse file
         is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
-        
+
         if is_in_matching_dir or is_enmasse:
             print(f'File closed (no write): {event_path}')
 
-    def on_deleted(self, event):
+    def on_deleted(self, event:'FileSystemEvent') -> 'None':
         """ Handle deleted events and clean up tracking.
         """
         # Get normalized path
         event_path = event.src_path.rstrip(os.path.sep)
-        
+
         if self._is_event_relevant(event_path, 'deleted'):
             print(f'Event detected: deleted - {event_path}')
-            
+
             # Clean up any tracking for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
@@ -351,27 +351,27 @@ def watch_directory(directory_path:'str', matching_items:'list[str]', event_type
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
     Only processes events that occur within directories returned by find_matching_items,
     with special exception for enmasse files which are never ignored.
-    
+
     Args:
         directory_path: Base directory path to search in
         matching_items: List of directories/files to watch for changes
         event_types: Types of events to monitor (default: created, deleted, modified)
-    
+
     Returns the observer instance, which must be started by the caller.
     """
     # Find the deepest common directory to watch
     watch_directory = find_deepest_common_directory(matching_items)
-    
+
     if not watch_directory:
         raise ValueError('No common directory to watch could be determined')
 
     # Create observer and event handler
     observer = Observer()
     event_handler = ZatoFileSystemEventHandler(matching_items, event_types)
-    
+
     # Schedule the observer
     observer.schedule(event_handler, watch_directory, recursive=True)
-    
+
     return observer
 
 # ################################################################################################################################
@@ -414,19 +414,19 @@ if __name__ == '__main__':
             common_dir = find_deepest_common_directory(matching_items)
             if common_dir:
                 print(f'\nDeepest common directory: {common_dir}')
-                
+
                 # Automatically watch for changes
                 try:
                     observer = watch_directory(directory_path, matching_items)
                     observer.start()
                     print(f'\nWatching for changes, press Ctrl+C to stop...')
-                    
+
                     try:
                         while True:
                             time.sleep(1)
                     except KeyboardInterrupt:
                         observer.stop()
-                        
+
                     observer.join()
                     print('\nWatching stopped.')
                 except Exception as e:
