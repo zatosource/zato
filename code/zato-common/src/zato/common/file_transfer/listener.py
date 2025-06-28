@@ -16,7 +16,7 @@ from collections import defaultdict
 from pathlib import Path
 
 # watchdog
-from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileCreatedEvent, FileModifiedEvent, FileSystemEventHandler
+from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 # typing
@@ -58,12 +58,12 @@ pickup_order_patterns = [pattern.strip() for pattern in pickup_order_patterns]
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """ Custom file system event handler for Zato projects.
     """
-    
+
     def __init__(self, root_dir:'str', patterns:'List[str]') -> 'None':
         super().__init__()
         self.root_dir = Path(root_dir)
         self.patterns = patterns
-        
+
     def _is_path_matching_patterns(self, path:'Path') -> 'bool':
         """ Check if the path matches any of the defined patterns.
         """
@@ -72,19 +72,19 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             if fnmatch.fnmatch(rel_path_str, pattern):
                 return True
         return False
-    
+
     def on_created(self, event:'FileSystemEventHandler') -> 'None':
         path = Path(event.src_path)
         if self._is_path_matching_patterns(path):
             event_type = "directory" if isinstance(event, DirCreatedEvent) else "file"
             logger.info(f'Created {event_type}: {path}')
-    
+
     def on_modified(self, event:'FileSystemEventHandler') -> 'None':
         path = Path(event.src_path)
         if self._is_path_matching_patterns(path):
             event_type = "directory" if isinstance(event, DirModifiedEvent) else "file"
             logger.info(f'Modified {event_type}: {path}')
-            
+
     def on_deleted(self, event:'FileSystemEventHandler') -> 'None':
         path = Path(event.src_path)
         if self._is_path_matching_patterns(path):
@@ -97,12 +97,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 class ZatoDirectoryWatcher:
     """ Watches directories specified by Zato_Project_Root* environment variables.
     """
-    
+
     def __init__(self, patterns:'List[str]'=None) -> 'None':
         self.patterns = patterns or pickup_order_patterns
         self.observers = {}
         self.watched_paths = defaultdict(set)
-        
+
     def _get_project_root_dirs(self) -> 'dict':
         """ Get all environment variables starting with Zato_Project_Root.
         """
@@ -114,13 +114,13 @@ class ZatoDirectoryWatcher:
                 else:
                     logger.warning(f'Directory specified by {key} doesn\'t exist: {value}')
         return project_roots
-    
+
     def _find_matching_paths(self, root_dir:'str') -> 'list':
         """ Find all paths under root_dir that match any of the patterns.
         """
         matching_paths = []
         root_path = Path(root_dir)
-        
+
         for pattern in self.patterns:
             # Use Path.glob() for recursive pattern matching
             if '**' in pattern:
@@ -129,38 +129,38 @@ class ZatoDirectoryWatcher:
             else:
                 # Handle non-recursive patterns
                 matching_paths.extend([str(p) for p in root_path.glob(pattern)])
-                
+
         return matching_paths
-    
+
     def start_watching(self) -> 'list':
         """ Start watching all project root directories.
         """
         project_roots = self._get_project_root_dirs()
-        
+
         if not project_roots:
             logger.warning("No Zato_Project_Root* environment variables found")
             return []
-        
+
         initially_matched = []
-        
+
         for env_var, root_dir in project_roots.items():
             logger.info(f'Setting up watcher for {env_var}: {root_dir}')
             matching_paths = self._find_matching_paths(root_dir)
             initially_matched.extend(matching_paths)
-            
+
             # Set up the observer for this root directory
             observer = Observer()
             event_handler = ZatoFileSystemEventHandler(root_dir, self.patterns)
-            observer.schedule(event_handler, root_dir, recursive=True)
+            _ = observer.schedule(event_handler, root_dir, recursive=True)
             observer.start()
-            
+
             self.observers[env_var] = observer
             self.watched_paths[env_var] = set(matching_paths)
-            
+
             logger.info(f'Watching {len(matching_paths)} paths in {root_dir}')
-        
+
         return initially_matched
-    
+
     def stop_watching(self) -> 'None':
         """ Stop all file system observers.
         """
@@ -168,25 +168,25 @@ class ZatoDirectoryWatcher:
             logger.info(f'Stopping observer for {env_var}')
             observer.stop()
             observer.join()
-    
+
     def check_for_new_directories(self) -> 'None':
         """ Check if there are any new directories to watch.
         """
         current_roots = self._get_project_root_dirs()
-        
+
         # Check for new roots
         for env_var, root_dir in current_roots.items():
             if env_var not in self.observers:
                 logger.info(f'New project root detected: {env_var} -> {root_dir}')
                 observer = Observer()
                 event_handler = ZatoFileSystemEventHandler(root_dir, self.patterns)
-                observer.schedule(event_handler, root_dir, recursive=True)
+                _ = observer.schedule(event_handler, root_dir, recursive=True)
                 observer.start()
-                
+
                 self.observers[env_var] = observer
                 matching_paths = self._find_matching_paths(root_dir)
                 self.watched_paths[env_var] = set(matching_paths)
-                
+
                 logger.info(f'Now watching {len(matching_paths)} paths in {root_dir}')
 
 # ################################################################################################################################
@@ -197,7 +197,7 @@ if __name__ == '__main__':
         logger.info("Starting Zato file system watcher")
         watcher = ZatoDirectoryWatcher()
         initially_matched = watcher.start_watching()
-        
+
         # Print initially matched paths
         if initially_matched:
             logger.info(f'\nInitially matched {len(initially_matched)} paths:')
@@ -205,7 +205,7 @@ if __name__ == '__main__':
                 logger.info(f'  - {path}')
         else:
             logger.info("No paths initially matched the patterns")
-        
+
         try:
             # Keep the main thread running to process file system events
             logger.info("\nWatcher is running. Press Ctrl+C to stop.")
@@ -216,7 +216,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             logger.info("\nStopping watcher due to keyboard interrupt")
             watcher.stop_watching()
-            
+
     except Exception as e:
         logger.exception(f'Error in Zato file system watcher: {e}')
         sys.exit(1)
