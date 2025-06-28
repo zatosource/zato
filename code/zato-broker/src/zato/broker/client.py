@@ -24,6 +24,7 @@ from zato.server.connection.amqp_ import get_connection_class, Producer
 
 if 0:
     from zato.common.typing_ import any_, anydict
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,8 +33,10 @@ class BrokerClient:
 
     def __init__(self, *, server:'ParallelServer | None'=None) -> 'None':
 
+        self.server = server
+
         broker_config = get_broker_config()
-        
+
         host, port = broker_config.address.split(':')
         port = int(port)
 
@@ -66,7 +69,7 @@ class BrokerClient:
 
     def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
 
-        msg = dumps(msg)
+        msg = dumps(msg) # type: ignore
 
         with self.producer.acquire() as client:
 
