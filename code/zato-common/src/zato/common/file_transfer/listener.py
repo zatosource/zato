@@ -219,7 +219,7 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """ Custom event handler that processes file system events.
     """
-    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None, server:'object'=None):
+    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None):
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
@@ -231,7 +231,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Number of checks with stable size required to consider a file complete
         self.stability_threshold = 3
         # Initialize broker client for publishing events
-        self.broker_client = BrokerClient(server=server)
+        self.broker_client = BrokerClient()
         super().__init__()
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
@@ -244,7 +244,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Ignore all directory events (not just modified ones)
         # But make an exception for enmasse files which we always want to process
         is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
-        
+
         # Skip all directory events (unless it's enmasse-related)
         if os.path.isdir(event_path) and not is_enmasse:
             return False
@@ -252,12 +252,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Always process enmasse events
         if is_enmasse:
             return True
-        
+
         # For file events, check if the path is in one of our matching directories
         for dir_path in self.matching_dirs:
             if event_path.startswith(dir_path):
                 return True
-        
+
         # Event is not in any of the matching directories
         return False
 
@@ -275,7 +275,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             # If size hasn't changed, increment check counter
             if current_size == self.file_sizes[event_path]:
                 self.file_checks[event_path] += 1
-                
+
                 # If file size has been stable for several checks, consider it complete
                 if self.file_checks[event_path] >= self.stability_threshold:
                     logger.info('File ready: %s', event_path)
@@ -321,14 +321,14 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             'path': event_path,
             'timestamp': time.time(),
         }
-        
+
         # Publish the event to the broker
         try:
             self.broker_client.publish(msg)
         except Exception as e:
             # Don't let broker issues interrupt file handling
             logger.warning('Could not publish event to broker: %s', e)
-        
+
     def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
         """
@@ -339,7 +339,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             logger.info('File ready: %s', event_path)
             # Publish the file-ready event
             self.publish_file_ready_event(event_path)
-            
+
             # Clean up any stability checks for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
@@ -375,7 +375,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         if self._is_event_relevant(event_path, 'deleted'):
             logger.info('File deleted: %s', event_path)
-            
+
             # Clean up any tracking for this file
             if event_path in self.file_sizes:
                 del self.file_sizes[event_path]
@@ -404,7 +404,7 @@ def watch_directory(directory_path:'str', matching_items:'list[str]', event_type
     event_handler = ZatoFileSystemEventHandler(matching_items, event_types)
 
     # Schedule the observer
-    observer.schedule(event_handler, watch_directory, recursive=True)
+    _ = observer.schedule(event_handler, watch_directory, recursive=True)
 
     return observer
 
