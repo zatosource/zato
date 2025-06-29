@@ -20,8 +20,8 @@ from watchdog.observers import Observer
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common.broker_message import HOT_DEPLOY
-from zato.common.util.api import utcnow
+from zato.common.broker_message import SERVICE
+from zato.common.util.api import new_cid, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -252,6 +252,10 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Number of checks with stable size required to consider a file complete
         self.stability_threshold = 3
 
+        # Track files that have been modified or created - these are candidates for 'file ready'
+        # when a subsequent 'closed' event is received
+        self.modified_files = set()
+
         # Initialize broker client for publishing events
         self.broker_client = BrokerClient()
         super().__init__()
@@ -338,6 +342,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         if self._is_event_relevant(event_path, 'created'):
+            # Mark this file as modified/created for later reference
+            self.modified_files.add(event_path)
             # Silent - start stability checking for this file
             _ = self._check_file_stability(event_path)
 
@@ -352,6 +358,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         if self._is_event_relevant(event_path, 'modified'):
             # Silent - continue stability checking if it's a file
             if not os.path.isdir(event_path):
+                # Mark this file as modified for later reference
+                self.modified_files.add(event_path)
                 _ = self._check_file_stability(event_path)
 
 # ################################################################################################################################
@@ -360,9 +368,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         """ Publish file-ready event to the broker.
         """
         msg = {
+            'cid': new_cid(),
             'event_type': 'file_ready',
-            'action': HOT_DEPLOY.CREATE_SERVICE.value,
+            'action': SERVICE.PUBLISH.value,
             'path': event_path,
+            'payload': event_path,
+            'service': 'demo.input-logger',
             'timestamp': utcnow().isoformat(),
         }
 
@@ -379,18 +390,24 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
         """
-        # Get normalized path
-        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
+        if self._is_event_relevant(event.src_path, 'closed'): # type: ignore
+            event_path = event.src_path
+            logger.info('File closed: %s', event_path)
 
-        if self._is_event_relevant(event_path, 'closed'):
-            logger.info('File ready: %s', event_path)
-            # Publish the file-ready event
-            self.publish_file_ready_event(event_path)
+            # Check if this file was previously modified or created
+            if event_path in self.modified_files:
+                logger.info('File ready: %s', event_path)
 
-            # Clean up any stability checks for this file
-            if event_path in self.file_sizes:
-                del self.file_sizes[event_path]
-                del self.file_checks[event_path]
+                # Publish the file-ready event
+                self.publish_file_ready_event(event_path) # type: ignore
+
+                # Clean up any stability checks for this file
+                if event_path in self.file_sizes:
+                    del self.file_sizes[event_path]
+                    del self.file_checks[event_path]
+
+                # Remove from modified files
+                self.modified_files.remove(event_path)
 
 # ################################################################################################################################
 
@@ -412,9 +429,11 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
 
         if is_in_matching_dir or is_enmasse:
-            logger.info('File ready (reopened): %s', event_path)
-            # Publish the file-ready event
-            self.publish_file_ready_event(event_path)
+            logger.debug('File closed without writing: %s', event_path)
+
+            # If it's in the modified set, it was a false positive, remove it
+            if event_path in self.modified_files:
+                self.modified_files.remove(event_path)
 
 # ################################################################################################################################
 
