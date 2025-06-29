@@ -567,12 +567,12 @@ if __name__ == '__main__':
                         observer.stop()
 
                     observer.join()
-                    print('\nWatching stopped.')
+                    logger.info('\nWatching stopped.')
                 except Exception as e:
-                    print(f'\nError setting up file watching: {e}')
+                    logger.info(f'\nError setting up file watching: {e}')
 
     except Exception as e:
-        print(f'Error: {e}')
+        logger.info(f'Error: {e}')
         sys.exit(1)
 
 # ################################################################################################################################
