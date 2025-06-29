@@ -512,7 +512,7 @@ if __name__ == '__main__':
 
                 # Automatically watch for changes
                 try:
-                    observer = watch_directory(base_dir, matching_items, file_patterns=file_patterns)
+                    observer = watch_directory(base_dir, matching_items, event_types=None, file_patterns=file_patterns)
                     observer.start()
                     logger.info('Watching for changes, press Ctrl+C to stop...')
 
