@@ -1009,7 +1009,14 @@ $.fn.zato.ide.post_load_source_object = function(
     after_post_load_source_func,
     get_current_file_service_list_func,
 ) {
+    // First, establish the new baseline for deployment status. The content we just received from the server
+    // is now considered the "last deployed" version for the purpose of detecting unsaved changes.
+    let key = $.fn.zato.ide.get_last_deployed_key();
+    store.set(key, current_file_source_code);
+
+    // Now, load the content into the editor. Any subsequent 'change' event will compare against the correct baseline.
     $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
+
     $.fn.zato.ide.highlight_current_file(fs_location);
     if(get_current_file_service_list_func) {
         current_file_service_list = get_current_file_service_list_func();
@@ -1018,19 +1025,9 @@ $.fn.zato.ide.post_load_source_object = function(
 
     console.log(`Object: "${object_name}", reuse:"${reuse_source_code}"`); // current:"${$.fn.zato.to_dict(current_file_service_list)}"`);
 
-    // We are going to reuse the source that we may already have cached
-    // and it means that we may potentially need to set the correct deployment status ..
-    if(reuse_source_code) {
-        $.fn.zato.ide.maybe_populate_initial_last_deployed();
-        $.fn.zato.ide.maybe_set_deploy_needed();
-    }
-
-    // .. if we are here, we know that we have just loaded the latest source code
-    // .. from the server so we also know that we don't need to deploy this file.
-    else {
-        $.fn.zato.ide.set_deployment_button_status_not_different();
-        $.fn.zato.ide.update_deployment_option_state(false);
-    }
+    // Since we just set the baseline to the current editor content, the file is by definition not modified.
+    $.fn.zato.ide.set_deployment_button_status_not_different();
+    $.fn.zato.ide.update_deployment_option_state(false);
 
     $.fn.zato.ide.set_is_current_file(fs_location);
     if(after_post_load_source_func) {
