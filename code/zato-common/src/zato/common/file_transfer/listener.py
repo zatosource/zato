@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import fnmatch
 import glob
 import logging
 import os
@@ -277,7 +278,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Check if the file matches any of our file patterns
         matches_pattern = False
         for pattern in self.file_patterns:
-            if glob.fnmatch.fnmatch(os.path.basename(event_path), pattern):
+            if fnmatch.fnmatch(os.path.basename(event_path), pattern):
                 matches_pattern = True
                 break
 
