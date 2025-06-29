@@ -464,12 +464,18 @@ def watch_directory(
 
 if __name__ == '__main__':
 
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_format)
+
     # Check if a directory path was provided
     if len(sys.argv) > 1:
         base_dir = sys.argv[1]
     else:
         base_dir = os.getcwd()
-        logger.info('Using current directory: %s', base_dir)
+
+    base_dir = os.path.abspath(base_dir)
+
+    logger.info('Using current directory: %s', base_dir)
 
     try:
         # Find matching items
