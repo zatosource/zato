@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,6 @@ import logging
 import os
 import sys
 import time
-from os.path import abspath, commonpath, dirname, join
 
 # Watchdog
 from watchdog.events import FileSystemEventHandler
@@ -26,6 +25,8 @@ from zato.broker.client import BrokerClient
 
 if 0:
     from watchdog.events import FileSystemEvent
+    from watchdog.observers.api import BaseObserver
+    from zato.common.typing_ import strlist, strlistnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,7 +67,7 @@ ignored_suffixes = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-def find_matching_items(directory_path:'str') -> 'list[str]':
+def find_matching_items(directory_path:'str') -> 'strlist':
     """ Finds all files and directories matching pickup_order_patterns in the given directory.
     For non-enmasse patterns, returns only the directories containing matches (under "src").
     For enmasse patterns, returns the full paths to matching files (anywhere in the directory).
@@ -225,22 +226,34 @@ def find_deepest_common_directory(directories:'list[str]') -> 'str':
 class ZatoFileSystemEventHandler(FileSystemEventHandler):
     """ Custom event handler that processes file system events.
     """
-    def __init__(self, matching_dirs:'list[str]', event_types:'list[str]'=None, file_patterns:'list[str]'=None):
+    def __init__(
+        self,
+        matching_dirs:'strlist',
+        event_types:'strlistnone',
+        file_patterns:'strlistnone',
+    ) -> 'None':
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
+
         # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
+
         # File patterns to match (e.g. ['*.py', '*.txt'])
         self.file_patterns = file_patterns or ['*.py']
+
         # For tracking file size stability
         self.file_sizes = {}
         self.file_checks = {}
+
         # Number of checks with stable size required to consider a file complete
         self.stability_threshold = 3
+
         # Initialize broker client for publishing events
         self.broker_client = BrokerClient()
         super().__init__()
+
+# ################################################################################################################################
 
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
         """ Check if event should be processed based on path and type.
@@ -280,6 +293,8 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # Event is not in any of the matching directories
         return False
 
+# ################################################################################################################################
+
     def _check_file_stability(self, event_path:'str') -> 'None':
         """ Check if a file size has stabilized to determine if writing is complete.
         For files that are created by copying rather than direct writing.
@@ -311,26 +326,32 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             self.file_sizes[event_path] = current_size
             self.file_checks[event_path] = 1
 
+# ################################################################################################################################
+
     def on_created(self, event:'FileSystemEvent') -> 'None':
         """ Handle created events and start stability checking.
         """
         # Get normalized path
-        event_path = event.src_path.rstrip(os.path.sep)
+        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         if self._is_event_relevant(event_path, 'created'):
             # Silent - start stability checking for this file
             _ = self._check_file_stability(event_path)
 
+# ################################################################################################################################
+
     def on_modified(self, event:'FileSystemEvent') -> 'None':
         """ Handle modified events and update stability checking.
         """
         # Get normalized path
-        event_path = event.src_path.rstrip(os.path.sep)
+        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         if self._is_event_relevant(event_path, 'modified'):
             # Silent - continue stability checking if it's a file
             if not os.path.isdir(event_path):
                 _ = self._check_file_stability(event_path)
+
+# ################################################################################################################################
 
     def publish_file_ready_event(self, event_path:'str') -> 'None':
         """ Publish file-ready event to the broker.
@@ -348,11 +369,13 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             # Don't let broker issues interrupt file handling
             logger.warning('Could not publish event to broker: %s', e)
 
+# ################################################################################################################################
+
     def on_closed(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed events (file was written to and closed).
         """
         # Get normalized path
-        event_path = event.src_path.rstrip(os.path.sep)
+        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         if self._is_event_relevant(event_path, 'closed'):
             logger.info('File ready: %s', event_path)
@@ -364,11 +387,13 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 del self.file_sizes[event_path]
                 del self.file_checks[event_path]
 
+# ################################################################################################################################
+
     def on_closed_no_write(self, event:'FileSystemEvent') -> 'None':
         """ Handle closed_no_write events (file was opened but not modified).
         """
         # Get normalized path
-        event_path = event.src_path.rstrip(os.path.sep)
+        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         # Filter more strictly for closed_no_write events
         # First check if it's within our directory structure
@@ -386,11 +411,13 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             # Publish the file-ready event
             self.publish_file_ready_event(event_path)
 
+# ################################################################################################################################
+
     def on_deleted(self, event:'FileSystemEvent') -> 'None':
         """ Handle deleted events and clean up tracking.
         """
         # Get normalized path
-        event_path = event.src_path.rstrip(os.path.sep)
+        event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
 
         if self._is_event_relevant(event_path, 'deleted'):
             logger.info('File deleted: %s', event_path)
@@ -400,7 +427,15 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 del self.file_sizes[event_path]
                 del self.file_checks[event_path]
 
-def watch_directory(directory_path:'str', matching_items:'list[str]', event_types:'list[str]'=None, file_patterns:'list[str]'=None) -> 'Observer':
+# ################################################################################################################################
+# ################################################################################################################################
+
+def watch_directory(
+    directory_path:'str',
+    matching_items:'strlist',
+    event_types:'strlistnone',
+    file_patterns:'strlistnone',
+) -> 'BaseObserver':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
     """
     # Create a watchdog observer
@@ -466,14 +501,14 @@ if __name__ == '__main__':
                 # Use default pattern or override with command line args
                 # Default to only Python files (*.py)
                 file_patterns = ['*.py']
-                
+
                 # Check if file patterns were provided as additional command line arguments
                 if len(sys.argv) > 2:
                     file_patterns = sys.argv[2:]
                     logger.info('Using file patterns: %s', file_patterns)
                 else:
                     logger.info('Using default file pattern: %s', file_patterns)
-                    
+
                 # Automatically watch for changes
                 try:
                     observer = watch_directory(base_dir, matching_items, file_patterns=file_patterns)
@@ -494,3 +529,6 @@ if __name__ == '__main__':
     except Exception as e:
         print(f'Error: {e}')
         sys.exit(1)
+
+# ################################################################################################################################
+# ################################################################################################################################
