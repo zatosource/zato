@@ -15,11 +15,9 @@ from time import sleep
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import HOT_DEPLOY
 from zato.common.typing_ import cast_
-from zato.common.util.api import is_python_file, is_archive_file, utcnow
+from zato.common.util.api import is_python_file, is_archive_file, publish_file
 from zato.common.util.file_system import fs_safe_now
-from zato.common.util.open_ import open_r
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -168,19 +166,8 @@ class Create(AdminService):
 
             for item in file_name_list:
 
-                with open_r(item) as f:
-                    event_data = f.read()
-
-                msg = {
-                    'cid': self.cid,
-                    'event_type': 'file_ready',
-                    'action': HOT_DEPLOY.CREATE_SERVICE.value,
-                    'payload_name': item,
-                    'payload': event_data,
-                    'timestamp': utcnow().isoformat(),
-                }
-
-                self.server.broker_client.publish(msg)
+                # Publish the file to the broker
+                _ = publish_file(self.server.broker_client, self.cid, item)
 
 # ################################################################################################################################
 

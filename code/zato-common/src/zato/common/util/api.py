@@ -94,7 +94,7 @@ if PY3:
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
      SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
-from zato.common.broker_message import SERVICE
+from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
@@ -1944,5 +1944,26 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
                 found_module_paths.add(full_module_path)
 
     return sorted(found_module_paths)
+
+# ################################################################################################################################
+
+def publish_file(broker_client, cid:'str', file_path:'str') -> 'dict':
+    """ Publish a file's content to the broker for hot-deployment.
+    """
+
+    with open_r(file_path) as f:
+        event_data = f.read()
+
+    msg = {
+        'cid': cid,
+        'event_type': 'file_ready',
+        'action': HOT_DEPLOY.CREATE_SERVICE.value,
+        'payload_name': file_path,
+        'payload': event_data,
+        'timestamp': utcnow().isoformat(),
+    }
+
+    broker_client.publish(msg)
+    return msg
 
 # ################################################################################################################################

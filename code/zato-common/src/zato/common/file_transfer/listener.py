@@ -20,9 +20,7 @@ from watchdog.observers import Observer
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common.broker_message import HOT_DEPLOY
-from zato.common.util.api import new_cid, utcnow
-from zato.common.util.open_ import open_r
+from zato.common.util.api import new_cid, publish_file
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -368,24 +366,11 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     def publish_file_ready_event(self, event_path:'str') -> 'None':
         """ Publish file-ready event to the broker.
         """
-        with open_r(event_path) as f:
-            event_data = f.read()
-
-        msg = {
-            'cid': new_cid(),
-            'event_type': 'file_ready',
-            'action': HOT_DEPLOY.CREATE_SERVICE.value,
-            'payload_name': event_path,
-            'payload': event_data,
-            'timestamp': utcnow().isoformat(),
-        }
-
-        # Publish the event to the broker
         try:
-            self.broker_client.publish(msg)
+            msg = publish_file(self.broker_client, new_cid(), event_path)
             logger.info('Sent msg -> %s', msg)
         except Exception as e:
-            logger.warning('Could not publish event to broker: %s -> %s', e, msg)
+            logger.warning('Could not publish event to broker: %s -> %s', e, event_path)
 
 # ################################################################################################################################
 
