@@ -562,7 +562,7 @@ class GetFile(_GetBase):
 
         # Reusable
         fs_location = self.request.input.fs_location
-        fs_location = self._convert_pickup_to_work_dir(fs_location)
+        # fs_location = self._convert_pickup_to_work_dir(fs_location)
         deployment_info_list = self.get_deployment_info_list()
 
         # Build a response ..

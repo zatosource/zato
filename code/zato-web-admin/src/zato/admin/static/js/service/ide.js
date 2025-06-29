@@ -134,17 +134,16 @@ $.fn.zato.ide.handle_inactivity = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
-    //  console.log("Saving to local storage")
     let key = $.fn.zato.ide.get_current_source_code_key()
     let value = window.zato_editor.getValue();
-    store.set(key, value);
+    localStorage.setItem(key, value);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
     let key = $.fn.zato.ide.get_current_source_code_key()
-    let value = store.get(key)
+    let value = localStorage.getItem(key)
     if(value) {
         window.zato_editor.setValue(value);
         window.zato_editor.clearSelection();
@@ -154,7 +153,7 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.restore_layout = function() {
-    let size = store.get(window.zato_local_storage_key.zato_action_area_size);
+    let size = localStorage.getItem(window.zato_local_storage_key.zato_action_area_size);
     if(size) {
         $.fn.zato.ide.set_main_area_container_size(size);
     }
@@ -207,7 +206,7 @@ $.fn.zato.ide.toggle_action_area = function() {
     $.fn.zato.ide.set_main_area_container_size(new_size);
 
     // .. and persist it for later use.
-    store.set(window.zato_local_storage_key.zato_action_area_size, new_size);
+    localStorage.setItem(window.zato_local_storage_key.zato_action_area_size, new_size);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1205,32 +1204,39 @@ $.fn.zato.ide.set_up_editor_session = function(editor_session) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_editor_session = function(
-    fs_location,
-    current_file_source_code,
-    reuse_source_code
-) {
+$.fn.zato.ide.load_editor_session = function(fs_location, source_code, _ignored_reuse_source_code) {
 
-    // We may already have a previous session for that file so we can load it here ..
-    var editor_session = window.zato_editor_session_map[fs_location];
-    if(!editor_session) {
-        var editor_session = ace.createEditSession(current_file_source_code);
+    console.log(`ZATO_IDE_DEBUG: load_editor_session called for fs_location: ${fs_location}`);
+    console.log(`ZATO_IDE_DEBUG: load_editor_session received source_code:`, JSON.stringify(source_code));
+
+    // Do we have a session for this file already?
+    let existing_session = window.zato_editor_session_map[fs_location];
+
+    // If so, let's just switch to it and update its content
+    if(existing_session) {
+        console.log(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, updating its content.`);
+        existing_session.setValue(source_code);
+        window.zato_editor.setSession(existing_session);
+    }
+    // .. otherwise, create a new one.
+    else {
+        console.log(`ZATO_IDE_DEBUG: Creating new session for ${fs_location}.`);
+        let new_session = ace.createEditSession(source_code);
+        $.fn.zato.ide.set_up_editor_session(new_session);
+        window.zato_editor.setSession(new_session);
+        window.zato_editor_session_map[fs_location] = new_session;
     }
 
-    // .. we may have an old session whose source we need to overwrite with what we have on input ..
-    if(!reuse_source_code) {
-        window.zato_editor.setValue(current_file_source_code);
-        window.zato_editor.clearSelection();
+    // Set mode depending on file name
+    if(fs_location.endsWith(".py")) {
+        window.zato_editor.session.setMode("ace/mode/python");
     }
-
-    // .. configure ACE ..
-    $.fn.zato.ide.set_up_editor_session(editor_session);
-
-    // .. let it be our current editor ..
-    window.zato_editor.setSession(editor_session);
-
-    // .. that we can now switch.
-    window.zato_editor.focus();
+    else if(fs_location.endsWith(".json")) {
+        window.zato_editor.session.setMode("ace/mode/json");
+    }
+    else {
+        window.zato_editor.session.setMode("ace/mode/text");
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1243,7 +1249,7 @@ $.fn.zato.ide.save_current_editor_session = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.get_last_deployed_from_store = function(key) {
-    let last_deployed = store.get(key);
+    let last_deployed = localStorage.getItem(key);
     // console.log("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
     return last_deployed;
 }
@@ -1261,7 +1267,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
 
     if(!last_deployed) {
         let editor_value = window.zato_editor.getValue()
-        store.set(key, editor_value);
+        localStorage.setItem(key, editor_value);
     }
 }
 
@@ -1411,8 +1417,8 @@ $.fn.zato.ide.set_deployment_status = function() {
 
     // console.log("Key: "+ key);
     // console.log("Editor: ["+ editor_value + "]");
-    // console.log("Store: ["+ last_deployed + "]");
-    // console.log("Is diff: "+ is_different);
+    // console.log("Last deployed: ["+ last_deployed + "]");
+    // console.log("Is different: " + is_different);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
