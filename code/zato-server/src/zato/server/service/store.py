@@ -11,6 +11,7 @@ import importlib
 import inspect
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -435,7 +436,7 @@ class ServiceStore:
 
         # Local aliases
         _Class_SimpleIO = None # type: ignore
-        _Class_SimpleIO = _Class_SimpleIO # For flake8
+        _Class_SimpleIO = _Class_SimpleIO # type: ignore
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -560,7 +561,6 @@ class ServiceStore:
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_odoo = True
-                class_.component_enabled_zeromq = True
 
             else:
 
@@ -1255,25 +1255,14 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _has_module_import(self, source_code:'str', mod_name:'str') -> 'bool':
+    def _has_module_import(self, source_code: str, mod_name: str) -> bool:
 
-        # .. ignore modules that do not import what we had on input ..
+        pattern = re.compile(r'\b{}\b'.format(re.escape(mod_name)))
+
         for line in source_code.splitlines():
-
-            # .. these two will be True if we are importing this module ..
-            has_import   = 'import' in line
-            has_mod_name = mod_name in line
-
-            # .. in which case, there is no need to continue ..
-            if has_import and has_mod_name:
-                break
-
-        # .. otherwise, no, we are not importing this module ..
-        else:
-            has_import   = False
-            has_mod_name = False
-
-        return has_import and has_mod_name
+            if 'import' in line and pattern.search(line):
+                return True
+        return False
 
 # ################################################################################################################################
 
@@ -1367,6 +1356,9 @@ class ServiceStore:
         # .. add everything found to the result ..
         out.extend(service_path_list)
         out.extend(model_path_list)
+
+        # .. make it unique and sorted ..
+        out = sorted(set(out))
 
         # .. now, we can return our result to the caller.
         return out
