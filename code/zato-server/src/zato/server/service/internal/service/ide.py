@@ -371,6 +371,7 @@ class ServiceIDE(_IDEBase):
         current_service_file_list = []
 
         service_list_response = self.get_deployment_info_list()
+        service_list_response = list(service_list_response)
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
