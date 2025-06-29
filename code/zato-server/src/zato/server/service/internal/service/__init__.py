@@ -465,12 +465,7 @@ class Invoke(AdminService):
             impl_name = self.server.service_store.id_to_impl_name[id]
             name = self.server.service_store.service_data(impl_name)['name']
 
-        # If PID is given on input it means we must invoke this particular server process by it ID
-        if pid and pid != self.server.pid:
-            response = self.server.invoke_by_pid(name, payload, pid)
-        else:
-            response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
-
+        response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
         return response
 
 # ################################################################################################################################
