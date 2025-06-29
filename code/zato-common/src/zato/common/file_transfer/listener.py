@@ -20,6 +20,8 @@ from watchdog.observers import Observer
 
 # Zato
 from zato.broker.client import BrokerClient
+from zato.common.broker_message import HOT_DEPLOY
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -359,16 +361,18 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         """
         msg = {
             'event_type': 'file_ready',
+            'action': HOT_DEPLOY.CREATE_SERVICE.value,
             'path': event_path,
-            'timestamp': time.time(),
+            'timestamp': utcnow().isoformat(),
         }
 
         # Publish the event to the broker
         try:
             self.broker_client.publish(msg)
+            logger.info('Sent msg -> %s', msg)
         except Exception as e:
             # Don't let broker issues interrupt file handling
-            logger.warning('Could not publish event to broker: %s', e)
+            logger.warning('Could not publish event to broker: %s -> %s', e, msg)
 
 # ################################################################################################################################
 
