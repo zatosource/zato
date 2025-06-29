@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import argparse
 import fnmatch
 import glob
 import logging
@@ -17,6 +18,8 @@ import time
 # Watchdog
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
+from watchdog.observers.inotify import InotifyObserver
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -446,11 +449,21 @@ def watch_directory(
     matching_items:'strlist',
     event_types:'strlistnone',
     file_patterns:'strlistnone',
+    observer_type:'str'='inotify',
 ) -> 'BaseObserver':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
     """
-    # Create a watchdog observer
-    observer = Observer()
+    # Create the appropriate watchdog observer based on type
+    if observer_type == 'polling':
+        observer = PollingObserver()
+    elif observer_type == 'inotify':
+        try:
+            observer = InotifyObserver()
+        except Exception as e:
+            logger.warning('Could not create InotifyObserver, falling back to default: %s', e)
+            observer = Observer()
+    else: # 'auto' or any other value defaults to the system-specific observer
+        observer = Observer()
 
     # Find the deepest common directory to watch
     # This optimizes the observer to watch from the appropriate level
@@ -477,13 +490,26 @@ if __name__ == '__main__':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_format)
 
-    # Check if a directory path was provided
-    if len(sys.argv) > 1:
-        base_dir = sys.argv[1]
-    else:
-        base_dir = os.getcwd()
+    # Configure argument parser
+    parser = argparse.ArgumentParser(description='Zato file event monitoring system')
 
-    base_dir = os.path.abspath(base_dir)
+    _ = parser.add_argument('directory', nargs='?', default=os.getcwd(), help='Directory to monitor (default: current working directory)')
+
+    _ = parser.add_argument(
+        '--observer',
+        dest='observer_type',
+        default='inotify',
+        choices=['inotify', 'polling', 'auto'],
+        help='Observer type to use for file monitoring (default: inotify)'
+    )
+
+    _ = parser.add_argument('--patterns', nargs='*', default=['*.py'], help='File patterns to monitor (default: *.py)')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Get absolute path for the directory
+    base_dir = os.path.abspath(args.directory)
 
     logger.info('Using current directory: %s', base_dir)
 
@@ -515,20 +541,22 @@ if __name__ == '__main__':
             if common_dir:
                 logger.info('Deepest common directory: %s', common_dir)
 
-                # Use default pattern or override with command line args
-                # Default to only Python files (*.py)
-                file_patterns = ['*.py']
+                # Use the parsed arguments
+                file_patterns = args.patterns
+                observer_type = args.observer_type
 
-                # Check if file patterns were provided as additional command line arguments
-                if len(sys.argv) > 2:
-                    file_patterns = sys.argv[2:]
-                    logger.info('Using file patterns: %s', file_patterns)
-                else:
-                    logger.info('Using default file pattern: %s', file_patterns)
+                logger.info('Using file patterns: %s', file_patterns)
+                logger.info('Using observer type: %s', observer_type)
 
                 # Automatically watch for changes
                 try:
-                    observer = watch_directory(base_dir, matching_items, event_types=None, file_patterns=file_patterns)
+                    observer = watch_directory(
+                        base_dir,
+                        matching_items,
+                        event_types=None,
+                        file_patterns=file_patterns,
+                        observer_type=observer_type
+                    )
                     observer.start()
                     logger.info('Watching for changes, press Ctrl+C to stop...')
 
