@@ -377,7 +377,6 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             'action': HOT_DEPLOY.CREATE_SERVICE.value,
             'payload_name': event_path,
             'payload': event_data,
-            'service': 'demo.input-logger',
             'timestamp': utcnow().isoformat(),
         }
 
