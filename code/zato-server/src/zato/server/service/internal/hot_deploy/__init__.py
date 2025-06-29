@@ -9,18 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
-from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
 from errno import ENOENT
-from json import loads
 from time import sleep
 from traceback import format_exc
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS
-from zato.common.json_internal import dumps
-from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_python_file, is_archive_file
 from zato.common.util.file_system import fs_safe_now, touch_multiple
@@ -58,11 +53,9 @@ class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_hot_deploy_create_request'
-        response_elem = 'zato_hot_deploy_create_response'
-        input_required = ('package_id',)
-        input_optional = ('is_startup',)
-        output_optional = (AsIs('services_deployed'),)
+        input_required = 'payload', 'payload_name'
+        input_optional = 'is_startup'
+        output_optional = AsIs('services_deployed')
 
 # ################################################################################################################################
 
@@ -253,21 +246,18 @@ class Create(AdminService):
 
     def _deploy_package(
         self,
-        session,      # type: any_
-        package_id,   # type: int
+        payload,      # type: str
         payload_name, # type: str
-        payload,      # type: strbytes
-        should_deploy_in_place, # type: bool
-        in_place_dir_name       # type: str
     ) -> 'anylistnone':
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
-        # type: (object, int, str, str)
+
+        should_deploy_in_place = True
 
         # Local objects
         if should_deploy_in_place:
-            work_dir = in_place_dir_name
+            work_dir = os.path.dirname(payload_name)
         else:
             work_dir:'str' = self.server.hot_deploy_config.current_work_dir
 
@@ -278,9 +268,6 @@ class Create(AdminService):
 
         # We enter here if there were some models or services that we deployed ..
         if ctx.model_name_list or ctx.service_name_list:
-
-            # .. no matter what kind of objects we found, the package has been deployed ..
-            self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
 
             # .. report any models found ..
             if ctx.model_name_list:
@@ -310,60 +297,22 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _update_deployment_status(self, session:'SASession', package_id:'int', status:'str') -> 'None':
-        ds = session.query(DeploymentStatus).\
-            filter(DeploymentStatus.package_id==package_id).\
-            filter(DeploymentStatus.server_id==self.server.id).\
-            one()
-        ds.status = status
-        ds.status_change_time = datetime.utcnow()
+    def deploy_package(self, payload:'str', payload_name:'str') -> 'any_':
 
-        session.add(ds)
-        session.commit()
-
-# ################################################################################################################################
-
-    def deploy_package(self, package_id:'int', session:'SASession') -> 'any_':
-
-        dp = self.get_package(package_id, session)
-
-        if dp:
-
-            # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
-            details = loads(dp.details) # type: ignore
-
-            should_deploy_in_place = details['should_deploy_in_place']
-            in_place_dir_name = os.path.dirname(details['fs_location'])
-
-            if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-                return self._deploy_package(session, package_id, dp.payload_name, dp.payload, # type: ignore
-                    should_deploy_in_place, in_place_dir_name)
-            else:
-                # This shouldn't really happen at all because the pickup notifier is to
-                # filter such things out but life is full of surprises
-                self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
-
-                # Log a message but only on a debug level
-                self.logger.debug(
-                    'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
-
-# ################################################################################################################################
-
-    def get_package(self, package_id:'int', session:'SASession') -> 'DeploymentPackage | None':
-        return session.query(DeploymentPackage).filter(DeploymentPackage.id==package_id).first() # type: ignore
+        if is_archive_file(payload_name) or is_python_file(payload_name):
+            return self._deploy_package(payload, payload_name)
+        else:
+            self.logger.warning('Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', payload_name)
 
 # ################################################################################################################################
 
     def handle(self):
-        package_id = self.request.input.package_id
-        server_token = self.server.fs_server_config.main.token
-        lock_name = '{}{}:{}'.format('uploading', server_token, package_id)
-        already_deployed_flag = '{}{}:{}'.format('already-deployed', server_token, package_id)
 
-        # TODO: Stuff below - and the methods used - needs to be rectified.
-        # As of now any worker process will always set deployment status
-        # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
-        # reporting of whether the deployment succeeded or not.
+        payload = self.request.input.payload
+        payload_name = self.request.input.payload_name
+
+        server_token = self.server.fs_server_config.main.token
+        lock_name = '{}{}:{}'.format('uploading', server_token, payload_name)
 
         ttl = self.server.deployment_lock_expires
         block = self.server.deployment_lock_timeout
@@ -375,42 +324,32 @@ class Create(AdminService):
             sleep(0.2)
 
         with self.lock(lock_name, ttl, block):
-            with closing(self.odb.session()) as session:
-                try:
-                    # Only one of workers will get here ..
-                    if not self.server.kv_data_api.get(already_deployed_flag):
-                        self.backup_current_work_dir()
 
-                        self.server.kv_data_api.set(
-                            already_deployed_flag,
-                            dumps({'create_time_utc':datetime.utcnow().isoformat()}),
-                            self.server.deployment_lock_expires,
-                        )
+            try:
+                self.backup_current_work_dir()
+                services_deployed = self.deploy_package(payload, payload_name) or []
 
-                    # .. all workers get here.
-                    services_deployed = self.deploy_package(self.request.input.package_id, session) or []
+                # Go through all services deployed, check if any needs post-processing
+                # and if does, call the relevant function and clear the flag.
+                service_store = self.server.service_store
+                needs_post_deploy_attr = service_store.needs_post_deploy_attr
 
-                    # Go through all services deployed, check if any needs post-processing
-                    # and if does, call the relevant function and clear the flag.
-                    service_store = self.server.service_store
-                    needs_post_deploy_attr = service_store.needs_post_deploy_attr
+                for service_id in services_deployed:
 
-                    for service_id in services_deployed:
+                    service_info = service_store.get_service_info_by_id(service_id)
+                    class_ = service_info['service_class']
 
-                        service_info = service_store.get_service_info_by_id(service_id)
-                        class_ = service_info['service_class']
+                    if getattr(class_, needs_post_deploy_attr, None):
+                        service_store.post_deploy(class_)
+                        delattr(class_, needs_post_deploy_attr)
 
-                        if getattr(class_, needs_post_deploy_attr, None):
-                            service_store.post_deploy(class_)
-                            delattr(class_, needs_post_deploy_attr)
+                self.response.payload.services_deployed = services_deployed
 
-                    self.response.payload.services_deployed = services_deployed
-
-                except OSError as e:
-                    if e.errno == ENOENT:
-                        self.logger.debug('Caught ENOENT e:`%s`', format_exc())
-                    else:
-                        raise
+            except OSError as e:
+                if e.errno == ENOENT:
+                    self.logger.debug('Caught ENOENT e:`%s`', format_exc())
+                else:
+                    raise
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1339,7 +1339,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Uploads the service
         _ = self.on_broker_msg_hot_deploy(
-            msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE', *args,
+            msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
 # ################################################################################################################################
