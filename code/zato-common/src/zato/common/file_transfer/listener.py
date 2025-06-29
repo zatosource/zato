@@ -85,70 +85,48 @@ def find_matching_items(directory_path:'str') -> 'strlist':
     if not os.path.isdir(directory_path):
         raise ValueError(f'Directory does not exist: {directory_path}')
 
-    # First, find the "src" directory (exact match) inside the provided directory
+    # Determine the base directories for searching by looking for 'src'
+    base_dirs = []
     src_pattern = os.path.join(directory_path, '**/src')
     src_directories = glob.glob(src_pattern, recursive=True)
 
-    # Filter to ensure we only match exact 'src' directories, not something like 'mysrc'
-    filtered_src_directories = []
+    # Filter to ensure we only match exact 'src' directories
     for d in src_directories:
         if os.path.basename(d) == 'src' and os.path.isdir(d):
-            filtered_src_directories.append(d)
-    src_directories = filtered_src_directories
+            base_dirs.append(d)
 
     # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
-    # Use sets to ensure uniqueness
     enmasse_matches = set()
     other_dir_matches = set()
 
     # Process any patterns containing "enmasse" - these can be anywhere in the input directory
     for pattern in pickup_order_patterns:
         if 'enmasse' in pattern:
-            # Get the full pattern path - avoid double-prepending **/ to patterns
+            # Get the full pattern path
             if pattern.startswith('**/'):
                 full_pattern = os.path.join(directory_path, pattern)
             else:
                 full_pattern = os.path.join(directory_path, '**/' + pattern)
 
             # Find matching items
-            matches = glob.glob(full_pattern, recursive=True)
+            for match in glob.glob(full_pattern, recursive=True):
+                if os.path.isfile(match):
+                    enmasse_matches.add(match.rstrip(os.path.sep))
 
-            # Add normalized full paths to enmasse matches
-            for match in matches:
-                # Normalize the path by removing trailing slashes
-                normalized_match = match.rstrip(os.path.sep)
-                enmasse_matches.add(normalized_match)
-
-    # Continue only if src directory was found for the other patterns
-    if src_directories:
-        # Use the first found src directory as our base for pattern matching
-        src_directory = src_directories[0]
-
-        # Process each non-enmasse pattern within the src directory
+    # Process non-enmasse patterns within each base directory
+    for base_dir in base_dirs:
         for pattern in pickup_order_patterns:
             if 'enmasse' not in pattern:
-                # Get the full pattern path - prepend '**/' to ensure we catch items at any depth
-                full_pattern = os.path.join(src_directory, '**/' + pattern)
+                # Get the full pattern path
+                full_pattern = os.path.join(base_dir, '**/' + pattern)
 
                 # Find matching items
-                matches = glob.glob(full_pattern, recursive=True)
-
-                # Extract only the directories for non-enmasse matches
-                for match in matches:
-                    if os.path.isfile(match):
-                        # For files, get the parent directory
-                        directory = os.path.dirname(match)
-                    else:
-                        # For directories, use as is
-                        directory = match
-
-                    # Normalize the path by removing trailing slashes
-                    directory = directory.rstrip(os.path.sep)
-
-                    other_dir_matches.add(directory)
+                for match in glob.glob(full_pattern, recursive=True):
+                    directory = os.path.dirname(match) if os.path.isfile(match) else match
+                    other_dir_matches.add(directory.rstrip(os.path.sep))
 
     # Combine enmasse full paths with unique directories from other matches
-    out = list(enmasse_matches) + list(other_dir_matches)
+    out = list(enmasse_matches.union(other_dir_matches))
 
     # Sort the combined results
     out = sorted(out)
@@ -514,62 +492,55 @@ if __name__ == '__main__':
     logger.info('Using current directory: %s', base_dir)
 
     try:
-        # Find matching items
-        matching_items = find_matching_items(base_dir)
+        matching_items = []
+        is_incoming_services = base_dir.rstrip(os.path.sep).endswith(os.path.join('incoming', 'services'))
 
-        # Print results
-        if not matching_items:
-            logger.info('No "src" directory found in %s or no matching items within src directory.', base_dir)
+        if is_incoming_services:
+            matching_items = [base_dir]
+            logger.info('Watching for changes in %s', base_dir)
         else:
-            # Find the src directory that was used
-            src_pattern = os.path.join(base_dir, '**/src')
-            src_directories = glob.glob(src_pattern, recursive=True)
-            filtered_src_directories = []
-            for d in src_directories:
-                if os.path.basename(d) == 'src' and os.path.isdir(d):
-                    filtered_src_directories.append(d)
-            src_directories = filtered_src_directories
-            src_directory = src_directories[0] if src_directories else 'Unknown'
+            matching_items = find_matching_items(base_dir)
+            if not matching_items:
+                logger.info('No "src" directory found in %s, or no matching items within it. Nothing to watch.', base_dir)
+            else:
+                common_dir = find_deepest_common_directory(matching_items)
+                logger.info('Watching for changes in %s and subdirectories.', common_dir)
+                logger.info('Found %s matching items to process:', len(matching_items))
+                for item in matching_items:
+                    logger.info('  %s', item)
 
-            logger.info('Using src directory: %s', src_directory)
-            logger.info('Found %s matching items:', len(matching_items))
-            for item in matching_items:
-                logger.info('  %s', item)
+        # Start the watcher if we have something to watch
+        if matching_items:
 
-            # Find and display the deepest common directory
-            common_dir = find_deepest_common_directory(matching_items)
-            if common_dir:
-                logger.info('Deepest common directory: %s', common_dir)
+            # Use the parsed arguments
+            file_patterns = args.patterns
+            observer_type = args.observer_type
 
-                # Use the parsed arguments
-                file_patterns = args.patterns
-                observer_type = args.observer_type
+            logger.info('Using file patterns: %s', file_patterns)
+            logger.info('Using observer type: %s', observer_type)
 
-                logger.info('Using file patterns: %s', file_patterns)
-                logger.info('Using observer type: %s', observer_type)
+            # Automatically watch for changes
+            try:
+                observer = watch_directory(
+                    base_dir,
+                    matching_items,
+                    event_types=None,
+                    file_patterns=file_patterns,
+                    observer_type=observer_type
+                )
+                observer.start()
+                logger.info('Watching for changes, press Ctrl+C to stop...')
 
-                # Automatically watch for changes
                 try:
-                    observer = watch_directory(
-                        base_dir,
-                        matching_items,
-                        event_types=None,
-                        file_patterns=file_patterns,
-                        observer_type=observer_type
-                    )
-                    observer.start()
-                    logger.info('Watching for changes, press Ctrl+C to stop...')
+                    while True:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    observer.stop()
 
-                    try:
-                        while True:
-                            time.sleep(1)
-                    except KeyboardInterrupt:
-                        observer.stop()
-
-                    observer.join()
-                    logger.info('\nWatching stopped.')
-                except Exception as e:
-                    logger.info(f'\nError setting up file watching: {e}')
+                observer.join()
+                logger.info('\nWatching stopped.')
+            except Exception as e:
+                logger.info(f'\nError setting up file watching: {e}')
 
     except Exception as e:
         logger.info(f'Error: {e}')
