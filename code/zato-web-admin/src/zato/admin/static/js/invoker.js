@@ -1,16 +1,28 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.on_invoke_submitted = function() {
+    let current_object_select = $.fn.zato.ide.get_current_object_select();
+    let is_modified = current_object_select.attr('data-is-modified') == '1';
 
-    const options = {
-        "request_form_id": "#invoke-service-request-form",
-        "on_started_activate_blinking": ["#invoking-please-wait"],
-        "on_ended_draw_attention": ["#result-header"],
-        "get_request_url_func": $.fn.zato.invoker.get_sync_invoke_request_url,
+    let invoke_func = function() {
+        const options = {
+            "request_form_id": "#invoke-service-request-form",
+            "on_started_activate_blinking": ["#invoking-please-wait"],
+            "on_ended_draw_attention": ["#result-header"],
+            "get_request_url_func": $.fn.zato.invoker.get_sync_invoke_request_url,
+        };
+        $.fn.zato.invoker.run_sync_invoker(options);
+    };
 
+    if (is_modified) {
+        // If the file is modified, deploy it first, and then invoke.
+        // The deploy function will take care of the UI feedback.
+        $.fn.zato.ide.run_sync_deployer(invoke_func);
+    } else {
+        // Otherwise, just invoke it directly.
+        invoke_func();
     }
-    $.fn.zato.invoker.run_sync_invoker(options);
-}
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

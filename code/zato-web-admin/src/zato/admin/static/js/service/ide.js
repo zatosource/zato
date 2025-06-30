@@ -962,40 +962,41 @@ $.fn.zato.ide.disable_file_delete_button = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.postprocess_file_buttons = function() {
+$.fn.zato.ide.postprocess_file_buttons = function(current_file_service_list) {
+    // A list of buttons that depend on a file being selected.
+    const file_buttons = ["#file-rename", "#file-delete", "#file-reload"];
 
-    // Local variables
-    let button_id_list = ["#file-rename", "#file-delete", "#file-reload"];
-    let current_object_type = $.fn.zato.ide.get_current_object_type();
+    // Get the current file context
+    const current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
-    // Check if we have any specific file now that we loaded an object
-    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
-
-    // console.log(`Postprocessing file buttons: "${current_fs_location}"`);
-
-    // Go through all the buttons ..
-    for(button_id of button_id_list) {
-
-        // First, clear out everything ..
-        $.fn.zato.ide.enable_button(button_id);
-
-        // .. we enter here if we don't have any current file ..
-        if(!current_fs_location) {
-
-            // .. now, indicate that this button should be disabled.
-            $.fn.zato.ide.disable_button(button_id);
-        }
-
-        // .. certain buttons are disabled if we're showing services ..
-        //
-        let is_service = current_object_type == "service";
-        let is_demo = current_fs_location.endsWith("demo.py");
-        if(is_service || is_demo) {
-            $.fn.zato.ide.disable_file_rename_button();
-            $.fn.zato.ide.disable_file_delete_button();
-        }
+    // If no file is selected, disable all file-related buttons and the invoke button.
+    if (!current_fs_location) {
+        file_buttons.forEach(button_id => $.fn.zato.ide.disable_button(button_id));
+        $.fn.zato.ide.disable_invoke_button();
+        return; // Exit early
     }
-}
+
+    // If a file is selected, enable buttons by default, then apply specific disabling rules.
+    file_buttons.forEach(button_id => $.fn.zato.ide.enable_button(button_id));
+
+    // Rule: Disable rename/delete for services or demo.py
+    const current_object_type = $.fn.zato.ide.get_current_object_type();
+    const is_service_view = current_object_type === "service";
+    const is_demo_file = current_fs_location.endsWith("demo.py");
+    if (is_service_view || is_demo_file) {
+        $.fn.zato.ide.disable_file_rename_button();
+        $.fn.zato.ide.disable_file_delete_button();
+    }
+
+    // Rule: Handle the invoke button state.
+    const is_service_file = current_file_service_list && current_file_service_list.length > 0;
+    if (is_service_file) {
+        // Always enable for services. The click handler deals with deployment.
+        $.fn.zato.ide.enable_invoke_button();
+    } else {
+        $.fn.zato.ide.disable_invoke_button();
+    }
+};
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
@@ -1023,8 +1024,6 @@ $.fn.zato.ide.post_load_source_object = function(
     }
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
 
-    console.log(`Object: "${object_name}", reuse:"${reuse_source_code}"`); // current:"${$.fn.zato.to_dict(current_file_service_list)}"`);
-
     // Since we just set the baseline to the current editor content, the file is by definition not modified.
     $.fn.zato.ide.set_deployment_button_status_not_different();
     $.fn.zato.ide.update_deployment_option_state(false);
@@ -1035,7 +1034,7 @@ $.fn.zato.ide.post_load_source_object = function(
     }
 
     // This will enable or disable file buttons
-    $.fn.zato.ide.postprocess_file_buttons();
+    $.fn.zato.ide.postprocess_file_buttons(current_file_service_list);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
