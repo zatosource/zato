@@ -48,6 +48,7 @@ from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_
     register_diag_handlers, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
@@ -897,6 +898,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
             'server': self,
         })
+
+        # Touch all the hot-directory files to trigger their deployment
+        py_files = get_python_files(self.hot_deploy_config.pickup_dir)
+        for item in py_files:
+            _ = self.invoke('zato.hot-deploy.create', {
+                'payload': item['data'],
+                'payload_name': item['full_path']
+            })
 
         # The server is started so we can deploy what we were told to handle on startup.
         if self.deploy_auto_from:
