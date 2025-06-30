@@ -11,15 +11,22 @@ import os
 import re
 import string
 from datetime import datetime, timedelta
+from logging import getLogger
 from pathlib import Path
 from tempfile import gettempdir
 from time import sleep
 from uuid import uuid4
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_, strlist
+    from zato.common.typing_ import callable_, dictlist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -108,5 +115,35 @@ def touch(path:'str') -> 'None':
 def touch_multiple(path_list:'strlist') -> 'None':
     for path in path_list:
         touch(path)
+
+# ################################################################################################################################
+
+def _walk_python_files(root_dir: 'str'):
+    for root, _, files in os.walk(root_dir):
+        for item in files:
+            if item.endswith('.py'):
+                yield os.path.join(root, item)
+
+# ################################################################################################################################
+
+def touch_python_files(root_dir:'str') -> 'None':
+    for full_path in _walk_python_files(root_dir):
+        try:
+            touch(full_path)
+        except Exception as e:
+            logger.warning('Could not touch %s -> %s', full_path, e)
+
+# ################################################################################################################################
+
+def get_python_files(root_dir:'str') -> 'dictlist':
+    results = []
+    for full_path in _walk_python_files(root_dir):
+        try:
+            with open(full_path, 'r', encoding='utf-8') as f:
+                data = f.read()
+            results.append({'full_path': full_path, 'data': data})
+        except Exception as e:
+            logger.warning('Could not read %s -> %s', full_path, e)
+    return results
 
 # ################################################################################################################################
