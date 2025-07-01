@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
+from base64 import b64decode
 from dataclasses import dataclass
 from errno import ENOENT
 from time import sleep
@@ -18,6 +19,7 @@ from traceback import format_exc
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_python_file, is_archive_file, publish_file
 from zato.common.util.file_system import fs_safe_now
+from zato.common.util.open_ import open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -53,7 +55,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         input_required = 'payload', 'payload_name'
         input_optional = 'is_startup'
-        output_optional = AsIs('services_deployed')
+        output_optional = AsIs('services_deployed'), 'success'
 
 # ################################################################################################################################
 
@@ -312,6 +314,34 @@ class Create(AdminService):
 
         payload = self.request.input.payload
         payload_name = self.request.input.payload_name
+
+        # If it's just a file name, it means it must've been uploaded via the plugin,
+        # so we need to save it in our local deployment directory and it will be picked up
+        # by a background listener, which will in turn invokes again, but this time the file
+        # will be already on disk. But we need to do it only for files that are not internal ones.
+
+        internal_path = os.path.join('server', 'service', 'internal')
+        payload_name = os.path.normpath(payload_name)
+
+        is_external = internal_path not in payload_name
+        is_relative = not os.path.isabs(payload_name)
+
+        if is_external and is_relative:
+
+            full_path = os.path.join(self.server.hot_deploy_config.pickup_dir, payload_name)
+            full_path = os.path.abspath(full_path)
+
+            payload = b64decode(payload)
+            payload = payload.decode('utf8')
+
+            with open_w(full_path) as f:
+                _ = f.write(payload)
+
+            # All went fine
+            self.response.payload.success = True
+
+            # Now, we can return early
+            return
 
         server_token = self.server.fs_server_config.main.token
         lock_name = '{}{}:{}'.format('uploading', server_token, payload_name)
