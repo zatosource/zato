@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from errno import ENOENT
 from time import sleep
 from traceback import format_exc
+
+# Bunch
+from bunch import Bunch
 
 # Zato
 from zato.common.typing_ import cast_
@@ -55,7 +58,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         input_required = 'payload', 'payload_name'
         input_optional = 'is_startup'
-        output_optional = AsIs('services_deployed'), 'success'
+        output_optional = AsIs('services_deployed'), 'zato_ide_deploy_create_response'
 
 # ################################################################################################################################
 
@@ -338,7 +341,9 @@ class Create(AdminService):
                 _ = f.write(payload)
 
             # All went fine
-            self.response.payload.success = True
+            self.response.payload.zato_ide_deploy_create_response = Bunch()
+            self.response.payload.zato_ide_deploy_create_response.success = True
+            self.response.payload.zato_ide_deploy_create_response.msg = 'OK, deployed to server'
 
             # Now, we can return early
             return
