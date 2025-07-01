@@ -11,7 +11,6 @@ import importlib
 import inspect
 import logging
 import os
-import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -1255,13 +1254,34 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _has_module_import(self, source_code: str, mod_name: str) -> bool:
+    def _has_module_import(self, source_code:'str', mod_name:'str') -> bool:
 
-        pattern = re.compile(r'\b{}\b'.format(re.escape(mod_name)))
+        processed_code = source_code.replace('\\\n', '')
 
-        for line in source_code.splitlines():
-            if 'import' in line and pattern.search(line):
-                return True
+        for line in processed_code.splitlines():
+            # Strip comments and whitespace
+            line = line.split('#', 1)[0].strip()
+
+            if not line:
+                continue
+
+            # `import api` or `import api as ...`
+            if line.startswith('import '):
+                rest_of_line = line.split('import ', 1)[1]
+                modules = rest_of_line.split(',')
+                for mod_spec in modules:
+                    mod_name_part = mod_spec.strip().split(' as ')[0].strip()
+                    if mod_name_part == mod_name:
+                        return True
+
+            # `from api import foo`
+            elif line.startswith('from '):
+                parts = line.split()
+                if len(parts) >= 3 and parts[0] == 'from' and parts[2] == 'import':
+                    imported_module = parts[1]
+                    if imported_module == mod_name:
+                        return True
+
         return False
 
 # ################################################################################################################################
