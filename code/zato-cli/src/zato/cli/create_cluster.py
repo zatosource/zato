@@ -93,11 +93,14 @@ class Create(ZatoCommand):
 
             session.flush()
 
-            admin_invoke_name = 'zato.service.invoke'
-            admin_invoke_name = 'zato.server.service.internal.service.Invoke'
-            admin_invoke_service = Service(None, admin_invoke_name, True, admin_invoke_name, True, cluster)
+            admin_invoke_service_name = 'zato.server.service.internal.service.Invoke'
+            admin_invoke_service = Service(None, admin_invoke_service_name, True, admin_invoke_service_name, True, cluster)
+
+            ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
+            ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
 
             self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
+            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
 
             ping_service = self.add_ping_service(session, cluster)
 
@@ -177,7 +180,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_admin_invoke(self, session, cluster, service, admin_invoke_sec):
+    def add_admin_invoke(self, session, cluster, service, security):
         """ Adds an admin channel for invoking services from web admin and CLI.
         """
 
@@ -189,7 +192,24 @@ class Create(ZatoCommand):
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
             None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
             SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
-            security=admin_invoke_sec)
+            security=security)
+        session.add(channel)
+
+# ################################################################################################################################
+
+    def add_ide_publisher_channel(self, session, cluster, service, security):
+        """ Adds a channel for IDE deployments.
+        """
+
+        # Zato
+        from zato.common.api import MISC, SIMPLE_IO
+        from zato.common.odb.model import HTTPSOAP
+
+        channel = HTTPSOAP(
+            None, 'zato.ide_publisher', True, True, 'channel', 'plain_http',
+            None, '/ide-deploy', None, '', None,
+            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            security=security)
         session.add(channel)
 
 # ################################################################################################################################
