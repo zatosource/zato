@@ -207,28 +207,37 @@ class BrokerClient:
         if self.reply_consumer_started:
             return
 
-        # Create a config for the reply consumer
+        # Create a config for the reply consumer with explicit queue properties
         reply_config = bunchify(dict(self.consumer_config, **{
             'name': f'reply-consumer',
             'queue': self.reply_queue_name,
             'consumer_tag_prefix': 'zato-reply',
+            'queue_opts': {
+                'auto_delete': True,
+                'durable': False,
+                'arguments': {'x-expires': 300000}  # 5 minutes expiry
+            },
         }))
 
-        # Create a dedicated queue for replies
-        conn = KombuAMQPConnection(reply_config.conn_url)
-        channel = conn.channel()
+        # We let the Consumer create the queue automatically with consistent settings
+        # Instead of creating it manually, which could cause parameter mismatches
 
-        # Declare the reply queue (auto-delete when no longer used, non-durable)
-        channel.queue_declare(
-            queue=self.reply_queue_name,
+        # Create the Queue object for Kombu consumer
+        from kombu import Queue as KombuQueue
+        queue = KombuQueue(
+            name=self.reply_queue_name,
             auto_delete=True,
             durable=False,
-            arguments={'x-expires': 300000}  # 5 minutes expiry
+            queue_arguments={'x-expires': 300000}
         )
-        conn.release()
 
-        # Start the reply consumer
+        # Create a properly configured consumer
         self.reply_consumer = Consumer(reply_config, self._on_reply)
+
+        # Replace the queue attribute with our properly configured Queue
+        self.reply_consumer.queue = [queue]
+
+        # Start the consumer
         spawn(self.reply_consumer.start)
         self.reply_consumer_started = True
 
@@ -269,7 +278,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=30) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=2) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
 
@@ -295,7 +304,7 @@ class BrokerClient:
         }
 
         # Log the request
-        logger.info(f'Invoking service `{service}` synchronously with `{request}`')
+        logger.info(f'Invoking service `{service}` with `{request}`')
 
         # Send the request with callback
         self.invoke_with_callback(msg, response.set_response)
@@ -311,7 +320,7 @@ class BrokerClient:
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
         # Return the data
-        logger.info(f'Received synchronous response from service `{service}`')
+        logger.info(f'Received response from service `{service}`')
         return response.data
 
 # ################################################################################################################################
