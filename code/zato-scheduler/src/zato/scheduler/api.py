@@ -86,41 +86,55 @@ class SchedulerAPI:
 # ################################################################################################################################
 
     def invoke_service(self, name:'str', request:'strdictnone'=None) -> 'strdict':
-
+        """ Invokes a service synchronously using the broker client with callback mechanism.
+        """
         # Make sure we have a request to send
         request = request or {}
 
-        # Assume there is no response until we have one
-        response = None
+        # Prepare the request message
+        msg = {
+            'cluster_id': MISC.Default_Cluster_ID,
+            'service': name,
+            'payload': request,
+            'cid': new_cid(),
+            'request_type': 'scheduler',
+        }
 
-        # Enrich the business data ..
-        request['cluster_id'] = MISC.Default_Cluster_ID
+        # Log what we're about to do
+        logger.info(f'Invoking service `{name}` with `{request}`')
 
-        # .. keep looping until we have a response ..
-        while not response:
+        class ResponseHolder:
+            def __init__(self):
+                self.data = None
+                self.ready = False
 
-            try:
-                # .. log what we are about to do ..
-                logger.info(f'Invoking service `{name}` with `{request}`')
+            def set_response(self, response):
+                self.data = response
+                self.ready = True
 
-                # .. invoke the server ..
-                response = self.broker_client.zato_client.invoke(name, request, timeout=0.5)
+        # Initialize our response holder
+        response_holder = ResponseHolder()
 
-            except Exception as e:
+        try:
+            self.broker_client.invoke_with_callback(msg, response_holder.set_response)
 
-                logger.info(f'Service invocation error -> `{name}` -> {e}')
+            # Wait for the response to come back
+            wait_count = 0
+            max_wait_count = 30  # Maximum number of seconds to wait
 
-            finally:
-
-                # .. if there is still none, wait a bit longer ..
-                logger.info(f'Waiting for response from service `{name}`')
-
-                # .. do wait now ..
+            while not response_holder.ready and wait_count < max_wait_count:
+                wait_count += 1
                 sleep(1)
 
-        # .. if we are here, we have a response to return.
-        logger.info(f'Returning response from service {name}')
-        return response.data
+            if not response_holder.ready:
+                raise Exception(f'Timed out waiting for response from service `{name}`')
+
+            logger.info(f'Received response from service `{name}`')
+            return response_holder.data
+
+        except Exception as e:
+            logger.error(f'Error invoking service `{name}`: {e}')
+            raise
 
 # ################################################################################################################################
 
