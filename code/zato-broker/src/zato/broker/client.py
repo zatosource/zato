@@ -15,6 +15,9 @@ from uuid import uuid4
 # Bunch
 from bunch import bunchify
 
+# gevent
+from gevent import spawn
+
 # Kombu
 from kombu.connection import Connection as KombuAMQPConnection
 from kombu.entity import PERSISTENT_DELIVERY_MODE
@@ -124,8 +127,9 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _on_message(self, body:'any_', msg:'any_', name:'str', config:'anydict') -> 'None':
+    def _on_message(self, body:'any_', msg:'any_', name:'str'=None, config:'dict'=None) -> 'None':
         """ Callback invoked when a message is received from the broker.
+        The name and config parameters are required by the Consumer callback signature but not used.
         """
         try:
             # Parse message body
@@ -151,8 +155,9 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _on_reply(self, body:'any_', msg:'any_', name:'str', config:'anydict') -> 'None':
+    def _on_reply(self, body:'any_', msg:'any_', name:'str'=None, config:'dict'=None) -> 'None':
         """ Specific handler for replies to the temporary reply queue.
+        The name and config parameters are required by the Consumer callback signature but not used.
         """
         try:
             # Parse message body
@@ -180,10 +185,7 @@ class BrokerClient:
         """
         if not self.consumer:
             self.consumer = Consumer(self.consumer_config, self._on_message)
-
-            from gevent import spawn
             spawn(self.consumer.start)
-
             logger.info('Started broker consumer')
 
 # ################################################################################################################################
@@ -221,16 +223,14 @@ class BrokerClient:
 
         # Start the reply consumer
         self.reply_consumer = Consumer(reply_config, self._on_reply)
-
-        from gevent import spawn
         spawn(self.reply_consumer.start)
-
         self.reply_consumer_started = True
+
         logger.info(f'Started reply consumer on queue: {self.reply_queue_name}')
 
 # ################################################################################################################################
 
-    def invoke_with_callback(self, msg:'anydict', callback:'callable_', timeout:'int'=30) -> 'strnone':
+    def invoke_with_callback(self, msg:'anydict', callback:'callable_') -> 'strnone':
         """ Publishes a message and registers a callback to be invoked when a reply is received.
         Returns a correlation ID that can be used to track the request.
         """
