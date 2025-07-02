@@ -336,6 +336,10 @@ class AuxServer:
         # Where we keep our configuration
         base_dir = base_dir or '.'
         repo_location = os.path.join(base_dir, 'config', 'repo')
+        repo_location = os.path.abspath(repo_location)
+
+        # Need to set up logging
+        os.chdir(base_dir)
 
         # Optionally, configure logging
         if class_.needs_logging_setup:

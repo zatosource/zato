@@ -475,9 +475,12 @@ Examples:
 # ################################################################################################################################
 
     def _on_scheduler(self, *ignored:'any_') -> 'None':
+        env_vars = {
+            'Zato_Component_Dir': self.component_dir
+        }
         self.run_check_config()
         _ = self.check_pidfile()
-        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)
+        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile, env_vars=env_vars)
 
 # ################################################################################################################################
 # ################################################################################################################################
