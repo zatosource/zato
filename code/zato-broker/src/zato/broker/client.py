@@ -25,6 +25,7 @@ from kombu.entity import PERSISTENT_DELIVERY_MODE
 # Zato
 from zato.common.api import AMQP
 from zato.common.pubsub.util import get_broker_config
+from zato.common.util.api import new_cid
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 
 # ################################################################################################################################
@@ -260,6 +261,53 @@ class BrokerClient:
             )
 
         return correlation_id
+
+# ################################################################################################################################
+
+    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=30) -> 'any_':
+        """ Synchronously invokes a service via the broker and waits for the response.
+        """
+
+        class ResponseHolder:
+            def __init__(self):
+                self.data = None
+                self.ready = False
+                self.error = None
+
+            def set_response(self, response):
+                self.data = response
+                self.ready = True
+
+        # Initialize response holder
+        response = ResponseHolder()
+
+        # Prepare the message
+        msg = {
+            'service': service,
+            'payload': request or {},
+            'cid': new_cid(),
+            'request_type': 'sync'
+        }
+
+        # Log the request
+        logger.info(f'Invoking service `{service}` synchronously with `{request}`')
+
+        # Send the request with callback
+        self.invoke_with_callback(msg, response.set_response)
+
+        # Wait for the response
+        wait_count = 0
+        while not response.ready and wait_count < timeout:
+            wait_count += 1
+            sleep(1)
+
+        # Handle timeout
+        if not response.ready:
+            raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
+
+        # Return the data
+        logger.info(f'Received synchronous response from service `{service}`')
+        return response.data
 
 # ################################################################################################################################
 # ################################################################################################################################
