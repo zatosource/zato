@@ -86,51 +86,17 @@ class SchedulerAPI:
 # ################################################################################################################################
 
     def invoke_service(self, name:'str', request:'strdictnone'=None) -> 'strdict':
-        """ Invokes a service synchronously using the broker client with callback mechanism.
+        """ Invokes a service synchronously using the broker client's invoke_sync method.
         """
-        # Make sure we have a request to send
+        # Add cluster_id to the request
         request = request or {}
-
-        # Prepare the request message
-        msg = {
-            'cluster_id': MISC.Default_Cluster_ID,
-            'service': name,
-            'payload': request,
-            'cid': new_cid(),
-            'request_type': 'scheduler',
-        }
-
-        # Log what we're about to do
-        logger.info(f'Invoking service `{name}` with `{request}`')
-
-        class ResponseHolder:
-            def __init__(self):
-                self.data = None
-                self.ready = False
-
-            def set_response(self, response):
-                self.data = response
-                self.ready = True
-
-        # Initialize our response holder
-        response_holder = ResponseHolder()
+        request['cluster_id'] = MISC.Default_Cluster_ID
 
         try:
-            self.broker_client.invoke_with_callback(msg, response_holder.set_response)
-
-            # Wait for the response to come back
-            wait_count = 0
-            max_wait_count = 30  # Maximum number of seconds to wait
-
-            while not response_holder.ready and wait_count < max_wait_count:
-                wait_count += 1
-                sleep(1)
-
-            if not response_holder.ready:
-                raise Exception(f'Timed out waiting for response from service `{name}`')
-
+            logger.info(f'Invoking service `{name}` with `{request}`')
+            response = self.broker_client.invoke_sync(name, request)
             logger.info(f'Received response from service `{name}`')
-            return response_holder.data
+            return response
 
         except Exception as e:
             logger.error(f'Error invoking service `{name}`: {e}')
