@@ -18,6 +18,9 @@ else:
 from gevent import monkey
 _ = monkey.patch_all()
 
+# stdlib
+import os
+
 # Zato
 from zato.scheduler.server import SchedulerServer
 
@@ -25,7 +28,8 @@ from zato.scheduler.server import SchedulerServer
 # ################################################################################################################################
 
 def main():
-    SchedulerServer.start_from_repo_location()
+    base_dir = os.environ['Zato_Component_Dir']
+    SchedulerServer.start_from_repo_location(base_dir=base_dir)
 
 # ################################################################################################################################
 # ################################################################################################################################
