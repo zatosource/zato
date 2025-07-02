@@ -81,7 +81,7 @@ class SchedulerServer(AuxServer):
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
-        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
+        self.scheduler_api.broker_client = BrokerClient()
 
 # ################################################################################################################################
 
