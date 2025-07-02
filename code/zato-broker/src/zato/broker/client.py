@@ -16,7 +16,7 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # Kombu
 from kombu.connection import Connection as KombuAMQPConnection
@@ -218,8 +218,13 @@ class BrokerClient:
         conn = KombuAMQPConnection(reply_config.conn_url)
         channel = conn.channel()
 
-        # Declare the reply queue (auto-delete when no longer used)
-        channel.queue_declare(queue=self.reply_queue_name, auto_delete=True)
+        # Declare the reply queue (auto-delete when no longer used, non-durable)
+        channel.queue_declare(
+            queue=self.reply_queue_name,
+            auto_delete=True,
+            durable=False,
+            arguments={'x-expires': 300000}  # 5 minutes expiry
+        )
         conn.release()
 
         # Start the reply consumer
