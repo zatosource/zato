@@ -142,6 +142,7 @@ class SERVICE(Constants):
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
     PUBLISH = ValueConstant('')
+    INVOKE = ValueConstant('')
 
 class HOT_DEPLOY(Constants):
     code_start = 102200
