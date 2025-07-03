@@ -124,6 +124,29 @@ class BrokerClient:
                 delivery_mode=PERSISTENT_DELIVERY_MODE
             )
 
+# ################################################################################################################################
+
+    def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
+        """ Publishes a message directly to a specific queue.
+        """
+        if not isinstance(msg, str):
+            msg = dumps(msg)
+
+        # Prepare publish parameters
+        publish_kwargs = {
+            'exchange': '',  # Default exchange
+            'routing_key': queue_name,  # Queue name as routing key
+            'content_type': 'text/plain',
+        }
+
+        # Add correlation ID if provided
+        if correlation_id:
+            publish_kwargs['correlation_id'] = correlation_id
+
+        # Publish the message
+        with self.producer.acquire() as client:
+            client.publish(msg, **publish_kwargs)
+
     invoke_async = publish
 
 # ################################################################################################################################
