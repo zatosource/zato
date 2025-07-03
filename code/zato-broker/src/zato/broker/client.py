@@ -359,7 +359,6 @@ class BrokerClient:
 
     def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=2) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
-        Deletes reply queue either after receiving a response or reaching timeout.
         """
         # Create response holder class without nonlocal keyword
         class ResponseHolder:
