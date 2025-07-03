@@ -12,13 +12,19 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import ZATO_NONE
-from zato.common.broker_message import code_to_name
+from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.util.api import new_cid
 from zato.common.util.config import resolve_env_variables
 
 logger = logging.getLogger('zato')
 has_debug = logger.isEnabledFor(logging.DEBUG)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+service_invoke = SERVICE.INVOKE.value
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class BrokerMessageReceiver:
@@ -42,11 +48,15 @@ class BrokerMessageReceiver:
             msg = self.preprocess_msg(msg)
 
             if self.filter(msg):
-                action = msg['action']
-                action = code_to_name[action]
+                action_code = msg['action']
+                action = code_to_name[action_code]
                 handler = 'on_broker_msg_{0}'.format(action)
                 func = getattr(self.worker_store, handler)
-                func(msg)
+                response = func(msg)
+
+                if action_code == service_invoke:
+                    response
+
             else:
                 logger.info('Rejecting broker message `%r`', msg)
         except Exception:
@@ -68,4 +78,5 @@ class BrokerMessageReceiver:
         """
         return True
 
+# ################################################################################################################################
 # ################################################################################################################################
