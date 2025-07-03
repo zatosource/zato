@@ -357,7 +357,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=2) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=22) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
         # Create response holder class without nonlocal keyword
@@ -385,13 +385,17 @@ class BrokerClient:
             'request_type': 'sync',
         }
 
-        logger.info(f'Invoking service `{service}` with `{request}`')
+        # Get correlation ID and create reply queue via invoke_with_callback
         correlation_id = self.invoke_with_callback(msg, response.set_response)
 
         # Store the reply queue name for possible cleanup in case of timeout
         with self.lock:
             if correlation_id in self.correlation_to_queue_map:
                 response.reply_queue_name = self.correlation_to_queue_map.get(correlation_id)
+
+        # Log service invocation with reply queue in the same line
+        reply_queue_info = f", reply-to: `{response.reply_queue_name}`" if response.reply_queue_name else ""
+        logger.info(f'Invoking service `{service}` with `{request}`{reply_queue_info}')
 
         # Wait for the response
         wait_count = 0
@@ -401,7 +405,6 @@ class BrokerClient:
 
         # Handle timeout
         if not response.ready:
-
             # If timed out and we know the queue name, clean it up
             if response.reply_queue_name:
                 logger.warning(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
@@ -416,6 +419,7 @@ class BrokerClient:
 
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
+        # Return the data
         logger.info(f'Received synchronous response from service `{service}`')
         return response.data
 
