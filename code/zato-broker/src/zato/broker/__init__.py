@@ -42,7 +42,8 @@ class BrokerMessageReceiver:
             msg = self.preprocess_msg(msg)
 
             if self.filter(msg):
-                action = code_to_name[msg['action']]
+                action = msg['action']
+                action = code_to_name[action]
                 handler = 'on_broker_msg_{0}'.format(action)
                 func = getattr(self.worker_store, handler)
                 func(msg)
