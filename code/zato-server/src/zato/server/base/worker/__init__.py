@@ -1299,9 +1299,17 @@ class WorkerStore(_WorkerStoreBase):
             if mod:
                 del sys.modules[mod.__name__]
 
+# ################################################################################################################################
+
     def on_broker_msg_SERVICE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         del msg['action']
         self.server.service_store.edit_service_data(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'None':
+        response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
+        return response
 
 # ################################################################################################################################
 
