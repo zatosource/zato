@@ -55,7 +55,11 @@ class BrokerMessageReceiver:
                 response = func(msg)
 
                 if action_code == service_invoke:
-                    response
+
+                    if 'reply_to' in msg:
+                        reply_to = msg['reply_to']
+                        correlation_id = msg.get('cid', '')
+                        self.broker_client.send(reply_to, response, correlation_id=correlation_id)
 
             else:
                 logger.info('Rejecting broker message `%r`', msg)
