@@ -24,6 +24,7 @@ from kombu.entity import PERSISTENT_DELIVERY_MODE
 
 # Zato
 from zato.common.api import AMQP
+from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
@@ -320,13 +321,14 @@ class BrokerClient:
 
         # Prepare the message
         msg = {
+            'action': SERVICE.INVOKE.value,
             'service': service,
             'payload': request or {},
             'cid': new_cid(),
             'request_type': 'sync',
         }
 
-        logger.info(f'Invoking service `{service}` synchronously with `{request}`')
+        logger.info(f'Invoking service `{service}` with `{request}`')
         _ = self.invoke_with_callback(msg, response.set_response)
 
         # Wait for the response
