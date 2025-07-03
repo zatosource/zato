@@ -24,7 +24,6 @@ from kombu.entity import PERSISTENT_DELIVERY_MODE
 
 # Zato
 from zato.common.api import AMQP
-from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
@@ -34,7 +33,7 @@ from zato.server.connection.amqp_ import Consumer, get_connection_class, Produce
 
 if 0:
     from typing import Dict
-    from zato.common.typing_ import any_, anydict, callable_, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -128,7 +127,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _on_message(self, body:'any_', msg:'any_', name:'str'=None, config:'dict'=None) -> 'None':
+    def _on_message(self, body:'any_', msg:'any_', name:'strnone'=None, config:'anydictnone'=None) -> 'None':
         """ Callback invoked when a message is received from the broker.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
@@ -156,7 +155,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _on_reply(self, body:'any_', msg:'any_', name:'str'=None, config:'dict'=None) -> 'None':
+    def _on_reply(self, body:'any_', msg:'any_', name:'strnone'=None, config:'anydictnone'=None) -> 'None':
         """ Specific handler for replies to the temporary reply queue.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
@@ -167,7 +166,7 @@ class BrokerClient:
             # Get correlation ID
             correlation_id = msg.properties.get('correlation_id')
             # Get the queue name from config or properties
-            queue_name = config.queue if hasattr(config, 'queue') else None
+            queue_name = config.queue if hasattr(config, 'queue') else None # type: ignore
 
             if correlation_id and correlation_id in self._callbacks:
                 # Invoke callback registered for this correlation ID
@@ -176,7 +175,7 @@ class BrokerClient:
 
                 # Schedule cleanup of this consumer if we have a queue name
                 if queue_name:
-                    spawn(self._cleanup_reply_consumer, queue_name, 2)
+                    _ = spawn(self._cleanup_reply_consumer, queue_name, 2)
 
             # Always acknowledge the message
             msg.ack()
@@ -212,7 +211,7 @@ class BrokerClient:
         """
         if not self.consumer:
             self.consumer = Consumer(self.consumer_config, self._on_message)
-            spawn(self.consumer.start)
+            _ = spawn(self.consumer.start)
             logger.info('Started broker consumer')
 
 # ################################################################################################################################
@@ -246,7 +245,7 @@ class BrokerClient:
         consumer = Consumer(reply_config, self._on_reply)
 
         # Start the consumer in its own greenlet
-        spawn(consumer.start)
+        _ = spawn(consumer.start)
 
         # Track this consumer
         with self.lock:
@@ -276,15 +275,12 @@ class BrokerClient:
         reply_queue = self._create_reply_queue()
 
         # Create a consumer specifically for this reply queue
-        self._create_reply_consumer(reply_queue)
+        _ = self._create_reply_consumer(reply_queue)
 
-        # Register the callback
         with self.lock:
             self._callbacks[correlation_id] = callback
 
-        # Add reply_to to the message body itself
-        if isinstance(msg, dict):
-            msg['reply_to'] = reply_queue
+        msg['reply_to'] = reply_queue
 
         # Convert message to JSON
         msg_str = dumps(msg) # type: ignore
@@ -305,7 +301,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=1) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=1) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
         # Create response holder class without nonlocal keyword
@@ -331,7 +327,7 @@ class BrokerClient:
         }
 
         logger.info(f'Invoking service `{service}` synchronously with `{request}`')
-        self.invoke_with_callback(msg, response.set_response)
+        _ = self.invoke_with_callback(msg, response.set_response)
 
         # Wait for the response
         wait_count = 0
