@@ -52,6 +52,9 @@ class BrokerClient:
         self.server = server
         self.lock = RLock()
         self._callbacks = {}  # type: Dict[str, callable_]
+        self.correlation_to_queue_map = {}  # Maps correlation IDs to queue names for timeout handling
+        self.reply_consumers = {}  # Maps reply queue names to consumers
+        self.reply_consumer_started = False
         self.consumer = None
 
         # Get broker configuration
@@ -195,11 +198,17 @@ class BrokerClient:
             if correlation_id and correlation_id in self._callbacks:
                 # Invoke callback registered for this correlation ID
                 callback = self._callbacks.pop(correlation_id)
+
+                # Clean up correlation to queue mapping
+                with self.lock:
+                    self.correlation_to_queue_map.pop(correlation_id, None)
+
+                # Invoke the callback with the response
                 callback(message_data)
 
-                # Schedule cleanup of this consumer if we have a queue name
+                # Immediately delete the queue and clean up the consumer
                 if queue_name:
-                    _ = spawn(self._cleanup_reply_consumer, queue_name, 2)
+                    _ = spawn(self._cleanup_reply_consumer, queue_name)
 
             # Always acknowledge the message
             msg.ack()
@@ -210,23 +219,43 @@ class BrokerClient:
 
     def _cleanup_reply_consumer(self, queue_name:'str', delay_seconds:'int'=0) -> 'None':
         """ Cleans up a reply consumer after waiting for specified delay.
+        Explicitly deletes the queue after stopping the consumer.
         """
-        # Wait for any in-flight messages to be processed
-        if delay_seconds > 0:
-            sleep(delay_seconds)
+        try:
+            # First, get the consumer (don't remove it yet to avoid race conditions)
+            with self.lock:
+                consumer = self.reply_consumers.get(queue_name)
 
-        # Get and remove the consumer from our tracking dict
-        consumer = None
-        with self.lock:
-            consumer = self.reply_consumers.pop(queue_name, None)
+            # If we have a consumer, properly disconnect it before deleting the queue
+            if consumer:
+                try:
+                    # Stop the consumer's main loop first
+                    consumer.stop()
+                    logger.debug(f'Stopped consumer for {queue_name}')
+                except Exception as e:
+                    logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
 
-        # If we found the consumer, stop it
-        if consumer:
+                # Wait a brief moment to ensure consumer loop has exited
+                sleep(0.1)
+
+                # Now remove it from the dictionary to avoid further references
+                with self.lock:
+                    self.reply_consumers.pop(queue_name, None)
+
+            # Finally, explicitly delete the queue using a fresh connection
+            # This avoids using potentially cancelled channels
             try:
-                consumer.keep_running = False
-                logger.debug(f'Cleaned up reply consumer for queue: {queue_name}')
+                with self.producer.acquire() as conn:
+                    channel = conn.channel
+                    if channel and channel.is_open:
+                        channel.queue_delete(queue=queue_name)
+                        logger.debug(f'Deleted queue: {queue_name}')
             except Exception as e:
-                logger.warning(f'Error cleaning up reply consumer for {queue_name}: {str(e)}')
+                logger.warning(f'Error deleting queue {queue_name}: {str(e)}')
+
+            logger.debug(f'Completed cleanup for queue: {queue_name}')
+        except Exception as e:
+            logger.warning(f'Error during cleanup for {queue_name}: {str(e)}')
 
 # ################################################################################################################################
 
@@ -301,9 +330,12 @@ class BrokerClient:
         # Create a consumer specifically for this reply queue
         _ = self._create_reply_consumer(reply_queue)
 
+        # Store callback and correlation mapping
         with self.lock:
             self._callbacks[correlation_id] = callback
+            self.correlation_to_queue_map[correlation_id] = reply_queue
 
+        # Include reply queue in message
         msg['reply_to'] = reply_queue
 
         # Convert message to JSON
@@ -325,8 +357,9 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=1) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=2) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
+        Deletes reply queue either after receiving a response or reaching timeout.
         """
         # Create response holder class without nonlocal keyword
         class ResponseHolder:
@@ -334,10 +367,12 @@ class BrokerClient:
                 self.data = None
                 self.ready = False
                 self.error = None
+                self.reply_queue_name = None
 
             def set_response(self, response):
                 self.data = response
                 self.ready = True
+                # Queue deletion is handled in _on_reply when the reply is received
 
         # Initialize response holder
         response = ResponseHolder()
@@ -352,7 +387,12 @@ class BrokerClient:
         }
 
         logger.info(f'Invoking service `{service}` with `{request}`')
-        _ = self.invoke_with_callback(msg, response.set_response)
+        correlation_id = self.invoke_with_callback(msg, response.set_response)
+
+        # Store the reply queue name for possible cleanup in case of timeout
+        with self.lock:
+            if correlation_id in self.correlation_to_queue_map:
+                response.reply_queue_name = self.correlation_to_queue_map.get(correlation_id)
 
         # Wait for the response
         wait_count = 0
@@ -362,9 +402,21 @@ class BrokerClient:
 
         # Handle timeout
         if not response.ready:
+
+            # If timed out and we know the queue name, clean it up
+            if response.reply_queue_name:
+                logger.warning(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
+                self._cleanup_reply_consumer(response.reply_queue_name)
+
+                # Also clean up the callback registration
+                with self.lock:
+                    if correlation_id in self._callbacks:
+                        self._callbacks.pop(correlation_id, None)
+                    if correlation_id in self.correlation_to_queue_map:
+                        self.correlation_to_queue_map.pop(correlation_id, None)
+
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
-        # Return the data
         logger.info(f'Received synchronous response from service `{service}`')
         return response.data
 
