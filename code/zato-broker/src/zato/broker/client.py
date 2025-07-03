@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps, loads
 from logging import getLogger
 from threading import RLock
+from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
@@ -132,14 +133,18 @@ class BrokerClient:
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
         """ Publishes a message directly to a specific queue.
         """
+        logger.info(f'Publishing to queue `{queue_name}`, correlation_id:`{correlation_id}`')
+
         if not isinstance(msg, str):
             msg = dumps(msg)
+            logger.debug(f'Converted message to string: {msg[:100]}...' if len(msg) > 100 else msg)
 
         # Prepare publish parameters
         publish_kwargs = {
             'exchange': '',  # Default exchange
             'routing_key': queue_name,  # Queue name as routing key
             'content_type': 'text/plain',
+            'delivery_mode': PERSISTENT_DELIVERY_MODE,  # Make sure it's persistent
         }
 
         # Add correlation ID if provided
@@ -148,7 +153,8 @@ class BrokerClient:
 
         # Publish the message
         with self.producer.acquire() as client:
-            client.publish(msg, **publish_kwargs)
+            logger.debug(f'Producer connection acquired: {client}')
+            _ = client.publish(msg, **publish_kwargs)
 
     invoke_async = publish
 
@@ -186,36 +192,33 @@ class BrokerClient:
         """ Specific handler for replies to the temporary reply queue.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
-        try:
-            # Parse message body
-            message_data = loads(body)
+        message_data = loads(body)
 
-            # Get correlation ID
-            correlation_id = msg.properties.get('correlation_id')
-            # Get the queue name from config or properties
-            queue_name = config.queue if hasattr(config, 'queue') else None # type: ignore
+        # Get correlation ID
+        correlation_id = msg.properties.get('correlation_id')
+        queue_name = config.queue if hasattr(config, 'queue') else None # type: ignore
 
-            if correlation_id and correlation_id in self._callbacks:
-                # Invoke callback registered for this correlation ID
-                callback = self._callbacks.pop(correlation_id)
+        if correlation_id and correlation_id in self._callbacks:
+            # Invoke callback registered for this correlation ID
+            callback = self._callbacks.pop(correlation_id)
 
-                # Clean up correlation to queue mapping
-                with self.lock:
-                    self.correlation_to_queue_map.pop(correlation_id, None)
+            # Clean up correlation to queue mapping
+            with self.lock:
+                self.correlation_to_queue_map.pop(correlation_id, None)
 
-                # Invoke the callback with the response
-                callback(message_data)
+            # Invoke the callback with the response
+            callback(message_data)
 
-                # Immediately delete the queue and clean up the consumer
-                if queue_name:
-                    _ = spawn(self._cleanup_reply_consumer, queue_name)
+            # Immediately delete the queue and clean up the consumer
+            if queue_name:
+                _ = spawn(self._cleanup_reply_consumer, queue_name)
+        else:
+            logger.warning(f'No callback found for correlation ID: {correlation_id}')
 
-            # Always acknowledge the message
+        # Always acknowledge the message
             msg.ack()
 
-        except Exception as e:
-            logger.warning(f'Error processing reply message: {e}')
-            msg.ack()
+# ################################################################################################################################
 
     def _cleanup_reply_consumer(self, queue_name:'str', delay_seconds:'int'=0) -> 'None':
         """ Cleans up a reply consumer after waiting for specified delay.
@@ -290,7 +293,6 @@ class BrokerClient:
             'queue_opts': {
                 'auto_delete': True,
                 'durable': False,
-                'arguments': {'x-expires': 300000}  # 5 minutes expiry
             }
         }))
 
@@ -304,8 +306,10 @@ class BrokerClient:
         with self.lock:
             self.reply_consumers[queue_name] = consumer
 
-        logger.debug(f'Started reply consumer for queue: {queue_name}')
+        logger.info(f'Started reply consumer for queue: {queue_name}')
         return consumer
+
+# ################################################################################################################################
 
     def _create_reply_queue(self) -> 'str':
         """ Creates a unique name for a reply queue.
@@ -335,8 +339,18 @@ class BrokerClient:
             self._callbacks[correlation_id] = callback
             self.correlation_to_queue_map[correlation_id] = reply_queue
 
+            # Also store a copy of the callback under the msg cid value if present
+            # This handles cases where the broker middleware changes the correlation ID
+            if 'cid' in msg:
+                cid = msg['cid']
+                self._callbacks[cid] = callback
+                self.correlation_to_queue_map[cid] = reply_queue
+
         # Include reply queue in message
         msg['reply_to'] = reply_queue
+
+        # Set correlation ID in the business message ONLY, not in AMQP properties
+        msg['cid'] = correlation_id
 
         # Convert message to JSON
         msg_str = dumps(msg) # type: ignore
@@ -349,7 +363,7 @@ class BrokerClient:
                 routing_key='server',
                 content_type='text/plain',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
-                correlation_id=correlation_id,
+                # Don't use AMQP properties for correlation_id
                 reply_to=reply_queue
             )
 
@@ -357,7 +371,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=22) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=2) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
         # Create response holder class without nonlocal keyword
