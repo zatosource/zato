@@ -104,9 +104,8 @@ class BrokerClient:
 
         self.consumer_config = consumer_config
 
-        # Reply queue for responses
-        self.reply_queue_name = f'zato-reply-{uuid4().hex[:8]}'
-        self.reply_consumer = None
+        # For managing reply consumers
+        self.reply_consumers = {}  # Maps reply queue names to consumers
         self.reply_consumer_started = False
 
 # ################################################################################################################################
@@ -167,11 +166,17 @@ class BrokerClient:
 
             # Get correlation ID
             correlation_id = msg.properties.get('correlation_id')
+            # Get the queue name from config or properties
+            queue_name = config.queue if hasattr(config, 'queue') else None
 
             if correlation_id and correlation_id in self._callbacks:
                 # Invoke callback registered for this correlation ID
                 callback = self._callbacks.pop(correlation_id)
                 callback(message_data)
+
+                # Schedule cleanup of this consumer if we have a queue name
+                if queue_name:
+                    spawn(self._cleanup_reply_consumer, queue_name, 2)
 
             # Always acknowledge the message
             msg.ack()
@@ -179,6 +184,26 @@ class BrokerClient:
         except Exception as e:
             logger.warning(f'Error processing reply message: {e}')
             msg.ack()
+
+    def _cleanup_reply_consumer(self, queue_name:'str', delay_seconds:'int'=0) -> 'None':
+        """ Cleans up a reply consumer after waiting for specified delay.
+        """
+        # Wait for any in-flight messages to be processed
+        if delay_seconds > 0:
+            sleep(delay_seconds)
+
+        # Get and remove the consumer from our tracking dict
+        consumer = None
+        with self.lock:
+            consumer = self.reply_consumers.pop(queue_name, None)
+
+        # If we found the consumer, stop it
+        if consumer:
+            try:
+                consumer.keep_running = False
+                logger.debug(f'Cleaned up reply consumer for queue: {queue_name}')
+            except Exception as e:
+                logger.warning(f'Error cleaning up reply consumer for {queue_name}: {str(e)}')
 
 # ################################################################################################################################
 
@@ -202,63 +227,64 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _ensure_reply_consumer(self) -> 'None':
-        """ Ensures the reply consumer is set up and running.
+    def _create_reply_consumer(self, queue_name:'str') -> 'Consumer':
+        """ Creates a consumer for a specific reply queue.
         """
-        if self.reply_consumer_started:
-            return
-
-        # Create a config for the reply consumer with explicit queue properties
+        # Set up configuration for a reply consumer
         reply_config = bunchify(dict(self.consumer_config, **{
-            'name': f'reply-consumer',
-            'queue': self.reply_queue_name,
+            'name': f'reply-consumer-{queue_name[-8:]}',
+            'queue': queue_name,
             'consumer_tag_prefix': 'zato-reply',
             'queue_opts': {
                 'auto_delete': True,
                 'durable': False,
                 'arguments': {'x-expires': 300000}  # 5 minutes expiry
-            },
+            }
         }))
 
-        # We let the Consumer create the queue automatically with consistent settings
-        # Instead of creating it manually, which could cause parameter mismatches
+        # Create consumer for this specific reply queue
+        consumer = Consumer(reply_config, self._on_reply)
 
-        # Create the Queue object for Kombu consumer
-        from kombu import Queue as KombuQueue
-        queue = KombuQueue(
-            name=self.reply_queue_name,
-            auto_delete=True,
-            durable=False,
-            queue_arguments={'x-expires': 300000}
-        )
+        # Start the consumer in its own greenlet
+        spawn(consumer.start)
 
-        # Create a properly configured consumer
-        self.reply_consumer = Consumer(reply_config, self._on_reply)
+        # Track this consumer
+        with self.lock:
+            self.reply_consumers[queue_name] = consumer
 
-        # Replace the queue attribute with our properly configured Queue
-        self.reply_consumer.queue = [queue]
+        logger.debug(f'Started reply consumer for queue: {queue_name}')
+        return consumer
 
-        # Start the consumer
-        spawn(self.reply_consumer.start)
-        self.reply_consumer_started = True
-
-        logger.info(f'Started reply consumer on queue: {self.reply_queue_name}')
+    def _create_reply_queue(self) -> 'str':
+        """ Creates a unique name for a reply queue.
+        The broker will create it on demand when the first message is sent there.
+        """
+        # Generate a unique queue name for this request
+        unique_queue_name = f'zato-reply-{uuid4().hex}'
+        logger.debug(f'Created unique reply queue name: {unique_queue_name}')
+        return unique_queue_name
 
 # ################################################################################################################################
 
     def invoke_with_callback(self, msg:'anydict', callback:'callable_') -> 'strnone':
         """ Publishes a message and registers a callback to be invoked when a reply is received.
-        Returns a correlation ID that can be used to track the request.
         """
-        # Ensure we have a reply consumer running
-        self._ensure_reply_consumer()
-
         # Generate a unique correlation ID for this request
         correlation_id = uuid4().hex
+
+        # Create a unique reply queue name for this specific request
+        reply_queue = self._create_reply_queue()
+
+        # Create a consumer specifically for this reply queue
+        self._create_reply_consumer(reply_queue)
 
         # Register the callback
         with self.lock:
             self._callbacks[correlation_id] = callback
+
+        # Add reply_to to the message body itself
+        if isinstance(msg, dict):
+            msg['reply_to'] = reply_queue
 
         # Convert message to JSON
         msg_str = dumps(msg) # type: ignore
@@ -272,17 +298,17 @@ class BrokerClient:
                 content_type='text/plain',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
                 correlation_id=correlation_id,
-                reply_to=self.reply_queue_name
+                reply_to=reply_queue
             )
 
         return correlation_id
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=2) -> 'any_':
+    def invoke_sync(self, service:'str', request:'anydict'=None, timeout:'int'=1) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
-
+        # Create response holder class without nonlocal keyword
         class ResponseHolder:
             def __init__(self):
                 self.data = None
@@ -298,17 +324,13 @@ class BrokerClient:
 
         # Prepare the message
         msg = {
-            'action': SERVICE.INVOKE.value,
             'service': service,
             'payload': request or {},
             'cid': new_cid(),
-            'request_type': 'sync'
+            'request_type': 'sync',
         }
 
-        # Log the request
-        logger.info(f'Invoking service `{service}` with `{request}`')
-
-        # Send the request with callback
+        logger.info(f'Invoking service `{service}` synchronously with `{request}`')
         self.invoke_with_callback(msg, response.set_response)
 
         # Wait for the response
@@ -322,7 +344,7 @@ class BrokerClient:
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
         # Return the data
-        logger.info(f'Received response from service `{service}`')
+        logger.info(f'Received synchronous response from service `{service}`')
         return response.data
 
 # ################################################################################################################################
