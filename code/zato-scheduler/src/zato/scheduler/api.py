@@ -95,13 +95,11 @@ class SchedulerAPI:
         request['cluster_id'] = MISC.Default_Cluster_ID
 
         try:
-            logger.info(f'Invoking service `{name}` with `{request}`')
             response = self.broker_client.invoke_sync(name, request)
-            logger.info(f'Received response from service `{name}`')
             return response
 
         except Exception as e:
-            logger.error(f'Error invoking service `{name}`: {e}')
+            logger.warning(f'Error invoking service `{name}`: {e}')
             raise
 
 # ################################################################################################################################

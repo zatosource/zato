@@ -207,8 +207,6 @@ class GetList(_Get):
     name = _service_name_prefix + 'get-list'
 
     class SimpleIO(_Get.SimpleIO):
-        request_elem = 'zato_scheduler_job_get_list_request'
-        response_elem = 'zato_scheduler_job_get_list_response'
         input_optional = GetListAdminSIO.input_optional + ('service_name',)
 
     def get_data(self, session):

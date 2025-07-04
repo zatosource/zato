@@ -188,6 +188,10 @@ class BrokerClient:
                 # Handle the message using the shared handler
                 result = handle_broker_msg(body, self.context)
 
+                print()
+                print(111, result)
+                print()
+
                 # If the message was handled and needs a reply
                 if result.was_handled and result.action_code == SERVICE.INVOKE.value:
                     if reply_to := body.get('reply_to'):
@@ -322,7 +326,7 @@ class BrokerClient:
         with self.lock:
             self.reply_consumers[queue_name] = consumer
 
-        logger.info(f'Started reply consumer for queue: {queue_name}')
+        logger.debug(f'Started reply consumer for queue: {queue_name}')
         return consumer
 
 # ################################################################################################################################
@@ -397,21 +401,30 @@ class BrokerClient:
                 self.ready = False
                 self.error = None
                 self.reply_queue_name = None
+                self.cid = None
+                self.service = None
 
             def set_response(self, response):
                 self.data = response
                 self.ready = True
-                # Queue deletion is handled in _on_reply when the reply is received
+                logger.info(f'Rsp 🠈 {cid} - `{response}` from service `{self.service}``')
 
         # Initialize response holder
         response = ResponseHolder()
+
+        # Generate a new CID for this request
+        cid = new_cid()
+
+        # Store service and CID in response holder for logging when response arrives
+        response.service = service
+        response.cid = cid
 
         # Prepare the message
         msg = {
             'action': SERVICE.INVOKE.value,
             'service': service,
             'payload': request or {},
-            'cid': new_cid(),
+            'cid': cid,
             'request_type': 'sync',
         }
 
@@ -423,9 +436,9 @@ class BrokerClient:
             if correlation_id in self.correlation_to_queue_map:
                 response.reply_queue_name = self.correlation_to_queue_map.get(correlation_id)
 
-        # Log service invocation with reply queue in the same line
+        # Log service invocation with reply queue and CID in the same line
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
-        logger.info(f'Invoking service `{service}` with `{request}`{reply_queue_info}')
+        logger.info(f'Req 🠊 {cid} - `{service}` with `{request}`{reply_queue_info}`')
 
         # Wait for the response
         wait_count = 0
@@ -449,8 +462,7 @@ class BrokerClient:
 
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
-        # Return the data
-        logger.info(f'Received synchronous response from service `{service}`')
+        # Return the data - response already logged in set_response with CID
         return response.data
 
 # ################################################################################################################################

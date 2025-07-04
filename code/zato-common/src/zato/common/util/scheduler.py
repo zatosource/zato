@@ -238,16 +238,18 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
 def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
-
     # Get a list of all the jobs we are to run ..
     response = api.invoke_service('zato.scheduler.job.get-list')
 
     # .. we have some jobs to schedule ..
     if response:
 
+        response = response['response']
+
         # .. log what we are about to add ..
         items = sorted(elem['name'] for elem in response)
-        logger.info('Loading jobs into scheduler -> %s', items)
+
+        logger.warning('Loading jobs into scheduler -> %s', items)
 
         # .. go through each of the jobs received ..
         for item in response:

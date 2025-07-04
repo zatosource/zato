@@ -539,11 +539,14 @@ class Scheduler:
 
         # If we have ODB configuration, we will be initializing jobs in the ODB ..
         if self.prefer_odb_config:
+            aaa
             self._init_jobs_by_odb()
 
         # .. otherwise, we are initializing jobs via API calls to a remote server.
         else:
-            _ = spawn_greenlet(self._init_jobs_by_api)
+            #_ = spawn_greenlet(self._init_jobs_by_api)
+
+            self._init_jobs_by_api()
 
 # ################################################################################################################################
 
