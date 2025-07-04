@@ -29,6 +29,7 @@ from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
+from zato.broker.message_handler import BrokerMessageHandler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,7 +181,24 @@ class BrokerClient:
                 callback = self._callbacks.pop(correlation_id)
                 callback(message_data)
             else:
-                logger.info(f'Received message with no handler: {message_data}')
+                # Handle the message using the shared handler if it's not a reply
+                if hasattr(self, 'server') and self.server:
+                    # If we have a server object, use it as the context for handlers
+                    result = BrokerMessageHandler.handle_message(
+                        msg=message_data, 
+                        context=self.server,
+                        preprocess_func=None,  # BrokerClient doesn't preprocess messages
+                        filter_func=None       # BrokerClient doesn't filter messages
+                    )
+                    
+                    # If the message was handled and needs a reply
+                    if result.was_handled and result.action_code == SERVICE.INVOKE.value:
+                        if reply_to := message_data.get('reply_to'):
+                            correlation_id = message_data.get('cid', '')
+                            self.publish_to_queue(reply_to, result.response, correlation_id=correlation_id)
+                else:
+                    # Fall back to logging if we have no server context
+                    logger.info(f'Received message with no handler: {message_data}')
 
             # Always acknowledge the message
             msg.ack()

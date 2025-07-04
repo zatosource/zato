@@ -8,13 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from traceback import format_exc
 
 # Zato
 from zato.common.api import ZATO_NONE
-from zato.common.broker_message import code_to_name, SERVICE
+from zato.common.broker_message import SERVICE
 from zato.common.util.api import new_cid
 from zato.common.util.config import resolve_env_variables
+from zato.broker.message_handler import BrokerMessageHandler
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger('zato')
 has_debug = logger.isEnabledFor(logging.DEBUG)
@@ -43,28 +46,19 @@ class BrokerMessageReceiver:
         (because in this case '1000' is the code for creating a new scheduler's job, see zato.common.broker_message for the list
         of all actions).
         """
-        try:
-            # Apply pre-processing
-            msg = self.preprocess_msg(msg)
+        # Use the shared BrokerMessageHandler with our own context and functions
+        result = BrokerMessageHandler.handle_message(
+            msg=msg,
+            context=self.worker_store,
+            preprocess_func=self.preprocess_msg,
+            filter_func=self.filter
+        )
 
-            if self.filter(msg):
-                action_code = msg['action']
-                action = code_to_name[action_code]
-                handler = 'on_broker_msg_{0}'.format(action)
-                func = getattr(self.worker_store, handler)
-                response = func(msg)
-
-                if action_code == service_invoke:
-                    if reply_to := msg.get('reply_to'):
-                        correlation_id = msg.get('cid', '')
-                        self.broker_client.publish_to_queue(reply_to, response, correlation_id=correlation_id)
-
-            else:
-                logger.info('Rejecting broker message `%r`', msg)
-        except Exception:
-            msg_action = msg.get('action') or 'undefined_msg_action' # type: str
-            action = code_to_name.get(msg_action) or 'undefined_action'
-            logger.error('Could not handle broker message: (%s:%s) `%r`, e:`%s`', action, msg_action, msg, format_exc())
+        # If message was handled and it's a service invocation that needs a reply
+        if result.was_handled and result.action_code == service_invoke:
+            if reply_to := msg.get('reply_to'):
+                correlation_id = msg.get('cid', '')
+                self.broker_client.publish_to_queue(reply_to, result.response, correlation_id=correlation_id)
 
 # ################################################################################################################################
 
