@@ -59,9 +59,11 @@ class SchedulerAPI:
     """ The job scheduler server. All of the operations assume the data was already validated
     by relevant Zato public API services.
     """
+    broker_client: 'BrokerClient'
+
     def __init__(self, config:'SchedulerServerConfig'=None, run:'bool'=False):
         self.config = config
-        self.broker_client = None # type: BrokerClient
+        self.broker_client:'BrokerClient' = None # type: ignore
         self.config.on_job_executed_cb = self.on_job_executed
         self.scheduler = _Scheduler(self.config, self)
 

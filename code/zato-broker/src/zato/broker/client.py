@@ -48,7 +48,7 @@ logger = getLogger(__name__)
 
 class BrokerClient:
 
-    def __init__(self, *, server:'ParallelServer | None'=None) -> 'None':
+    def __init__(self, *, server:'ParallelServer | None'=None, **kwargs:'any_') -> 'None':
 
         self.server = server
         self.lock = RLock()
@@ -69,6 +69,9 @@ class BrokerClient:
 
         # Base component name
         component_name = 'internal'
+
+        # What queue to listen for messages from
+        queue_name = kwargs.get('queue_name')
 
         # Connection class factory function
         def get_conn_class_func(suffix, is_tls):
@@ -99,10 +102,10 @@ class BrokerClient:
         # Configure consumer
         consumer_config = bunchify(dict(shared_config, **{
             'name': f'{component_name}-consumer',
-            'queue': 'server',
+            'queue': queue_name,
             'consumer_tag_prefix': 'zato-broker',
             'ack_mode': AMQP.ACK_MODE.ACK.id,
-            'prefetch_count': 5,
+            'prefetch_count': 1,
             'conn_class': KombuAMQPConnection,
         }))
 
@@ -118,13 +121,14 @@ class BrokerClient:
         """ Publishes a message to the AMQP broker.
         """
         msg = dumps(msg) # type: ignore
+        routing_key = kwargs.get('routing_key') or 'server'
 
         with self.producer.acquire() as client:
             client.publish(
                 msg,
                 exchange='components',
-                routing_key='server',
-                content_type='text/plain',
+                routing_key=routing_key,
+                content_type='application/json',
                 delivery_mode=PERSISTENT_DELIVERY_MODE
             )
 
@@ -143,8 +147,8 @@ class BrokerClient:
         publish_kwargs = {
             'exchange': '',  # Default exchange
             'routing_key': queue_name,  # Queue name as routing key
-            'content_type': 'text/plain',
-            'delivery_mode': PERSISTENT_DELIVERY_MODE,  # Make sure it's persistent
+            'content_type': 'application/json',
+            'delivery_mode': PERSISTENT_DELIVERY_MODE,
         }
 
         # Add correlation ID if provided
@@ -192,7 +196,8 @@ class BrokerClient:
         """ Specific handler for replies to the temporary reply queue.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
-        message_data = loads(body)
+        if not isinstance(body, dict):
+            body = loads(body)
 
         # Get correlation ID
         correlation_id = msg.properties.get('correlation_id')
@@ -207,7 +212,7 @@ class BrokerClient:
                 self.correlation_to_queue_map.pop(correlation_id, None)
 
             # Invoke the callback with the response
-            callback(message_data)
+            callback(body)
 
             # Immediately delete the queue and clean up the consumer
             if queue_name:
@@ -408,7 +413,7 @@ class BrokerClient:
                 response.reply_queue_name = self.correlation_to_queue_map.get(correlation_id)
 
         # Log service invocation with reply queue in the same line
-        reply_queue_info = f", reply-to: `{response.reply_queue_name}`" if response.reply_queue_name else ""
+        reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
         logger.info(f'Invoking service `{service}` with `{request}`{reply_queue_info}')
 
         # Wait for the response
