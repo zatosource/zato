@@ -1105,7 +1105,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def on_pubsub_message(self, body:'any_', msg:'any_', name:'str', config:'dict') -> 'None':
 
-        body = loads(body)
+        if not isinstance(body, dict):
+            body = loads(body)
         body = bunchify(body)
 
         self.on_broker_msg(body)
