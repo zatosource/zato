@@ -82,6 +82,7 @@ class SchedulerServer(AuxServer):
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
         self.scheduler_api.broker_client = BrokerClient(queue_name='scheduler')
+        self.scheduler_api.broker_client.start_consumer()
 
 # ################################################################################################################################
 
