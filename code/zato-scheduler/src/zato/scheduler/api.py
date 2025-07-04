@@ -283,11 +283,4 @@ class SchedulerAPI:
         self.execute(msg)
 
 # ################################################################################################################################
-
-    def on_broker_msg_SCHEDULER_SET_SERVER_ADDRESS(self, msg, *ignored_args):
-        url = parse_url_address(msg.address, SCHEDULER.Default_Server_Port)
-        self.broker_client.set_zato_client_address(url)
-        logger.info('Set server address to -> %s', url)
-
-# ################################################################################################################################
 # ################################################################################################################################
