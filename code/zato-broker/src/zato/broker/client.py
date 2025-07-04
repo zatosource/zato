@@ -180,7 +180,6 @@ class BrokerClient:
                 callback = self._callbacks.pop(correlation_id)
                 callback(message_data)
             else:
-                # Log the message if there's no handler
                 logger.info(f'Received message with no handler: {message_data}')
 
             # Always acknowledge the message
