@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
+# Bunch
+from bunch import bunchify
+
 # Zato
 from zato.common.broker_message import code_to_name
 from zato.common.typing_ import any_, anydict, dataclass, strnone
@@ -58,18 +61,21 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
         result.action_name = action
 
         # Find and call the handler method
-        handler = f'on_broker_msg_{action}'
-        if hasattr(context, handler):
-            func = getattr(context, handler)
-            result.response = func(msg)
+        handler_name = f'on_broker_msg_{action}'
+        if func := getattr(context, handler_name, None):
+            msg = bunchify(msg)
+            response = func(msg)
+            result.response = response
             result.was_handled = True
+        else:
+            logger.warning('No such handler: %s in context: %s', handler_name, context)
 
         return result
 
     except Exception:
         msg_action = msg.get('action') or 'undefined_msg_action'
         action = code_to_name.get(msg_action) or 'undefined_action'
-        logger.error('Could not handle broker message: (%s:%s) `%r`, e:`%s`', action, msg_action, msg, format_exc())
+        logger.warning('Could not handle broker message: (%s:%s) `%r`, e:`%s`', action, msg_action, msg, format_exc())
         return result
 
 # ################################################################################################################################
