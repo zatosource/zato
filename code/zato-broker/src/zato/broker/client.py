@@ -59,6 +59,9 @@ class BrokerClient:
         self.reply_consumer_started = False
         self.consumer = None
 
+        # This is the object whose on_broker_msg_ methods will be invoked for any messages taken off a queue
+        self.context = kwargs.get('context') or self
+
         # Get broker configuration
         broker_config = get_broker_config()
 
@@ -171,7 +174,8 @@ class BrokerClient:
         """
         try:
             # Parse message body
-            message_data = loads(body)
+            if not isinstance(body, dict):
+                body = loads(body)
 
             # Check if this is a reply to a previous request
             correlation_id = msg.properties.get('correlation_id')
@@ -179,15 +183,15 @@ class BrokerClient:
             if correlation_id and correlation_id in self._callbacks:
                 # Invoke callback registered for this correlation ID
                 callback = self._callbacks.pop(correlation_id)
-                callback(message_data)
+                callback(body)
             else:
                 # Handle the message using the shared handler
-                result = handle_broker_msg(message_data, self)
+                result = handle_broker_msg(body, self.context)
 
                 # If the message was handled and needs a reply
                 if result.was_handled and result.action_code == SERVICE.INVOKE.value:
-                    if reply_to := message_data.get('reply_to'):
-                        correlation_id = message_data.get('cid', '')
+                    if reply_to := body.get('reply_to'):
+                        correlation_id = body.get('cid', '')
                         self.publish_to_queue(reply_to, result.response, correlation_id=correlation_id)
 
             # Always acknowledge the message

@@ -344,117 +344,12 @@ class Execute(AdminService):
                     one()
 
                 msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': job.name}
-                self.broker_client.publish(msg)
+                self.broker_client.publish(msg, routing_key='scheduler')
 
             except Exception:
                 self.logger.error('Could not execute the job, e:`%s`', format_exc())
                 session.rollback()
                 raise
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SetActiveStatus(AdminService):
-    """ Actives or deactivates a job.
-    """
-    name = _service_name_prefix + 'set-active-status'
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_scheduler_job_set_active_status_request'
-        response_elem = 'zato_scheduler_job_set_active_status_response'
-        input_required = ('id', 'is_active')
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            try:
-                session.query(Job).\
-                    filter(Job.id==self.request.input.id).\
-                    one().is_active = self.request.input.is_active
-                session.commit()
-
-            except Exception:
-                session.rollback()
-                self.logger.error('Could not update is_active status, e:`%s`', format_exc())
-
-                raise
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _SetAddressBase(Service):
-
-    input = 'address'
-    output = 'msg'
-
-    address_component_type = None
-
-    def _handle(self, address:'str') -> 'None':
-        raise NotImplementedError()
-
-    def handle(self) -> 'None':
-        address = (self.request.input.address or '').strip()
-        self._handle(address)
-        self.response.payload.msg = f'OK, {self.address_component_type} address set to {self.request.input.address}'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SetServerAddress(_SetAddressBase):
-    """ Tells the scheduler what the new address of a server it can invoke is.
-    """
-    name = 'pub.zato.scheduler.set-server-address'
-    address_component_type = 'server'
-
-    def _handle(self, address:'str') -> 'None':
-        self.broker_client.publish({
-            'action': SCHEDULER_MSG.SET_SERVER_ADDRESS.value,
-            'address': address
-        })
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SetSchedulerAddressImpl(_SetAddressBase):
-    """ Per server-service that tells the server what the new address of a scheduler it can invoke is.
-    """
-    address_component_type = 'server (impl)'
-
-    def _handle(self, address:'str') -> 'None':
-
-        # Extract information about the address we are to use ..
-        url = parse_url_address(address, SCHEDULER.DefaultPort)
-
-        # First, save the information to disk ..
-        with self.lock():
-
-            # .. extract the stanza that we need ..
-            config:'ConfigObj' = get_config_object(self.server.repo_location, 'server.conf') # type: ignore
-
-            # .. update its contents ..
-            config['scheduler']['scheduler_host'] = url.host # type: ignore
-            config['scheduler']['scheduler_port'] = url.port # type: ignore
-            config['scheduler']['scheduler_use_tls'] = url.use_tls # type: ignore
-
-            # .. we can save it back to disk ..
-            update_config_file(config, self.server.repo_location, 'server.conf')
-
-        # .. now, set the new address in RAM.
-        self.server.set_scheduler_address(address)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SetSchedulerAddress(_SetAddressBase):
-    """ Tells all servers what the new address of a scheduler they can invoke is.
-    """
-    name = 'pub.zato.scheduler.set-scheduler-address'
-    address_component_type = 'scheduler'
-
-    def _handle(self, address:'str') -> 'None':
-        self.broker_client.publish({
-            'action': SCHEDULER_MSG.SET_SCHEDULER_ADDRESS.value,
-            'address': address,
-        })
 
 # ################################################################################################################################
 # ################################################################################################################################
