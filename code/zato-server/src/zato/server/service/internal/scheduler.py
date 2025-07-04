@@ -101,7 +101,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     if action == 'create':
         job = Job(None, name, is_active, job_type, start_date, extra, cluster=cluster, service=service)
     else:
-        job = session.query(Job).filter_by(id=job_id).one()
+        job = session.query(Job).filter_by(id=job_id).one() # type: ignore
         old_name = job.name
         job.name = name
         job.is_active = is_active
@@ -123,7 +123,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             if action == 'create':
                 ib_job = IntervalBasedJob(None, job)
             else:
-                ib_job = session.query(IntervalBasedJob).filter_by(id=job.interval_based.id).one()
+                ib_job = session.query(IntervalBasedJob).filter_by(id=job.interval_based.id).one() # type: ignore
 
             for param in ib_params + ('repeats',):
                 value = input[param] or None
@@ -149,10 +149,10 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                }
 
         if action == 'edit':
-            msg['old_name'] = old_name
+            msg['old_name'] = old_name # type: ignore
 
         if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-            for param in ib_params + ('repeats',):
+            for param in ib_params + ('repeats',): # type: ignore
                 value = input[param]
                 msg[param] = int(value) if value else 0
 
