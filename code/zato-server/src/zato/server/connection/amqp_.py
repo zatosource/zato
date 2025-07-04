@@ -255,7 +255,7 @@ class Consumer:
                                 self.is_connected = True
 
             if connection:
-                logger.info('Closing connection for `%s`', consumer)
+                logger.debug('Closing connection for `%s`', consumer)
                 connection.close()
             self.is_stopped = True # Set to True if we break out of the main loop.
 
