@@ -417,7 +417,7 @@ class PubSubRESTServer:
         self.subscriptions[topic_name][endpoint_name] = subscription
 
         # Register subscription with broker client
-        self.broker_client.subscribe(topic_name, endpoint_name, sub_key)
+        self.broker_client.subscribe(topic_name, endpoint_name, sub_key) # type: ignore
         logger.info(f'[{cid}] Successfully subscribed {endpoint_name} to {topic_name} with key {sub_key}')
 
         return SimpleResponse(is_ok=True)
@@ -443,7 +443,7 @@ class PubSubRESTServer:
             _ = self.subscriptions[topic_name].pop(endpoint_name)
 
             # Unregister subscription with broker client
-            self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key)
+            self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key) # type: ignore
 
             logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
         else:
