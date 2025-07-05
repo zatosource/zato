@@ -305,6 +305,15 @@
                                     {% endif %}
                                 </ul>
                             </li>
+                            <li class="first-level">
+                                <a class="menu-link" href="#">Pub/sub &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Clients</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
+                                </ul>
+                            </li>
+
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
 
                             {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}
