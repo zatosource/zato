@@ -1062,11 +1062,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SCHEDULER_SET_SCHEDULER_ADDRESS(self, msg:'bunch_', args:'any_'=None) -> 'any_':
-        self.invoke('zato.scheduler.set-scheduler-address-impl', msg)
-
-# ################################################################################################################################
-
     def on_broker_msg_OUTGOING_SQL_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an SQL connection, including changing its
         password.
