@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,14 +22,7 @@ from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, Job, IntervalBasedJob, Service as ODBService
 from zato.common.odb.query import job_by_id, job_by_name, job_list
-from zato.common.util.config import get_config_object, parse_url_address, update_config_file
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO, Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.ext.configobj_ import ConfigObj
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,11 +135,16 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         # Now send it to the broker, but only if the job is active.
         # if is_active:
         msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
-        msg = {'action': msg_action, 'job_type': job_type,
-               'is_active':is_active, 'start_date':start_date.isoformat(),
-               'extra':extra.decode('utf8'), 'service': service.name,
-               'id':job.id, 'name': name
-               }
+        msg = {
+            'action': msg_action,
+            'job_type': job_type,
+            'is_active': is_active,
+            'start_date': start_date.isoformat(),
+            'extra': extra.decode('utf8'),
+            'service': service.name,
+            'id':job.id,
+            'name': name
+        }
 
         if action == 'edit':
             msg['old_name'] = old_name # type: ignore
@@ -156,7 +154,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 value = input[param]
                 msg[param] = int(value) if value else 0
 
-        broker_client.publish(msg)
+        broker_client.publish(msg, routing_key='scheduler')
 
     except Exception:
         session.rollback()
@@ -313,7 +311,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
-                self.broker_client.publish(msg)
+                self.broker_client.publish(msg, routing_key='scheduler')
 
             except Exception:
                 session.rollback()
