@@ -22,7 +22,7 @@ from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, optional, str_
+    from zato.common.typing_ import any_, anydict, anydictnone, optional, str_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,9 +71,9 @@ class UserInfo:
 class OperationResult:
     """ Result of an operation.
     """
-    is_ok: bool = False
+    is_ok: 'bool' = False
     message: 'str' = ''
-    details: optional[anydict] = None
+    details: 'anydictnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -287,4 +287,19 @@ def main() -> 'int':
 if __name__ == '__main__':
     sys.exit(main())
 
+"""
+# Publish a message to a topic:
+curl -v -u demo:demo -X POST http://localhost:44556/msg/my-topic -d '{"content":"Hello World"}'
+
+# Subscribe to a topic:
+curl -v -u demo:demo -X POST http://localhost:44556/sub/my-topic -d '{"endpoint_name":"my-endpoint"}'
+
+# Get messages for a subscription:
+curl -v -u demo:demo http://localhost:44556/msg/my-topic/my-endpoint
+
+# Unsubscribe from a topic:
+curl -v -u demo:demo -X DELETE http://localhost:44556/sub/my-topic/my-endpoint
+"""
+
+# ################################################################################################################################
 # ################################################################################################################################
