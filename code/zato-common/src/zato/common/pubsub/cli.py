@@ -288,17 +288,17 @@ if __name__ == '__main__':
     sys.exit(main())
 
 """
+# Health check endpoint:
+curl http://localhost:44556/pubsub/health; echo
+
 # Publish a message to a topic:
-curl -v -u demo:demo -X POST http://localhost:44556/msg/my-topic -d '{"content":"Hello World"}'
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic -d '{"topic_name":"my-topic","content":"Hello World"}'; echo
 
 # Subscribe to a topic:
-curl -v -u demo:demo -X POST http://localhost:44556/sub/my-topic -d '{"endpoint_name":"my-endpoint"}'
-
-# Get messages for a subscription:
-curl -v -u demo:demo http://localhost:44556/msg/my-topic/my-endpoint
+curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my-topic -d '{"endpoint_name":"my-endpoint"}'; echo
 
 # Unsubscribe from a topic:
-curl -v -u demo:demo -X DELETE http://localhost:44556/sub/my-topic/my-endpoint
+curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/my-topic/my-endpoint; echo
 """
 
 # ################################################################################################################################
