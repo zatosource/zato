@@ -132,6 +132,13 @@ subscription_list = list_[Subscription]
 message_list = list_[Message]
 topic_list = list_[Topic]
 
+# Endpoint-specific collections
+endpoint_messages = dict_[str_, message_list]  # endpoint_name -> [Message]
+topic_messages = dict_[str_, endpoint_messages]  # topic_name -> {endpoint_name -> [Message]}
+
+endpoint_subscriptions = dict_[str_, Subscription]  # endpoint_name -> Subscription
+topic_subscriptions = dict_[str_, endpoint_subscriptions]  # topic_name -> {endpoint_name -> Subscription}
+
 # Optional types
 message_optional = optional[Message]
 subscription_optional = optional[Subscription]
