@@ -211,13 +211,16 @@ class PubSubRESTServer:
         )
 
         # Authenticate request
-        endpoint_name = self.authenticate(environ)
-        if not endpoint_name:
+        username = self.authenticate(environ)
+        if not username:
             logger.warning(f'[{cid}] Authentication failed')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
 
+        # Get client id if provided
+        ext_client_id = data.get('ext_client_id')
+
         # Publish message
-        result = self.publish_message(topic_name, msg, endpoint_name)
+        result = self.publish_message(topic_name, msg, username, ext_client_id)
 
         # Create a simple response with only the necessary fields
         return self._json_response(start_response, {'is_ok': result.is_ok, 'cid': cid})
@@ -318,12 +321,13 @@ class PubSubRESTServer:
         self,
         topic_name:'str',
         msg:'PubMessage',
-        endpoint_name:'str'
+        username:'str',
+        ext_client_id:'strnone'=None
         ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
         cid = new_cid()
-        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {endpoint_name}')
+        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
 
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
@@ -357,13 +361,13 @@ class PubSubRESTServer:
             'expiration_time_iso': expiration_time_iso,
             'size': size,
             'delivery_count': 0,
-            'publisher': endpoint_name,
+            'publisher': username,
         }
 
-        # Use broker client to publish the message
-        # This will handle message distribution to subscribers
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
-        logger.info(f'[{cid}] Published message {msg_id} to topic {topic_name} via broker')
+
+        ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
+        logger.info(f'Published message {cid} to topic {topic_name} ({username}{ext_client_part})')
 
         # Return success response
         return PubResponse(
