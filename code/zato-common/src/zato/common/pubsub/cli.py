@@ -293,7 +293,7 @@ if __name__ == '__main__':
 curl http://localhost:44556/pubsub/health; echo
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic -d '{"topic_name":"my.topic","content":"Hello World"}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic.1 '{"data":"Hello World"}'; echo
 
 # Subscribe to a topic:
 curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my.topic -d '{"endpoint_name":"my-endpoint"}'; echo
