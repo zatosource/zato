@@ -179,7 +179,15 @@ class PubSubRESTServer:
         """
         logger.info('Processing publish request')
         cid = new_cid()
-        logger.info(f'[{cid}] Publishing message to topic')
+
+        # Extract topic name from URL path
+        path_info = environ.get('PATH_INFO', '')
+        url_segments = path_info.strip('/').split('/')
+
+        # The full path is /pubsub/topic/{topic_name}
+        topic_name = url_segments[2]
+
+        logger.info(f'[{cid}] Publishing message to topic {topic_name}')
 
         # Get request data
         request = Request(environ)
@@ -190,9 +198,15 @@ class PubSubRESTServer:
             logger.warning(f'[{cid}] Invalid request data')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
 
-        topic_name = data.get('topic_name')
+        # Use the 'data' field from the request as specified in the spec
+        msg_data = data.get('data')
+
+        if msg_data is None:
+            logger.warning(f'[{cid}] Missing required data field')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Missing required data field'}, '400 Bad Request')
+
         msg = PubMessage(
-            data=data.get('data'),
+            data=msg_data,
             priority=data.get('priority', 5),
             expiration=data.get('expiration', 86400),
             correl_id=data.get('correl_id', ''),
