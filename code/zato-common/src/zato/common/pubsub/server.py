@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import base64
 import uuid
 from datetime import datetime, timedelta
 from json import dumps, loads
@@ -158,26 +157,28 @@ class PubSubRESTServer:
         cid = new_cid()
         auth_header = environ.get('HTTP_AUTHORIZATION', '')
 
+        path_info = environ.get('PATH_INFO', 'unknown-path')
+
         if not auth_header:
-            logger.warning('No Authorization header present')
+            logger.warning(f'No Authorization header present; path_info:`{path_info}`')
             return None
 
         # First, extract the username and password from the auth header
         result = extract_basic_auth(cid, auth_header, raise_on_error=False)
-
-        if not result[0]:
-            logger.warning(f'Invalid Authorization header format')
-            return None
-
         username, _ = result
 
-        # Check if the username exists in our users dict
+        if not username:
+            logger.warning(f'Invalid Authorization header format; path_info:`{path_info}`')
+            return None
+
         if username in self.users:
-            # Use check_basic_auth for secure comparison
             if check_basic_auth(cid, auth_header, username, self.users[username]) is True:
                 return username
+            else:
+                logger.warning(f'Invalid password for `{username}`; path_info:`{path_info}`')
+        else:
+            logger.warning(f'No such user `{username}`; path_info:`{path_info}`')
 
-        logger.warning(f'Authentication failed for user: {username}')
         return None
 
 # ################################################################################################################################
