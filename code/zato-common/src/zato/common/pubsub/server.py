@@ -15,6 +15,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
+from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
 from gevent import monkey; monkey.patch_all()
@@ -154,28 +155,30 @@ class PubSubRESTServer:
     def authenticate(self, environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
-        auth_header = environ.get('HTTP_AUTHORIZATION')
+        cid = new_cid()
+        auth_header = environ.get('HTTP_AUTHORIZATION', '')
+
         if not auth_header:
             logger.warning('No Authorization header present')
             return None
 
-        if not auth_header.startswith('Basic '):
-            logger.warning('Authorization header is not Basic')
+        # First, extract the username and password from the auth header
+        result = extract_basic_auth(cid, auth_header, raise_on_error=False)
+
+        if not result[0]:
+            logger.warning(f'Invalid Authorization header format')
             return None
 
-        try:
-            encoded = auth_header[6:]  # Remove 'Basic ' prefix
-            decoded = base64.b64decode(encoded).decode('utf-8')
-            username, password = decoded.split(':', 1)
+        username, _ = result
 
-            if username in self.users and self.users[username] == password:
+        # Check if the username exists in our users dict
+        if username in self.users:
+            # Use check_basic_auth for secure comparison
+            if check_basic_auth(cid, auth_header, username, self.users[username]) is True:
                 return username
 
-            logger.warning(f'Authentication failed for user: {username}')
-            return None
-        except Exception as e:
-            logger.error(f'Error during authentication: {e}')
-            return None
+        logger.warning(f'Authentication failed for user: {username}')
+        return None
 
 # ################################################################################################################################
 
