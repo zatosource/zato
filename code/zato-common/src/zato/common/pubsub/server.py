@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import base64
 import uuid
 from datetime import datetime, timedelta
-from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
 
@@ -32,9 +31,9 @@ from gunicorn.app.base import BaseApplication
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.util.api import new_cid
-from zato.common.pubsub.models import PubMessage, PubResponse, Message, SimpleResponse
+from zato.common.pubsub.models import PubMessage, PubResponse, SimpleResponse
 from zato.common.pubsub.models import Subscription, Topic
-from zato.common.pubsub.models import topic_messages, topic_subscriptions
+from zato.common.pubsub.models import topic_subscriptions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,10 +135,10 @@ class PubSubRESTServer:
         if users_file:
             self.users = load_users(users_file)
 
-        # In-memory storage for topics, subscriptions, and messages
+        # Storage for topics and subscriptions metadata only
         self.topics:'dict_[str, Topic]' = {}           # topic_name -> Topic
         self.subscriptions:'topic_subscriptions' = {}  # topic_name -> {endpoint_name -> Subscription}
-        self.messages:'topic_messages' = {}            # topic_name -> {endpoint_name -> [Message]}
+        # No in-memory message storage - all messaging goes through broker_client
 
         logger.info(f'PubSubRESTServer initialized on {host}:{port} with has_debug={has_debug}')
 
@@ -335,7 +334,7 @@ class PubSubRESTServer:
         msg:'PubMessage',
         endpoint_name:'str'
         ) -> 'PubResponse':
-        """ Publish a message to a topic.
+        """ Publish a message to a topic using the broker client.
         """
         cid = new_cid()
         logger.info(f'[{cid}] Publishing message to topic {topic_name} from {endpoint_name}')
@@ -344,7 +343,6 @@ class PubSubRESTServer:
         if topic_name not in self.topics:
             self.topics[topic_name] = Topic(name=topic_name)
             self.subscriptions[topic_name] = {}
-            self.messages[topic_name] = {}
             logger.info(f'[{cid}] Created new topic: {topic_name}')
 
         # Generate message ID and calculate size
@@ -359,35 +357,27 @@ class PubSubRESTServer:
         expiration_time_iso = expiration_time.isoformat()
 
         # Create message object
-        message = Message(
-            data=msg.data,
-            topic_name=topic_name,
-            msg_id=msg_id,
-            correl_id=msg.correl_id,
-            in_reply_to=msg.in_reply_to,
-            priority=msg.priority,
-            ext_client_id=msg.ext_client_id,
-            pub_time_iso=pub_time_iso,
-            recv_time_iso=pub_time_iso,  # Same as pub_time for direct API calls
-            expiration=msg.expiration,
-            expiration_time_iso=expiration_time_iso,
-            size=size,
-            delivery_count=0,
-        )
+        message = {
+            'data': msg.data,
+            'topic_name': topic_name,
+            'msg_id': msg_id,
+            'correl_id': msg.correl_id,
+            'in_reply_to': msg.in_reply_to,
+            'priority': msg.priority,
+            'ext_client_id': msg.ext_client_id,
+            'pub_time_iso': pub_time_iso,
+            'recv_time_iso': pub_time_iso,  # Same as pub_time for direct API calls
+            'expiration': msg.expiration,
+            'expiration_time_iso': expiration_time_iso,
+            'size': size,
+            'delivery_count': 0,
+            'publisher': endpoint_name,
+        }
 
-        # Distribute message to all subscribers
-        for endpoint_name, subscription in self.subscriptions[topic_name].items():
-            if endpoint_name not in self.messages[topic_name]:
-                self.messages[topic_name][endpoint_name] = []
-
-            # Copy the message and set the subscription key
-            msg_copy = Message(**asdict(message))
-            msg_copy.sub_key = subscription.sub_key
-            msg_copy.delivery_count += 1
-
-            # Add to the subscriber's queue
-            self.messages[topic_name][endpoint_name].append(msg_copy)
-            logger.debug(f'[{cid}] Delivered message {msg_id} to {endpoint_name} on topic {topic_name}')
+        # Use broker client to publish the message
+        # This will handle message distribution to subscribers
+        self.broker_client.publish(message, routing_key=topic_name)
+        logger.info(f'[{cid}] Published message {msg_id} to topic {topic_name} via broker')
 
         # Return success response
         return PubResponse(
@@ -412,7 +402,6 @@ class PubSubRESTServer:
         if topic_name not in self.topics:
             self.topics[topic_name] = Topic(name=topic_name)
             self.subscriptions[topic_name] = {}
-            self.messages[topic_name] = {}
             logger.info(f'[{cid}] Created new topic: {topic_name}')
 
         # Check if already subscribed
@@ -433,12 +422,10 @@ class PubSubRESTServer:
             self.subscriptions[topic_name] = {}
         self.subscriptions[topic_name][endpoint_name] = subscription
 
-        # Initialize message queue
-        if topic_name not in self.messages:
-            self.messages[topic_name] = {}
-        self.messages[topic_name][endpoint_name] = []
-
+        # Register subscription with broker client
+        self.broker_client.subscribe(topic_name, endpoint_name, sub_key)
         logger.info(f'[{cid}] Successfully subscribed {endpoint_name} to {topic_name} with key {sub_key}')
+
         return SimpleResponse(is_ok=True)
 
 # ################################################################################################################################
@@ -455,21 +442,14 @@ class PubSubRESTServer:
 
         # Check if subscription exists
         if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
+            # Get subscription key before removing it
+            sub_key = self.subscriptions[topic_name][endpoint_name].sub_key
 
-            # Get topic subscriptions
-            topic_subscriptions = self.subscriptions[topic_name]
+            # Remove the subscription from our metadata
+            _ = self.subscriptions[topic_name].pop(endpoint_name)
 
-            # Remove the subscription
-            _ = topic_subscriptions.pop(endpoint_name)
-
-            # Remove messages if they exist
-            if topic_name in self.messages and endpoint_name in self.messages[topic_name]:
-
-                # Get topic messages
-                topic_message_map = self.messages[topic_name]
-
-                # Remove endpoint messages
-                _ = topic_message_map.pop(endpoint_name)
+            # Unregister subscription with broker client
+            self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key)
 
             logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
         else:
