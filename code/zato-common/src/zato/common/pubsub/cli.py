@@ -293,13 +293,16 @@ if __name__ == '__main__':
 curl http://localhost:44556/pubsub/health; echo
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic.1 '{"data":"Hello World"}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic -d '{"data":"Hello World"}'; echo
+
+echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:44556/pubsub/topic/my.topic
+N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
 
 # Subscribe to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my.topic -d '{"endpoint_name":"my-endpoint"}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my.topic; echo
 
 # Unsubscribe from a topic:
-curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/my.topic/my-endpoint; echo
+curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/my.topic
 """
 
 # ################################################################################################################################

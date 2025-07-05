@@ -154,7 +154,6 @@ class PubSubRESTServer:
     def authenticate(self, environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
-        logger.info('Authenticating request')
         auth_header = environ.get('HTTP_AUTHORIZATION')
         if not auth_header:
             logger.warning('No Authorization header present')
@@ -170,7 +169,6 @@ class PubSubRESTServer:
             username, password = decoded.split(':', 1)
 
             if username in self.users and self.users[username] == password:
-                logger.debug(f'Authenticated user: {username}')
                 return username
 
             logger.warning(f'Authentication failed for user: {username}')
@@ -186,8 +184,6 @@ class PubSubRESTServer:
         """
         logger.info('Processing publish request')
         cid = new_cid()
-
-        logger.info(f'[{cid}] Publishing message to topic {topic_name}')
 
         # Get request data
         request = Request(environ)
@@ -288,14 +284,11 @@ class PubSubRESTServer:
         try:
             # Get raw data from environ['wsgi.input']
             raw_data = request.get_data()
-            logger.debug(f'Raw request data: {raw_data}')
 
             if raw_data:
                 # Decode and parse
                 text_data = raw_data.decode('utf-8')
-                logger.debug(f'Decoded request data: {text_data}')
                 data = loads(text_data)
-                logger.debug(f'Parsed JSON data: {data}')
                 return data
             else:
                 logger.warning('No request data provided')
@@ -463,7 +456,6 @@ class PubSubRESTServer:
         try:
             # Match the path to a registered endpoint
             endpoint, args = urls.match()
-            logger.debug('Matched endpoint: %s, args: %s', endpoint, args)
 
             # Dynamic dispatch - call the method named by the endpoint
             if hasattr(self, endpoint):
