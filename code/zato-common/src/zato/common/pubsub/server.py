@@ -420,12 +420,21 @@ class PubSubRESTServer:
 
         # Check if subscription exists
         if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
-            # Remove subscription
-            del self.subscriptions[topic_name][endpoint_name]
 
-            # Remove messages
+            # Get topic subscriptions
+            topic_subscriptions = self.subscriptions[topic_name]
+
+            # Remove the subscription
+            _ = topic_subscriptions.pop(endpoint_name)
+
+            # Remove messages if they exist
             if topic_name in self.messages and endpoint_name in self.messages[topic_name]:
-                del self.messages[topic_name][endpoint_name]
+
+                # Get topic messages
+                topic_message_map = self.messages[topic_name]
+
+                # Remove endpoint messages
+                _ = topic_message_map.pop(endpoint_name)
 
             logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
         else:
@@ -477,9 +486,10 @@ class GunicornApplication(BaseApplication):
         super().__init__()
 
     def load_config(self):
-        config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
+        # Apply valid configuration options
+        for key, value in self.options.items():
+            if key in self.cfg.settings and value is not None: # type: ignore
+                self.cfg.set(key.lower(), value) # type: ignore
 
     def load(self):
         return self.application
