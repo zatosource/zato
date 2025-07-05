@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps, loads
 from logging import getLogger
 from threading import RLock
-from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
@@ -224,7 +223,7 @@ class BrokerClient:
 
             # Clean up correlation to queue mapping
             with self.lock:
-                self.correlation_to_queue_map.pop(correlation_id, None)
+                _ = self.correlation_to_queue_map.pop(correlation_id, None)
 
             # Invoke the callback with the response
             callback(body)
@@ -259,11 +258,11 @@ class BrokerClient:
                     logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
 
                 # Wait a brief moment to ensure consumer loop has exited
-                sleep(0.1)
+                sleep(0.1) # type: ignore
 
                 # Now remove it from the dictionary to avoid further references
                 with self.lock:
-                    self.reply_consumers.pop(queue_name, None)
+                    _ = self.reply_consumers.pop(queue_name, None)
 
             # Finally, explicitly delete the queue using a fresh connection
             # This avoids using potentially cancelled channels
@@ -401,8 +400,8 @@ class BrokerClient:
                 self.ready = False
                 self.error = None
                 self.reply_queue_name = None
-                self.cid = None
-                self.service = None
+                self.cid = 'cid-not-set'
+                self.service = 'service-not-set'
 
             def set_response(self, response):
                 self.data = response
@@ -456,9 +455,9 @@ class BrokerClient:
                 # Also clean up the callback registration
                 with self.lock:
                     if correlation_id in self._callbacks:
-                        self._callbacks.pop(correlation_id, None)
+                        _ = self._callbacks.pop(correlation_id, None) # type: ignore
                     if correlation_id in self.correlation_to_queue_map:
-                        self.correlation_to_queue_map.pop(correlation_id, None)
+                        _ = self.correlation_to_queue_map.pop(correlation_id, None)
 
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
