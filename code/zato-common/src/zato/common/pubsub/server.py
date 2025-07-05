@@ -12,7 +12,7 @@ import json
 import uuid
 from datetime import datetime, timedelta
 from dataclasses import asdict
-from json import dumps
+from json import dumps, loads
 from logging import getLogger
 
 # Zato
@@ -83,7 +83,7 @@ def load_users(users_file:'str') -> 'strdict':
     logger.info(f'Loading users from {users_file}')
     try:
         with open(users_file, 'r') as f:
-            users_list = json.load(f)
+            users_list = load(f)
 
         # Convert the list of single-pair dicts to a single dict
         users = {}
@@ -143,7 +143,7 @@ class PubSubRESTServer:
 
         logger.info(f'PubSubRESTServer initialized on {host}:{port} with debug={debug}')
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def authenticate(self, environ:'anydict') -> 'optional[str_]':
         """ Authenticate a request using HTTP Basic Authentication.
@@ -173,7 +173,7 @@ class PubSubRESTServer:
             logger.error(f'Error during authentication: {e}')
             return None
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def publish(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ Publish a message to a topic.
@@ -184,7 +184,7 @@ class PubSubRESTServer:
 
         # Get request data
         request = Request(environ)
-        data = request.get_json()
+        data = self._parse_json(request)
 
         # Validate request data
         if not data:
@@ -211,7 +211,7 @@ class PubSubRESTServer:
         result = self.publish_message(topic_name, msg, endpoint_name)
         return self._json_response(start_response, asdict(result))
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def handle_subscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ Handle subscribe request to a topic.
@@ -222,7 +222,7 @@ class PubSubRESTServer:
 
         # Get request data
         request = Request(environ)
-        data = request.get_json()
+        data = self._parse_json(request)
 
         # Validate request data
         if not data:
@@ -241,7 +241,7 @@ class PubSubRESTServer:
         result = self.subscribe(topic_name, endpoint_name)
         return self._json_response(start_response, asdict(result))
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def handle_unsubscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ Handle unsubscribe request from a topic.
@@ -252,7 +252,7 @@ class PubSubRESTServer:
 
         # Get request data
         request = Request(environ)
-        data = request.get_json()
+        data = self._parse_json(request)
 
         # Validate request data
         if not data:
@@ -271,7 +271,7 @@ class PubSubRESTServer:
         result = self.unsubscribe(topic_name, endpoint_name)
         return self._json_response(start_response, asdict(result))
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def health_check(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ Health check endpoint.
@@ -279,20 +279,34 @@ class PubSubRESTServer:
         logger.info('Processing health check request')
         return self._json_response(start_response, {'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
 
-    # ################################################################################################################################
+# ################################################################################################################################
+
+    def _parse_json(self, request:'Request') -> 'dict_':
+        """ Parse JSON from request regardless of Content-Type.
+        Raises ValueError if JSON cannot be parsed.
+        """
+        if request.data:
+            data = request.data.decode('utf-8')
+            data = loads(raw_data)
+        else:
+            data = request.data
+
+        return data
+
+# ################################################################################################################################
 
     def _json_response(self, start_response:'any_', data:'any_', status:'str_'='200 OK') -> 'list_[bytes]':
         """ Return a JSON response.
         """
-        logger.debug('Sending JSON response, status: %s', status)
-        response = dumps(asdict(data) if hasattr(data, '__dataclass_fields__') else data).encode('utf-8')
-        start_response(status, [
-            ('Content-Type', 'application/json'),
-            ('Content-Length', str(len(response)))
-        ])
-        return [response]
+        # Set response headers
+        headers = [('Content-Type', 'application/json')]
+        start_response(status, headers)
 
-    # ################################################################################################################################
+        # Return JSON data
+        json_data = dumps(data).encode('utf-8')
+        return [json_data]
+
+# ################################################################################################################################
 
     def publish_message(
         self,
@@ -361,7 +375,7 @@ class PubSubRESTServer:
             cid=cid,
         )
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def subscribe(
         self,
@@ -406,7 +420,7 @@ class PubSubRESTServer:
         logger.info(f'[{cid}] Successfully subscribed {endpoint_name} to {topic_name} with key {sub_key}')
         return SimpleResponse(is_ok=True)
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def unsubscribe(
         self,
@@ -442,7 +456,7 @@ class PubSubRESTServer:
 
         return SimpleResponse(is_ok=True)
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def __call__(self, environ:'anydict', start_response:'any_') -> 'any_':
         """ Handle incoming HTTP requests.
@@ -465,7 +479,7 @@ class PubSubRESTServer:
             logger.warning('Unknown request path: %s', environ['PATH_INFO'])
             return self._json_response(start_response, {'is_ok': False, 'details': 'Unknown request path'}, '404 Not Found')
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
