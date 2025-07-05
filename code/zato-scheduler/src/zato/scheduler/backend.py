@@ -255,11 +255,12 @@ class Job:
                     # Invoke callback in a new greenlet so it doesn't block the current one.
                     self._spawn(self.callback, **{'ctx':self.get_context()})
 
+                    logger.info('Job executed: %s (extra=%s)', self.name, self.extra)
+
                 except Exception:
                     logger.warning(format_exc())
 
                 finally:
-                    # pylint: disable=lost-exception
 
                     # Pause the greenlet for however long is needed if it is not a one-off job
                     if self.type == SCHEDULER.JOB_TYPE.ONE_TIME:

@@ -89,8 +89,8 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Active</a></th>
-                        <th><a href="#">Job type</a></th>
+                        <th style="text-align:center"><a href="#">Active</a></th>
+                        <th style="text-align:center"><a href="#">Job type</a></th>
                         <th>Definition</th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
@@ -117,8 +117,8 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
-                        <td>{{ job.is_active|yesno:"Yes,No" }}</td>
-                        <td>{{ job.job_type_friendly }}</td>
+                        <td style="text-align:center">{{ job.is_active|yesno:"Yes,No" }}</td>
+                        <td style="text-align:center">{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url "service-overview" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
