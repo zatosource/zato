@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import base64
-import json
 import uuid
 from datetime import datetime, timedelta
 from dataclasses import asdict
@@ -16,7 +15,7 @@ from json import dumps, loads
 from logging import getLogger
 
 # Zato
-from zato.common.typing_ import any_, anydict, dict_, list_, optional, str_
+from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 
 # gevent
 from gevent import monkey; monkey.patch_all()
@@ -109,13 +108,13 @@ class PubSubRESTServer:
         host:'str'=DEFAULT_HOST,
         port:'int'=DEFAULT_PORT,
         users_file:'str'='',
-        debug:'bool'=False
+        has_debug:'bool'=False
         ) -> 'None':
 
         # Basic server configuration
         self.host = host
         self.port = port
-        self.debug = debug
+        self.has_debug = has_debug
 
         # Initialize broker client
         self.broker_client = BrokerClient()
@@ -138,15 +137,15 @@ class PubSubRESTServer:
             self.users = load_users(users_file)
 
         # In-memory storage for topics, subscriptions, and messages
-        self.topics:dict_[str_, Topic] = {}  # topic_name -> Topic
-        self.subscriptions:topic_subscriptions = {}  # topic_name -> {endpoint_name -> Subscription}
-        self.messages:topic_messages = {}  # topic_name -> {endpoint_name -> [Message]}
+        self.topics:'dict_[str, Topic]' = {}           # topic_name -> Topic
+        self.subscriptions:'topic_subscriptions' = {}  # topic_name -> {endpoint_name -> Subscription}
+        self.messages:'topic_messages' = {}            # topic_name -> {endpoint_name -> [Message]}
 
-        logger.info(f'PubSubRESTServer initialized on {host}:{port} with debug={debug}')
+        logger.info(f'PubSubRESTServer initialized on {host}:{port} with has_debug={has_debug}')
 
 # ################################################################################################################################
 
-    def authenticate(self, environ:'anydict') -> 'optional[str_]':
+    def authenticate(self, environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
         logger.info('Authenticating request')
@@ -211,12 +210,8 @@ class PubSubRESTServer:
         # Publish message
         result = self.publish_message(topic_name, msg, endpoint_name)
 
-        response_data = {'is_ok': result.is_ok, 'cid': cid}
-
-        if result.details:
-            response_data['details'] = result.details
-
-        return self._json_response(start_response, response_data)
+        # Create a simple response with only the necessary fields
+        return self._json_response(start_response, {'is_ok': result.is_ok, 'cid': cid})
 
 # ################################################################################################################################
 
@@ -246,13 +241,7 @@ class PubSubRESTServer:
 
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
-
-        response_data = {'is_ok': result.is_ok, 'cid': cid}
-
-        if result.details:
-            response_data['details'] = result.details
-
-        return self._json_response(start_response, response_data)
+        return self._json_response(start_response, {'is_ok': result.is_ok, 'cid': cid})
 
 # ################################################################################################################################
 
@@ -283,12 +272,10 @@ class PubSubRESTServer:
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
 
-        response_data = {'is_ok': result.is_ok, 'cid': cid}
-
-        if result.details:
-            response_data['details'] = result.details
-
-        return self._json_response(start_response, response_data)
+        if result.is_ok:
+            return self._json_response(start_response, {'is_ok': True, 'cid': cid})
+        else:
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Failed to unsubscribe'}, '400 Bad Request')
 
 # ################################################################################################################################
 
@@ -303,6 +290,9 @@ class PubSubRESTServer:
     def _parse_json(self, request:'Request') -> 'dict_':
         """ Parse JSON from request.
         """
+        # Initialize raw_data to avoid unbound variable in exception handler
+        raw_data = None
+
         try:
             # Get raw data from environ['wsgi.input']
             raw_data = request.get_data()
@@ -326,7 +316,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'any_', status:'str_'='200 OK') -> 'list_[bytes]':
+    def _json_response(self, start_response:'any_', data:'any_', status:'str'='200 OK') -> 'list_[bytes]':
         """ Return a JSON response.
         """
         # Set response headers

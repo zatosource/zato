@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from logging import basicConfig, getLogger, INFO, DEBUG
+from logging import basicConfig, DEBUG, getLogger, INFO
 
 # Zato
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
@@ -90,7 +90,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
     _ = start_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
-    _ = start_parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
 
     # List users command
     list_users_parser = subparsers.add_parser('list-users', help='List users from users JSON file')
@@ -207,7 +207,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
     try:
         # Set up logging level
-        level = DEBUG if args.debug else INFO
+        level = DEBUG if args.has_debug else INFO
         basicConfig(
             level=level,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -221,7 +221,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             host=args.host,
             port=args.port,
             users_file=args.users_file,
-            debug=args.debug
+            has_debug=args.has_debug
         )
 
         # Configure gunicorn options
@@ -231,7 +231,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             'worker_class': 'gevent',
             'timeout': 30,
             'keepalive': 2,
-            'loglevel': 'debug' if args.debug else 'info',
+            'loglevel': 'has_debug' if args.has_debug else 'info',
             'proc_name': 'zato-pubsub-rest',
             'preload_app': True,
         }
