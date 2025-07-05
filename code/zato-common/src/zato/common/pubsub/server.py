@@ -34,8 +34,14 @@ from gunicorn.app.base import BaseApplication
 from zato.broker.client import BrokerClient
 from zato.common.util.api import new_cid
 from zato.common.pubsub.models import PubMessage, PubResponse, Message, SimpleResponse
-from zato.common.pubsub.models import Subscription
+from zato.common.pubsub.models import Subscription, Topic
 from zato.common.pubsub.models import topic_messages, topic_subscriptions
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strdict, dictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,7 +77,7 @@ def generate_sub_key() -> 'str':
 
 # ################################################################################################################################
 
-def load_users(users_file:'str') -> 'Dict[str, str]':
+def load_users(users_file:'str') -> 'strdict':
     """ Load users from a JSON file.
     """
     logger.info(f'Loading users from {users_file}')
@@ -465,7 +471,7 @@ class PubSubRESTServer:
 class GunicornApplication(BaseApplication):
     """ Gunicorn application wrapper for the PubSub REST API.
     """
-    def __init__(self, app:'PubSubRESTServer', options:'Dict'=None):
+    def __init__(self, app:'PubSubRESTServer', options:'dictnone'=None):
         self.options = options or {}
         self.application = app
         super().__init__()
