@@ -12,10 +12,11 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass
 from logging import basicConfig, getLogger, INFO, DEBUG
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set, Any, Union
+
+# Zato
+from zato.common.typing_ import dataclass, anyset, any_, anydict, optional, set_, str_, union_, instance_from_dict
 
 # gunicorn
 from gunicorn.config import Config
@@ -50,7 +51,7 @@ DEFAULT_USERS_FILE = os.path.join(
 class UserInfo:
     """ Information about a user.
     """
-    username: str
+    username: str_
 
 # ################################################################################################################################
 
@@ -59,8 +60,8 @@ class OperationResult:
     """ Result of an operation.
     """
     is_ok: bool
-    message: str
-    details: Optional[Dict] = None
+    message: str_
+    details: optional[anydict] = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,7 +94,7 @@ def get_parser() -> 'argparse.ArgumentParser':
 
 # ################################################################################################################################
 
-def validate_users_file(users_file:'str') -> 'OperationResult':
+def validate_users_file(users_file:'str_') -> 'OperationResult':
     """ Validate that the users file exists and is readable.
     """
     if not os.path.exists(users_file):
@@ -117,7 +118,7 @@ def validate_users_file(users_file:'str') -> 'OperationResult':
 
 # ################################################################################################################################
 
-def list_users(args:'argparse.Namespace') -> 'Union[Set[UserInfo], OperationResult]':
+def list_users(args:'argparse.Namespace') -> 'union_[set_[UserInfo], OperationResult]':
     """ List users from the specified users file.
     """
     validation_result = validate_users_file(args.users_file)
@@ -129,7 +130,7 @@ def list_users(args:'argparse.Namespace') -> 'Union[Set[UserInfo], OperationResu
             users_list = json.load(f)
             
         logger.info(f'Users in {args.users_file}:')
-        users = set()
+        users = set_()
         for user_dict in users_list:
             for username, _ in user_dict.items():
                 logger.info(f'  - {username}')
