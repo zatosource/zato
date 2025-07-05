@@ -21,6 +21,7 @@ from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 
 # werkzeug
+from werkzeug.exceptions import NotFound
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -118,16 +119,17 @@ class PubSubRESTServer:
         # Initialize broker client
         self.broker_client = BrokerClient()
 
-        # Set up URL routing
+        # Set up URL routing with direct mapping to handler methods
         self.url_map = Map([
-            # Topic operations
-            Rule('/pubsub/topic/<topic_name>', endpoint='handle_topic', methods=['POST', 'PATCH', 'GET']),
+            # Topic operations - publish
+            Rule('/pubsub/topic/<topic_name>', endpoint='publish', methods=['POST']),
 
-            # Subscription operations
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST', 'DELETE']),
+            # Subscribe and unsubscribe operations - same URL, different HTTP methods
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST']),
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_unsubscribe', methods=['DELETE']),
 
             # Health check
-            Rule('/pubsub/health', endpoint='handle_health', methods=['GET']),
+            Rule('/pubsub/health', endpoint='health_check', methods=['GET']),
         ])
 
         # Load users if a file is provided
@@ -138,7 +140,6 @@ class PubSubRESTServer:
         # Storage for topics and subscriptions metadata only
         self.topics:'dict_[str, Topic]' = {}           # topic_name -> Topic
         self.subscriptions:'topic_subscriptions' = {}  # topic_name -> {endpoint_name -> Subscription}
-        # No in-memory message storage - all messaging goes through broker_client
 
         logger.info(f'PubSubRESTServer initialized on {host}:{port} with has_debug={has_debug}')
 
@@ -174,18 +175,11 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def publish(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+    def publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Publish a message to a topic.
         """
         logger.info('Processing publish request')
         cid = new_cid()
-
-        # Extract topic name from URL path
-        path_info = environ.get('PATH_INFO', '')
-        url_segments = path_info.strip('/').split('/')
-
-        # The full path is /pubsub/topic/{topic_name}
-        topic_name = url_segments[2]
 
         logger.info(f'[{cid}] Publishing message to topic {topic_name}')
 
@@ -228,23 +222,13 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def handle_subscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
-        """ Handle subscribe request to a topic.
+    def handle_subscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+        """ Handle subscription request.
         """
         logger.info('Processing subscribe request')
         cid = new_cid()
-        logger.info(f'[{cid}] Handling subscribe request to topic')
 
-        # Get request data
-        request = Request(environ)
-        data = self._parse_json(request)
-
-        # Validate request data
-        if not data:
-            logger.warning(f'[{cid}] Invalid request data')
-            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
-
-        topic_name = data.get('topic_name')
+        logger.info(f'[{cid}] Processing subscription request for topic {topic_name}')
 
         # Authenticate request
         endpoint_name = self.authenticate(environ)
@@ -258,23 +242,12 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def handle_unsubscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
-        """ Handle unsubscribe request from a topic.
+    def handle_unsubscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+        """ Handle unsubscribe request.
         """
         logger.info('Processing unsubscribe request')
         cid = new_cid()
-        logger.info(f'[{cid}] Handling unsubscribe request from topic')
-
-        # Get request data
-        request = Request(environ)
-        data = self._parse_json(request)
-
-        # Validate request data
-        if not data:
-            logger.warning(f'[{cid}] Invalid request data')
-            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
-
-        topic_name = data.get('topic_name')
+        logger.info(f'[{cid}] Processing unsubscription request for topic {topic_name}')
 
         # Authenticate request
         endpoint_name = self.authenticate(environ)
@@ -473,25 +446,31 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def __call__(self, environ:'anydict', start_response:'any_') -> 'any_':
-        """ Handle incoming HTTP requests.
+    def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
-        # Log the incoming request
         logger.info('Handling incoming HTTP request, path: %s, method: %s', environ.get('PATH_INFO'), environ.get('REQUEST_METHOD'))
 
-        # Dispatch to handler
-        if environ['PATH_INFO'] == '/pubsub/topic':
-            return self.publish(environ, start_response)
-        elif environ['PATH_INFO'].startswith('/pubsub/subscribe/topic'):
-            # Check the HTTP method to determine if it's a subscribe or unsubscribe request
-            if environ['REQUEST_METHOD'] == 'POST':
-                return self.handle_subscribe(environ, start_response)
-            elif environ['REQUEST_METHOD'] == 'DELETE':
-                return self.handle_unsubscribe(environ, start_response)
-        elif environ['PATH_INFO'] == '/pubsub/health':
-            return self.health_check(environ, start_response)
-        else:
-            logger.warning('Unknown request path: %s', environ['PATH_INFO'])
+        # Bind the URL map to the current request
+        urls = self.url_map.bind_to_environ(environ)
+
+        try:
+            # Match the path to a registered endpoint
+            endpoint, args = urls.match()
+            logger.debug('Matched endpoint: %s, args: %s', endpoint, args)
+
+            # Dynamic dispatch - call the method named by the endpoint
+            if hasattr(self, endpoint):
+                handler = getattr(self, endpoint)
+                return handler(environ, start_response, **args)
+            else:
+                logger.warning(f'No handler for endpoint: {endpoint}')
+                return self._json_response(start_response,
+                    {'is_ok': False, 'details': 'Endpoint not implemented'},
+                    '501 Not Implemented')
+
+        except NotFound:
+            logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
             return self._json_response(start_response, {'is_ok': False, 'details': 'Unknown request path'}, '404 Not Found')
 
 # ################################################################################################################################
