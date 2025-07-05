@@ -16,7 +16,9 @@ from datetime import datetime, timedelta
 from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
-from typing import Any, Dict, List, Tuple, Optional, Union
+
+# Zato
+from zato.common.typing_ import any_, anydict, anylist, dict_, list_, optional, str_, tuple_, union_
 
 # gevent
 from gevent import monkey; monkey.patch_all()
@@ -140,17 +142,18 @@ class PubSubRESTServer:
 
     # ################################################################################################################################
 
-    def authenticate(self, auth_header:'Optional[str]') -> 'Tuple[bool, str]':
-        """ Authenticate a request using HTTP Basic Auth.
-        Returns a tuple of (is_authenticated, endpoint_name).
+    def authenticate(self, environ:'anydict') -> 'optional[str_]':
+        """ Authenticate a request using HTTP Basic Authentication.
         """
+        logger.info('Authenticating request')
+        auth_header = environ.get('HTTP_AUTHORIZATION')
         if not auth_header:
             logger.warning('No Authorization header present')
-            return False, ''
+            return None
             
         if not auth_header.startswith('Basic '):
             logger.warning('Authorization header is not Basic')
-            return False, ''
+            return None
             
         try:
             encoded = auth_header[6:]  # Remove 'Basic ' prefix
@@ -159,13 +162,132 @@ class PubSubRESTServer:
             
             if username in self.users and self.users[username] == password:
                 logger.debug(f'Authenticated user: {username}')
-                return True, username
+                return username
                 
             logger.warning(f'Authentication failed for user: {username}')
-            return False, ''
+            return None
         except Exception as e:
             logger.error(f'Error during authentication: {e}')
-            return False, ''
+            return None
+
+    # ################################################################################################################################
+
+    def publish(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Publish a message to a topic.
+        """
+        logger.info('Processing publish request')
+        cid = new_cid()
+        logger.info(f'[{cid}] Publishing message to topic')
+        
+        # Get request data
+        request = Request(environ)
+        data = request.get_json()
+        
+        # Validate request data
+        if not data:
+            logger.warning(f'[{cid}] Invalid request data')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
+            
+        topic_name = data.get('topic_name')
+        msg = PubMessage(
+            data=data.get('data'),
+            priority=data.get('priority', 5),
+            expiration=data.get('expiration', 86400),
+            correl_id=data.get('correl_id', ''),
+            in_reply_to=data.get('in_reply_to', ''),
+            ext_client_id=data.get('ext_client_id', '')
+        )
+        
+        # Authenticate request
+        endpoint_name = self.authenticate(environ)
+        if not endpoint_name:
+            logger.warning(f'[{cid}] Authentication failed')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
+            
+        # Publish message
+        result = self.publish_message(topic_name, msg, endpoint_name)
+        return self._json_response(start_response, asdict(result))
+
+    # ################################################################################################################################
+
+    def subscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Subscribe to a topic.
+        """
+        logger.info('Processing subscribe request')
+        cid = new_cid()
+        logger.info(f'[{cid}] Subscribing to topic')
+        
+        # Get request data
+        request = Request(environ)
+        data = request.get_json()
+        
+        # Validate request data
+        if not data:
+            logger.warning(f'[{cid}] Invalid request data')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
+            
+        topic_name = data.get('topic_name')
+        
+        # Authenticate request
+        endpoint_name = self.authenticate(environ)
+        if not endpoint_name:
+            logger.warning(f'[{cid}] Authentication failed')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
+            
+        # Subscribe to topic
+        result = self.subscribe(topic_name, endpoint_name)
+        return self._json_response(start_response, asdict(result))
+
+    # ################################################################################################################################
+
+    def unsubscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Unsubscribe from a topic.
+        """
+        logger.info('Processing unsubscribe request')
+        cid = new_cid()
+        logger.info(f'[{cid}] Unsubscribing from topic')
+        
+        # Get request data
+        request = Request(environ)
+        data = request.get_json()
+        
+        # Validate request data
+        if not data:
+            logger.warning(f'[{cid}] Invalid request data')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
+            
+        topic_name = data.get('topic_name')
+        
+        # Authenticate request
+        endpoint_name = self.authenticate(environ)
+        if not endpoint_name:
+            logger.warning(f'[{cid}] Authentication failed')
+            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
+            
+        # Unsubscribe from topic
+        result = self.unsubscribe(topic_name, endpoint_name)
+        return self._json_response(start_response, asdict(result))
+
+    # ################################################################################################################################
+
+    def health_check(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Health check endpoint.
+        """
+        logger.info('Processing health check request')
+        return self._json_response(start_response, {'status': 'ok', 'timestamp': datetime.utcnow().isoformat()})
+
+    # ################################################################################################################################
+
+    def _json_response(self, start_response:'any_', data:'any_', status:'str_'='200 OK') -> 'list_[bytes]':
+        """ Return a JSON response.
+        """
+        logger.debug('Sending JSON response, status: %s', status)
+        response = dumps(asdict(data) if hasattr(data, '__dataclass_fields__') else data).encode('utf-8')
+        start_response(status, [
+            ('Content-Type', 'application/json'),
+            ('Content-Length', str(len(response)))
+        ])
+        return [response]
 
     # ################################################################################################################################
 
@@ -238,52 +360,12 @@ class PubSubRESTServer:
 
     # ################################################################################################################################
 
-    def retrieve_messages(
-        self,
-        topic_name:'str',
-        endpoint_name:'str',
-        destructive:'bool'=False
-        ) -> 'MessagesResponse':
-        """ Retrieve messages for a subscriber from a topic.
-        If destructive is True, messages are removed from the queue.
-        """
-        cid = new_cid()
-        logger.info(f'[{cid}] Retrieving messages from topic {topic_name} for {endpoint_name} (destructive={destructive})')
-        
-        # Check if topic and subscription exist
-        if topic_name not in self.topics:
-            logger.warning(f'[{cid}] Topic {topic_name} does not exist')
-            return MessagesResponse(is_ok=True, messages=[])
-            
-        if topic_name not in self.subscriptions or endpoint_name not in self.subscriptions[topic_name]:
-            logger.warning(f'[{cid}] No subscription for {endpoint_name} to topic {topic_name}')
-            return MessagesResponse(is_ok=True, messages=[])
-            
-        # Get messages for this endpoint
-        if topic_name in self.messages and endpoint_name in self.messages[topic_name]:
-            messages = list(self.messages[topic_name][endpoint_name])  # Make a copy
-            
-            # Sort by priority (high to low) then by receive time (newest first)
-            messages.sort(key=lambda m: (-m.priority, m.recv_time_iso), reverse=True)
-            
-            # Remove messages if destructive
-            if destructive:
-                logger.info(f'[{cid}] Removing {len(messages)} messages for {endpoint_name} on topic {topic_name}')
-                self.messages[topic_name][endpoint_name] = []
-                
-            return MessagesResponse(is_ok=True, messages=messages)
-        
-        # No messages found
-        return MessagesResponse(is_ok=True, messages=[])
-
-    # ################################################################################################################################
-
     def subscribe(
         self,
         topic_name:'str',
         endpoint_name:'str'
         ) -> 'SimpleResponse':
-        """ Subscribe an endpoint to a topic.
+        """ Subscribe to a topic.
         """
         cid = new_cid()
         logger.info(f'[{cid}] Subscribing {endpoint_name} to topic {topic_name}')
@@ -328,7 +410,7 @@ class PubSubRESTServer:
         topic_name:'str',
         endpoint_name:'str'
         ) -> 'SimpleResponse':
-        """ Unsubscribe an endpoint from a topic.
+        """ Unsubscribe from a topic.
         """
         cid = new_cid()
         logger.info(f'[{cid}] Unsubscribing {endpoint_name} from topic {topic_name}')
@@ -350,171 +432,22 @@ class PubSubRESTServer:
 
     # ################################################################################################################################
 
-    def dispatch_request(self, request:'Request') -> 'Response':
-        """ Dispatch incoming requests to the appropriate handler.
+    def __call__(self, environ:'anydict', start_response:'any_') -> 'any_':
+        """ Handle incoming HTTP requests.
         """
-        # Generate correlation ID for this request
-        cid = new_cid()
+        # Log the incoming request
+        logger.info('Handling incoming HTTP request, path: %s, method: %s', environ.get('PATH_INFO'), environ.get('REQUEST_METHOD'))
         
-        # Set response headers
-        headers = {
-            'X-Zato-CID': cid,
-            'Content-Type': 'application/json'
-        }
-        
-        try:
-            # Match URL pattern
-            adapter = self.url_map.bind_to_environ(request.environ)
-            endpoint, values = adapter.match()
-            
-            # Skip auth for health endpoint
-            if endpoint == 'handle_health':
-                return self.handle_health(request, **values)
-                
-            # Authenticate request
-            is_authenticated, endpoint_name = self.authenticate(request.headers.get('Authorization'))
-            if not is_authenticated:
-                logger.warning(f'[{cid}] Authentication failed for request to {request.path}')
-                return Response(
-                    dumps({'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}),
-                    status=401,
-                    headers=headers
-                )
-                
-            # Dispatch to handler
-            values['endpoint_name'] = endpoint_name
-            handler = getattr(self, endpoint)
-            return handler(request, **values)
-            
-        except HTTPException as e:
-            # Handle HTTP exceptions
-            logger.error(f'[{cid}] HTTP error: {e}')
-            return Response(
-                dumps({'is_ok': False, 'cid': cid, 'details': str(e)}),
-                status=e.code,
-                headers=headers
-            )
-        except Exception as e:
-            # Handle unexpected errors
-            logger.exception(f'[{cid}] Unexpected error: {e}')
-            return Response(
-                dumps({'is_ok': False, 'cid': cid, 'details': 'Internal server error'}),
-                status=500,
-                headers=headers
-            )
-
-    # ################################################################################################################################
-
-    def handle_health(self, request:'Request', **values) -> 'Response':
-        """ Health check endpoint.
-        """
-        return Response(
-            dumps({'status': 'ok', 'timestamp': datetime.utcnow().isoformat()}),
-            status=200,
-            content_type='application/json'
-        )
-
-    # ################################################################################################################################
-
-    def handle_topic(self, request:'Request', topic_name:'str', endpoint_name:'str', **values) -> 'Response':
-        """ Handle topic operations: publish, retrieve, read.
-        """
-        # POST = publish message
-        if request.method == 'POST':
-            try:
-                data = request.get_json()
-                msg = PubMessage(
-                    data=data.get('data'),
-                    priority=data.get('priority', 5),
-                    expiration=data.get('expiration', 86400),
-                    correl_id=data.get('correl_id', ''),
-                    in_reply_to=data.get('in_reply_to', ''),
-                    ext_client_id=data.get('ext_client_id', '')
-                )
-                result = self.publish_message(topic_name, msg, endpoint_name)
-                return Response(
-                    dumps(asdict(result)),
-                    status=200,
-                    content_type='application/json'
-                )
-            except Exception as e:
-                logger.exception(f'Error publishing message: {e}')
-                return Response(
-                    dumps({'is_ok': False, 'cid': new_cid(), 'details': str(e)}),
-                    status=400,
-                    content_type='application/json'
-                )
-                
-        # PATCH = retrieve messages (destructive)
-        elif request.method == 'PATCH':
-            result = self.retrieve_messages(topic_name, endpoint_name, destructive=True)
-            return Response(
-                dumps(asdict(result)),
-                status=200,
-                content_type='application/json'
-            )
-            
-        # GET = read messages (non-destructive)
-        elif request.method == 'GET':
-            result = self.retrieve_messages(topic_name, endpoint_name, destructive=False)
-            return Response(
-                dumps(asdict(result)),
-                status=200,
-                content_type='application/json'
-            )
-            
-        # Other methods not allowed
-        return Response(
-            dumps({'is_ok': False, 'cid': new_cid(), 'details': 'Method not allowed'}),
-            status=405,
-            content_type='application/json'
-        )
-
-    # ################################################################################################################################
-
-    def handle_subscribe(self, request:'Request', topic_name:'str', endpoint_name:'str', **values) -> 'Response':
-        """ Handle subscription operations: subscribe, unsubscribe.
-        """
-        # POST = subscribe
-        if request.method == 'POST':
-            result = self.subscribe(topic_name, endpoint_name)
-            return Response(
-                dumps(asdict(result)),
-                status=200,
-                content_type='application/json'
-            )
-            
-        # DELETE = unsubscribe
-        elif request.method == 'DELETE':
-            result = self.unsubscribe(topic_name, endpoint_name)
-            return Response(
-                dumps(asdict(result)),
-                status=200,
-                content_type='application/json'
-            )
-            
-        # Other methods not allowed
-        return Response(
-            dumps({'is_ok': False, 'cid': new_cid(), 'details': 'Method not allowed'}),
-            status=405,
-            content_type='application/json'
-        )
-
-    # ################################################################################################################################
-
-    def wsgi_app(self, environ:'Dict', start_response:'Any') -> 'Any':
-        """ WSGI application entry point.
-        """
-        request = Request(environ)
-        response = self.dispatch_request(request)
-        return response(environ, start_response)
-
-    # ################################################################################################################################
-
-    def __call__(self, environ:'Dict', start_response:'Any') -> 'Any':
-        """ Make the class callable as a WSGI application.
-        """
-        return self.wsgi_app(environ, start_response)
+        # Dispatch to handler
+        if environ['PATH_INFO'] == '/pubsub/topic':
+            return self.publish(environ, start_response)
+        elif environ['PATH_INFO'] == '/pubsub/subscribe/topic':
+            return self.subscribe(environ, start_response)
+        elif environ['PATH_INFO'] == '/pubsub/health':
+            return self.health_check(environ, start_response)
+        else:
+            logger.warning('Unknown request path: %s', environ['PATH_INFO'])
+            return self._json_response(start_response, {'is_ok': False, 'details': 'Unknown request path'}, '404 Not Found')
 
     # ################################################################################################################################
 

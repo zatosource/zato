@@ -7,12 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 # Zato
-from zato.common.typing_ import dict_, list_, optional, str as str_
+from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional, str_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,12 +26,12 @@ DEFAULT_EXPIRATION = 86400  # 24 hours in seconds
 class PubMessage:
     """ Model representing a message to be published to a topic.
     """
-    data: Any
+    data: any_
     priority: int = DEFAULT_PRIORITY
     expiration: int = DEFAULT_EXPIRATION
-    correl_id: str = ''
-    in_reply_to: str = ''
-    ext_client_id: str = ''
+    correl_id: str_ = ''
+    in_reply_to: str_ = ''
+    ext_client_id: str_ = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,9 +41,9 @@ class PubResponse:
     """ Response model for publish operations.
     """
     is_ok: bool
-    msg_id: str = ''
-    cid: str = ''
-    details: str = ''
+    msg_id: str_ = ''
+    cid: str_ = ''
+    details: str_ = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,22 +52,22 @@ class PubResponse:
 class Message:
     """ Model for a single message as returned by retrieve/read operations.
     """
-    data: Any
-    topic_name: str
-    msg_id: str
-    correl_id: str = ''
-    in_reply_to: str = ''
+    data: any_
+    topic_name: str_
+    msg_id: str_
+    correl_id: str_ = ''
+    in_reply_to: str_ = ''
     priority: int = DEFAULT_PRIORITY
-    mime_type: str = 'application/json'
-    ext_client_id: str = ''
-    pub_time_iso: str = ''
-    ext_pub_time_iso: str = ''
-    recv_time_iso: str = ''
+    mime_type: str_ = 'application/json'
+    ext_client_id: str_ = ''
+    pub_time_iso: str_ = ''
+    ext_pub_time_iso: str_ = ''
+    recv_time_iso: str_ = ''
     expiration: int = DEFAULT_EXPIRATION
-    expiration_time_iso: str = ''
+    expiration_time_iso: str_ = ''
     size: int = 0
     delivery_count: int = 0
-    sub_key: str = ''
+    sub_key: str_ = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +77,7 @@ class MessagesResponse:
     """ Response model containing a list of messages.
     """
     is_ok: bool
-    messages: List[Message] = field(default_factory=list)
+    messages: list_[Message] = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,8 +95,8 @@ class SimpleResponse:
 class User:
     """ Model representing a user with username and password.
     """
-    username: str
-    password: str
+    username: str_
+    password: str_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,9 +105,9 @@ class User:
 class Subscription:
     """ Model representing a subscription to a topic.
     """
-    topic_name: str
-    endpoint_name: str
-    sub_key: str
+    topic_name: str_
+    endpoint_name: str_
+    sub_key: str_
     creation_time: datetime = field(default_factory=datetime.utcnow)
     is_active: bool = True
 
@@ -120,7 +118,7 @@ class Subscription:
 class Topic:
     """ Model representing a topic.
     """
-    name: str
+    name: str_
     creation_time: datetime = field(default_factory=datetime.utcnow)
     is_active: bool = True
 
@@ -128,7 +126,7 @@ class Topic:
 # ################################################################################################################################
 
 # Type aliases for collections
-users_dict = dict_[str, str]
+users_dict = dict_[str_, str_]
 user_list = list_[User]
 subscription_list = list_[Subscription]
 message_list = list_[Message]
