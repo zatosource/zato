@@ -124,12 +124,14 @@ class BrokerClient:
         """ Publishes a message to the AMQP broker.
         """
         msg = dumps(msg) # type: ignore
+
+        exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
 
         with self.producer.acquire() as client:
             client.publish(
                 msg,
-                exchange='components',
+                exchange=exchange,
                 routing_key=routing_key,
                 content_type='application/json',
                 delivery_mode=PERSISTENT_DELIVERY_MODE
