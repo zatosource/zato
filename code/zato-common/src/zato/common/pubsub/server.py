@@ -83,7 +83,8 @@ def load_users(users_file:'str') -> 'strdict':
     logger.info(f'Loading users from {users_file}')
     try:
         with open(users_file, 'r') as f:
-            users_list = load(f)
+            data = f.read()
+            users_list = loads(data)
 
         # Convert the list of single-pair dicts to a single dict
         users = {}
@@ -286,10 +287,10 @@ class PubSubRESTServer:
         Raises ValueError if JSON cannot be parsed.
         """
         if request.data:
-            data = request.data.decode('utf-8')
+            raw_data = request.data.decode('utf-8')
             data = loads(raw_data)
         else:
-            data = request.data
+            data = {}
 
         return data
 
