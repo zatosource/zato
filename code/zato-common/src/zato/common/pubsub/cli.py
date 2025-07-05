@@ -12,9 +12,10 @@ import json
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from logging import basicConfig, getLogger, INFO, DEBUG
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set, Any, Union
 
 # gunicorn
 from gunicorn.config import Config
@@ -41,6 +42,25 @@ DEFAULT_USERS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 
     'users.json'
 )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class UserInfo:
+    """ Information about a user.
+    """
+    username: str
+
+# ################################################################################################################################
+
+@dataclass
+class OperationResult:
+    """ Result of an operation.
+    """
+    is_ok: bool
+    message: str
+    details: Optional[Dict] = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,50 +93,57 @@ def get_parser() -> 'argparse.ArgumentParser':
 
 # ################################################################################################################################
 
-def validate_users_file(users_file:'str') -> 'bool':
+def validate_users_file(users_file:'str') -> 'OperationResult':
     """ Validate that the users file exists and is readable.
     """
     if not os.path.exists(users_file):
-        logger.error(f'Users file {users_file} does not exist')
-        return False
+        message = f'Users file {users_file} does not exist'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message)
         
     if not os.path.isfile(users_file):
-        logger.error(f'Users file {users_file} is not a file')
-        return False
+        message = f'Users file {users_file} is not a file'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message)
         
     try:
         with open(users_file, 'r') as f:
             json.load(f)
-        return True
+        return OperationResult(is_ok=True, message='Users file is valid')
     except Exception as e:
-        logger.error(f'Error reading users file {users_file}: {e}')
-        return False
+        message = f'Error reading users file {users_file}: {e}'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
 
 # ################################################################################################################################
 
-def list_users(args:'argparse.Namespace') -> 'int':
+def list_users(args:'argparse.Namespace') -> 'Union[Set[UserInfo], OperationResult]':
     """ List users from the specified users file.
     """
-    if not validate_users_file(args.users_file):
-        return 1
+    validation_result = validate_users_file(args.users_file)
+    if not validation_result.is_ok:
+        return validation_result
         
     try:
         with open(args.users_file, 'r') as f:
             users_list = json.load(f)
             
         logger.info(f'Users in {args.users_file}:')
+        users = set()
         for user_dict in users_list:
             for username, _ in user_dict.items():
                 logger.info(f'  - {username}')
+                users.add(UserInfo(username=username))
                 
-        return 0
+        return users
     except Exception as e:
-        logger.error(f'Error listing users: {e}')
-        return 1
+        message = f'Error listing users: {e}'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
 
 # ################################################################################################################################
 
-def create_user(args:'argparse.Namespace') -> 'int':
+def create_user(args:'argparse.Namespace') -> 'OperationResult':
     """ Create a new user in the specified users file.
     """
     users_file = args.users_file
@@ -137,8 +164,9 @@ def create_user(args:'argparse.Namespace') -> 'int':
         # Check if user already exists
         for user_dict in users_list:
             if username in user_dict:
-                logger.error(f'User {username} already exists')
-                return 1
+                message = f'User {username} already exists'
+                logger.error(message)
+                return OperationResult(is_ok=False, message=message)
                 
         # Add new user
         users_list.append({username: password})
@@ -147,19 +175,22 @@ def create_user(args:'argparse.Namespace') -> 'int':
         with open(users_file, 'w') as f:
             json.dump(users_list, f, indent=2)
             
-        logger.info(f'User {username} created successfully')
-        return 0
+        message = f'User {username} created successfully'
+        logger.info(message)
+        return OperationResult(is_ok=True, message=message)
     except Exception as e:
-        logger.error(f'Error creating user: {e}')
-        return 1
+        message = f'Error creating user: {e}'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
 
 # ################################################################################################################################
 
-def start_server(args:'argparse.Namespace') -> 'int':
+def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
-    if not validate_users_file(args.users_file):
-        return 1
+    validation_result = validate_users_file(args.users_file)
+    if not validation_result.is_ok:
+        return validation_result
         
     try:
         # Set up logging level
@@ -199,25 +230,35 @@ def start_server(args:'argparse.Namespace') -> 'int':
         # Run the gunicorn application
         GunicornApplication(app, options).run()
         
-        return 0
+        return OperationResult(is_ok=True, message='Server stopped')
     except Exception as e:
-        logger.error(f'Error starting server: {e}')
-        return 1
+        message = f'Error starting server: {e}'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
 
 # ################################################################################################################################
 
 def main() -> 'int':
     """ Main entry point for the CLI.
+    Returns an integer exit code - 0 for success, non-zero for failure.
     """
     parser = get_parser()
     args = parser.parse_args()
     
+    # Handle commands
     if args.command == 'start':
-        return start_server(args)
+        result = start_server(args)
+        return 0 if result.is_ok else 1
     elif args.command == 'list-users':
-        return list_users(args)
+        result = list_users(args)
+        # If we got a set of users, it was successful
+        if isinstance(result, set):
+            return 0
+        # Otherwise it's an OperationResult indicating failure
+        return 0 if result.is_ok else 1
     elif args.command == 'create-user':
-        return create_user(args)
+        result = create_user(args)
+        return 0 if result.is_ok else 1
     else:
         parser.print_help()
         return 1
