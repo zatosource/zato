@@ -86,7 +86,7 @@ class SchedulerAPI:
 
 # ################################################################################################################################
 
-    def invoke_service(self, name:'str', request:'strdictnone'=None) -> 'strdict':
+    def invoke_service(self, name:'str', request:'strdictnone'=None, timeout:'int'=600) -> 'strdict':
         """ Invokes a service synchronously using the broker client's invoke_sync method.
         """
         # Add cluster_id to the request
@@ -94,7 +94,7 @@ class SchedulerAPI:
         request['cluster_id'] = MISC.Default_Cluster_ID
 
         try:
-            response = self.broker_client.invoke_sync(name, request)
+            response = self.broker_client.invoke_sync(name, request, timeout)
             return response
 
         except Exception as e:
