@@ -12,17 +12,19 @@ import json
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from logging import basicConfig, getLogger, INFO, DEBUG
-from pathlib import Path
 
 # Zato
-from zato.common.typing_ import dataclass, anyset, any_, anydict, optional, set_, str_, union_, instance_from_dict
-
-# gunicorn
-from gunicorn.config import Config
+from zato.common.typing_ import anydict, optional, set_, str_, union_
 
 # Zato
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,21 +76,21 @@ def get_parser() -> 'argparse.ArgumentParser':
 
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
-    start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
-    start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
-    start_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
-    start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
-    start_parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
+    _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
+    _ = start_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
+    _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
+    _ = start_parser.add_argument('--debug', action='store_true', help='Enable debug mode')
 
     # List users command
     list_users_parser = subparsers.add_parser('list-users', help='List users from users JSON file')
-    list_users_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
+    _ = list_users_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
 
     # Create user command
     create_user_parser = subparsers.add_parser('create-user', help='Create a new user')
-    create_user_parser.add_argument('--username', type=str, required=True, help='Username')
-    create_user_parser.add_argument('--password', type=str, required=True, help='Password')
-    create_user_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
+    _ = create_user_parser.add_argument('--username', type=str, required=True, help='Username')
+    _ = create_user_parser.add_argument('--password', type=str, required=True, help='Password')
+    _ = create_user_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
 
     return parser
 
@@ -170,7 +172,7 @@ def create_user(args:'argparse.Namespace') -> 'OperationResult':
                 return OperationResult(is_ok=False, message=message)
 
         # Add new user
-        users_list.append({username: password})
+        _ = users_list.append({username: password})
 
         # Write updated users file
         with open(users_file, 'w') as f:
