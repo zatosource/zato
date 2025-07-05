@@ -9,16 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import base64
 import json
-import logging
-import os
 import uuid
 from datetime import datetime, timedelta
 from dataclasses import asdict
-from json import dumps, loads
+from json import dumps
 from logging import getLogger
 
 # Zato
-from zato.common.typing_ import any_, anydict, anylist, dict_, list_, optional, str_, tuple_, union_
+from zato.common.typing_ import any_, anydict, dict_, list_, optional, str_
 
 # gevent
 from gevent import monkey; monkey.patch_all()
@@ -26,8 +24,7 @@ from gevent.pywsgi import WSGIServer
 
 # werkzeug
 from werkzeug.routing import Map, Rule
-from werkzeug.wrappers import Request, Response
-from werkzeug.exceptions import HTTPException, NotFound, Unauthorized, BadRequest, MethodNotAllowed
+from werkzeug.wrappers import Request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # gunicorn
@@ -35,10 +32,10 @@ from gunicorn.app.base import BaseApplication
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common.api import new_cid
-from zato.common.pubsub.models import PubMessage, PubResponse, Message, MessagesResponse, SimpleResponse, User
-from zato.common.pubsub.models import Subscription, Topic, subscription_list, message_list, topic_list
-from zato.common.pubsub.util import get_broker_config
+from zato.common.util.api import new_cid
+from zato.common.pubsub.models import PubMessage, PubResponse, Message, SimpleResponse
+from zato.common.pubsub.models import Subscription
+from zato.common.pubsub.models import topic_messages, topic_subscriptions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,13 +78,13 @@ def load_users(users_file:'str') -> 'Dict[str, str]':
     try:
         with open(users_file, 'r') as f:
             users_list = json.load(f)
-            
+
         # Convert the list of single-pair dicts to a single dict
         users = {}
         for user_dict in users_list:
             for username, password in user_dict.items():
                 users[username] = password
-                
+
         logger.info(f'Loaded {len(users)} users')
         return users
     except Exception as e:
@@ -107,37 +104,37 @@ class PubSubRESTServer:
         users_file:'str'='',
         debug:'bool'=False
         ) -> 'None':
-        
+
         # Basic server configuration
         self.host = host
         self.port = port
         self.debug = debug
-        
+
         # Initialize broker client
         self.broker_client = BrokerClient()
-        
+
         # Set up URL routing
         self.url_map = Map([
             # Topic operations
             Rule('/pubsub/topic/<topic_name>', endpoint='handle_topic', methods=['POST', 'PATCH', 'GET']),
-            
+
             # Subscription operations
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST', 'DELETE']),
-            
+
             # Health check
             Rule('/pubsub/health', endpoint='handle_health', methods=['GET']),
         ])
-        
+
         # Load users if a file is provided
         self.users = {}
         if users_file:
             self.users = load_users(users_file)
-        
+
         # In-memory storage for topics, subscriptions, and messages
-        self.topics:'Dict[str, Topic]' = {}  # topic_name -> Topic
-        self.subscriptions:'Dict[str, Dict[str, Subscription]]' = {}  # topic_name -> {endpoint_name -> Subscription}
-        self.messages:'Dict[str, Dict[str, List[Message]]]' = {}  # topic_name -> {endpoint_name -> [Message]}
-        
+        self.topics:dict_[str_, Topic] = {}  # topic_name -> Topic
+        self.subscriptions:topic_subscriptions = {}  # topic_name -> {endpoint_name -> Subscription}
+        self.messages:topic_messages = {}  # topic_name -> {endpoint_name -> [Message]}
+
         logger.info(f'PubSubRESTServer initialized on {host}:{port} with debug={debug}')
 
     # ################################################################################################################################
@@ -150,20 +147,20 @@ class PubSubRESTServer:
         if not auth_header:
             logger.warning('No Authorization header present')
             return None
-            
+
         if not auth_header.startswith('Basic '):
             logger.warning('Authorization header is not Basic')
             return None
-            
+
         try:
             encoded = auth_header[6:]  # Remove 'Basic ' prefix
             decoded = base64.b64decode(encoded).decode('utf-8')
             username, password = decoded.split(':', 1)
-            
+
             if username in self.users and self.users[username] == password:
                 logger.debug(f'Authenticated user: {username}')
                 return username
-                
+
             logger.warning(f'Authentication failed for user: {username}')
             return None
         except Exception as e:
@@ -178,16 +175,16 @@ class PubSubRESTServer:
         logger.info('Processing publish request')
         cid = new_cid()
         logger.info(f'[{cid}] Publishing message to topic')
-        
+
         # Get request data
         request = Request(environ)
         data = request.get_json()
-        
+
         # Validate request data
         if not data:
             logger.warning(f'[{cid}] Invalid request data')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
-            
+
         topic_name = data.get('topic_name')
         msg = PubMessage(
             data=data.get('data'),
@@ -197,73 +194,73 @@ class PubSubRESTServer:
             in_reply_to=data.get('in_reply_to', ''),
             ext_client_id=data.get('ext_client_id', '')
         )
-        
+
         # Authenticate request
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
-            
+
         # Publish message
         result = self.publish_message(topic_name, msg, endpoint_name)
         return self._json_response(start_response, asdict(result))
 
     # ################################################################################################################################
 
-    def subscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
-        """ Subscribe to a topic.
+    def handle_subscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Handle subscribe request to a topic.
         """
         logger.info('Processing subscribe request')
         cid = new_cid()
-        logger.info(f'[{cid}] Subscribing to topic')
-        
+        logger.info(f'[{cid}] Handling subscribe request to topic')
+
         # Get request data
         request = Request(environ)
         data = request.get_json()
-        
+
         # Validate request data
         if not data:
             logger.warning(f'[{cid}] Invalid request data')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
-            
+
         topic_name = data.get('topic_name')
-        
+
         # Authenticate request
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
-            
+
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
         return self._json_response(start_response, asdict(result))
 
     # ################################################################################################################################
 
-    def unsubscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
-        """ Unsubscribe from a topic.
+    def handle_unsubscribe(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ Handle unsubscribe request from a topic.
         """
         logger.info('Processing unsubscribe request')
         cid = new_cid()
-        logger.info(f'[{cid}] Unsubscribing from topic')
-        
+        logger.info(f'[{cid}] Handling unsubscribe request from topic')
+
         # Get request data
         request = Request(environ)
         data = request.get_json()
-        
+
         # Validate request data
         if not data:
             logger.warning(f'[{cid}] Invalid request data')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Invalid request data'}, '400 Bad Request')
-            
+
         topic_name = data.get('topic_name')
-        
+
         # Authenticate request
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
             return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
-            
+
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
         return self._json_response(start_response, asdict(result))
@@ -301,25 +298,25 @@ class PubSubRESTServer:
         """
         cid = new_cid()
         logger.info(f'[{cid}] Publishing message to topic {topic_name} from {endpoint_name}')
-        
+
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
             self.topics[topic_name] = Topic(name=topic_name)
             self.subscriptions[topic_name] = {}
             self.messages[topic_name] = {}
             logger.info(f'[{cid}] Created new topic: {topic_name}')
-        
+
         # Generate message ID and calculate size
         msg_id = generate_msg_id()
         data_str = dumps(msg.data) if not isinstance(msg.data, str) else msg.data
         size = len(data_str.encode('utf-8'))
-        
+
         # Set timestamps
         now = datetime.utcnow()
         pub_time_iso = now.isoformat()
         expiration_time = now + timedelta(seconds=msg.expiration)
         expiration_time_iso = expiration_time.isoformat()
-        
+
         # Create message object
         message = Message(
             data=msg.data,
@@ -336,21 +333,21 @@ class PubSubRESTServer:
             size=size,
             delivery_count=0,
         )
-        
+
         # Distribute message to all subscribers
         for endpoint_name, subscription in self.subscriptions[topic_name].items():
             if endpoint_name not in self.messages[topic_name]:
                 self.messages[topic_name][endpoint_name] = []
-                
+
             # Copy the message and set the subscription key
             msg_copy = Message(**asdict(message))
             msg_copy.sub_key = subscription.sub_key
             msg_copy.delivery_count += 1
-            
+
             # Add to the subscriber's queue
             self.messages[topic_name][endpoint_name].append(msg_copy)
             logger.debug(f'[{cid}] Delivered message {msg_id} to {endpoint_name} on topic {topic_name}')
-        
+
         # Return success response
         return PubResponse(
             is_ok=True,
@@ -369,19 +366,19 @@ class PubSubRESTServer:
         """
         cid = new_cid()
         logger.info(f'[{cid}] Subscribing {endpoint_name} to topic {topic_name}')
-        
+
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
             self.topics[topic_name] = Topic(name=topic_name)
             self.subscriptions[topic_name] = {}
             self.messages[topic_name] = {}
             logger.info(f'[{cid}] Created new topic: {topic_name}')
-            
+
         # Check if already subscribed
         if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
             logger.info(f'[{cid}] Endpoint {endpoint_name} already subscribed to {topic_name}')
             return SimpleResponse(is_ok=True)
-            
+
         # Create subscription
         sub_key = generate_sub_key()
         subscription = Subscription(
@@ -389,17 +386,17 @@ class PubSubRESTServer:
             endpoint_name=endpoint_name,
             sub_key=sub_key
         )
-        
+
         # Store subscription
         if topic_name not in self.subscriptions:
             self.subscriptions[topic_name] = {}
         self.subscriptions[topic_name][endpoint_name] = subscription
-        
+
         # Initialize message queue
         if topic_name not in self.messages:
             self.messages[topic_name] = {}
         self.messages[topic_name][endpoint_name] = []
-        
+
         logger.info(f'[{cid}] Successfully subscribed {endpoint_name} to {topic_name} with key {sub_key}')
         return SimpleResponse(is_ok=True)
 
@@ -414,20 +411,20 @@ class PubSubRESTServer:
         """
         cid = new_cid()
         logger.info(f'[{cid}] Unsubscribing {endpoint_name} from topic {topic_name}')
-        
+
         # Check if subscription exists
         if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
             # Remove subscription
             del self.subscriptions[topic_name][endpoint_name]
-            
+
             # Remove messages
             if topic_name in self.messages and endpoint_name in self.messages[topic_name]:
                 del self.messages[topic_name][endpoint_name]
-                
+
             logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
         else:
             logger.info(f'[{cid}] No subscription found for {endpoint_name} to {topic_name}')
-            
+
         return SimpleResponse(is_ok=True)
 
     # ################################################################################################################################
@@ -437,12 +434,16 @@ class PubSubRESTServer:
         """
         # Log the incoming request
         logger.info('Handling incoming HTTP request, path: %s, method: %s', environ.get('PATH_INFO'), environ.get('REQUEST_METHOD'))
-        
+
         # Dispatch to handler
         if environ['PATH_INFO'] == '/pubsub/topic':
             return self.publish(environ, start_response)
-        elif environ['PATH_INFO'] == '/pubsub/subscribe/topic':
-            return self.subscribe(environ, start_response)
+        elif environ['PATH_INFO'].startswith('/pubsub/subscribe/topic'):
+            # Check the HTTP method to determine if it's a subscribe or unsubscribe request
+            if environ['REQUEST_METHOD'] == 'POST':
+                return self.handle_subscribe(environ, start_response)
+            elif environ['REQUEST_METHOD'] == 'DELETE':
+                return self.handle_unsubscribe(environ, start_response)
         elif environ['PATH_INFO'] == '/pubsub/health':
             return self.health_check(environ, start_response)
         else:
