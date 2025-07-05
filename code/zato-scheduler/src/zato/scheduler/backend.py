@@ -474,6 +474,7 @@ class Scheduler:
             for job in itervalues(self.jobs):
                 if job.name == name:
                     self.on_job_executed(job.get_context(), False)
+                    logger.info('Job executed: %s', job.name)
                     break
             else:
                 logger.warning('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
