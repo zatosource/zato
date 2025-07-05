@@ -62,6 +62,12 @@ DEFAULT_WORKERS = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+    Exchange_Name = 'pubsubapi'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def generate_msg_id() -> 'str':
     """ Generate a unique message ID with prefix.
     """
@@ -363,7 +369,7 @@ class PubSubRESTServer:
 
         # Use broker client to publish the message
         # This will handle message distribution to subscribers
-        self.broker_client.publish(message, routing_key=topic_name)
+        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
         logger.info(f'[{cid}] Published message {msg_id} to topic {topic_name} via broker')
 
         # Return success response
