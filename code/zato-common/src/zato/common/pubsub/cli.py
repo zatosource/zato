@@ -16,15 +16,13 @@ from dataclasses import dataclass
 from logging import basicConfig, getLogger, INFO, DEBUG
 
 # Zato
-from zato.common.typing_ import anydict, optional, set_, str_, union_
-
-# Zato
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-
+if 0:
+    from zato.common.typing_ import any_, anydict, optional, str_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,11 +47,23 @@ DEFAULT_USERS_FILE = os.path.join(
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(frozen=True)
 class UserInfo:
     """ Information about a user.
     """
-    username: str_
+    username: 'str'
+
+    def __hash__(self) -> int:
+        """ Make this class hashable for use in sets.
+        """
+        return hash(self.username)
+
+    def __eq__(self, other) -> bool:
+        """ Define equality based on username.
+        """
+        if not isinstance(other, UserInfo):
+            return False
+        return self.username == other.username
 
 # ################################################################################################################################
 
@@ -61,8 +71,8 @@ class UserInfo:
 class OperationResult:
     """ Result of an operation.
     """
-    is_ok: bool
-    message: str_
+    is_ok: bool = False
+    message: 'str' = ''
     details: optional[anydict] = None
 
 # ################################################################################################################################
@@ -120,7 +130,7 @@ def validate_users_file(users_file:'str_') -> 'OperationResult':
 
 # ################################################################################################################################
 
-def list_users(args:'argparse.Namespace') -> 'union_[set_[UserInfo], OperationResult]':
+def list_users(args:'argparse.Namespace') -> 'any_':
     """ List users from the specified users file.
     """
     validation_result = validate_users_file(args.users_file)
@@ -132,11 +142,11 @@ def list_users(args:'argparse.Namespace') -> 'union_[set_[UserInfo], OperationRe
             users_list = json.load(f)
 
         logger.info(f'Users in {args.users_file}:')
-        users = set_()
+        users = []
         for user_dict in users_list:
-            for username, _ in user_dict.items():
+            for username in user_dict:
                 logger.info(f'  - {username}')
-                users.add(UserInfo(username=username))
+                users.append(UserInfo(username=username))
 
         return users
     except Exception as e:
@@ -252,13 +262,18 @@ def main() -> 'int':
     if args.command == 'start':
         result = start_server(args)
         return 0 if result.is_ok else 1
+
     elif args.command == 'list-users':
+
         result = list_users(args)
-        # If we got a set of users, it was successful
-        if isinstance(result, set):
+
+        # If we got a list of users, it was successful
+        if isinstance(result, list):
             return 0
+
         # Otherwise it's an OperationResult indicating failure
         return 0 if result.is_ok else 1
+
     elif args.command == 'create-user':
         result = create_user(args)
         return 0 if result.is_ok else 1
