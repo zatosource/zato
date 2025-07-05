@@ -210,7 +210,13 @@ class PubSubRESTServer:
 
         # Publish message
         result = self.publish_message(topic_name, msg, endpoint_name)
-        return self._json_response(start_response, asdict(result))
+
+        response_data = {'is_ok': result.is_ok, 'cid': cid}
+
+        if result.details:
+            response_data['details'] = result.details
+
+        return self._json_response(start_response, response_data)
 
 # ################################################################################################################################
 
@@ -240,7 +246,13 @@ class PubSubRESTServer:
 
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
-        return self._json_response(start_response, asdict(result))
+
+        response_data = {'is_ok': result.is_ok, 'cid': cid}
+
+        if result.details:
+            response_data['details'] = result.details
+
+        return self._json_response(start_response, response_data)
 
 # ################################################################################################################################
 
@@ -270,7 +282,13 @@ class PubSubRESTServer:
 
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
-        return self._json_response(start_response, asdict(result))
+
+        response_data = {'is_ok': result.is_ok, 'cid': cid}
+
+        if result.details:
+            response_data['details'] = result.details
+
+        return self._json_response(start_response, response_data)
 
 # ################################################################################################################################
 
@@ -283,16 +301,28 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def _parse_json(self, request:'Request') -> 'dict_':
-        """ Parse JSON from request regardless of Content-Type.
-        Raises ValueError if JSON cannot be parsed.
+        """ Parse JSON from request.
         """
-        if request.data:
-            raw_data = request.data.decode('utf-8')
-            data = loads(raw_data)
-        else:
-            data = {}
+        try:
+            # Get raw data from environ['wsgi.input']
+            raw_data = request.get_data()
+            logger.debug(f'Raw request data: {raw_data}')
 
-        return data
+            if raw_data:
+                # Decode and parse
+                text_data = raw_data.decode('utf-8')
+                logger.debug(f'Decoded request data: {text_data}')
+                data = loads(text_data)
+                logger.debug(f'Parsed JSON data: {data}')
+                return data
+            else:
+                logger.warning('No request data provided')
+                return {}
+
+        except Exception as e:
+            logger.error(f'Error parsing JSON: {e}, raw data: {raw_data}')
+            # Re-raise so the caller can handle it
+            raise
 
 # ################################################################################################################################
 

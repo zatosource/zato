@@ -238,7 +238,8 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
         # Start gunicorn application
         logger.info(f'Starting PubSub REST API server on {args.host}:{args.port}')
-        logger.info(f'Using {args.workers} worker(s)')
+        worker_text = 'worker' if args.workers == 1 else 'workers'
+        logger.info(f'Using {args.workers} {worker_text}')
 
         # Run the gunicorn application
         GunicornApplication(app, options).run()
