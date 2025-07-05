@@ -249,7 +249,7 @@ def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
         # .. log what we are about to add ..
         items = sorted(elem['name'] for elem in response)
 
-        logger.warning('Loading jobs into scheduler -> %s', items)
+        logger.info('Loading jobs into scheduler -> %s', items)
 
         # .. go through each of the jobs received ..
         for item in response:

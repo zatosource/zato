@@ -187,10 +187,6 @@ class BrokerClient:
                 # Handle the message using the shared handler
                 result = handle_broker_msg(body, self.context)
 
-                print()
-                print(111, result)
-                print()
-
                 # If the message was handled and needs a reply
                 if result.was_handled and result.action_code == SERVICE.INVOKE.value:
                     if reply_to := body.get('reply_to'):
