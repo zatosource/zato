@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -49,7 +49,7 @@ class SchedulerServerConfig(AuxServerConfig):
         super().__init__()
 
         self.startup_jobs = []
-        self.on_job_executed_cb = None
+        self.on_job_executed_cb = cast_('callable', None)
         self.job_log_level = 'debug'
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
