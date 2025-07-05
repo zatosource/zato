@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +23,6 @@ from gevent import sleep
 from zato.common.api import MISC, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.util.api import new_cid, spawn_greenlet
-from zato.common.util.config import parse_url_address
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
@@ -61,7 +60,7 @@ class SchedulerAPI:
     """
     broker_client: 'BrokerClient'
 
-    def __init__(self, config:'SchedulerServerConfig'=None, run:'bool'=False):
+    def __init__(self, config:'SchedulerServerConfig'=None, run:'bool'=False): # type: ignore
         self.config = config
         self.broker_client:'BrokerClient' = None # type: ignore
         self.config.on_job_executed_cb = self.on_job_executed
@@ -80,7 +79,7 @@ class SchedulerAPI:
                 logger.warning(format_exc())
 
             while not self.scheduler.ready:
-                sleep(0.1)
+                sleep(0.1) # type: ignore
 
         except Exception:
             logger.warning(format_exc())
