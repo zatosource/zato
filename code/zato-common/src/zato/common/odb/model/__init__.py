@@ -20,6 +20,7 @@ from zato.common.api import AMQP, CACHE, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODO
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1309,6 +1310,80 @@ class GenericConnClient(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(
         Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubTopic(Base):
+    """ Represents a Pub/Sub topic that messages can be published to.
+    """
+    __tablename__ = 'pubsub_topic'
+    __table_args__ = (
+        UniqueConstraint('name', 'cluster_id'),
+        {}
+    )
+
+    id = Column(Integer, Sequence('pubsub_topic_id_seq'), primary_key=True)
+    name = Column(String(400), nullable=False)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubSubscription(Base):
+    """ Represents a subscription of an API client to a topic.
+    """
+    __tablename__ = 'pubsub_subscription'
+    __table_args__ = (
+        UniqueConstraint('topic_id', 'sec_base_id', 'cluster_id'),
+        Index('pubsub_sub_key_idx', 'sub_key', unique=True),
+    )
+
+    id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
+    sub_key = Column(String(200), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship('PubSubTopic', backref=backref('subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubPermission(Base):
+    """ Defines publication/subscription permissions for a security definition.
+    """
+    __tablename__ = 'pubsub_permission'
+    __table_args__ = (
+        UniqueConstraint('sec_base_id', 'pattern', 'access_type', 'cluster_id'),
+        {}
+    )
+
+    id = Column(Integer, Sequence('pubsub_permission_id_seq'), primary_key=True)
+    pattern = Column(String(400), nullable=False)
+    access_type = Column(String(20), nullable=False) # 'publish' or 'subscribe'
+    is_active = Column(Boolean, nullable=False, default=True)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_base = relationship('SecurityBase', backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 # ################################################################################################################################
