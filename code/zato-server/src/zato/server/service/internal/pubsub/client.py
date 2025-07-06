@@ -28,7 +28,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_permission_get_list_request'
         response_elem = 'zato_pubsub_permission_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type'
+        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id'
 
     def get_data(self, session):
         return elems_with_opaque(pubsub_permission_list(session, self.request.input.cluster_id, False))
