@@ -9,6 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Django
+from django.http import JsonResponse
+from django.views import View
+
 # Zato
 from zato.admin.web.forms.pubsub.client import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
@@ -34,23 +38,33 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        # Get existing basic auth definitions for the dropdown
-        response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
-            'cluster_id': self.req.zato.cluster_id,
-        })
 
-        choices = []
-        if response.ok:
-            for item in response.data:
-                choices.append((item['id'], item['name']))
-
-        create_form = CreateForm(sec_base_choices=choices)
-        edit_form = EditForm(sec_base_choices=choices, prefix='edit')
+        create_form = CreateForm()
+        edit_form = EditForm(prefix='edit')
 
         return {
             'create_form': create_form,
             'edit_form': edit_form,
         }
+
+# ################################################################################################################################
+
+class GetSecurityDefinitions(View):
+    url_name = 'pubsub-client-get-security-definitions'
+
+    def get(self, request):
+
+        # Get existing basic auth definitions for AJAX response
+        response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
+            'cluster_id': request.zato.cluster_id,
+        })
+
+        choices = []
+        if response.ok:
+            for item in response.data:
+                choices.append({'id': item['id'], 'name': item['name']})
+
+        return JsonResponse({'security_definitions': choices})
 
 # ################################################################################################################################
 
@@ -79,7 +93,7 @@ class Create(_CreateEdit):
     url_name = 'pubsub-client-create'
     service_name = 'zato.pubsub.client.create'
     form_class = CreateForm
-    
+
     def success_message(self, item):
         return 'Successfully created the PubSub API client'
 
@@ -97,7 +111,7 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-client-edit'
     service_name = 'zato.pubsub.client.edit'
     form_class = EditForm
-    
+
     def success_message(self, item):
         return 'Successfully updated the PubSub API client'
 
@@ -113,7 +127,7 @@ class Delete(_Delete):
     url_name = 'pubsub-client-delete'
     error_message = 'Could not delete the PubSub API client'
     service_name = 'zato.pubsub.client.delete'
-    
+
     def success_message(self, item):
         return 'Successfully deleted the PubSub API client'
 
