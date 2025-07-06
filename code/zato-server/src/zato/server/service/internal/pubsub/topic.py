@@ -37,9 +37,11 @@ class GetList(AdminService):
         data = []
 
         for item, publisher_count, subscriber_count in result:
-            item_dict = item._asdict()
+
+            item_dict = item.asdict()
             item_dict['publisher_count'] = publisher_count
             item_dict['subscriber_count'] = subscriber_count
+
             data.append(item_dict)
 
         return elems_with_opaque(data)
