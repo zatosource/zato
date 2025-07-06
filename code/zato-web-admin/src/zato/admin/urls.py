@@ -39,6 +39,7 @@ from zato.admin.web.views.security.oauth import outconn_client_credentials as oa
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
+from zato.admin.web.views.pubsub import client
 
 urlpatterns = [
 
@@ -714,6 +715,17 @@ urlpatterns += [
         login_required(topic.Edit()), name=topic.Edit.url_name),
     url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(topic.Delete()), name=topic.Delete.url_name),
+
+    # PubSub Client Assignments
+
+    url(r'^zato/pubsub/client/$',
+        login_required(client.Index()), name=client.Index.url_name),
+    url(r'^zato/pubsub/client/create/$',
+        login_required(client.Create()), name=client.Create.url_name),
+    url(r'^zato/pubsub/client/edit/$',
+        login_required(client.Edit()), name=client.Edit.url_name),
+    url(r'^zato/pubsub/client/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(client.Delete()), name=client.Delete.url_name),
 ]
 
 # ################################################################################################################################
