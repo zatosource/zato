@@ -200,7 +200,7 @@ class PubSubRESTServer:
         if not data:
             logger.warning(f'[{cid}] Invalid request data')
             response = BadRequestResponse(cid=cid)
-            return self._json_response(start_response, response, '400 Bad Request')
+            return self._json_response(start_response, response)
 
         # Use the 'data' field from the request as specified in the spec
         msg_data = data.get('data')
@@ -208,7 +208,7 @@ class PubSubRESTServer:
         if msg_data is None:
             logger.warning(f'[{cid}] Missing required data field')
             response = BadRequestResponse(cid=cid, details='Missing required data field')
-            return self._json_response(start_response, response, '400 Bad Request')
+            return self._json_response(start_response, response)
 
         msg = PubMessage(
             data=msg_data,
@@ -224,7 +224,7 @@ class PubSubRESTServer:
         if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response, '401 Unauthorized')
+            return self._json_response(start_response, response)
 
         # Get client id if provided
         ext_client_id = data.get('ext_client_id')
@@ -251,7 +251,7 @@ class PubSubRESTServer:
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response, '401 Unauthorized')
+            return self._json_response(start_response, response)
 
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
@@ -272,7 +272,7 @@ class PubSubRESTServer:
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response, '401 Unauthorized')
+            return self._json_response(start_response, response)
 
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
@@ -282,7 +282,7 @@ class PubSubRESTServer:
             return self._json_response(start_response, response)
         else:
             response = BadRequestResponse(cid=cid, details='Failed to unsubscribe')
-            return self._json_response(start_response, response, '400 Bad Request')
+            return self._json_response(start_response, response)
 
 # ################################################################################################################################
 
@@ -320,24 +320,20 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'any_', status:'str'='200 OK') -> 'list_[bytes]':
+    def _json_response(self, start_response:'any_', data:'any_') -> 'list_[bytes]':
         """ Return a JSON response. The data parameter can be either a dict or a dataclass instance.
         """
-        # Set response headers
-        headers = [('Content-Type', 'application/json')]
+        status = getattr(data, 'http_status', '200 OK')
+
+        if is_dataclass(data):
+            response_data = asdict(data)
+        else:
+            response_data = data
+
+        json_data = dumps(response_data, indent=4 if self.has_debug else None).encode('utf-8')
+        headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
         start_response(status, headers)
-
-        # Convert the dataclass to a dict ..
-        data = asdict(data)
-
-        # .. now to JSON ..
-        data = dumps(data)
-
-        # .. now make sure we're returning bytes ..
-        data = data.encode('utf-8')
-
-        # .. and do return them now.
-        return [data]
+        return [json_data]
 
 # ################################################################################################################################
 
@@ -492,12 +488,12 @@ class PubSubRESTServer:
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
                 response = NotImplementedResponse()
-                return self._json_response(start_response, response, '501 Not Implemented')
+                return self._json_response(start_response, response)
 
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
             response = NotFoundResponse()
-            return self._json_response(start_response, response, '404 Not Found')
+            return self._json_response(start_response, response)
 
 # ################################################################################################################################
 
