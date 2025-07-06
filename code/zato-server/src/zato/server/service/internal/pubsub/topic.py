@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from traceback import format_exc
-from uuid import uuid4
 
 # Zato
 from zato.common.broker_message import PUBSUB
@@ -56,7 +55,7 @@ class Create(AdminService):
 
     def handle(self):
         input = self.request.input
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
+        cluster_id = self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
@@ -75,7 +74,7 @@ class Create(AdminService):
                 topic.name = input.name
                 topic.is_active = input.is_active
                 topic.cluster = cluster
-                topic.description = input.get('description')
+                topic.description = input.description
 
                 set_instance_opaque_attrs(topic, input)
 
@@ -111,7 +110,7 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
         input_id = input.get('id')
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
+        cluster_id = self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
@@ -140,7 +139,7 @@ class Edit(AdminService):
 
                 topic.name = input.name
                 topic.is_active = input.is_active
-                topic.description = input.get('description', '')
+                topic.description = input.description
 
                 session.add(topic)
                 session.commit()

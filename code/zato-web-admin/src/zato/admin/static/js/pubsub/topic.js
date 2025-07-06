@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubTopic;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'description']);
+    $.fn.zato.data_table.setup_forms(['name']);
 })
 
 // Namespace for all pubsub-related functionality
