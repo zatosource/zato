@@ -149,7 +149,7 @@ class Edit(_CreateEdit):
     class SimpleIO:
         input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = 'id',
+        output_required = 'id', 'name'
         output_optional = []
 
     def success_message(self, item):
