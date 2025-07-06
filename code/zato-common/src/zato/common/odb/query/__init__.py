@@ -872,3 +872,28 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
     return query
 
 # ################################################################################################################################
+
+def _pubsub_permission(session, cluster_id, id):
+    return session.query(PubSubPermission, SecurityBase).\
+        join(SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id).\
+        filter(PubSubPermission.cluster_id==cluster_id).\
+        filter(PubSubPermission.id==id)
+
+def pubsub_permission(session, cluster_id, id):
+    return _pubsub_permission(session, cluster_id, id).one()
+
+@query_wrapper
+def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=False):
+    return session.query(
+        PubSubPermission.id,
+        SecurityBase.name,
+        PubSubPermission.pattern,
+        PubSubPermission.access_type,
+        PubSubPermission.is_active
+    ).join(
+        SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
+    ).filter(
+        PubSubPermission.cluster_id == cluster_id
+    ).order_by(SecurityBase.name)
+
+# ################################################################################################################################
