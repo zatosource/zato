@@ -456,9 +456,27 @@ function populatePatterns(formType, patternString) {
 function populateSecurityDefinitions(formType, selectedId) {
     var selectId = formType === 'create' ? '#id_sec_base_id' : '#id_edit-sec_base_id';
     var clusterId = $('#cluster_id').val();
+    var select = $(selectId);
+    var selectContainer = select.parent();
 
     console.log('=== AJAX DEBUG: Making request to get security definitions ===');
     console.log('=== AJAX DEBUG: formType:', formType, 'clusterId:', clusterId, 'selectId:', selectId);
+
+    // Show spinner with smooth transition and minimum display time
+    var startTime = Date.now();
+
+    // Clear existing content (select already hidden by CSS)
+    selectContainer.find('.no-security-definitions-message').remove();
+    selectContainer.find('.loading-spinner').remove();
+
+    // Add spinner
+    var spinner = $('<span class="loading-spinner" style="font-style: italic; color: #666;">Loading security definitions...</span>');
+    selectContainer.append(spinner);
+
+    // Smooth fade-in for spinner
+    setTimeout(function() {
+        spinner.addClass('show');
+    }, 50);
 
     $.ajax({
         url: '/zato/pubsub/client/get-security-definitions/',
@@ -473,58 +491,71 @@ function populateSecurityDefinitions(formType, selectedId) {
             if (response.security_definitions && response.security_definitions.length > 0) {
                 console.log('=== AJAX DEBUG: Security definitions details:', JSON.stringify(response.security_definitions));
             }
+
+            // Re-declare variables for callback scope
             var select = $(selectId);
             var selectContainer = select.parent();
+            var spinner = selectContainer.find('.loading-spinner');
 
-            // Always clear the select and remove any existing messages
-            select.empty();
-            selectContainer.find('.no-security-definitions-message').remove();
+            // Ensure minimum display time for smooth UX (prevent flicker)
+            var elapsedTime = Date.now() - startTime;
+            var minDisplayTime = 300; // 300ms minimum
+            var remainingTime = Math.max(0, minDisplayTime - elapsedTime);
 
-            if (response.security_definitions && response.security_definitions.length > 0) {
-                console.log('=== AJAX DEBUG: Showing select dropdown with', response.security_definitions.length, 'definitions');
+            setTimeout(function() {
+                // Fade out spinner
+                spinner.removeClass('show');
 
-                // Show the select dropdown
-                select.show();
+                setTimeout(function() {
+                    // Remove spinner and clear any existing messages
+                    selectContainer.find('.loading-spinner').remove();
+                    selectContainer.find('.no-security-definitions-message').remove();
+                    select.empty();
 
-                // Populate select with available security definitions
-                $.each(response.security_definitions, function(index, item) {
-                    var option = $('<option></option>')
-                        .attr('value', item.id)
-                        .text(item.name);
-                    if (selectedId && item.id == selectedId) {
-                        option.attr('selected', 'selected');
-                    } else if (index === 0 && !selectedId) {
-                        option.attr('selected', 'selected');
+                    if (response.security_definitions && response.security_definitions.length > 0) {
+                        console.log('=== AJAX DEBUG: Showing select dropdown with', response.security_definitions.length, 'definitions');
+
+                        // Populate select with available security definitions
+                        $.each(response.security_definitions, function(index, item) {
+                            var option = $('<option></option>')
+                                .attr('value', item.id)
+                                .text(item.name);
+                            if (selectedId && item.id == selectedId) {
+                                option.attr('selected', 'selected');
+                            } else if (index === 0 && !selectedId) {
+                                option.attr('selected', 'selected');
+                            }
+                            select.append(option);
+                        });
+
+                        // Show the select dropdown with smooth transition
+                        select.show().removeClass('hide').addClass('security-select');
+
+                        // Enable OK button since we have security definitions
+                        var okButton = select.closest('form').find('input[type="submit"]');
+                        okButton.prop('disabled', false);
+                    } else {
+                        // No security definitions available - show appropriate message
+                        var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
+                        var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
+
+                        // Add message with link
+                        var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=1" target="_blank">Click to create one</a></span>');
+                        selectContainer.append(messageElement);
+
+                        // Disable OK button to prevent form submission
+                        var okButton = select.closest('form').find('input[type="submit"]');
+                        okButton.prop('disabled', true);
                     }
-                    select.append(option);
-                });
-
-                // Enable OK button since we have security definitions
-                var okButton = select.closest('form').find('input[type="submit"]');
-                okButton.prop('disabled', false);
-            } else {
-                // No security definitions available - show appropriate message
-                var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
-                var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
-
-                // Replace select with informative text
-                var selectContainer = select.parent();
-                select.hide();
-
-                // Remove any existing message
-                selectContainer.find('.no-security-definitions-message').remove();
-
-                // Add message with link
-                var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=1" target="_blank">Click to create one</a></span>');
-                selectContainer.append(messageElement);
-
-                // Disable OK button to prevent form submission
-                var okButton = select.closest('form').find('input[type="submit"]');
-                okButton.prop('disabled', true);
-            }
+                }, 300); // Wait for fade-out transition
+            }, remainingTime);
         },
         error: function(xhr, status, error) {
             console.error('Failed to load security definitions:', error);
+            // Remove spinner on error
+            var select = $(selectId);
+            var selectContainer = select.parent();
+            selectContainer.find('.loading-spinner').remove();
         }
     });
 }
