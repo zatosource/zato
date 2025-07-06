@@ -1,6 +1,7 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
-{% block html_title %}pub/sub Topics{% endblock %}
+{% block html_title %}Pub/sub Topics{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -26,11 +27,14 @@
             '_numbering',
             '_selection',
             'name',
-            'description',
+
+            '_description',
             '_edit',
             '_delete',
+
             'id',
             'is_active',
+            'description',
         ]
     }
     </script>
@@ -62,13 +66,11 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
+
                         <th><a href="#">Description</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -82,16 +84,19 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.description|default:"" }}</td>
+
+                        <td>{{ item.description|no_value_indicator }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a></td>
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.description|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='11'>No results</td>
+                        <td colspan='99'>No results</td>
                     </tr>
                 {% endif %}
 
