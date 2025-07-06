@@ -41,6 +41,59 @@
             text-align: center;
             line-height: 22px;
         }
+
+        /* Smooth transitions for security definitions loading */
+        .loading-spinner {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+
+        .loading-spinner.show {
+            opacity: 1;
+        }
+
+        .security-select {
+            transition: opacity 0.2s ease-out;
+        }
+
+        .security-select.hide {
+            opacity: 0;
+        }
+
+        /* Hide security definition selects by default to prevent flash */
+        #id_sec_base_id, #id_edit-sec_base_id {
+            display: none;
+        }
+
+        /* Reserve exact space for select to prevent layout shifts */
+        .security-definition-container {
+            position: relative;
+            display: inline-block;
+            width: 200px;
+            height: 22px;
+            vertical-align: top;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-style: italic;
+            color: #666;
+        }
+
+        #id_sec_base_id, #id_edit-sec_base_id {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
     </style>
 
 {% endblock %}
@@ -154,7 +207,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Security definition</td>
-                            <td>{{ create_form.sec_base_id }}</td>
+                            <td><div class="security-definition-container">{{ create_form.sec_base_id }}</div></td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Access type</td>
@@ -196,7 +249,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Security definition</td>
-                            <td>{{ edit_form.sec_base_id }}</td>
+                            <td><div class="security-definition-container">{{ edit_form.sec_base_id }}</div></td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Access type</td>
