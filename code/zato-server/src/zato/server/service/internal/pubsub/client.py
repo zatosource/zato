@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubPermission
+from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -47,7 +47,7 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_permission_create_response'
         input_required = 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = 'id'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -94,6 +94,10 @@ class Create(AdminService):
                 self.broker_client.publish(input)
 
                 self.response.payload.id = permission.id
+                
+                # Get the security definition name for the response
+                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).one()
+                self.response.payload.name = sec_base.name
 
 # ################################################################################################################################
 
