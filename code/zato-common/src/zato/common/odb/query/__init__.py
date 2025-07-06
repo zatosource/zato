@@ -19,18 +19,25 @@ from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
-     PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+     PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
-    OutgoingSAP
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubTopic, SecurityBase, Server, Service, \
+    SMTP, SQLConnectionPool, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+pubsub_publisher = PubSub.API_Client.Publisher
+pubsub_subscriber = PubSub.API_Client.Subscriber
+pubsub_publisher_subscriber = PubSub.API_Client.Publisher_Subscriber
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -836,7 +843,7 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
         func.count(PubSubPermission.id).label('publisher_count')
     ).filter(
         PubSubPermission.cluster_id == cluster_id,
-        PubSubPermission.access_type.in_(['publisher', 'publisher-subscriber'])
+        PubSubPermission.access_type.in_([pubsub_publisher, pubsub_publisher_subscriber])
     ).group_by(PubSubPermission.pattern).subquery()
 
     # Subquery to count subscribers
@@ -845,7 +852,7 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
         func.count(PubSubPermission.id).label('subscriber_count')
     ).filter(
         PubSubPermission.cluster_id == cluster_id,
-        PubSubPermission.access_type.in_(['subscriber', 'publisher-subscriber'])
+        PubSubPermission.access_type.in_([pubsub_subscriber, pubsub_publisher_subscriber])
     ).group_by(PubSubPermission.pattern).subquery()
 
     # Main query with counts
