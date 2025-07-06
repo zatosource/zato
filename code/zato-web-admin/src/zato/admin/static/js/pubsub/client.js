@@ -68,7 +68,7 @@ $(document).ready(function() {
 
 $.fn.zato.pubsub.client.create = function() {
     console.log('=== CREATE DEBUG: Create function called ===');
-    $.fn.zato.data_table._create_edit('create', 'Create a new client assignment', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
     console.log('=== CREATE DEBUG: _create_edit called ===');
     // Initialize pattern type options for create form
     setTimeout(function() {
@@ -79,7 +79,7 @@ $.fn.zato.pubsub.client.create = function() {
 
 $.fn.zato.pubsub.client.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
-    $.fn.zato.data_table._create_edit('edit', 'Update the client assignment', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the API client', id);
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
@@ -125,9 +125,9 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
 }
 
 $.fn.zato.pubsub.client.delete_ = function(id) {
-    $.fn.zato.data_table.delete_(id, 'td[2]',
-        'PubSub client assignment [{0}] deleted',
-        'Are you sure you want to delete the PubSub client assignment [{0}]?',
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'API client [{0}] deleted',
+        'Are you sure you want to delete API client [{0}]?',
         true);
 }
 
