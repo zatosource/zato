@@ -888,7 +888,8 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
         PubSubPermission.id,
         SecurityBase.name,
         PubSubPermission.pattern,
-        PubSubPermission.access_type
+        PubSubPermission.access_type,
+        PubSubPermission.sec_base_id
     ).join(
         SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
     ).filter(
