@@ -30,11 +30,19 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_topic_get_list_response'
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active'
-        output_optional = 'description'
+        output_optional = 'description', 'publisher_count', 'subscriber_count'
 
     def get_data(self, session):
-        data = elems_with_opaque(self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False))
-        return data
+        result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
+        data = []
+
+        for item, publisher_count, subscriber_count in result:
+            item_dict = item._asdict()
+            item_dict['publisher_count'] = publisher_count
+            item_dict['subscriber_count'] = subscriber_count
+            data.append(item_dict)
+
+        return elems_with_opaque(data)
 
     def handle(self):
         with closing(self.odb.session()) as session:

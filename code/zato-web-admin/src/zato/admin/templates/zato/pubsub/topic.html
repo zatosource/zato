@@ -27,14 +27,17 @@
             '_numbering',
             '_selection',
             'name',
-
             '_description',
+            '_publishers',
+            '_subscribers',
             '_edit',
             '_delete',
 
             'id',
             'is_active',
             'description',
+            'publisher_count',
+            'subscriber_count',
         ]
     }
     </script>
@@ -66,11 +69,14 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-
                         <th style="text-align:center"><a href="#">Description</a></th>
+                        <th style="text-align:center"><a href="#">Publishers</a></th>
+                        <th style="text-align:center"><a href="#">Subscribers</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -84,14 +90,17 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-
                         <td style="text-align:center">{{ item.description|no_value_indicator }}</td>
+                        <td style="text-align:center">{{ item.publisher_count }}</td>
+                        <td style="text-align:center">{{ item.subscriber_count }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.description|default:"" }}</td>
+                        <td class='ignore'>{{ item.publisher_count }}</td>
+                        <td class='ignore'>{{ item.subscriber_count }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
