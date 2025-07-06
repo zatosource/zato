@@ -13,32 +13,66 @@ $.fn.zato.data_table.PubSubClient = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    console.log('=== PUBSUB CLIENT DEBUG: Document ready ===');
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubClient;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.client.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
+    console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
-    // Setup form submission handlers for pattern consolidation
-    $('#create-form').on('submit', function() {
+    // Setup form submission handlers for pattern consolidation (using event delegation)
+    $(document).on('submit', '#create-form', function(e) {
+        console.log('=== FORM SUBMIT DEBUG: Create form submit triggered ===');
+        console.log('Form data before consolidation:', $(this).serialize());
         consolidatePatterns('create');
+        console.log('Form data after consolidation:', $(this).serialize());
+        console.log('Pattern hidden field value:', $('#create-pattern-hidden').val());
     });
-    $('#edit-form').on('submit', function() {
+    $(document).on('submit', '#edit-form', function(e) {
+        console.log('=== FORM SUBMIT DEBUG: Edit form submit triggered ===');
+        console.log('Form data before consolidation:', $(this).serialize());
         consolidatePatterns('edit');
+        console.log('Form data after consolidation:', $(this).serialize());
+        console.log('Pattern hidden field value:', $('#edit-pattern-hidden').val());
     });
 
-    // Add event handler for access type change
-    $('#id_access_type').on('change', function() {
+    // Add event handlers for access type change (both create and edit forms) using event delegation
+    $(document).on('change', '#id_access_type', function() {
+        console.log('=== ACCESS TYPE DEBUG: Create access type changed to:', $(this).val());
         updatePatternTypeOptions('create');
+    });
+    $(document).on('change', '#id_edit-access_type', function() {
+        console.log('=== ACCESS TYPE DEBUG: Edit access type changed to:', $(this).val());
         updatePatternTypeOptions('edit');
     });
+
+    console.log('=== PUBSUB CLIENT DEBUG: Event handlers attached ===');
+
+    // Set up before_submit_hook to consolidate patterns before form submission
+    $.fn.zato.data_table.before_submit_hook = function(form) {
+        console.log('=== BEFORE SUBMIT HOOK: Called with form:', form.attr('id'));
+        var formId = form.attr('id');
+        if (formId === 'create-form') {
+            console.log('=== BEFORE SUBMIT HOOK: Consolidating patterns for create ===');
+            consolidatePatterns('create');
+        } else if (formId === 'edit-form') {
+            console.log('=== BEFORE SUBMIT HOOK: Consolidating patterns for edit ===');
+            consolidatePatterns('edit');
+        }
+        console.log('=== BEFORE SUBMIT HOOK: Form data after consolidation:', form.serialize());
+        return true; // Allow form submission to continue
+    };
 })
 
 $.fn.zato.pubsub.client.create = function() {
+    console.log('=== CREATE DEBUG: Create function called ===');
     $.fn.zato.data_table._create_edit('create', 'Create a new client assignment', null);
+    console.log('=== CREATE DEBUG: _create_edit called ===');
     // Initialize pattern type options for create form
     setTimeout(function() {
+        console.log('=== CREATE DEBUG: Initializing pattern options ===');
         updatePatternTypeOptions('create');
     }, 100);
 }
@@ -142,18 +176,28 @@ function removePatternRow(button) {
 }
 
 function consolidatePatterns(formType) {
+    console.log('=== CONSOLIDATE DEBUG: Starting consolidatePatterns for:', formType);
     var container = $('#' + formType + '-patterns-container');
+    console.log('Container found:', container.length > 0);
     var patterns = [];
 
-    container.find('.pattern-row').each(function() {
+    container.find('.pattern-row').each(function(index) {
         var patternType = $(this).find('.pattern-type-select').val();
         var patternValue = $(this).find('.pattern-input').val().trim();
+        console.log('Row', index, '- Type:', patternType, 'Value:', JSON.stringify(patternValue));
         if (patternValue) {
-            patterns.push(patternType + '=' + patternValue);
+            var combined = patternType + '=' + patternValue;
+            patterns.push(combined);
+            console.log('Added pattern:', JSON.stringify(combined));
         }
     });
 
-    $('#' + formType + '-pattern-hidden').val(patterns.join('\n'));
+    var consolidated = patterns.join('\n');
+    console.log('Final consolidated patterns:', JSON.stringify(consolidated));
+    var hiddenField = $('#' + formType + '-pattern-hidden');
+    console.log('Hidden field found:', hiddenField.length > 0);
+    hiddenField.val(consolidated);
+    console.log('Hidden field value set to:', JSON.stringify(hiddenField.val()));
 }
 
 function populatePatterns(formType, patternString) {
@@ -206,7 +250,8 @@ function populatePatterns(formType, patternString) {
 }
 
 function updatePatternTypeOptions(formType) {
-    var accessType = $('#id_access_type').val();
+    var accessTypeId = formType === 'create' ? '#id_access_type' : '#id_edit-access_type';
+    var accessType = $(accessTypeId).val();
     var container = $('#' + formType + '-patterns-container');
 
     container.find('.pattern-row').each(function() {

@@ -234,6 +234,9 @@ class PUBSUB(Constants):
     TOPIC_CREATE = ValueConstant('')
     TOPIC_EDIT = ValueConstant('')
     TOPIC_DELETE = ValueConstant('')
+    PERMISSION_CREATE = ValueConstant('')
+    PERMISSION_EDIT = ValueConstant('')
+    PERMISSION_DELETE = ValueConstant('')
 
 code_to_name = {}
 
