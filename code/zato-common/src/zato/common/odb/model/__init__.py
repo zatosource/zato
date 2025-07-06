@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timezone
 from ftplib import FTP_PORT
 
 # SQLAlchemy
@@ -20,7 +20,7 @@ from zato.common.api import AMQP, CACHE, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODO
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
-from zato.common.util.api import utcnow
+
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +101,12 @@ def to_json(data:'any_', return_as_dict:'bool'=False) -> 'any_':
             return out
 
         return _to_json(data, return_as_dict)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _utcnow(_utc_zone=timezone.utc):
+    return datetime.now(_utc_zone)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1327,8 +1333,8 @@ class PubSubTopic(Base):
     name = Column(String(400), nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=utcnow)
-    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+    created = Column(DateTime, nullable=False, default=_utcnow)
+    last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1348,8 +1354,8 @@ class PubSubSubscription(Base):
     id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
     sub_key = Column(String(200), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=utcnow)
-    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+    created = Column(DateTime, nullable=False, default=_utcnow)
+    last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1376,8 +1382,8 @@ class PubSubPermission(Base):
     pattern = Column(String(400), nullable=False)
     access_type = Column(String(20), nullable=False) # 'publish' or 'subscribe'
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=utcnow)
-    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+    created = Column(DateTime, nullable=False, default=_utcnow)
+    last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
