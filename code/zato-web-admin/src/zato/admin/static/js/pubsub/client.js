@@ -70,25 +70,34 @@ $.fn.zato.pubsub.client.create = function() {
     console.log('=== CREATE DEBUG: Create function called ===');
     $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
     console.log('=== CREATE DEBUG: _create_edit called ===');
-    // Populate security definitions via AJAX when select element becomes available
-    var selectElement = $('#id_sec_base_id');
-    if (selectElement.length > 0 && selectElement.is(':visible')) {
+
+    // Function to populate security definitions and initialize form
+    function initializeCreateForm() {
         console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
         populateSecurityDefinitions('create');
         updatePatternTypeOptions('create');
-    } else {
-        // Use MutationObserver to watch for the element
-        var observer = new MutationObserver(function(mutations) {
-            var selectElement = $('#id_sec_base_id');
-            if (selectElement.length > 0 && selectElement.is(':visible')) {
-                console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
-                populateSecurityDefinitions('create');
-                updatePatternTypeOptions('create');
-                observer.disconnect();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
     }
+
+    // Always populate security definitions via AJAX when select element becomes available
+    // Use a timeout to ensure the DOM is ready, then always make fresh AJAX call
+    setTimeout(function() {
+        var selectElement = $('#id_sec_base_id');
+        if (selectElement.length > 0) {
+            console.log('=== CREATE DEBUG: Select element found, initializing form ===');
+            initializeCreateForm();
+        } else {
+            // Use MutationObserver to watch for the element if not immediately available
+            var observer = new MutationObserver(function(mutations) {
+                var selectElement = $('#id_sec_base_id');
+                if (selectElement.length > 0) {
+                    console.log('=== CREATE DEBUG: Select element found via observer, initializing form ===');
+                    initializeCreateForm();
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }, 100);
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
@@ -448,6 +457,9 @@ function populateSecurityDefinitions(formType, selectedId) {
     var selectId = formType === 'create' ? '#id_sec_base_id' : '#id_edit-sec_base_id';
     var clusterId = $('#cluster_id').val();
 
+    console.log('=== AJAX DEBUG: Making request to get security definitions ===');
+    console.log('=== AJAX DEBUG: formType:', formType, 'clusterId:', clusterId, 'selectId:', selectId);
+
     $.ajax({
         url: '/zato/pubsub/client/get-security-definitions/',
         type: 'GET',
@@ -456,10 +468,24 @@ function populateSecurityDefinitions(formType, selectedId) {
             form_type: formType
         },
         success: function(response) {
+            console.log('=== AJAX DEBUG: Received response:', JSON.stringify(response));
+            console.log('=== AJAX DEBUG: Security definitions count:', response.security_definitions ? response.security_definitions.length : 0);
+            if (response.security_definitions && response.security_definitions.length > 0) {
+                console.log('=== AJAX DEBUG: Security definitions details:', JSON.stringify(response.security_definitions));
+            }
             var select = $(selectId);
+            var selectContainer = select.parent();
+
+            // Always clear the select and remove any existing messages
             select.empty();
+            selectContainer.find('.no-security-definitions-message').remove();
 
             if (response.security_definitions && response.security_definitions.length > 0) {
+                console.log('=== AJAX DEBUG: Showing select dropdown with', response.security_definitions.length, 'definitions');
+
+                // Show the select dropdown
+                select.show();
+
                 // Populate select with available security definitions
                 $.each(response.security_definitions, function(index, item) {
                     var option = $('<option></option>')
@@ -472,7 +498,7 @@ function populateSecurityDefinitions(formType, selectedId) {
                     }
                     select.append(option);
                 });
-                
+
                 // Enable OK button since we have security definitions
                 var okButton = select.closest('form').find('input[type="submit"]');
                 okButton.prop('disabled', false);
@@ -491,7 +517,7 @@ function populateSecurityDefinitions(formType, selectedId) {
                 // Add message with link
                 var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=1" target="_blank">Click to create one</a></span>');
                 selectContainer.append(messageElement);
-                
+
                 // Disable OK button to prevent form submission
                 var okButton = select.closest('form').find('input[type="submit"]');
                 okButton.prop('disabled', true);
