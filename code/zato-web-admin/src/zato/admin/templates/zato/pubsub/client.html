@@ -44,12 +44,9 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Search"%}
-
-
     {% if cluster_id %}
 
-        <div class='page_prompt' style="clear:left">
+        <div class='page_prompt'>
             <a href="javascript:$.fn.zato.pubsub.client.create()">Create a new client assignment</a>
         </div>
 
@@ -121,9 +118,14 @@
                             <td style="vertical-align:middle">Active:</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
                     </table>
-                    <input type="submit" value="OK" />
-                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -149,9 +151,14 @@
                             <td style="vertical-align:middle">Active:</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
                     </table>
-                    <input type="submit" value="OK" />
-                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
