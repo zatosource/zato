@@ -23,7 +23,7 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
     OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
@@ -828,8 +828,40 @@ def pubsub_topic(session, cluster_id, id):
 
 @query_wrapper
 def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
-    """ A list of Pub/Sub topics.
+    """ A list of Pub/Sub topics with publisher and subscriber counts.
     """
-    return _pubsub_topic(session, cluster_id)
+    # Subquery to count publishers
+    publisher_count = session.query(
+        PubSubPermission.pattern,
+        func.count(PubSubPermission.id).label('publisher_count')
+    ).filter(
+        PubSubPermission.cluster_id == cluster_id,
+        PubSubPermission.access_type.in_(['publisher', 'publisher-subscriber'])
+    ).group_by(PubSubPermission.pattern).subquery()
+
+    # Subquery to count subscribers
+    subscriber_count = session.query(
+        PubSubPermission.pattern,
+        func.count(PubSubPermission.id).label('subscriber_count')
+    ).filter(
+        PubSubPermission.cluster_id == cluster_id,
+        PubSubPermission.access_type.in_(['subscriber', 'publisher-subscriber'])
+    ).group_by(PubSubPermission.pattern).subquery()
+
+    # Main query with counts
+    query = session.query(
+        PubSubTopic,
+        func.coalesce(publisher_count.c.publisher_count, 0).label('publisher_count'),
+        func.coalesce(subscriber_count.c.subscriber_count, 0).label('subscriber_count')
+    ).filter(
+        Cluster.id == cluster_id,
+        Cluster.id == PubSubTopic.cluster_id
+    ).outerjoin(
+        publisher_count, PubSubTopic.name == publisher_count.c.pattern
+    ).outerjoin(
+        subscriber_count, PubSubTopic.name == subscriber_count.c.pattern
+    ).order_by(PubSubTopic.name)
+
+    return query
 
 # ################################################################################################################################
