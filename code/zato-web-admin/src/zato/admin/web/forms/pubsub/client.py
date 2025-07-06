@@ -21,7 +21,6 @@ ACCESS_TYPE_CHOICES = [
 
 class CreateForm(forms.Form):
     sec_base_id = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
-    pattern = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     access_type = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
 
     def __init__(self, sec_base_choices=None, *args, **kwargs):
