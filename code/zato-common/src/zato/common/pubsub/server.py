@@ -250,7 +250,7 @@ class PubSubRESTServer:
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
-            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
+            return self._json_response(start_response, UnauthorizedResponse(cid=cid, details='Authentication failed'), '401 Unauthorized')
 
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
@@ -270,7 +270,7 @@ class PubSubRESTServer:
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
-            return self._json_response(start_response, {'is_ok': False, 'cid': cid, 'details': 'Authentication failed'}, '401 Unauthorized')
+            return self._json_response(start_response, UnauthorizedResponse(cid=cid, details='Authentication failed'), '401 Unauthorized')
 
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
