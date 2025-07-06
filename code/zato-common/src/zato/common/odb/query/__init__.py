@@ -23,7 +23,7 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, \
     OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
@@ -810,5 +810,26 @@ def out_sap_list(session, cluster_id, needs_columns=False):
     """ A list of SAP RFC connections.
     """
     return _out_sap(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_topic(session, cluster_id):
+    return session.query(PubSubTopic).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==PubSubTopic.cluster_id).\
+        order_by(PubSubTopic.name)
+
+def pubsub_topic(session, cluster_id, id):
+    """ An individual Pub/Sub topic.
+    """
+    return _pubsub_topic(session, cluster_id).\
+        filter(PubSubTopic.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_topic_list(session, cluster_id, needs_columns=False):
+    """ A list of Pub/Sub topics.
+    """
+    return _pubsub_topic(session, cluster_id)
 
 # ################################################################################################################################

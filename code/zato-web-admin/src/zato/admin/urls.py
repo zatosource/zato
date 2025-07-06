@@ -38,6 +38,7 @@ from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.vendors import keysight_vision
+from zato.admin.web.views.pubsub import topic
 
 urlpatterns = [
 
@@ -697,6 +698,23 @@ urlpatterns += [
     url(r'^zato/groups/edit/$',
         login_required(groups.Edit()), name=groups.Edit.url_name),
     ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # PubSub Topics
+
+    url(r'^zato/pubsub/topic/$',
+        login_required(topic.Index()), name=topic.Index.url_name),
+    url(r'^zato/pubsub/topic/create/$',
+        login_required(topic.Create()), name=topic.Create.url_name),
+    url(r'^zato/pubsub/topic/edit/$',
+        login_required(topic.Edit()), name=topic.Edit.url_name),
+    url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(topic.Delete()), name=topic.Delete.url_name),
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
