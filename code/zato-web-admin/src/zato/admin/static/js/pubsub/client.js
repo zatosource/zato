@@ -70,9 +70,10 @@ $.fn.zato.pubsub.client.create = function() {
     console.log('=== CREATE DEBUG: Create function called ===');
     $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
     console.log('=== CREATE DEBUG: _create_edit called ===');
-    // Initialize pattern type options for create form
+    // Populate security definitions via AJAX and initialize pattern type options
     setTimeout(function() {
-        console.log('=== CREATE DEBUG: Initializing pattern options ===');
+        console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
+        populateSecurityDefinitions('create');
         updatePatternTypeOptions('create');
     }, 100);
 }
@@ -80,6 +81,11 @@ $.fn.zato.pubsub.client.create = function() {
 $.fn.zato.pubsub.client.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.data_table._create_edit('edit', 'Update the API client', id);
+    // Populate security definitions via AJAX
+    setTimeout(function() {
+        console.log('=== EDIT DEBUG: Populating security definitions ===');
+        populateSecurityDefinitions('edit', instance.sec_base_id);
+    }, 100);
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
@@ -247,6 +253,38 @@ function populatePatterns(formType, patternString) {
 
     // Update pattern type options based on access type
     updatePatternTypeOptions(formType);
+}
+
+function populateSecurityDefinitions(formType, selectedId) {
+    var selectId = formType === 'create' ? '#id_sec_base_id' : '#id_edit-sec_base_id';
+    var clusterId = $('#cluster_id').val();
+
+    $.ajax({
+        url: '/zato/pubsub/client/get-security-definitions/',
+        type: 'GET',
+        data: {
+            cluster_id: clusterId
+        },
+        success: function(response) {
+            var select = $(selectId);
+            select.empty();
+
+            $.each(response.security_definitions, function(index, item) {
+                var option = $('<option></option>')
+                    .attr('value', item.id)
+                    .text(item.name);
+                if (selectedId && item.id == selectedId) {
+                    option.attr('selected', 'selected');
+                } else if (index === 0 && !selectedId) {
+                    option.attr('selected', 'selected');
+                }
+                select.append(option);
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to load security definitions:', error);
+        }
+    });
 }
 
 function updatePatternTypeOptions(formType) {

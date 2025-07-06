@@ -724,6 +724,8 @@ urlpatterns += [
         login_required(client.Create()), name=client.Create.url_name),
     url(r'^zato/pubsub/client/edit/$',
         login_required(client.Edit()), name=client.Edit.url_name),
+    url(r'^zato/pubsub/client/get-security-definitions/$',
+        login_required(client.GetSecurityDefinitions.as_view()), name=client.GetSecurityDefinitions.url_name),
     url(r'^zato/pubsub/client/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(client.Delete()), name=client.Delete.url_name),
 ]
