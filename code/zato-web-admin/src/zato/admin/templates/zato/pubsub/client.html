@@ -70,7 +70,8 @@
             '_delete',
             'id',
             '_pattern',
-            '_access_type'
+            '_access_type',
+            'sec_base_id'
         ]
     }
     </script>
@@ -109,6 +110,7 @@
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -130,6 +132,7 @@
                         <td class='ignore'>{{ item.pattern }}</td>
 
                         <td class='ignore'>{{ item.access_type }}</td>
+                        <td class='ignore'>{{ item.sec_base_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

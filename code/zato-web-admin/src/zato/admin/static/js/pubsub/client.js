@@ -81,19 +81,19 @@ $.fn.zato.pubsub.client.create = function() {
 $.fn.zato.pubsub.client.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.data_table._create_edit('edit', 'Update the API client', id);
-    // Populate security definitions via AJAX
-    setTimeout(function() {
-        console.log('=== EDIT DEBUG: Populating security definitions ===');
-        populateSecurityDefinitions('edit', instance.sec_base_id);
-    }, 100);
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
-    $('#edit-sec_base_id').val(instance.sec_base_id);
     $('#edit-access_type').val(instance.access_type);
 
     // Populate patterns
     populatePatterns('edit', instance.pattern);
+
+    // Populate security definitions via AJAX after other fields are set
+    setTimeout(function() {
+        console.log('=== EDIT DEBUG: Populating security definitions ===');
+        populateSecurityDefinitions('edit', instance.sec_base_id);
+    }, 100);
 }
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
@@ -122,6 +122,10 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.delete_(\'{0}\')">Delete</a></td>', item.id);
+    row += String.format('<td style="display:none">{0}</td>', item.id); // id (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.pattern || ''); // _pattern (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.access_type || ''); // _access_type (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.sec_base_id || ''); // sec_base_id (hidden)
 
     if(include_tr) {
         row += '</tr>';
