@@ -57,7 +57,6 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
 
     method_allowed = 'POST'
-    form_prefix = 'pubsub_permission'
 
     def get_form_kwargs(self):
         # Get existing basic auth definitions for the dropdown
@@ -81,6 +80,10 @@ class Create(_CreateEdit):
     url_name = 'pubsub-client-create'
     service_name = 'zato.pubsub.client.create'
     form_class = CreateForm
+
+    class SimpleIO:
+        input_required = 'sec_base_id', 'pattern', 'access_type'
+        input_optional = 'cluster_id'
 
 # ################################################################################################################################
 
