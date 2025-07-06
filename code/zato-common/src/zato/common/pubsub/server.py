@@ -321,18 +321,14 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def _json_response(self, start_response:'any_', data:'any_') -> 'list_[bytes]':
-        """ Return a JSON response. The data parameter can be either a dict or a dataclass instance.
+        """ Return a JSON response.
         """
-        status = getattr(data, 'http_status', '200 OK')
+        response_data = asdict(data)
+        json_data = dumps(response_data).encode('utf-8')
 
-        if is_dataclass(data):
-            response_data = asdict(data)
-        else:
-            response_data = data
-
-        json_data = dumps(response_data, indent=4 if self.has_debug else None).encode('utf-8')
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
-        start_response(status, headers)
+        start_response(data.http_status, headers)
+
         return [json_data]
 
 # ################################################################################################################################
