@@ -291,7 +291,8 @@ function populateSecurityDefinitions(formType, selectedId) {
         url: '/zato/pubsub/client/get-security-definitions/',
         type: 'GET',
         data: {
-            cluster_id: clusterId
+            cluster_id: clusterId,
+            form_type: formType
         },
         success: function(response) {
             var select = $(selectId);
