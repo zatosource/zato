@@ -70,12 +70,25 @@ $.fn.zato.pubsub.client.create = function() {
     console.log('=== CREATE DEBUG: Create function called ===');
     $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
     console.log('=== CREATE DEBUG: _create_edit called ===');
-    // Populate security definitions via AJAX and initialize pattern type options
-    setTimeout(function() {
+    // Populate security definitions via AJAX when select element becomes available
+    var selectElement = $('#id_sec_base_id');
+    if (selectElement.length > 0 && selectElement.is(':visible')) {
         console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
         populateSecurityDefinitions('create');
         updatePatternTypeOptions('create');
-    }, 100);
+    } else {
+        // Use MutationObserver to watch for the element
+        var observer = new MutationObserver(function(mutations) {
+            var selectElement = $('#id_sec_base_id');
+            if (selectElement.length > 0 && selectElement.is(':visible')) {
+                console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
+                populateSecurityDefinitions('create');
+                updatePatternTypeOptions('create');
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
@@ -89,11 +102,22 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // Populate patterns
     populatePatterns('edit', instance.pattern);
 
-    // Populate security definitions via AJAX after other fields are set
-    setTimeout(function() {
+    // Populate security definitions via AJAX when select element becomes available
+    var selectElement = $('#id_edit-sec_base_id');
+    if (selectElement.length > 0 && selectElement.is(':visible')) {
         console.log('=== EDIT DEBUG: Populating security definitions ===');
         populateSecurityDefinitions('edit', instance.sec_base_id);
-    }, 100);
+    } else {
+        var observer = new MutationObserver(function(mutations) {
+            var selectElement = $('#id_edit-sec_base_id');
+            if (selectElement.length > 0 && selectElement.is(':visible')) {
+                console.log('=== EDIT DEBUG: Populating security definitions ===');
+                populateSecurityDefinitions('edit', instance.sec_base_id);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 }
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
