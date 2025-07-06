@@ -28,7 +28,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_permission_get_list_request'
         response_elem = 'zato_pubsub_permission_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type', 'is_active'
+        output_required = 'id', 'name', 'pattern', 'access_type'
 
     def get_data(self, session):
         return elems_with_opaque(pubsub_permission_list(session, self.request.input.cluster_id, False))
@@ -46,7 +46,7 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_permission_create_request'
         response_elem = 'zato_pubsub_permission_create_response'
         input_required = 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id', 'is_active'
+        input_optional = 'cluster_id'
         output_required = 'id'
 
     def handle(self):
@@ -71,7 +71,6 @@ class Create(AdminService):
                 permission.access_type = input.access_type
                 permission.pattern = input.pattern
                 permission.cluster_id = cluster_id
-                permission.is_active = input.get('is_active', True)
 
                 set_instance_opaque_attrs(permission, input)
 
@@ -97,7 +96,7 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_permission_edit_request'
         response_elem = 'zato_pubsub_permission_edit_response'
         input_required = 'id', 'pattern', 'access_type'
-        input_optional = 'cluster_id', 'is_active'
+        input_optional = 'cluster_id'
         output_required = 'id'
 
     def handle(self):
@@ -111,7 +110,6 @@ class Edit(AdminService):
                 # Update permission fields only
                 permission.access_type = input.access_type
                 permission.pattern = input.pattern
-                permission.is_active = input.get('is_active', True)
 
                 set_instance_opaque_attrs(permission, input)
 
