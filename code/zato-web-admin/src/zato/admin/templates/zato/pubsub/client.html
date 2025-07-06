@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}Pub/sub Client Assignments{% endblock %}
+{% block html_title %}Pub/sub API Clients{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -78,7 +78,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub client assignments</h2>
+<h2 class="zato">Pub/sub API clients</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -89,7 +89,7 @@
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.pubsub.client.create()">Create a new client assignment</a>
+            <a href="javascript:$.fn.zato.pubsub.client.create()">Create a new API client</a>
         </div>
 
         <div id="markup">

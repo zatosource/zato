@@ -75,8 +75,8 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     action = 'create'
-    error_message = 'Could not create the PubSub client assignment'
-    success_message = 'Successfully created the PubSub client assignment'
+    error_message = 'Could not create the PubSub API client'
+    success_message = 'Successfully created the PubSub API client'
     url_name = 'pubsub-client-create'
     service_name = 'zato.pubsub.client.create'
     form_class = CreateForm
@@ -89,8 +89,8 @@ class Create(_CreateEdit):
 
 class Edit(_CreateEdit):
     action = 'edit'
-    error_message = 'Could not update the PubSub client assignment'
-    success_message = 'Successfully updated the PubSub client assignment'
+    error_message = 'Could not update the PubSub API client'
+    success_message = 'Successfully updated the PubSub API client'
     url_name = 'pubsub-client-edit'
     service_name = 'zato.pubsub.client.edit'
     form_class = EditForm
@@ -99,8 +99,8 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'pubsub-client-delete'
-    error_message = 'Could not delete the PubSub client assignment'
-    success_message = 'Successfully deleted the PubSub client assignment'
+    error_message = 'Could not delete the PubSub API client'
+    success_message = 'Successfully deleted the PubSub API client'
     service_name = 'zato.pubsub.client.delete'
 
 # ################################################################################################################################
