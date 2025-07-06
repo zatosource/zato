@@ -3,7 +3,7 @@
 $.fn.zato.data_table.PubSubClient = new Class({
     toString: function() {
         var s = '<PubSubClient id:{0} name:{1} pattern:{2} access_type:{3}>';
-        return String.format(s, this.id ? this.id : '(none)', 
+        return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.pattern ? this.pattern : '(none)',
                                 this.access_type ? this.access_type : '(none)');
@@ -19,7 +19,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.client.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
-    
+
     // Setup form submission handlers for pattern consolidation
     $('#create-form').on('submit', function() {
         consolidatePatterns('create');
@@ -27,21 +27,33 @@ $(document).ready(function() {
     $('#edit-form').on('submit', function() {
         consolidatePatterns('edit');
     });
+
+    // Add event handler for access type change
+    $('#id_access_type').on('change', function() {
+        updatePatternTypeOptions('create');
+        updatePatternTypeOptions('edit');
+    });
 })
 
 $.fn.zato.pubsub.client.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new PubSub client assignment', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new client assignment', null);
+    // Initialize pattern type options for create form
+    setTimeout(function() {
+        updatePatternTypeOptions('create');
+    }, 100);
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Edit PubSub client assignment', id);
-    
-    // Populate patterns from existing data
-    var row = $('#tr_' + id);
-    var patternData = row.find('td.ignore').eq(1).text(); // pattern is second ignore column
-    setTimeout(function() {
-        populatePatterns('edit', patternData);
-    }, 100);
+    var instance = $.fn.zato.data_table.data[id];
+    $.fn.zato.data_table._create_edit('edit', 'Update the client assignment', id);
+
+    $.fn.zato.data_table.reset_form('edit');
+    $('#edit-id').val(instance.id);
+    $('#edit-sec_base_id').val(instance.sec_base_id);
+    $('#edit-access_type').val(instance.access_type);
+
+    // Populate patterns
+    populatePatterns('edit', instance.pattern);
 }
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
@@ -52,7 +64,7 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     }
 
     var access_type_label = '';
-    
+
     if(item.access_type == 'publisher') {
         access_type_label = 'Publisher';
     } else if(item.access_type == 'subscriber') {
@@ -62,7 +74,7 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     }
 
     var pattern_display = item.pattern ? item.pattern.replace(/\n/g, ', ') : '';
-    
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
@@ -79,7 +91,7 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
 }
 
 $.fn.zato.pubsub.client.delete_ = function(id) {
-    $.fn.zato.data_table.delete_(id, 'td[2]', 
+    $.fn.zato.data_table.delete_(id, 'td[2]',
         'PubSub client assignment [{0}] deleted',
         'Are you sure you want to delete the PubSub client assignment [{0}]?',
         true);
@@ -89,30 +101,37 @@ $.fn.zato.pubsub.client.delete_ = function(id) {
 function addPatternRow(formType) {
     var container = $('#' + formType + '-patterns-container');
     var rowCount = container.find('.pattern-row').length;
-    
+
     var newRow = $('<div class="pattern-row">' +
+        '<select name="pattern_type_' + rowCount + '" class="pattern-type-select">' +
+        '<option value="pub">Publish</option>' +
+        '<option value="sub">Subscribe</option>' +
+        '</select>' +
         '<input type="text" name="pattern_' + rowCount + '" class="pattern-input" style="width:50%" />' +
         '<button type="button" class="pattern-add-button" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
         '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)">-</button>' +
         '</div>');
-    
+
     container.append(newRow);
-    
+
     // Show remove buttons and hide add buttons except on last row
     container.find('.pattern-row').each(function(index) {
         var isLast = (index === container.find('.pattern-row').length - 1);
         $(this).find('.pattern-add-button').toggle(isLast);
         $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
     });
+
+    // Update pattern type options for the new row
+    updatePatternTypeOptions(formType);
 }
 
 function removePatternRow(button) {
     var row = $(button).closest('.pattern-row');
     var container = row.closest('[id$="-patterns-container"]');
-    
+
     if (container.find('.pattern-row').length > 1) {
         row.remove();
-        
+
         // Update button visibility
         container.find('.pattern-row').each(function(index) {
             var isLast = (index === container.find('.pattern-row').length - 1);
@@ -125,36 +144,106 @@ function removePatternRow(button) {
 function consolidatePatterns(formType) {
     var container = $('#' + formType + '-patterns-container');
     var patterns = [];
-    
-    container.find('.pattern-input').each(function() {
-        var value = $(this).val().trim();
-        if (value) {
-            patterns.push(value);
+
+    container.find('.pattern-row').each(function() {
+        var patternType = $(this).find('.pattern-type-select').val();
+        var patternValue = $(this).find('.pattern-input').val().trim();
+        if (patternValue) {
+            patterns.push(patternType + '=' + patternValue);
         }
     });
-    
+
     $('#' + formType + '-pattern-hidden').val(patterns.join('\n'));
 }
 
 function populatePatterns(formType, patternString) {
     var container = $('#' + formType + '-patterns-container');
     container.empty();
-    
-    var patterns = patternString ? patternString.split('\n') : [''];
-    
+
+    if (!patternString || patternString.trim() === '') {
+        patternString = '';
+    }
+
+    var patterns = patternString.split('\n').filter(function(p) { return p.trim() !== ''; });
+    if (patterns.length === 0) {
+        patterns = [''];
+    }
+
     patterns.forEach(function(pattern, index) {
+        var patternType = 'pub';
+        var patternValue = pattern.trim();
+
+        // Parse prefixed patterns (pub=pattern or sub=pattern)
+        if (patternValue.startsWith('pub=')) {
+            patternType = 'pub';
+            patternValue = patternValue.substring(4);
+        } else if (patternValue.startsWith('sub=')) {
+            patternType = 'sub';
+            patternValue = patternValue.substring(4);
+        }
+
         var row = $('<div class="pattern-row">' +
-            '<input type="text" name="pattern_' + index + '" class="pattern-input" style="width:50%" value="' + pattern.trim() + '" />' +
+            '<select name="pattern_type_' + index + '" class="pattern-type-select">' +
+            '<option value="pub"' + (patternType === 'pub' ? ' selected' : '') + '>Publish</option>' +
+            '<option value="sub"' + (patternType === 'sub' ? ' selected' : '') + '>Subscribe</option>' +
+            '</select>' +
+            '<input type="text" name="pattern_' + index + '" class="pattern-input" style="width:50%" value="' + patternValue + '" />' +
             '<button type="button" class="pattern-add-button" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
             '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)" style="display:none">-</button>' +
             '</div>');
         container.append(row);
     });
-    
+
     // Show appropriate buttons
     container.find('.pattern-row').each(function(index) {
         var isLast = (index === container.find('.pattern-row').length - 1);
         $(this).find('.pattern-add-button').toggle(isLast);
         $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
+    });
+
+    // Update pattern type options based on access type
+    updatePatternTypeOptions(formType);
+}
+
+function updatePatternTypeOptions(formType) {
+    var accessType = $('#id_access_type').val();
+    var container = $('#' + formType + '-patterns-container');
+
+    container.find('.pattern-row').each(function() {
+        var select = $(this).find('.pattern-type-select');
+        var input = $(this).find('.pattern-input');
+        var currentValue = select.val();
+
+        // Check if current value is incompatible with new access type
+        var isIncompatible = (currentValue === 'pub' && accessType === 'subscriber') ||
+                           (currentValue === 'sub' && accessType === 'publisher');
+
+        // Clear and rebuild options based on access type
+        select.empty();
+
+        if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
+            select.append('<option value="pub">Publish</option>');
+        }
+        if (accessType === 'subscriber' || accessType === 'publisher-subscriber') {
+            select.append('<option value="sub">Subscribe</option>');
+        }
+
+        if (isIncompatible) {
+            // Current value is incompatible - add it as a disabled option to preserve it
+            select.append('<option value="' + currentValue + '" disabled>' +
+                         (currentValue === 'pub' ? 'Publish' : 'Subscribe') + '</option>');
+            select.val(currentValue);
+            select.prop('disabled', true);
+            input.prop('disabled', true);
+        } else {
+            // Current value is compatible or we need to set a default
+            if (select.find('option[value="' + currentValue + '"]').length > 0) {
+                select.val(currentValue);
+            } else {
+                select.val(select.find('option:first').val());
+            }
+            select.prop('disabled', false);
+            input.prop('disabled', false);
+        }
     });
 }
