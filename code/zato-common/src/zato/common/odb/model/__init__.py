@@ -1327,8 +1327,8 @@ class PubSubTopic(Base):
     name = Column(String(400), nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created = Column(DateTime, nullable=False, default=utcnow)
+    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1348,8 +1348,8 @@ class PubSubSubscription(Base):
     id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
     sub_key = Column(String(200), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created = Column(DateTime, nullable=False, default=utcnow)
+    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1376,8 +1376,8 @@ class PubSubPermission(Base):
     pattern = Column(String(400), nullable=False)
     access_type = Column(String(20), nullable=False) # 'publish' or 'subscribe'
     is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=datetime.utcnow)
-    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created = Column(DateTime, nullable=False, default=utcnow)
+    last_updated = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
