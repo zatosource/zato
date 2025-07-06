@@ -7,6 +7,11 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 
     <style type="text/css">
+
+        .ui-dialog-titlebar {
+            margin-bottom: 0px !important;
+        }
+
         .form-data td:first-child {
             width: 18%;
             white-space: nowrap;
@@ -61,7 +66,11 @@
             'name',
             'pattern',
             'access_type',
-            '_is_active'
+            '_edit',
+            '_delete',
+            'id',
+            '_pattern',
+            '_access_type'
         ]
     }
     </script>
@@ -90,13 +99,15 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Security definition</a></th>
+
                         <th><a href="#">Pattern</a></th>
                         <th style="text-align:center"><a href="#">Access type</a></th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
 
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -105,16 +116,19 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
+
                         <td>{{ item.pattern }}</td>
                         <td style="text-align:center">{{ item.access_type|capfirst }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.client.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.client.delete_('{{ item.id }}')">Delete</a></td>
 
+                        <td><a href="javascript:$.fn.zato.pubsub.client.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.pattern }}</td>
+
                         <td class='ignore'>{{ item.access_type }}</td>
                     </tr>
                 {% endfor %}
