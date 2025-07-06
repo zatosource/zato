@@ -20,27 +20,12 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(['name']);
 })
 
-// Namespace for all pubsub-related functionality
-if(!$.fn.zato.pubsub) {
-    $.fn.zato.pubsub = {};
-}
-
-// Namespace for topic-related functionality
-if(!$.fn.zato.pubsub.topic) {
-    $.fn.zato.pubsub.topic = {};
-}
-
-// Namespace for topic data table functionality
-if(!$.fn.zato.pubsub.topic.data_table) {
-    $.fn.zato.pubsub.topic.data_table = {};
-}
-
 $.fn.zato.pubsub.topic.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new Pub/Sub topic', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub topic', null);
 }
 
 $.fn.zato.pubsub.topic.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Edit Pub/Sub topic', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit pub/sub topic', id);
 }
 
 $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
@@ -70,7 +55,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.pubsub.topic.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Pub/Sub topic `{0}` deleted',
-        'Are you sure you want to delete Pub/Sub topic `{0}`?',
+        'Pub/sub topic `{0}` deleted',
+        'Are you sure you want to delete pub/sub topic `{0}`?',
         true);
 }
