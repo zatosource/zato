@@ -86,7 +86,7 @@ class Create(_CreateEdit):
     class SimpleIO:
         input_required = 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = ()
+        output_required = 'id', 'name'
         output_optional = ()
 
 # ################################################################################################################################

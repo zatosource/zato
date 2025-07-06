@@ -743,6 +743,10 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         instance.id = data.id;
     }
 
+    if(!instance.name && data.name) {
+        instance.name = data.name;
+    }
+
     console.log('Instance created: ' + instance);
 
     $.fn.zato.data_table.data[instance.id] = instance;
