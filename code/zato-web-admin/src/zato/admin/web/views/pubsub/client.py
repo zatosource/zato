@@ -38,6 +38,19 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Get the data that will be sent to the frontend
+        response = self.req.zato.client.invoke('zato.pubsub.client.get-list', {
+            'cluster_id': self.req.zato.cluster_id,
+        })
+
+        logger.error(f"=== PUBSUB CLIENT DEBUG: Backend response.ok: {response.ok}")
+        if response.ok:
+            logger.error(f"=== PUBSUB CLIENT DEBUG: Backend response.data: {response.data}")
+            for i, item in enumerate(response.data):
+                logger.error(f"=== PUBSUB CLIENT DEBUG: Item {i}: {item}")
 
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
@@ -132,6 +145,7 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-client-edit'
     service_name = 'zato.pubsub.client.edit'
     form_class = EditForm
+    form_prefix = 'edit-'
 
     def success_message(self, item):
         return 'Successfully updated the PubSub API client'
@@ -139,7 +153,7 @@ class Edit(_CreateEdit):
     class SimpleIO:
         input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = ()
+        output_required = 'id'
         output_optional = ()
 
 # ################################################################################################################################
