@@ -67,7 +67,7 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
 
-                        <th><a href="#">Description</a></th>
+                        <th style="text-align:center"><a href="#">Description</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
@@ -85,7 +85,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
 
-                        <td>{{ item.description|no_value_indicator }}</td>
+                        <td style="text-align:center">{{ item.description|no_value_indicator }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a></td>
 
