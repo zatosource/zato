@@ -250,7 +250,8 @@ class PubSubRESTServer:
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
-            return self._json_response(start_response, UnauthorizedResponse(cid=cid, details='Authentication failed'), '401 Unauthorized')
+            response = UnauthorizedResponse(cid=cid, details='Authentication failed')
+            return self._json_response(start_response, response, '401 Unauthorized')
 
         # Subscribe to topic
         result = self.subscribe(topic_name, endpoint_name)
@@ -270,7 +271,8 @@ class PubSubRESTServer:
         endpoint_name = self.authenticate(environ)
         if not endpoint_name:
             logger.warning(f'[{cid}] Authentication failed')
-            return self._json_response(start_response, UnauthorizedResponse(cid=cid, details='Authentication failed'), '401 Unauthorized')
+            response = UnauthorizedResponse(cid=cid, details='Authentication failed')
+            return self._json_response(start_response, response, '401 Unauthorized')
 
         # Unsubscribe from topic
         result = self.unsubscribe(topic_name, endpoint_name)
@@ -288,7 +290,7 @@ class PubSubRESTServer:
         """ Health check endpoint.
         """
         logger.info('Processing health check request')
-        response = HealthCheckResponse(timestamp=datetime.utcnow().isoformat())
+        response = HealthCheckResponse()
         return self._json_response(start_response, response)
 
 # ################################################################################################################################
@@ -314,7 +316,6 @@ class PubSubRESTServer:
 
         except Exception as e:
             logger.error(f'Error parsing JSON: {e}, raw data: {raw_data}')
-            # Re-raise so the caller can handle it
             raise
 
 # ################################################################################################################################
@@ -490,11 +491,13 @@ class PubSubRESTServer:
                 return handler(environ, start_response, **args)
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
-                return self._json_response(start_response, NotImplementedResponse(), '501 Not Implemented')
+                response = NotImplementedResponse()
+                return self._json_response(start_response, response, '501 Not Implemented')
 
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
-            return self._json_response(start_response, NotFoundResponse(), '404 Not Found')
+            response = NotFoundResponse()
+            return self._json_response(start_response, response, '404 Not Found')
 
 # ################################################################################################################################
 
