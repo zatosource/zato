@@ -53,6 +53,7 @@ class GetSecurityDefinitions(View):
     url_name = 'pubsub-client-get-security-definitions'
 
     def get(self, request):
+        form_type = request.GET.get('form_type', 'edit')
 
         # Get existing basic auth definitions for AJAX response
         response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
@@ -61,8 +62,28 @@ class GetSecurityDefinitions(View):
 
         choices = []
         if response.ok:
-            for item in response.data:
-                choices.append({'id': item['id'], 'name': item['name']})
+
+            # If this is for create form, exclude security definitions that already have patterns
+
+            if form_type == 'create':
+                # Get existing pubsub permissions to find which security definitions are already used
+                permissions_response = request.zato.client.invoke('zato.pubsub.client.get-list', {
+                    'cluster_id': request.zato.cluster_id,
+                })
+
+                used_sec_ids = set()
+                if permissions_response.ok:
+                    for perm in permissions_response.data:
+                        used_sec_ids.add(perm['sec_base_id'])
+
+                # Only include security definitions that are not already used
+                for item in response.data:
+                    if item['id'] not in used_sec_ids:
+                        choices.append({'id': item['id'], 'name': item['name']})
+            else:
+                # For edit form, include all security definitions
+                for item in response.data:
+                    choices.append({'id': item['id'], 'name': item['name']})
 
         return JsonResponse({'security_definitions': choices})
 
