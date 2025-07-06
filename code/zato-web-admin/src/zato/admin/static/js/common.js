@@ -89,6 +89,8 @@ $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.sap');
 $.namespace('zato.pubsub');
 $.namespace('zato.pubsub.topic');
+$.namespace('zato.pubsub.client');
+$.namespace('zato.pubsub.subscription');
 $.namespace('zato.query');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');

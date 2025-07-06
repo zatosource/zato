@@ -1,0 +1,161 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Pub/sub Client Assignments{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} PubSub Client {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/client.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            'pattern',
+            'access_type',
+            '_is_active'
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub client assignments</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Search"%}
+
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.pubsub.client.create()">Create a new client assignment</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Security definition</a></th>
+                        <th><a href="#">Pattern</a></th>
+                        <th style="text-align:center"><a href="#">Access type</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.pattern }}</td>
+                        <td style="text-align:center">{{ item.access_type|capfirst }}</td>
+                        <td><a href="javascript:$.fn.zato.pubsub.client.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.client.delete_('{{ item.id }}')">Delete</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.pattern }}</td>
+                        <td class='ignore'>{{ item.access_type }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='99'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "pubsub-client-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Security definition:</td>
+                            <td>{{ create_form.sec_base_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pattern:</td>
+                            <td>{{ create_form.pattern }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Access type:</td>
+                            <td>{{ create_form.access_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active:</td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+                    </table>
+                    <input type="submit" value="OK" />
+                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "pubsub-client-edit" %}" method="post" id="edit-form">
+                    {{ edit_form.id }}
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Security definition:</td>
+                            <td>{{ edit_form.sec_base_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pattern:</td>
+                            <td>{{ edit_form.pattern }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Access type:</td>
+                            <td>{{ edit_form.access_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active:</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                    </table>
+                    <input type="submit" value="OK" />
+                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+{% endif %}
+{% endblock %}
