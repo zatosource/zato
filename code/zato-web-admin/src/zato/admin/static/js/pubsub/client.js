@@ -92,7 +92,26 @@ $.fn.zato.pubsub.client.create = function() {
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
+    console.log('=== EDIT DEBUG: Function called with id:', id);
+    console.log('=== EDIT DEBUG: Data table keys:', Object.keys($.fn.zato.data_table.data));
+    console.log('=== EDIT DEBUG: Data table entry for id ' + id + ':', $.fn.zato.data_table.data[id]);
+    console.log('=== EDIT DEBUG: Stack trace:', new Error().stack);
+
     var instance = $.fn.zato.data_table.data[id];
+    console.log('=== EDIT DEBUG: Instance retrieved:', instance);
+
+    if (instance === null) {
+        console.log('=== EDIT DEBUG: Instance is null - this should not happen!');
+        console.log('=== EDIT DEBUG: All data table entries:', $.fn.zato.data_table.data);
+        return;
+    }
+
+    if (instance === undefined) {
+        console.log('=== EDIT DEBUG: Instance is undefined - ID not found in data table');
+        console.log('=== EDIT DEBUG: All data table entries:', $.fn.zato.data_table.data);
+        return;
+    }
+
     $.fn.zato.data_table._create_edit('edit', 'Update the API client', id);
 
     $.fn.zato.data_table.reset_form('edit');
@@ -121,6 +140,11 @@ $.fn.zato.pubsub.client.edit = function(id) {
 }
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
+    console.log('=== NEW_ROW DEBUG: item:', item);
+    console.log('=== NEW_ROW DEBUG: data:', data);
+    console.log('=== NEW_ROW DEBUG: item.id:', item.id);
+    console.log('=== NEW_ROW DEBUG: typeof item.id:', typeof item.id);
+
     var row = '';
 
     if(include_tr) {
