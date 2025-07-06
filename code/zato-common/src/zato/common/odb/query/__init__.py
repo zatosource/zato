@@ -827,7 +827,7 @@ def pubsub_topic(session, cluster_id, id):
         one()
 
 @query_wrapper
-def pubsub_topic_list(session, cluster_id, needs_columns=False):
+def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
     """ A list of Pub/Sub topics.
     """
     return _pubsub_topic(session, cluster_id)
