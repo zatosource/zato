@@ -135,7 +135,6 @@ class Create(_CreateEdit):
         input_required = 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
         output_required = 'id', 'name'
-        output_optional = ()
 
 # ################################################################################################################################
 
@@ -147,14 +146,26 @@ class Edit(_CreateEdit):
     form_class = EditForm
     form_prefix = 'edit-'
 
-    def success_message(self, item):
-        return 'Successfully updated the PubSub API client'
-
     class SimpleIO:
         input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = 'id'
-        output_optional = ()
+        output_required = 'id',
+        output_optional = []
+
+    def success_message(self, item):
+
+        sec_base_id = self.input.sec_base_id
+
+        response = self.req.zato.client.invoke('zato.security.get-list', {
+            'cluster_id': self.req.zato.cluster_id,
+        })
+
+        if response.ok:
+            for sec_def in response.data:
+                if sec_def.id == int(sec_base_id):
+                    return f'Successfully updated API client `{sec_def.name}`'
+        else:
+            raise Exception(response)
 
 # ################################################################################################################################
 
