@@ -26,8 +26,8 @@ class CreateForm(forms.Form):
     def __init__(self, sec_base_choices=None, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
         self.fields['access_type'].choices = ACCESS_TYPE_CHOICES
-        if sec_base_choices:
-            self.fields['sec_base_id'].choices = sec_base_choices
+        # Security definitions will be populated via AJAX
+        self.fields['sec_base_id'].choices = []
 
 # ################################################################################################################################
 
