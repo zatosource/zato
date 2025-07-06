@@ -465,12 +465,13 @@ function populateSecurityDefinitions(formType, selectedId) {
     // Show spinner with smooth transition and minimum display time
     var startTime = Date.now();
 
-    // Clear existing content (select already hidden by CSS)
+    // Hide select and clear existing content (prevent overlay if form opened twice)
+    select.hide();
     selectContainer.find('.no-security-definitions-message').remove();
     selectContainer.find('.loading-spinner').remove();
 
     // Add spinner
-    var spinner = $('<span class="loading-spinner" style="font-style: italic; color: #666;">Loading security definitions...</span>');
+    var spinner = $('<span class="loading-spinner" style="font-style: italic; color: #666;">Loading ..</span>');
     selectContainer.append(spinner);
 
     // Smooth fade-in for spinner
