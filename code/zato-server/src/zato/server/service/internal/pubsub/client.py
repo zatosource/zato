@@ -109,7 +109,7 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_permission_edit_response'
         input_required = 'id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
-        output_required = 'id'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -143,6 +143,7 @@ class Edit(AdminService):
                 self.broker_client.publish(input)
 
                 self.response.payload.id = permission.id
+                self.response.payload.name = permission.sec_base.name
 
 # ################################################################################################################################
 
