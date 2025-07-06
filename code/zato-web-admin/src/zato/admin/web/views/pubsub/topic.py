@@ -33,7 +33,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active'
-        output_optional = 'description',
+        output_optional = 'description', 'publisher_count', 'subscriber_count',
         output_repeated = True
 
     def handle(self):
