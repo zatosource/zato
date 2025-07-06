@@ -137,7 +137,124 @@ $.fn.zato.pubsub.client.edit = function(id) {
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
+
+    // Add extensive debugging for access type changes
+    setTimeout(function() {
+        var accessTypeSelect = $('#edit-access_type');
+        if (accessTypeSelect.length > 0) {
+            console.log('=== ACCESS TYPE DEBUG: Adding change listener to edit access type select');
+            accessTypeSelect.off('change.debug').on('change.debug', function() {
+                console.log('=== ACCESS TYPE CHANGE DEBUG: Event triggered ===');
+                console.log('=== ACCESS TYPE DEBUG: New value:', $(this).val());
+                console.log('=== ACCESS TYPE DEBUG: Previous value:', $(this).data('prev-value'));
+
+                // Log all form fields before and after
+                console.log('=== FORM FIELDS BEFORE ACCESS TYPE CHANGE:');
+                logAllFormFields('edit');
+
+                // Store new value for next comparison
+                $(this).data('prev-value', $(this).val());
+
+                // Log again after a short delay to catch any changes
+                setTimeout(function() {
+                    console.log('=== FORM FIELDS AFTER ACCESS TYPE CHANGE:');
+                    logAllFormFields('edit');
+                }, 100);
+            });
+
+            // Store initial value
+            accessTypeSelect.data('prev-value', accessTypeSelect.val());
+        }
+    }, 500);
 }
+
+// Function to log all form fields
+function logAllFormFields(prefix) {
+    var form = $('#' + prefix + '-form');
+    if (form.length === 0) {
+        console.log('=== FORM DEBUG: Form not found with prefix:', prefix);
+        return;
+    }
+
+    console.log('=== FORM DEBUG: All form fields for prefix "' + prefix + '":');
+
+    // Log all input fields
+    form.find('input').each(function() {
+        var $input = $(this);
+        console.log('  Input [' + ($input.attr('name') || 'no-name') + '] type=' + $input.attr('type') + ' value="' + $input.val() + '" id=' + ($input.attr('id') || 'no-id'));
+    });
+
+    // Log all select fields
+    form.find('select').each(function() {
+        var $select = $(this);
+        console.log('  Select [' + ($select.attr('name') || 'no-name') + '] value="' + $select.val() + '" id=' + ($select.attr('id') || 'no-id') + ' options=' + $select.find('option').length);
+    });
+
+    // Log all textarea fields
+    form.find('textarea').each(function() {
+        var $textarea = $(this);
+        console.log('  Textarea [' + ($textarea.attr('name') || 'no-name') + '] value="' + $textarea.val() + '" id=' + ($textarea.attr('id') || 'no-id'));
+    });
+
+    // Log pattern container specifically
+    var patternContainer = $('#' + prefix + '-pattern-container');
+    if (patternContainer.length > 0) {
+        console.log('  Pattern container rows:', patternContainer.find('.pattern-row').length);
+        patternContainer.find('.pattern-row').each(function(index) {
+            var $row = $(this);
+            var typeSelect = $row.find('select[name$="_type_' + index + '"]');
+            var valueInput = $row.find('input[name$="_' + index + '"]');
+            console.log('    Pattern row ' + index + ': type="' + (typeSelect.val() || 'empty') + '" value="' + (valueInput.val() || 'empty') + '"');
+        });
+    }
+
+    // Log hidden pattern field
+    var hiddenPattern = $('#' + prefix + '-pattern-hidden');
+    if (hiddenPattern.length > 0) {
+        console.log('  Hidden pattern field value:', hiddenPattern.val());
+    }
+}
+
+// Add debugging for plus/minus button clicks
+$(document).on('click', '.pattern-add-button', function() {
+    console.log('=== PLUS BUTTON DEBUG: Add pattern button clicked ===');
+    console.log('=== FORM FIELDS BEFORE ADDING PATTERN:');
+
+    // Determine which form we're in
+    var form = $(this).closest('form');
+    var prefix = 'create';
+    if (form.attr('id') === 'edit-form') {
+        prefix = 'edit';
+    }
+
+    logAllFormFields(prefix);
+
+    // Log after a short delay to catch the new row
+    setTimeout(function() {
+        console.log('=== FORM FIELDS AFTER ADDING PATTERN:');
+        logAllFormFields(prefix);
+    }, 100);
+});
+
+$(document).on('click', '.pattern-remove-button', function() {
+    console.log('=== MINUS BUTTON DEBUG: Remove pattern button clicked ===');
+    console.log('=== FORM FIELDS BEFORE REMOVING PATTERN:');
+
+    // Determine which form we're in
+    var form = $(this).closest('form');
+    var prefix = 'create';
+    if (form.attr('id') === 'edit-form') {
+        prefix = 'edit';
+    }
+
+    logAllFormFields(prefix);
+
+    // Log after a short delay to catch the removal
+    setTimeout(function() {
+        console.log('=== FORM FIELDS AFTER REMOVING PATTERN:');
+        logAllFormFields(prefix);
+    }, 100);
+});
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     console.log('=== NEW_ROW DEBUG: item:', item);
@@ -354,32 +471,31 @@ function updatePatternTypeOptions(formType) {
         var isIncompatible = (currentValue === 'pub' && accessType === 'subscriber') ||
                            (currentValue === 'sub' && accessType === 'publisher');
 
-        // Clear and rebuild options based on access type
-        select.empty();
-
-        if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
-            select.append('<option value="pub">Publish</option>');
-        }
-        if (accessType === 'subscriber' || accessType === 'publisher-subscriber') {
-            select.append('<option value="sub">Subscribe</option>');
-        }
-
         if (isIncompatible) {
-            // Current value is incompatible - add it as a disabled option to preserve it
-            select.append('<option value="' + currentValue + '" disabled>' +
-                         (currentValue === 'pub' ? 'Publish' : 'Subscribe') + '</option>');
-            select.val(currentValue);
+            // Current value is incompatible - disable the select and input to preserve the pattern
             select.prop('disabled', true);
             input.prop('disabled', true);
+            // Don't change the options or value - keep them as-is
         } else {
-            // Current value is compatible or we need to set a default
+            // Current value is compatible - ensure it's enabled and rebuild options if needed
+            select.prop('disabled', false);
+            input.prop('disabled', false);
+
+            // Always rebuild options for compatible patterns to ensure they have the right choices
+            select.empty();
+            if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
+                select.append('<option value="pub">Publish</option>');
+            }
+            if (accessType === 'subscriber' || accessType === 'publisher-subscriber') {
+                select.append('<option value="sub">Subscribe</option>');
+            }
+
+            // Set value to current if it exists, otherwise first option
             if (select.find('option[value="' + currentValue + '"]').length > 0) {
                 select.val(currentValue);
             } else {
                 select.val(select.find('option:first').val());
             }
-            select.prop('disabled', false);
-            input.prop('disabled', false);
         }
     });
 }
