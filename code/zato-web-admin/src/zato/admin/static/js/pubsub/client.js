@@ -92,8 +92,8 @@ function addPatternRow(formType) {
     
     var newRow = $('<div class="pattern-row">' +
         '<input type="text" name="pattern_' + rowCount + '" class="pattern-input" style="width:50%" />' +
-        '<button type="button" class="pattern-add-btn" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
-        '<button type="button" class="pattern-remove-btn" onclick="removePatternRow(this)">-</button>' +
+        '<button type="button" class="pattern-add-button" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
+        '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)">-</button>' +
         '</div>');
     
     container.append(newRow);
@@ -101,8 +101,8 @@ function addPatternRow(formType) {
     // Show remove buttons and hide add buttons except on last row
     container.find('.pattern-row').each(function(index) {
         var isLast = (index === container.find('.pattern-row').length - 1);
-        $(this).find('.pattern-add-btn').toggle(isLast);
-        $(this).find('.pattern-remove-btn').toggle(!isLast || container.find('.pattern-row').length > 1);
+        $(this).find('.pattern-add-button').toggle(isLast);
+        $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
     });
 }
 
@@ -116,8 +116,8 @@ function removePatternRow(button) {
         // Update button visibility
         container.find('.pattern-row').each(function(index) {
             var isLast = (index === container.find('.pattern-row').length - 1);
-            $(this).find('.pattern-add-btn').toggle(isLast);
-            $(this).find('.pattern-remove-btn').toggle(!isLast || container.find('.pattern-row').length > 1);
+            $(this).find('.pattern-add-button').toggle(isLast);
+            $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
         });
     }
 }
@@ -145,8 +145,8 @@ function populatePatterns(formType, patternString) {
     patterns.forEach(function(pattern, index) {
         var row = $('<div class="pattern-row">' +
             '<input type="text" name="pattern_' + index + '" class="pattern-input" style="width:50%" value="' + pattern.trim() + '" />' +
-            '<button type="button" class="pattern-add-btn" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
-            '<button type="button" class="pattern-remove-btn" onclick="removePatternRow(this)" style="display:none">-</button>' +
+            '<button type="button" class="pattern-add-button" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
+            '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)" style="display:none">-</button>' +
             '</div>');
         container.append(row);
     });
@@ -154,7 +154,7 @@ function populatePatterns(formType, patternString) {
     // Show appropriate buttons
     container.find('.pattern-row').each(function(index) {
         var isLast = (index === container.find('.pattern-row').length - 1);
-        $(this).find('.pattern-add-btn').toggle(isLast);
-        $(this).find('.pattern-remove-btn').toggle(!isLast || container.find('.pattern-row').length > 1);
+        $(this).find('.pattern-add-button').toggle(isLast);
+        $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
     });
 }
