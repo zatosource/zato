@@ -229,6 +229,12 @@ class Groups(Constants):
     Edit_Member_List = ValueConstant('')
     Delete = ValueConstant('')
 
+class PUBSUB(Constants):
+    code_start = 108200
+    TOPIC_CREATE = ValueConstant('')
+    TOPIC_EDIT = ValueConstant('')
+    TOPIC_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
