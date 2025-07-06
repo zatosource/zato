@@ -53,9 +53,17 @@ class Create(AdminService):
         input = self.request.input
         cluster_id = self.server.cluster_id
 
+        # Validate patterns
+        if not input.pattern or not input.pattern.strip():
+            raise Exception('At least one pattern is required')
+        
+        patterns = [p.strip() for p in input.pattern.split('\n') if p.strip()]
+        if not patterns:
+            raise Exception('At least one valid pattern is required')
+
         with closing(self.odb.session()) as session:
             try:
-                # Check if permission already exists for this security definition and pattern
+                # Check if permission already exists for this security definition and pattern combination
                 existing_perm = session.query(PubSubPermission).\
                     filter(PubSubPermission.cluster_id==cluster_id).\
                     filter(PubSubPermission.sec_base_id==input.sec_base_id).\
@@ -63,13 +71,13 @@ class Create(AdminService):
                     filter(PubSubPermission.access_type==input.access_type).first()
 
                 if existing_perm:
-                    raise Exception('Permission already exists for this security definition, pattern and access type')
+                    raise Exception('Permission already exists for this security definition, pattern combination and access type')
 
                 # Create the permission
                 permission = PubSubPermission()
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
-                permission.pattern = input.pattern
+                permission.pattern = '\n'.join(patterns)
                 permission.cluster_id = cluster_id
 
                 set_instance_opaque_attrs(permission, input)
@@ -103,13 +111,21 @@ class Edit(AdminService):
         input = self.request.input
         cluster_id = self.server.cluster_id
 
+        # Validate patterns
+        if not input.pattern or not input.pattern.strip():
+            raise Exception('At least one pattern is required')
+        
+        patterns = [p.strip() for p in input.pattern.split('\n') if p.strip()]
+        if not patterns:
+            raise Exception('At least one valid pattern is required')
+
         with closing(self.odb.session()) as session:
             try:
                 permission = session.query(PubSubPermission).filter_by(id=input.id).one()
-                
+
                 # Update permission fields only
                 permission.access_type = input.access_type
-                permission.pattern = input.pattern
+                permission.pattern = '\n'.join(patterns)
 
                 set_instance_opaque_attrs(permission, input)
 
