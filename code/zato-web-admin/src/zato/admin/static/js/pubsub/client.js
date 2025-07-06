@@ -472,6 +472,10 @@ function populateSecurityDefinitions(formType, selectedId) {
                     }
                     select.append(option);
                 });
+                
+                // Enable OK button since we have security definitions
+                var okButton = select.closest('form').find('input[type="submit"]');
+                okButton.prop('disabled', false);
             } else {
                 // No security definitions available - show appropriate message
                 var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
@@ -484,9 +488,13 @@ function populateSecurityDefinitions(formType, selectedId) {
                 // Remove any existing message
                 selectContainer.find('.no-security-definitions-message').remove();
 
-                // Add message
-                var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + '</span>');
+                // Add message with link
+                var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=1" target="_blank">Click to create one</a></span>');
                 selectContainer.append(messageElement);
+                
+                // Disable OK button to prevent form submission
+                var okButton = select.closest('form').find('input[type="submit"]');
+                okButton.prop('disabled', true);
             }
         },
         error: function(xhr, status, error) {
