@@ -132,6 +132,7 @@ class Create(_CreateEdit):
         input_required = 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
         output_required = 'id', 'name'
+        output_optional = []
 
     def success_message(self, item):
         return 'Successfully created the PubSub API client'
