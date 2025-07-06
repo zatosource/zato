@@ -2,12 +2,11 @@
 
 $.fn.zato.data_table.PubSubClient = new Class({
     toString: function() {
-        var s = '<PubSubClient id:{0} name:{1} pattern:{2} access_type:{3} is_active:{4}>';
+        var s = '<PubSubClient id:{0} name:{1} pattern:{2} access_type:{3}>';
         return String.format(s, this.id ? this.id : '(none)', 
                                 this.name ? this.name : '(none)',
                                 this.pattern ? this.pattern : '(none)',
-                                this.access_type ? this.access_type : '(none)',
-                                this.is_active ? this.is_active : '(none)');
+                                this.access_type ? this.access_type : '(none)');
     }
 });
 
@@ -37,7 +36,6 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_active = item.is_active == true;
     var access_type_label = '';
     
     if(item.access_type == 'publisher') {

@@ -20,10 +20,9 @@ ACCESS_TYPE_CHOICES = [
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
-    sec_base_id = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:20em'}))
-    pattern = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30em'}))
-    access_type = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:15em'}))
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    sec_base_id = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
+    pattern = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    access_type = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
 
     def __init__(self, sec_base_choices=None, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
@@ -35,7 +34,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     id = forms.CharField(widget=forms.HiddenInput())
-    
+
     def __init__(self, sec_base_choices=None, *args, **kwargs):
         super(EditForm, self).__init__(sec_base_choices, *args, **kwargs)
 

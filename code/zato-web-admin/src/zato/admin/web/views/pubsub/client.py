@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-
 # Zato
 from zato.admin.web.forms.pubsub.client import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
