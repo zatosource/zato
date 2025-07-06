@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Pub/Sub Topics{% endblock %}
+{% block html_title %}pub/sub Topics{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -38,7 +38,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/Sub Topics</h2>
+<h2 class="zato">pub/sub Topics</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -52,7 +52,7 @@
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new Pub/Sub topic</a>
+            <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new pub/sub topic</a>
         </div>
 
         <div id="markup">
