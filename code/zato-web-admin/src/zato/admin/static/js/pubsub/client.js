@@ -459,17 +459,35 @@ function populateSecurityDefinitions(formType, selectedId) {
             var select = $(selectId);
             select.empty();
 
-            $.each(response.security_definitions, function(index, item) {
-                var option = $('<option></option>')
-                    .attr('value', item.id)
-                    .text(item.name);
-                if (selectedId && item.id == selectedId) {
-                    option.attr('selected', 'selected');
-                } else if (index === 0 && !selectedId) {
-                    option.attr('selected', 'selected');
-                }
-                select.append(option);
-            });
+            if (response.security_definitions && response.security_definitions.length > 0) {
+                // Populate select with available security definitions
+                $.each(response.security_definitions, function(index, item) {
+                    var option = $('<option></option>')
+                        .attr('value', item.id)
+                        .text(item.name);
+                    if (selectedId && item.id == selectedId) {
+                        option.attr('selected', 'selected');
+                    } else if (index === 0 && !selectedId) {
+                        option.attr('selected', 'selected');
+                    }
+                    select.append(option);
+                });
+            } else {
+                // No security definitions available - show appropriate message
+                var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
+                var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
+
+                // Replace select with informative text
+                var selectContainer = select.parent();
+                select.hide();
+
+                // Remove any existing message
+                selectContainer.find('.no-security-definitions-message').remove();
+
+                // Add message
+                var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + '</span>');
+                selectContainer.append(messageElement);
+            }
         },
         error: function(xhr, status, error) {
             console.error('Failed to load security definitions:', error);
