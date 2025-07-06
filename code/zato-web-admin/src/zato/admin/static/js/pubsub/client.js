@@ -311,10 +311,28 @@ function addPatternRow(formType) {
     var container = $('#' + formType + '-patterns-container');
     var rowCount = container.find('.pattern-row').length;
 
+    // Get current access type to determine what pattern types are available
+    var accessTypeId = formType === 'create' ? '#id_access_type' : '#id_edit-access_type';
+    var accessType = $(accessTypeId).val();
+
+    // Build options based on current access type
+    var optionsHtml = '';
+    var defaultValue = 'pub'; // fallback default
+
+    if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
+        optionsHtml += '<option value="pub">Publish</option>';
+        defaultValue = 'pub';
+    }
+    if (accessType === 'subscriber' || accessType === 'publisher-subscriber') {
+        optionsHtml += '<option value="sub">Subscribe</option>';
+        if (accessType === 'subscriber') {
+            defaultValue = 'sub'; // For subscriber-only, default to sub
+        }
+    }
+
     var newRow = $('<div class="pattern-row">' +
         '<select name="pattern_type_' + rowCount + '" class="pattern-type-select">' +
-        '<option value="pub">Publish</option>' +
-        '<option value="sub">Subscribe</option>' +
+        optionsHtml +
         '</select>' +
         '<input type="text" name="pattern_' + rowCount + '" class="pattern-input" style="width:50%" />' +
         '<button type="button" class="pattern-add-button" onclick="addPatternRow(\'' + formType + '\')" style="display:none">+</button>' +
@@ -323,6 +341,9 @@ function addPatternRow(formType) {
 
     container.append(newRow);
 
+    // Set the default value for the new select
+    newRow.find('.pattern-type-select').val(defaultValue);
+
     // Show remove buttons and hide add buttons except on last row
     container.find('.pattern-row').each(function(index) {
         var isLast = (index === container.find('.pattern-row').length - 1);
@@ -330,8 +351,7 @@ function addPatternRow(formType) {
         $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
     });
 
-    // Update pattern type options for the new row
-    updatePatternTypeOptions(formType);
+    // No need to call updatePatternTypeOptions since we created the row with correct options
 }
 
 function removePatternRow(button) {
