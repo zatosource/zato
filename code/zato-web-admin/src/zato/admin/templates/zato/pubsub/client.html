@@ -23,6 +23,11 @@
             gap: 4px;
         }
 
+        .pattern-type-select {
+            width: 80px;
+            margin-right: 8px;
+        }
+
         .pattern-add-button, .pattern-remove-button {
             width: 24px;
             height: 24px;
@@ -142,6 +147,10 @@
                             <td>
                                 <div id="create-patterns-container">
                                     <div class="pattern-row">
+                                        <select name="pattern_type_0" class="pattern-type-select">
+                                            <option value="pub">Publish</option>
+                                            <option value="sub">Subscribe</option>
+                                        </select>
                                         <input type="text" name="pattern_0" class="pattern-input" style="width:50%" />
                                         <button type="button" class="pattern-add-button" onclick="addPatternRow('create')">+</button>
                                         <button type="button" class="pattern-remove-button" onclick="removePatternRow(this)" style="display:none">-</button>
@@ -180,6 +189,10 @@
                             <td>
                                 <div id="edit-patterns-container">
                                     <div class="pattern-row">
+                                        <select name="pattern_type_0" class="pattern-type-select">
+                                            <option value="pub">Publish</option>
+                                            <option value="sub">Subscribe</option>
+                                        </select>
                                         <input type="text" name="pattern_0" class="pattern-input" style="width:50%" />
                                         <button type="button" class="pattern-add-button" onclick="addPatternRow('edit')">+</button>
                                         <button type="button" class="pattern-remove-button" onclick="removePatternRow(this)" style="display:none">-</button>
