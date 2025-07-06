@@ -103,20 +103,20 @@
                 <form novalidate action="{% url "pubsub-client-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Security definition:</td>
-                            <td>{{ create_form.sec_base_id }}</td>
+                            <td style="vertical-align:middle;width:20%">Active:</td>
+                            <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Pattern:</td>
-                            <td>{{ create_form.pattern }}</td>
+                            <td style="vertical-align:middle">Security definition:</td>
+                            <td>{{ create_form.sec_base_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Access type:</td>
                             <td>{{ create_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active:</td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle">Pattern:</td>
+                            <td>{{ create_form.pattern }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -136,20 +136,20 @@
                     {{ edit_form.id }}
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Security definition:</td>
-                            <td>{{ edit_form.sec_base_id }}</td>
+                            <td style="vertical-align:middle;width:20%">Active:</td>
+                            <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Pattern:</td>
-                            <td>{{ edit_form.pattern }}</td>
+                            <td style="vertical-align:middle">Security definition:</td>
+                            <td>{{ edit_form.sec_base_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Access type:</td>
                             <td>{{ edit_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active:</td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle">Pattern:</td>
+                            <td>{{ edit_form.pattern }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
