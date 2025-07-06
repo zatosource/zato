@@ -148,6 +148,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_permission_delete_request'
         response_elem = 'zato_pubsub_permission_delete_response'
+        input_required = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
