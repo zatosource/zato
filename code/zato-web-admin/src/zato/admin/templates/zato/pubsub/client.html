@@ -171,6 +171,31 @@
         .pattern-display-table .pattern-type-unknown:hover {
             background: #f5f5f5 !important;
         }
+
+        /* Isolate pattern table from parent row hover effects */
+        #data-table tbody tr:hover .pattern-display {
+            background-color: white !important;
+        }
+
+        #data-table tbody tr:hover .pattern-display-table {
+            background-color: white !important;
+        }
+
+        #data-table tbody tr:hover .pattern-display-table td {
+            background-color: white !important;
+        }
+
+        #data-table tbody tr:hover .pattern-display-table .pattern-type-pub {
+            background-color: #e8f5e8 !important;
+        }
+
+        #data-table tbody tr:hover .pattern-display-table .pattern-type-sub {
+            background-color: #e8f0ff !important;
+        }
+
+        #data-table tbody tr:hover .pattern-display-table .pattern-type-unknown {
+            background-color: #f5f5f5 !important;
+        }
     </style>
 
 {% endblock %}

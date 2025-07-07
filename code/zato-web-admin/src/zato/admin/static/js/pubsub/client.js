@@ -19,13 +19,11 @@ function showTopicsAlert(pattern) {
 
 // Function to render pattern tables
 function renderPatternTables() {
-    console.log('=== PATTERN DEBUG: renderPatternTables called ===');
-    console.log('Found pattern-display elements:', $('.pattern-display').length);
-    
+
     $('.pattern-display').each(function() {
         var $container = $(this);
         var patterns = $container.data('patterns');
-        console.log('Raw patterns data:', patterns);
+
 
         if (!patterns || patterns.trim() === '') {
             console.log('No patterns found, showing empty message');
@@ -37,12 +35,12 @@ function renderPatternTables() {
         patterns = patterns.replace(/\\u([0-9a-fA-F]{4})/g, function(match, code) {
             return String.fromCharCode(parseInt(code, 16));
         });
-        console.log('Decoded patterns:', patterns);
+
 
         var patternLines = patterns.split('\n').filter(function(line) {
             return line.trim() !== '';
         });
-        console.log('Pattern lines:', patternLines);
+
 
         if (patternLines.length === 0) {
             console.log('No pattern lines after filtering');
@@ -51,7 +49,7 @@ function renderPatternTables() {
         }
 
         var tableHtml = '<table class="pattern-display-table">';
-        console.log('Starting table generation...');
+
 
         patternLines.forEach(function(patternLine) {
             var type, value, typeClass;
@@ -80,11 +78,11 @@ function renderPatternTables() {
         });
 
         tableHtml += '</table>';
-        console.log('Generated table HTML:', tableHtml);
+
         $container.html(tableHtml);
-        console.log('Table inserted into container');
+
     });
-    console.log('=== PATTERN DEBUG: renderPatternTables complete ===');
+
 }
 
 $(document).ready(function() {
@@ -98,6 +96,8 @@ $(document).ready(function() {
 
     // Render pattern tables after data is loaded
     renderPatternTables();
+
+
 
     console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
