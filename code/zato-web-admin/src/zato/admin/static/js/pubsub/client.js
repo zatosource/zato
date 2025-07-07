@@ -39,11 +39,11 @@ function showTopicsAlert(pattern, event) {
 
     // Create popup content HTML
     var popupHtml = `
-        <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 13px; line-height: 1.4;">
-            <div id="${popupId}-content">
-                <div style="text-align: center; padding: 8px; color: #666;">
+        <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">
+            <div id="${popupId}-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">
+                <div style="text-align: center; padding: 8px; color: #666; background-color: #f0f0f0;">
                     <div style="display: inline-block; width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <div style="margin-top: 4px; font-size: 11px;">Loading...</div>
+                    <div style="margin-top: 4px; font-size: 10px;">Loading...</div>
                 </div>
             </div>
         </div>
@@ -51,6 +51,12 @@ function showTopicsAlert(pattern, event) {
             @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
+            }
+            #${popupId} { background-color: #f0f0f0 !important; }
+            /* Only target the dialog that contains this specific popup ID */
+            .ui-dialog:has(#${popupId}) {
+                background-color: #f0f0f0 !important;
+                width: 20em !important;
             }
         </style>
     `;
@@ -61,7 +67,7 @@ function showTopicsAlert(pattern, event) {
     // Create draggable dialog using jQuery UI
     $('#' + popupId).dialog({
         autoOpen: true,
-        width: 280,
+        width: '20em',
         height: 'auto',
         maxHeight: 350,
         resizable: false,
@@ -69,6 +75,10 @@ function showTopicsAlert(pattern, event) {
         position: { my: "left top", at: "left+" + (clickX + 10) + " top+" + clickY, of: window },
         close: function() {
             $(this).dialog('destroy').remove();
+        },
+        create: function(event, ui) {
+            // Target only this specific dialog with a direct selector
+            $(this).parent('.ui-dialog').css('width', '20em');
         }
     });
 
@@ -77,22 +87,28 @@ function showTopicsAlert(pattern, event) {
     var $titlebar = $dialog.find('.ui-dialog-titlebar');
     var $closeBtn = $titlebar.find('.ui-dialog-titlebar-close');
 
-    // Style the close button
+    // Style the close button - make it just text with no border or background
     $closeBtn.html('×').css({
         'position': 'absolute',
         'right': '4px',
         'top': '50%',
         'transform': 'translateY(-50%)',
-        'width': '14px',
-        'height': '14px',
+        'width': 'auto',
+        'height': 'auto',
         'font-size': '12px',
-        'line-height': '12px',
+        'line-height': '1',
         'text-align': 'center',
-        'padding': '0',
+        'color': '#999999',
+        'background': 'transparent',
         'border': 'none',
-        'background': 'none',
-        'color': '#999'
+        'border-radius': '0',
+        'box-shadow': 'none',
+        'cursor': 'pointer',
+        'padding': '0'
     });
+
+    // Remove any UI widget styling
+    $closeBtn.removeClass('ui-button ui-corner-all ui-widget ui-button-icon-only ui-dialog-titlebar-close');
 
     // Adjust title bar to make room for close button
     $titlebar.css('position', 'relative');
@@ -151,8 +167,8 @@ function showTopicsAlert(pattern, event) {
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
-                contentHtml = '<div style="margin-bottom: 6px; font-weight: bold; color: #2c5aa0; font-size: 11px;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + ':</div>';
-                contentHtml += '<div style="max-height: 250px; overflow-y: auto;">';
+                contentHtml = '<div style="margin-bottom: 6px; font-weight: bold; color: #2c5aa0; font-size: 10px; background-color: #f0f0f0;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + ':</div>';
+                contentHtml += '<div style="max-height: 250px; overflow-y: auto; background-color: #f0f0f0; padding: 5px;">';
 
                 response.matches.forEach(function(topic, index) {
                     if (index > 0) contentHtml += '<div style="border-top: 1px solid #eee; margin: 4px 0;"></div>';
@@ -166,7 +182,7 @@ function showTopicsAlert(pattern, event) {
 
                 contentHtml += '</div>';
             } else {
-                contentHtml = '<div style="text-align: center; padding: 8px; color: #666; font-size: 11px;">';
+                contentHtml = '<div style="text-align: center; padding: 8px; color: #666; font-size: 10px; background-color: #f0f0f0;">';
                 contentHtml += 'No matches found';
                 contentHtml += '</div>';
             }
@@ -181,7 +197,7 @@ function showTopicsAlert(pattern, event) {
                 statusCode: xhr.status
             });
 
-            var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 11px;">';
+            var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
             errorHtml += 'Error: ' + (error || 'Failed to load');
             if (xhr.status) {
                 errorHtml += ' (' + xhr.status + ')';
@@ -267,7 +283,7 @@ function renderPatternTables() {
             tableHtml += '<div class="pattern-type ' + typeClass + '">' + type + '</div>';
             tableHtml += '<div class="pattern-value">' + value + '</div>';
             tableHtml += '<div class="pattern-link-cell">';
-            tableHtml += '<a href="javascript:void(0)" onclick="showTopicsAlert(\'' + patternLine.replace(/'/g, "\\''") + '\')" class="pattern-link">Show matches</a>';
+            tableHtml += '<a href="javascript:void(0)" class="pattern-link" data-pattern="' + patternLine.replace(/"/g, '&quot;') + '">Show matches</a>';
             tableHtml += '</div>';
             tableHtml += '</div>';
         });
@@ -341,7 +357,7 @@ function initializePatternEditing() {
 
                         // Update the "Show matches" link
                         var $showLink = $link.closest('.pattern-row').find('.pattern-link');
-                        $showLink.attr('onclick', "showTopicsAlert('" + newPattern.replace(/'/g, "\\'") + "')");
+                        $showLink.attr('data-pattern', newPattern);
 
                         console.log('Pattern updated successfully:', newPattern);
                     } else {
@@ -428,6 +444,12 @@ $(document).ready(function() {
     $(document).on('change', '#id_edit-access_type', function() {
         console.log('=== ACCESS TYPE DEBUG: Edit access type changed to:', $(this).val());
         updatePatternTypeOptions('edit');
+    });
+
+    // Use event delegation for pattern link clicks instead of inline onclick
+    $(document).on('click', '.pattern-link', function(event) {
+        var pattern = $(this).data('pattern');
+        showTopicsAlert(pattern, event);
     });
 
     console.log('=== PUBSUB CLIENT DEBUG: Event handlers attached ===');
