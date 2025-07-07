@@ -543,7 +543,7 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // Get pattern data from the hidden cell that contains the raw patterns
     // This cell was created in new_row function with the raw pattern data
     var $row = $('#tr_' + id);
-    var patternData = $row.find('td:eq(8)').text();
+    var patternData = $row.find('td:eq(9)').text();
     console.log('=== EDIT DEBUG: Pattern data from hidden cell:', patternData);
 
     // If no data found in hidden cell, try to get it from data-patterns attribute
@@ -786,7 +786,7 @@ function addPatternRow(formType) {
     }
 
     // Create a new row as a separate DOM element with proper styling
-    var newRow = $('<div class="pattern-row" style="clear:both; margin-top:5px; display:block;">' +
+    var newRow = $('<div class="pattern-row">' +
         '<select name="pattern_type_' + rowCount + '" class="pattern-type-select">' +
         optionsHtml +
         '</select>' +
