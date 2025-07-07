@@ -105,25 +105,36 @@
         /* Pattern display table styles */
         .pattern-display-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             margin: 0;
             padding: 0;
             border: 1px solid var(--pattern-border-color);
+            border-radius: 6px;
+            overflow: hidden;
         }
 
         .pattern-display-table tr {
-            border-bottom: 1px solid var(--pattern-border-color);
+            border-bottom: 1px solid var(--pattern-border-color2);
         }
 
         .pattern-display-table td {
-            border: 1px solid var(--pattern-border-color);
+            border-right: 1px solid var(--pattern-border-color2);
+            border-bottom: 1px solid var(--pattern-border-color2);
             padding: 6px 8px;
             vertical-align: middle;
         }
 
+        .pattern-display-table td:last-child {
+            border-right: none;
+        }
+
+        .pattern-display-table tr:last-child td {
+            border-bottom: none;
+        }
+
         .pattern-display-table .pattern-type-pub {
             background: var(--pattern-pub-bg);
-            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
@@ -131,7 +142,6 @@
 
         .pattern-display-table .pattern-type-sub {
             background: var(--pattern-sub-bg);
-            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
@@ -139,7 +149,6 @@
 
         .pattern-display-table .pattern-type-unknown {
             background: var(--pattern-unknown-bg);
-            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
@@ -206,12 +215,15 @@
             background-color: var(--pattern-unknown-bg) !important;
         }
 
-        /* Force all pattern table borders to use CSS variable, overriding any parent styling */
-        .pattern-display-table,
+        /* Force pattern table external borders to use primary color, internal borders to use secondary color */
+        .pattern-display-table {
+            border-color: var(--pattern-border-color) !important;
+        }
+
         .pattern-display-table tr,
         .pattern-display-table td,
         .pattern-display-table th {
-            border-color: var(--pattern-border-color) !important;
+            border-color: var(--pattern-border-color2) !important;
         }
     </style>
 
