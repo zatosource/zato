@@ -130,17 +130,25 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // Populate patterns
     populatePatterns('edit', instance.pattern);
 
-    // Populate security definitions via AJAX when select element becomes available
-    var selectElement = $('#id_edit-sec_base_id');
-    if (selectElement.length > 0 && selectElement.is(':visible')) {
-        console.log('=== EDIT DEBUG: Populating security definitions ===');
+    // Function to populate security definitions and initialize form
+    function initializeEditForm() {
+        console.log('=== EDIT DEBUG: Populating security definitions and initializing pattern options ===');
         populateSecurityDefinitions('edit', instance.sec_base_id);
+        updatePatternTypeOptions('edit');
+    }
+
+    // Always populate security definitions via AJAX when select element becomes available
+    var selectElement = $('#id_edit-sec_base_id');
+    if (selectElement.length > 0) {
+        console.log('=== EDIT DEBUG: Select element found, initializing form ===');
+        initializeEditForm();
     } else {
+        // Wait for the select element to be added to the DOM
         var observer = new MutationObserver(function(mutations) {
             var selectElement = $('#id_edit-sec_base_id');
-            if (selectElement.length > 0 && selectElement.is(':visible')) {
-                console.log('=== EDIT DEBUG: Populating security definitions ===');
-                populateSecurityDefinitions('edit', instance.sec_base_id);
+            if (selectElement.length > 0) {
+                console.log('=== EDIT DEBUG: Select element found via observer, initializing form ===');
+                initializeEditForm();
                 observer.disconnect();
             }
         });
