@@ -177,44 +177,38 @@ function showTopicsAlert(pattern, event) {
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
-                contentHtml = '<div style="margin-bottom: 8px; font-weight: 600; color: #2c5aa0; font-size: 12px; background: linear-gradient(135deg, #f8f9ff 0%, #e8f0fe 100%); padding: 6px 8px; border-radius: 4px;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + '</div>';
-
-                // Calculate dynamic height based on number of matches
                 var matchCount = response.matches.length;
-                var itemHeight = 35; // Approximate height per item
-                var minHeight = 60; // Minimum content height
-                var maxHeight = 320; // Maximum before scrolling
-                var calculatedHeight = Math.max(minHeight, Math.min(maxHeight, matchCount * itemHeight));
-                var needsScrolling = matchCount * itemHeight > maxHeight;
+                var minHeight = 40;
+                var itemHeight = 50; // Approximate height per item
+                var maxHeight = 320; // Max scrollable height
+                var calculatedHeight = Math.min(minHeight + (matchCount * itemHeight), maxHeight);
+                var needsScrolling = calculatedHeight >= maxHeight;
 
                 console.log('Match count:', matchCount);
                 console.log('Calculated height:', calculatedHeight);
                 console.log('Needs scrolling:', needsScrolling);
 
-                var contentStyle = needsScrolling ?
-                    'height: ' + maxHeight + 'px; max-height: ' + maxHeight + 'px; overflow-y: auto; background: #fafbfc; padding: 8px; border: 1px solid #e1e8ed; border-radius: 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);' :
-                    'background: #fafbfc; padding: 8px; border: 1px solid #e1e8ed; border-radius: 6px;';
-
-                console.log('Content style:', contentStyle);
-                contentHtml += '<div style="' + contentStyle + '">';
+                var containerClass = needsScrolling ? 'topic-matches-scrollable' : 'topic-matches-container';
+                console.log('Container class:', containerClass);
+                contentHtml += '<div class="' + containerClass + '">';
 
                 response.matches.forEach(function(topic, index) {
-                    if (index > 0) contentHtml += '<div style="height: 1px; background: linear-gradient(90deg, transparent 0%, #e1e8ed 50%, transparent 100%); margin: 8px 0;"></div>';
-                    contentHtml += '<div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 4px; border-left: 2px solid #4a90e2; transition: all 0.2s ease;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.12)\'; this.style.transform=\'translateY(-1px)\';" onmouseout="this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.08)\'; this.style.transform=\'translateY(0)\';">';
-                    contentHtml += '<div style="font-weight: 600; color: #2c3e50; font-size: 13px; margin-bottom: 2px;">' + topic.name + '</div>';
+                    if (index > 0) contentHtml += '<div class="topic-divider"></div>';
+                    contentHtml += '<div class="topic-item">';
+                    contentHtml += '<div class="topic-item-name">' + topic.name + '</div>';
                     if (topic.description) {
-                        contentHtml += '<div style="color: #7f8c8d; font-size: 11px; line-height: 1.4; font-style: italic;">' + topic.description + '</div>';
+                        contentHtml += '<div class="topic-item-description">' + topic.description + '</div>';
                     }
                     contentHtml += '</div>';
                 });
 
                 contentHtml += '</div>';
             } else {
-                console.log('No matches found - creating compact popup');
-                contentHtml = '<div style="text-align: center; padding: 8px; color: #555; font-size: 13px; font-weight: 500; background: #fafbfc; height: 40px; line-height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid #e1e8ed; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+                console.log('No matches found - using CSS classes');
+                contentHtml += '<div class="topic-matches-header topic-matches-no-results">';
                 contentHtml += 'No matches found';
                 contentHtml += '</div>';
-                console.log('No matches content HTML:', contentHtml);
+                console.log('No matches content HTML (CSS classes):', contentHtml);
             }
 
             console.log('Setting popup content...');
@@ -225,7 +219,12 @@ function showTopicsAlert(pattern, event) {
                 console.log('Resizing dialog for no matches case');
                 var $popup = $('#' + popupId);
                 $popup.dialog('option', 'height', 80);  // Compact height for no matches
-                console.log('Dialog resized to height: 80px');
+
+                // Ensure shadow doesn't get clipped
+                $popup.css('overflow', 'visible');
+                $popup.parent('.ui-dialog').css('overflow', 'visible');
+
+                console.log('Dialog resized to height: 80px and overflow set to visible');
             }
 
             // Check popup dimensions after content is set
