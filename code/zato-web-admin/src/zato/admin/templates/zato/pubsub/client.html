@@ -210,14 +210,18 @@
         /* Topic matches popup styles */
         .topic-matches-header {
             text-align: center;
-            padding: 8px;
+            padding: 24px 8px;
             color: black;
             font-size: 12px;
             font-weight: 500;
             background: white;
             border-radius: 4px;
             margin-bottom: 8px;
-            box-shadow: 0 8px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .topic-matches-found-header {
@@ -285,6 +289,31 @@
             height: 1px;
             background: linear-gradient(90deg, transparent 0%, #e1e8ed 50%, transparent 100%);
             margin: 8px 0;
+        }
+
+        /* Smooth transitions for popup content */
+        .ui-dialog-content {
+            transition: opacity 11250ms ease-in-out;
+        }
+
+        .ui-dialog-content > div {
+            transition: opacity 11200ms ease-in-out, transform 11200ms ease-in-out;
+        }
+
+        /* Fade in animation */
+        .topic-popup-fade-in {
+            animation: topicPopupFadeIn 900ms ease-in-out;
+        }
+
+        @keyframes topicPopupFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-2px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 

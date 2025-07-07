@@ -216,20 +216,14 @@ function showTopicsAlert(pattern, event) {
             }
 
             console.log('Setting popup content...');
-            $('#' + popupId + '-content').html(contentHtml);
+            var $content = $('#' + popupId + '-content');
+            $content.html(contentHtml);
+            $content.addClass('topic-popup-fade-in');
 
-            // Resize dialog for no-matches case
-            if (!response.matches || response.matches.length === 0) {
-                console.log('Resizing dialog for no matches case');
-                var $popup = $('#' + popupId);
-                $popup.dialog('option', 'height', 80);  // Compact height for no matches
-
-                // Ensure shadow doesn't get clipped
-                $popup.css('overflow', 'visible');
-                $popup.parent('.ui-dialog').css('overflow', 'visible');
-
-                console.log('Dialog resized to height: 80px and overflow set to visible');
-            }
+            // Ensure shadow doesn't get clipped for all cases
+            var $popup = $('#' + popupId);
+            $popup.css('overflow', 'visible');
+            $popup.parent('.ui-dialog').css('overflow', 'visible');
 
             // Check popup dimensions after content is set
             setTimeout(function() {
