@@ -540,8 +540,33 @@ $.fn.zato.pubsub.client.edit = function(id) {
     $('#edit-id').val(instance.id);
     $('#edit-access_type').val(instance.access_type);
 
+    // Get pattern data from the hidden cell that contains the raw patterns
+    // This cell was created in new_row function with the raw pattern data
+    var $row = $('#tr_' + id);
+    var patternData = $row.find('td:eq(8)').text();
+    console.log('=== EDIT DEBUG: Pattern data from hidden cell:', patternData);
+
+    // If no data found in hidden cell, try to get it from data-patterns attribute
+    if (!patternData || patternData.trim() === '') {
+        patternData = $row.find('.pattern-display').attr('data-patterns');
+        console.log('=== EDIT DEBUG: Pattern data from data-patterns attribute:', patternData);
+    }
+
+    // If still no data, try instance.pattern as last resort
+    if (!patternData || patternData.trim() === '') {
+        patternData = instance.pattern;
+        console.log('=== EDIT DEBUG: Pattern data from instance:', patternData);
+    }
+
+    // Decode any HTML entities in the pattern data
+    if (patternData) {
+        patternData = patternData.replace(/\\u003D/g, '=');
+        patternData = patternData.replace(/\\u000A/g, '\n');
+        console.log('=== EDIT DEBUG: Final decoded patterns:', patternData);
+    }
+
     // Populate patterns
-    populatePatterns('edit', instance.pattern);
+    populatePatterns('edit', patternData);
 
     // Function to populate security definitions and initialize form
     function initializeEditForm() {
