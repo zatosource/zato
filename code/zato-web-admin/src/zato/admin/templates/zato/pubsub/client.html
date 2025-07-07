@@ -94,6 +94,83 @@
             height: 100%;
             box-sizing: border-box;
         }
+
+        /* Pattern display table styles */
+        .pattern-display-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .pattern-display-table tr {
+            border-bottom: 1px solid #eee;
+        }
+
+        .pattern-display-table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+        }
+
+        .pattern-display-table .pattern-type-pub {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            font-weight: bold;
+            width: 60px;
+            text-align: center;
+        }
+
+        .pattern-display-table .pattern-type-sub {
+            background: #e8f0ff;
+            border: 1px solid #c3d9ff;
+            font-weight: bold;
+            width: 60px;
+            text-align: center;
+        }
+
+        .pattern-display-table .pattern-type-unknown {
+            background: #f5f5f5;
+            border: 1px solid #ccc;
+            font-weight: bold;
+            width: 60px;
+            text-align: center;
+        }
+
+        .pattern-display-table .pattern-link-cell {
+            width: 120px;
+            text-align: center;
+        }
+
+        .pattern-display-table .pattern-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 11px;
+        }
+
+        .pattern-display-table .pattern-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Prevent table row hover effects */
+        .pattern-display-table tr:hover {
+            background-color: inherit !important;
+        }
+
+        .pattern-display-table tr:hover td {
+            background-color: inherit !important;
+        }
+
+        .pattern-display-table .pattern-type-pub:hover {
+            background: #e8f5e8 !important;
+        }
+
+        .pattern-display-table .pattern-type-sub:hover {
+            background: #e8f0ff !important;
+        }
+
+        .pattern-display-table .pattern-type-unknown:hover {
+            background: #f5f5f5 !important;
+        }
     </style>
 
 {% endblock %}
