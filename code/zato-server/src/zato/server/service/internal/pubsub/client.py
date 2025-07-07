@@ -6,8 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
 
@@ -77,8 +75,8 @@ class Create(AdminService):
                 permission = PubSubPermission()
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
-                permission.pattern = '\n'.join(patterns)
-                permission.cluster_id = cluster_id
+                permission.pattern = '\n'.join(patterns) # type: ignore
+                permission.cluster_id = cluster_id       # type: ignore
 
                 set_instance_opaque_attrs(permission, input)
 
@@ -113,7 +111,6 @@ class Edit(AdminService):
 
     def handle(self):
         input = self.request.input
-        cluster_id = self.server.cluster_id
 
         # Validate patterns
         if not input.pattern or not input.pattern.strip():
