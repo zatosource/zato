@@ -511,6 +511,12 @@ $.fn.zato.pubsub.client.create = function() {
             observer.observe(document.body, { childList: true, subtree: true });
         }
     }, 100);
+
+    // Set callback to re-render pattern tables after successful create
+    $.fn.zato.data_table.on_submit_complete_callback = function() {
+        console.log('=== CREATE CALLBACK: Re-rendering pattern tables after create ===');
+        renderPatternTables();
+    };
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
@@ -621,6 +627,12 @@ $.fn.zato.pubsub.client.edit = function(id) {
             accessTypeSelect.data('prev-value', accessTypeSelect.val());
         }
     }, 500);
+
+    // Set callback to re-render pattern tables after successful edit
+    $.fn.zato.data_table.on_submit_complete_callback = function() {
+        console.log('=== EDIT CALLBACK: Re-rendering pattern tables after edit ===');
+        renderPatternTables();
+    };
 }
 
 // Function to log all form fields
@@ -733,13 +745,21 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
         access_type_label = 'Publisher & Subscriber';
     }
 
-    var pattern_display = item.pattern ? item.pattern.replace(/\n/g, ', ') : '';
+    // Create pattern display structure to match initial rendering
+    var pattern_display_html = '';
+    if (item.pattern) {
+        var escaped_pattern = item.pattern.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        pattern_display_html = String.format('<div class="pattern-display" data-patterns="{0}"></div>', escaped_pattern);
+    } else {
+        pattern_display_html = '<div class="pattern-display" data-patterns=""></div>';
+    }
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', pattern_display);
+    row += String.format('<td>{0}</td>', pattern_display_html);
     row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
+    row += String.format('<td style="text-align:center">{0}</td>', item.subscription_count || '0');
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.delete_(\'{0}\')">Delete</a></td>', item.id);
     row += String.format('<td style="display:none">{0}</td>', item.id); // id (hidden)
