@@ -48,8 +48,7 @@ function renderPatternTables() {
             return;
         }
 
-        var tableHtml = '<table class="pattern-display-table">';
-
+        var tableHtml = '<div class="pattern-display-container">';
 
         patternLines.forEach(function(patternLine) {
             var type, value, typeClass;
@@ -68,16 +67,16 @@ function renderPatternTables() {
                 typeClass = 'pattern-type-unknown';
             }
 
-            tableHtml += '<tr>';
-            tableHtml += '<td class="' + typeClass + '">' + type + '</td>';
-            tableHtml += '<td>' + value + '</td>';
-            tableHtml += '<td class="pattern-link-cell">';
-            tableHtml += '<a href="javascript:void(0)" onclick="showTopicsAlert(\'' + patternLine.replace(/'/g, "\\'") + '\')" class="pattern-link">Show topics</a>';
-            tableHtml += '</td>';
-            tableHtml += '</tr>';
+            tableHtml += '<div class="pattern-row">';
+            tableHtml += '<div class="pattern-type ' + typeClass + '">' + type + '</div>';
+            tableHtml += '<div class="pattern-value">' + value + '</div>';
+            tableHtml += '<div class="pattern-link-cell">';
+            tableHtml += '<a href="javascript:void(0)" onclick="showTopicsAlert(\'' + patternLine.replace(/'/g, "\\''") + '\')" class="pattern-link">Show topics</a>';
+            tableHtml += '</div>';
+            tableHtml += '</div>';
         });
 
-        tableHtml += '</table>';
+        tableHtml += '</div>';
 
         $container.html(tableHtml);
 
