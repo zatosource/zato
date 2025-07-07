@@ -82,3 +82,19 @@ class Delete(_Delete):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class GetMatches(_Index):
+    method_allowed = 'POST'
+    url_name = 'pubsub-topic-get-matches'
+    service_name = 'zato.pubsub.topic.get-matches'
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = 'cluster_id', 'pattern'
+        output_required = 'matches',
+        output_repeated = True
+
+    def handle(self):
+        return self.req_resp_func(self.request, self.service_name, self.SimpleIO, method='POST')
+
+# ################################################################################################################################
+# ################################################################################################################################
