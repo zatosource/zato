@@ -715,6 +715,7 @@ urlpatterns += [
         login_required(topic.Edit()), name=topic.Edit.url_name),
     url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(topic.Delete()), name=topic.Delete.url_name),
+    url(r'^zato/pubsub/topic/get-matches/$', login_required(topic.get_matches), name='pubsub-topic-get-matches'),
 
     # PubSub Client Assignments
 
