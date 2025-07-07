@@ -215,24 +215,13 @@ class GetMatches(AdminService):
         input_pattern = self.request.input.pattern
         cluster_id = self.request.input.cluster_id
 
-        # Convert pattern to regex
-
-        # Replace ** with a temporary placeholder
-        regex_pattern = input_pattern.replace('**', '__DOUBLE_ASTERISK__')
-
-        # Replace single * with [^.]* (match any character except dot)
-        regex_pattern = regex_pattern.replace('*', '[^.]*')
-
-        # Replace double asterisk placeholder with .* (match any character including dot)
-        regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
-
-        # Anchor the pattern
-        regex_pattern = '^' + regex_pattern + '$'
-
-        compiled_pattern = re.compile(regex_pattern)
+        # Extract the actual topic pattern (after pub= or sub= if present)
+        if input_pattern.startswith('pub=') or input_pattern.startswith('sub='):
+            topic_pattern = input_pattern.split('=', 1)[1]
+        else:
+            topic_pattern = input_pattern
 
         with closing(self.odb.session()) as session:
-
             # Get all topics for this cluster
             topics = session.query(PubSubTopic).filter(
                 PubSubTopic.cluster_id == cluster_id,
@@ -240,13 +229,34 @@ class GetMatches(AdminService):
             ).all()
 
             matching_topics = []
-            for topic in topics:
-                if compiled_pattern.match(topic.name):
-                    matching_topics.append({
-                        'id': topic.id,
-                        'name': topic.name,
-                        'description': topic.description or ''
-                    })
+
+            # Use pattern matching based on whether wildcards are present
+            if '*' not in topic_pattern and '?' not in topic_pattern:
+                # Direct matching for simple topic names (no wildcards)
+                for topic in topics:
+                    if topic.name == topic_pattern:
+                        matching_topics.append({
+                            'id': topic.id,
+                            'name': topic.name,
+                            'description': topic.description or ''
+                        })
+            else:
+                # Pattern matching for wildcards
+                # Convert pattern to regex
+                regex_pattern = topic_pattern.replace('**', '__DOUBLE_ASTERISK__')
+                regex_pattern = regex_pattern.replace('*', '[^.]*')
+                regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
+                regex_pattern = '^' + regex_pattern + '$'
+                compiled_pattern = re.compile(regex_pattern)
+
+                # Check each topic against the regex pattern
+                for topic in topics:
+                    if compiled_pattern.match(topic.name):
+                        matching_topics.append({
+                            'id': topic.id,
+                            'name': topic.name,
+                            'description': topic.description or ''
+                        })
 
             self.response.payload.matches = matching_topics
 

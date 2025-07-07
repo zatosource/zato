@@ -87,19 +87,19 @@ function showTopicsAlert(pattern, event) {
     var $titlebar = $dialog.find('.ui-dialog-titlebar');
     var $closeBtn = $titlebar.find('.ui-dialog-titlebar-close');
 
-    // Style the close button - make it just text with no border or background
+    // Style the close button - white background with black X
     $closeBtn.html('×').css({
         'position': 'absolute',
         'right': '4px',
         'top': '50%',
         'transform': 'translateY(-50%)',
-        'width': 'auto',
-        'height': 'auto',
+        'width': '14px',
+        'height': '14px',
         'font-size': '12px',
-        'line-height': '1',
+        'line-height': '14px',
         'text-align': 'center',
-        'color': '#999999',
-        'background': 'transparent',
+        'color': '#000000',
+        'background': '#ddd',
         'border': 'none',
         'border-radius': '0',
         'box-shadow': 'none',
