@@ -884,14 +884,27 @@ def pubsub_permission(session, cluster_id, id):
 
 @query_wrapper
 def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=False):
+    # Import PubSubSubscription here to avoid circular imports
+    from zato.common.odb.model import PubSubSubscription
+
+    # Subquery to count subscriptions per security definition
+    subscription_count = session.query(
+        PubSubSubscription.sec_base_id,
+        func.count(PubSubSubscription.id).label('subscription_count')
+    ).filter(
+        PubSubSubscription.cluster_id == cluster_id,
+        PubSubSubscription.is_active == True
+    ).group_by(PubSubSubscription.sec_base_id).subquery()
+
+    # Main query with subscription counts
     return session.query(
-        PubSubPermission.id,
-        SecurityBase.name,
-        PubSubPermission.pattern,
-        PubSubPermission.access_type,
-        PubSubPermission.sec_base_id
+        PubSubPermission,
+        SecurityBase.name.label('name'),
+        func.coalesce(subscription_count.c.subscription_count, 0).label('subscription_count')
     ).join(
         SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
+    ).outerjoin(
+        subscription_count, PubSubPermission.sec_base_id == subscription_count.c.sec_base_id
     ).filter(
         PubSubPermission.cluster_id == cluster_id
     ).order_by(SecurityBase.name)

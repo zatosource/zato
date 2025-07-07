@@ -216,6 +216,7 @@
             'name',
             'pattern',
             'access_type',
+            'subscription_count',
             '_edit',
             '_delete',
             'id',
@@ -254,6 +255,7 @@
 
                         <th><a href="#">Patterns</a></th>
                         <th style="text-align:center"><a href="#">Access type</a></th>
+                        <th style="text-align:center"><a href="#">Subscriptions</a></th>
                         <th>&nbsp;</th>
 
                         <th>&nbsp;</th>
@@ -279,6 +281,7 @@
                             </div>
                         </td>
                         <td style="text-align:center">{{ item.access_type|capfirst }}</td>
+                        <td style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.client.edit('{{ item.id }}')">Edit</a></td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.client.delete_('{{ item.id }}')">Delete</a></td>

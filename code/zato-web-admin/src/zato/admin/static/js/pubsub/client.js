@@ -19,11 +19,19 @@ function showTopicsAlert(pattern) {
 
 // Function to render pattern tables
 function renderPatternTables() {
+    console.log('=== PATTERN TABLE DEBUG: Starting renderPatternTables ===');
+    console.log('Found pattern-display elements:', $('.pattern-display').length);
 
-    $('.pattern-display').each(function() {
+    $('.pattern-display').each(function(index) {
         var $container = $(this);
         var patterns = $container.data('patterns');
 
+        console.log('=== PATTERN DEBUG [' + index + '] ===');
+        console.log('Container element:', $container[0]);
+        console.log('Raw patterns data:', patterns);
+        console.log('Patterns type:', typeof patterns);
+        console.log('Patterns length:', patterns ? patterns.length : 'N/A');
+        console.log('Container HTML before:', $container.html());
 
         if (!patterns || patterns.trim() === '') {
             console.log('No patterns found, showing empty message');
@@ -41,6 +49,8 @@ function renderPatternTables() {
             return line.trim() !== '';
         });
 
+        console.log('Pattern lines after split and filter:', patternLines);
+        console.log('Pattern lines count:', patternLines.length);
 
         if (patternLines.length === 0) {
             console.log('No pattern lines after filtering');
@@ -86,6 +96,9 @@ function renderPatternTables() {
 
 $(document).ready(function() {
     console.log('=== PUBSUB CLIENT DEBUG: Document ready ===');
+    console.log('Table HTML:', $('#data-table').html());
+    console.log('Table rows count:', $('#data-table tbody tr').length);
+
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubClient;
@@ -94,6 +107,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
 
     // Call the render function after the page loads
+    console.log('=== CALLING renderPatternTables ===');
     renderPatternTables();
     console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
