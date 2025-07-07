@@ -785,7 +785,8 @@ function addPatternRow(formType) {
         }
     }
 
-    var newRow = $('<div class="pattern-row">' +
+    // Create a new row as a separate DOM element with proper styling
+    var newRow = $('<div class="pattern-row" style="clear:both; margin-top:5px; display:block;">' +
         '<select name="pattern_type_' + rowCount + '" class="pattern-type-select">' +
         optionsHtml +
         '</select>' +
@@ -794,6 +795,7 @@ function addPatternRow(formType) {
         '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)">-</button>' +
         '</div>');
 
+    // Append the new row to the container
     container.append(newRow);
 
     // Set the default value for the new select
@@ -826,28 +828,28 @@ function removePatternRow(button) {
 }
 
 function consolidatePatterns(formType) {
-    console.log('=== CONSOLIDATE DEBUG: Starting consolidatePatterns for:', formType);
+    console.log('=== CONSOLIDATE DEBUG: Starting consolidatePatterns for:', JSON.stringify(formType, null, 2));
     var container = $('#' + formType + '-patterns-container');
-    console.log('Container found:', container.length > 0);
+    console.log('Container found:', JSON.stringify(container.length > 0, null, 2));
     var patterns = [];
 
     container.find('.pattern-row').each(function(index) {
         var patternType = $(this).find('.pattern-type-select').val();
         var patternValue = $(this).find('.pattern-input').val().trim();
-        console.log('Row', index, '- Type:', patternType, 'Value:', JSON.stringify(patternValue));
+        console.log('Row ' + index + ':', JSON.stringify({Type: patternType, Value: patternValue}, null, 2));
         if (patternValue) {
             var combined = patternType + '=' + patternValue;
             patterns.push(combined);
-            console.log('Added pattern:', JSON.stringify(combined));
+            console.log('Added pattern:', JSON.stringify(combined, null, 2));
         }
     });
 
     var consolidated = patterns.join('\n');
-    console.log('Final consolidated patterns:', JSON.stringify(consolidated));
+    console.log('Final consolidated patterns:', JSON.stringify(consolidated, null, 2));
     var hiddenField = $('#' + formType + '-pattern-hidden');
-    console.log('Hidden field found:', hiddenField.length > 0);
+    console.log('Hidden field found:', JSON.stringify(hiddenField.length > 0, null, 2));
     hiddenField.val(consolidated);
-    console.log('Hidden field value set to:', JSON.stringify(hiddenField.val()));
+    console.log('Hidden field value set to:', JSON.stringify(hiddenField.val(), null, 2));
 }
 
 function populatePatterns(formType, patternString) {
