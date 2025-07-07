@@ -68,8 +68,8 @@ function showTopicsAlert(pattern, event) {
     $('#' + popupId).dialog({
         autoOpen: true,
         width: '20em',
-        height: 'auto',
-        maxHeight: 350,
+        height: 'auto',  // Start with auto height, will adjust based on content
+        maxHeight: 400,
         resizable: false,
         draggable: true,
         position: { my: "left top", at: "left+" + (clickX + 10) + " top+" + clickY, of: window },
@@ -173,11 +173,30 @@ function showTopicsAlert(pattern, event) {
         },
         success: function(response) {
             console.log('AJAX Success Response:', response);
+            console.log('=== POPUP SIZING DEBUG ===');
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
                 contentHtml = '<div style="margin-bottom: 6px; font-weight: bold; color: #2c5aa0; font-size: 10px; background-color: #f0f0f0;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + ':</div>';
-                contentHtml += '<div style="max-height: 250px; overflow-y: auto; background-color: #f0f0f0; padding: 5px;">';
+
+                // Calculate dynamic height based on number of matches
+                var matchCount = response.matches.length;
+                var itemHeight = 35; // Approximate height per item
+                var minHeight = 60; // Minimum content height
+                var maxHeight = 320; // Maximum before scrolling
+                var calculatedHeight = Math.max(minHeight, Math.min(maxHeight, matchCount * itemHeight));
+                var needsScrolling = matchCount * itemHeight > maxHeight;
+
+                console.log('Match count:', matchCount);
+                console.log('Calculated height:', calculatedHeight);
+                console.log('Needs scrolling:', needsScrolling);
+
+                var contentStyle = needsScrolling ?
+                    'height: ' + maxHeight + 'px; max-height: ' + maxHeight + 'px; overflow-y: auto; background-color: #f0f0f0; padding: 5px; border: 1px solid #ddd;' :
+                    'background-color: #f0f0f0; padding: 5px;';
+
+                console.log('Content style:', contentStyle);
+                contentHtml += '<div style="' + contentStyle + '">';
 
                 response.matches.forEach(function(topic, index) {
                     if (index > 0) contentHtml += '<div style="border-top: 1px solid #eee; margin: 4px 0;"></div>';
@@ -191,12 +210,33 @@ function showTopicsAlert(pattern, event) {
 
                 contentHtml += '</div>';
             } else {
-                contentHtml = '<div style="text-align: center; padding: 8px; color: #666; font-size: 10px; background-color: #f0f0f0;">';
+                console.log('No matches found - creating compact popup');
+                contentHtml = '<div style="text-align: center; padding: 4px; color: #666; font-size: 10px; background-color: #f0f0f0; height: 30px; line-height: 22px;">';
                 contentHtml += 'No matches found';
                 contentHtml += '</div>';
+                console.log('No matches content HTML:', contentHtml);
             }
 
+            console.log('Setting popup content...');
             $('#' + popupId + '-content').html(contentHtml);
+
+            // Resize dialog for no-matches case
+            if (!response.matches || response.matches.length === 0) {
+                console.log('Resizing dialog for no matches case');
+                var $popup = $('#' + popupId);
+                $popup.dialog('option', 'height', 80);  // Compact height for no matches
+                console.log('Dialog resized to height: 80px');
+            }
+
+            // Check popup dimensions after content is set
+            setTimeout(function() {
+                var $popup = $('#' + popupId);
+                var $dialog = $popup.dialog('widget');
+                console.log('Final popup dimensions:');
+                console.log('Dialog width:', $dialog.width());
+                console.log('Dialog height:', $dialog.height());
+                console.log('Content height:', $popup.height());
+            }, 100);
         },
         error: function(xhr, status, error) {
             console.error('AJAX Error:', {
