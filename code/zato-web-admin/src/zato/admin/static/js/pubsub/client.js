@@ -795,17 +795,18 @@ function addPatternRow(formType) {
         '<button type="button" class="pattern-remove-button" onclick="removePatternRow(this)">-</button>' +
         '</div>');
 
-    // Append the new row to the container
-    container.append(newRow);
+    // Prepend the new row to the top of the container
+    container.prepend(newRow);
 
     // Set the default value for the new select
     newRow.find('.pattern-type-select').val(defaultValue);
 
-    // Show remove buttons and hide add buttons except on last row
+    // Show add button on first row, remove buttons on all rows when more than one
     container.find('.pattern-row').each(function(index) {
-        var isLast = (index === container.find('.pattern-row').length - 1);
-        $(this).find('.pattern-add-button').toggle(isLast);
-        $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
+        var isFirst = (index === 0);
+        var hasMultipleRows = container.find('.pattern-row').length > 1;
+        $(this).find('.pattern-add-button').toggle(isFirst);
+        $(this).find('.pattern-remove-button').toggle(hasMultipleRows);
     });
 
     // No need to call updatePatternTypeOptions since we created the row with correct options
@@ -820,9 +821,10 @@ function removePatternRow(button) {
 
         // Update button visibility
         container.find('.pattern-row').each(function(index) {
-            var isLast = (index === container.find('.pattern-row').length - 1);
-            $(this).find('.pattern-add-button').toggle(isLast);
-            $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
+            var isFirst = (index === 0);
+            var hasMultipleRows = container.find('.pattern-row').length > 1;
+            $(this).find('.pattern-add-button').toggle(isFirst);
+            $(this).find('.pattern-remove-button').toggle(hasMultipleRows);
         });
     }
 }
@@ -890,11 +892,12 @@ function populatePatterns(formType, patternString) {
         container.append(row);
     });
 
-    // Show appropriate buttons
+    // Show add button on first row, remove buttons on all rows when more than one
     container.find('.pattern-row').each(function(index) {
-        var isLast = (index === container.find('.pattern-row').length - 1);
-        $(this).find('.pattern-add-button').toggle(isLast);
-        $(this).find('.pattern-remove-button').toggle(!isLast || container.find('.pattern-row').length > 1);
+        var isFirst = (index === 0);
+        var hasMultipleRows = container.find('.pattern-row').length > 1;
+        $(this).find('.pattern-add-button').toggle(isFirst);
+        $(this).find('.pattern-remove-button').toggle(hasMultipleRows);
     });
 
     // Update pattern type options based on access type
