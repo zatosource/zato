@@ -177,7 +177,7 @@ function showTopicsAlert(pattern, event) {
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
-                contentHtml = '<div style="margin-bottom: 6px; font-weight: bold; color: #2c5aa0; font-size: 10px; background-color: #f0f0f0;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + ':</div>';
+                contentHtml = '<div style="margin-bottom: 8px; font-weight: 600; color: #2c5aa0; font-size: 12px; background: linear-gradient(135deg, #f8f9ff 0%, #e8f0fe 100%); padding: 6px 8px; border-radius: 4px;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + '</div>';
 
                 // Calculate dynamic height based on number of matches
                 var matchCount = response.matches.length;
@@ -192,18 +192,18 @@ function showTopicsAlert(pattern, event) {
                 console.log('Needs scrolling:', needsScrolling);
 
                 var contentStyle = needsScrolling ?
-                    'height: ' + maxHeight + 'px; max-height: ' + maxHeight + 'px; overflow-y: auto; background-color: #f0f0f0; padding: 5px; border: 1px solid #ddd;' :
-                    'background-color: #f0f0f0; padding: 5px;';
+                    'height: ' + maxHeight + 'px; max-height: ' + maxHeight + 'px; overflow-y: auto; background: #fafbfc; padding: 8px; border: 1px solid #e1e8ed; border-radius: 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);' :
+                    'background: #fafbfc; padding: 8px; border: 1px solid #e1e8ed; border-radius: 6px;';
 
                 console.log('Content style:', contentStyle);
                 contentHtml += '<div style="' + contentStyle + '">';
 
                 response.matches.forEach(function(topic, index) {
-                    if (index > 0) contentHtml += '<div style="border-top: 1px solid #eee; margin: 4px 0;"></div>';
-                    contentHtml += '<div style="padding: 2px 0;">';
-                    contentHtml += '<div style="font-weight: bold; color: #333; font-size: 12px;">' + topic.name + '</div>';
+                    if (index > 0) contentHtml += '<div style="height: 1px; background: linear-gradient(90deg, transparent 0%, #e1e8ed 50%, transparent 100%); margin: 8px 0;"></div>';
+                    contentHtml += '<div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 4px; border-left: 2px solid #4a90e2; transition: all 0.2s ease;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.12)\'; this.style.transform=\'translateY(-1px)\';" onmouseout="this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.08)\'; this.style.transform=\'translateY(0)\';">';
+                    contentHtml += '<div style="font-weight: 600; color: #2c3e50; font-size: 13px; margin-bottom: 2px;">' + topic.name + '</div>';
                     if (topic.description) {
-                        contentHtml += '<div style="color: #666; font-size: 11px; margin-top: 1px;">' + topic.description + '</div>';
+                        contentHtml += '<div style="color: #7f8c8d; font-size: 11px; line-height: 1.4; font-style: italic;">' + topic.description + '</div>';
                     }
                     contentHtml += '</div>';
                 });
@@ -211,7 +211,7 @@ function showTopicsAlert(pattern, event) {
                 contentHtml += '</div>';
             } else {
                 console.log('No matches found - creating compact popup');
-                contentHtml = '<div style="text-align: center; padding: 4px; color: #666; font-size: 10px; background-color: #f0f0f0; height: 30px; line-height: 22px;">';
+                contentHtml = '<div style="text-align: center; padding: 8px; color: #555; font-size: 13px; font-weight: 500; background: #fafbfc; height: 40px; line-height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid #e1e8ed; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
                 contentHtml += 'No matches found';
                 contentHtml += '</div>';
                 console.log('No matches content HTML:', contentHtml);
