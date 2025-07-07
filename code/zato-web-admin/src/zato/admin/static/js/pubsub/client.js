@@ -94,11 +94,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
 
-    // Render pattern tables after data is loaded
+    // Call the render function after the page loads
     renderPatternTables();
-
-
-
     console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
     // Setup form submission handlers for pattern consolidation (using event delegation)

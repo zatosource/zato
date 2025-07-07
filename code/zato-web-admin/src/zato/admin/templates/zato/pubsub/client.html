@@ -7,6 +7,13 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 
     <style type="text/css">
+        :root {
+            --pattern-pub-bg: #FFE8CC;
+            --pattern-sub-bg: #e8f0ff;
+            --pattern-unknown-bg: #f5f5f5;
+            --pattern-border-color: #999;
+            --pattern-border-color2: #ccc;
+        }
 
         .ui-dialog-titlebar {
             margin-bottom: 0px !important;
@@ -99,38 +106,40 @@
         .pattern-display-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            border: 1px solid var(--pattern-border-color);
         }
 
         .pattern-display-table tr {
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--pattern-border-color);
         }
 
         .pattern-display-table td {
+            border: 1px solid var(--pattern-border-color);
             padding: 6px 8px;
-            border: 1px solid #ddd;
             vertical-align: middle;
         }
 
         .pattern-display-table .pattern-type-pub {
-            background: #e8f5e8;
-            border: 1px solid #c3e6c3;
+            background: var(--pattern-pub-bg);
+            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
         }
 
         .pattern-display-table .pattern-type-sub {
-            background: #e8f0ff;
-            border: 1px solid #c3d9ff;
+            background: var(--pattern-sub-bg);
+            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
         }
 
         .pattern-display-table .pattern-type-unknown {
-            background: #f5f5f5;
-            border: 1px solid #ccc;
+            background: var(--pattern-unknown-bg);
+            border: 1px solid var(--pattern-border-color);
             font-weight: bold;
             width: 60px;
             text-align: center;
@@ -161,15 +170,15 @@
         }
 
         .pattern-display-table .pattern-type-pub:hover {
-            background: #e8f5e8 !important;
+            background: var(--pattern-pub-bg) !important;
         }
 
         .pattern-display-table .pattern-type-sub:hover {
-            background: #e8f0ff !important;
+            background: var(--pattern-sub-bg) !important;
         }
 
         .pattern-display-table .pattern-type-unknown:hover {
-            background: #f5f5f5 !important;
+            background: var(--pattern-unknown-bg) !important;
         }
 
         /* Isolate pattern table from parent row hover effects */
@@ -186,15 +195,23 @@
         }
 
         #data-table tbody tr:hover .pattern-display-table .pattern-type-pub {
-            background-color: #e8f5e8 !important;
+            background-color: var(--pattern-pub-bg) !important;
         }
 
         #data-table tbody tr:hover .pattern-display-table .pattern-type-sub {
-            background-color: #e8f0ff !important;
+            background-color: var(--pattern-sub-bg) !important;
         }
 
         #data-table tbody tr:hover .pattern-display-table .pattern-type-unknown {
-            background-color: #f5f5f5 !important;
+            background-color: var(--pattern-unknown-bg) !important;
+        }
+
+        /* Force all pattern table borders to use CSS variable, overriding any parent styling */
+        .pattern-display-table,
+        .pattern-display-table tr,
+        .pattern-display-table td,
+        .pattern-display-table th {
+            border-color: var(--pattern-border-color) !important;
         }
     </style>
 
