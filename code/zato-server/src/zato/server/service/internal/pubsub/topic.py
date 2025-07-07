@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from traceback import format_exc
+import re
 
 # Zato
 from zato.common.broker_message import PUBSUB
@@ -196,6 +197,58 @@ class Delete(AdminService):
                 self.request.input.action = PUBSUB.TOPIC_DELETE.value
                 self.request.input.name = topic.name
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMatches(AdminService):
+    """ Returns a list of Pub/Sub topics matching a given pattern.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_topic_get_matches_request'
+        response_elem = 'zato_pubsub_topic_get_matches_response'
+        input_required = 'cluster_id', 'pattern'
+        output_required = 'matches',
+        output_repeated = True
+
+    def handle(self):
+        input_pattern = self.request.input.pattern
+        cluster_id = self.request.input.cluster_id
+
+        # Convert pattern to regex
+
+        # Replace ** with a temporary placeholder
+        regex_pattern = input_pattern.replace('**', '__DOUBLE_ASTERISK__')
+
+        # Replace single * with [^.]* (match any character except dot)
+        regex_pattern = regex_pattern.replace('*', '[^.]*')
+
+        # Replace double asterisk placeholder with .* (match any character including dot)
+        regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
+
+        # Anchor the pattern
+        regex_pattern = '^' + regex_pattern + '$'
+
+        compiled_pattern = re.compile(regex_pattern)
+
+        with closing(self.odb.session()) as session:
+
+            # Get all topics for this cluster
+            topics = session.query(PubSubTopic).filter(
+                PubSubTopic.cluster_id == cluster_id,
+                PubSubTopic.is_active == True
+            ).all()
+
+            matching_topics = []
+            for topic in topics:
+                if compiled_pattern.match(topic.name):
+                    matching_topics.append({
+                        'id': topic.id,
+                        'name': topic.name,
+                        'description': topic.description or ''
+                    })
+
+            self.response.payload.matches = matching_topics
 
 # ################################################################################################################################
 # ################################################################################################################################
