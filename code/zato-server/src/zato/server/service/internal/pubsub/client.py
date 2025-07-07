@@ -26,10 +26,26 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_permission_get_list_request'
         response_elem = 'zato_pubsub_permission_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id'
+        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def get_data(self, session):
-        return elems_with_opaque(pubsub_permission_list(session, self.request.input.cluster_id, False))
+        # Get the query results which now return tuples of (PubSubPermission, name, subscription_count)
+        query_results = pubsub_permission_list(session, self.request.input.cluster_id, False)
+
+        # Convert tuples to dictionaries with the expected structure
+        processed_results = []
+        for result in query_results:
+            permission, name, subscription_count = result
+            processed_results.append({
+                'id': permission.id,
+                'name': name,
+                'pattern': permission.pattern,
+                'access_type': permission.access_type,
+                'sec_base_id': permission.sec_base_id,
+                'subscription_count': subscription_count
+            })
+
+        return processed_results
 
     def handle(self):
         with closing(self.odb.session()) as session:
