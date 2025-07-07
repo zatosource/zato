@@ -91,13 +91,21 @@ class Delete(_Delete):
 @method_allowed('POST')
 def get_matches(req):
     """Retrieves a list of topics matching a pattern."""
+    import logging
+    logger = logging.getLogger('zato')
+
     cluster_id = req.POST.get('cluster_id')
     pattern = req.POST.get('pattern')
+
+    logger.info('VIEW get_matches: received request with cluster_id=%s, pattern=%s', cluster_id, pattern)
 
     service_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
         'cluster_id': cluster_id,
         'pattern': pattern,
     })
+
+    logger.info('VIEW get_matches: service_response.ok=%s, data=%r',
+                service_response.ok, service_response.data if service_response.ok else service_response.details)
 
     if service_response.ok:
         return HttpResponse(
