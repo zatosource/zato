@@ -105,7 +105,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_permission_edit_request'
         response_elem = 'zato_pubsub_permission_edit_response'
-        input_required = 'id', 'pattern', 'access_type'
+        input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
         input_optional = 'cluster_id'
         output_required = 'id', 'name'
 
@@ -124,7 +124,8 @@ class Edit(AdminService):
             try:
                 permission = session.query(PubSubPermission).filter_by(id=input.id).one()
 
-                # Update permission fields only
+                # Update permission fields
+                permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
                 permission.pattern = '\n'.join(patterns)
 
