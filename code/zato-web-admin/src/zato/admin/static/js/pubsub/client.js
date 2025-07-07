@@ -154,13 +154,22 @@ function showTopicsAlert(pattern, event) {
     console.log('All CSRF inputs:', $('input[name*="csrf"]').toArray());
     console.log('All meta tokens:', $('meta[name*="csrf"]').toArray());
 
+    // Data to be sent to server
+    var requestData = {
+        cluster_id: clusterIdVal,
+        pattern: pattern,
+        csrfmiddlewaretoken: csrfToken
+    };
+
+    console.log('AJAX Request Data:', JSON.stringify(requestData));
+
     $.ajax({
         url: '/zato/pubsub/topic/get-matches/',
         type: 'POST',
-        data: {
-            cluster_id: clusterIdVal,
-            pattern: pattern,
-            csrfmiddlewaretoken: csrfToken
+        data: requestData,
+        beforeSend: function(xhr) {
+            console.log('AJAX sending request to:', this.url);
+            console.log('AJAX request data (before send):', JSON.stringify(this.data));
         },
         success: function(response) {
             console.log('AJAX Success Response:', response);

@@ -208,8 +208,7 @@ class GetMatches(AdminService):
         request_elem = 'zato_pubsub_topic_get_matches_request'
         response_elem = 'zato_pubsub_topic_get_matches_response'
         input_required = 'cluster_id', 'pattern'
-        output_required = 'matches',
-        output_repeated = True
+        output_optional = 'id', 'name', 'description'
 
     def handle(self):
         input_pattern = self.request.input.pattern
@@ -232,7 +231,6 @@ class GetMatches(AdminService):
 
             # Use pattern matching based on whether wildcards are present
             if '*' not in topic_pattern and '?' not in topic_pattern:
-                # Direct matching for simple topic names (no wildcards)
                 for topic in topics:
                     if topic.name == topic_pattern:
                         matching_topics.append({
@@ -241,24 +239,25 @@ class GetMatches(AdminService):
                             'description': topic.description or ''
                         })
             else:
-                # Pattern matching for wildcards
                 # Convert pattern to regex
                 regex_pattern = topic_pattern.replace('**', '__DOUBLE_ASTERISK__')
                 regex_pattern = regex_pattern.replace('*', '[^.]*')
                 regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
                 regex_pattern = '^' + regex_pattern + '$'
+
                 compiled_pattern = re.compile(regex_pattern)
 
                 # Check each topic against the regex pattern
                 for topic in topics:
-                    if compiled_pattern.match(topic.name):
+                    match_result = bool(compiled_pattern.match(topic.name))
+                    if match_result:
                         matching_topics.append({
                             'id': topic.id,
                             'name': topic.name,
                             'description': topic.description or ''
                         })
 
-            self.response.payload.matches = matching_topics
+            self.response.payload = matching_topics
 
 # ################################################################################################################################
 # ################################################################################################################################
