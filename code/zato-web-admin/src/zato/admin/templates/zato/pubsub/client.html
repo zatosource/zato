@@ -117,6 +117,21 @@
             display: contents;
         }
 
+        /* Pattern rows in edit forms should display as proper rows */
+        #create-patterns-container .pattern-row,
+        #edit-patterns-container .pattern-row {
+            display: flex;
+            align-items: center;
+            gap: 0px;
+            margin-bottom: 6px;
+            padding: 2px 0;
+        }
+
+        #create-patterns-container .pattern-row:last-child,
+        #edit-patterns-container .pattern-row:last-child {
+            margin-bottom: 0;
+        }
+
         .pattern-type {
             padding: 6px 8px;
             font-weight: bold;
