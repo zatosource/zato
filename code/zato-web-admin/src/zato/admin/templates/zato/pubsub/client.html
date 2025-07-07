@@ -206,6 +206,76 @@
         #data-table tbody tr:hover .pattern-display-container {
             background-color: rgb(211, 229, 238) !important;
         }
+
+        /* Topic matches popup styles */
+        .topic-matches-header {
+            text-align: center;
+            padding: 8px;
+            color: #666;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(74, 144, 226, 0.1);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            box-shadow: 0 8px 12px rgba(0,0,0,0.3);
+        }
+
+        .topic-matches-no-results {
+            box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+        }
+
+        .topic-matches-container {
+            background: #fafbfc;
+            padding: 8px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+        }
+
+        .topic-matches-scrollable {
+            height: 320px;
+            max-height: 320px;
+            overflow-y: auto;
+            background: #fafbfc;
+            padding: 8px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .topic-item {
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 4px;
+            border-left: 2px solid #4a90e2;
+            transition: all 0.2s ease;
+        }
+
+        .topic-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+
+        .topic-item-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+
+        .topic-item-description {
+            color: #7f8c8d;
+            font-size: 11px;
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        .topic-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, #e1e8ed 50%, transparent 100%);
+            margin: 8px 0;
+        }
     </style>
 
 {% endblock %}
