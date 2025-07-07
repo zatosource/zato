@@ -177,7 +177,10 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
 
-                        <td>{{ item.pattern }}</td>
+                        <td>
+                            <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
+                            </div>
+                        </td>
                         <td style="text-align:center">{{ item.access_type|capfirst }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.client.edit('{{ item.id }}')">Edit</a></td>
 

@@ -12,6 +12,67 @@ $.fn.zato.data_table.PubSubClient = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Function to render pattern tables
+function renderPatternTables() {
+    $('.pattern-display').each(function() {
+        var $container = $(this);
+        var patterns = $container.data('patterns');
+
+        if (!patterns || patterns.trim() === '') {
+            $container.html('<em>No patterns</em>');
+            return;
+        }
+
+        // Decode Unicode escape sequences from Django's escapejs filter
+        patterns = patterns.replace(/\\u([0-9a-fA-F]{4})/g, function(match, code) {
+            return String.fromCharCode(parseInt(code, 16));
+        });
+
+        var patternLines = patterns.split('\n').filter(function(line) {
+            return line.trim() !== '';
+        });
+
+        if (patternLines.length === 0) {
+            $container.html('<em>No patterns</em>');
+            return;
+        }
+
+        var tableHtml = '<table class="pattern-display-table" style="width:100%; border-collapse:collapse; font-size:12px;">';
+
+        patternLines.forEach(function(patternLine) {
+            var type, value, bgColor, borderColor;
+
+            if (patternLine.startsWith('pub=')) {
+                type = 'Pub';
+                value = patternLine.substring(4);
+                bgColor = '#e8f5e8';
+                borderColor = '#c3e6c3';
+            } else if (patternLine.startsWith('sub=')) {
+                type = 'Sub';
+                value = patternLine.substring(4);
+                bgColor = '#e8f0ff';
+                borderColor = '#c3d9ff';
+            } else {
+                type = '?';
+                value = patternLine;
+                bgColor = '#f5f5f5';
+                borderColor = '#ccc';
+            }
+
+            tableHtml += '<tr style="border-bottom:1px solid #eee;">';
+            tableHtml += '<td style="padding:2px 8px; background:' + bgColor + '; border:1px solid ' + borderColor + '; font-weight:bold; width:60px; text-align:center;">' + type + '</td>';
+            tableHtml += '<td style="padding:2px 8px; border:1px solid #ddd;">' + value + '</td>';
+            tableHtml += '<td style="padding:2px 8px; border:1px solid #ddd; width:120px; text-align:center;">';
+            tableHtml += '<a href="javascript:void(0)" onclick="alert(\'Show topics for: ' + patternLine.replace(/'/g, '\\\'') + '\')" style="color:#0066cc; text-decoration:none; font-size:11px;">Show topics</a>';
+            tableHtml += '</td>';
+            tableHtml += '</tr>';
+        });
+
+        tableHtml += '</table>';
+        $container.html(tableHtml);
+    });
+}
+
 $(document).ready(function() {
     console.log('=== PUBSUB CLIENT DEBUG: Document ready ===');
     $('#data-table').tablesorter();
@@ -20,6 +81,10 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.client.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
+
+    // Render pattern tables after data is loaded
+    renderPatternTables();
+
     console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
     // Setup form submission handlers for pattern consolidation (using event delegation)
