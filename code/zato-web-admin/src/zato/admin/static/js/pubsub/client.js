@@ -178,6 +178,10 @@ function showTopicsAlert(pattern, event) {
 
             if (response.matches && response.matches.length > 0) {
                 var matchCount = response.matches.length;
+                
+                // Add header showing match count
+                contentHtml += '<div class="topic-matches-found-header">Found ' + matchCount + ' match' + (matchCount === 1 ? '' : 'es') + '</div>';
+                
                 var minHeight = 40;
                 var itemHeight = 50; // Approximate height per item
                 var maxHeight = 320; // Max scrollable height
