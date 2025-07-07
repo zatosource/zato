@@ -40,9 +40,9 @@ function showTopicsAlert(pattern, event) {
     // Create popup content HTML
     var popupHtml = `
         <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 11px; line-height: 1.3; background-color: #f0f0f0;">
-            <div id="${popupId}-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">
-                <div style="text-align: center; padding: 8px; color: #666; background-color: #f0f0f0;">
-                    <div style="display: inline-block; width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <div id="${popupId}-content" class="topic-popup-content" style="background-color: #f0f0f0; border-radius: 0; padding: 4px;">
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; padding: 8px; color: #666; background-color: #f0f0f0;">
+                    <div style="width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                     <div style="margin-top: 4px; font-size: 10px;">Loading...</div>
                 </div>
             </div>
@@ -178,10 +178,10 @@ function showTopicsAlert(pattern, event) {
 
             if (response.matches && response.matches.length > 0) {
                 var matchCount = response.matches.length;
-                
+
                 // Add header showing match count
                 contentHtml += '<div class="topic-matches-found-header">Found ' + matchCount + ' match' + (matchCount === 1 ? '' : 'es') + '</div>';
-                
+
                 var minHeight = 40;
                 var itemHeight = 50; // Approximate height per item
                 var maxHeight = 320; // Max scrollable height
@@ -217,8 +217,21 @@ function showTopicsAlert(pattern, event) {
 
             console.log('Setting popup content...');
             var $content = $('#' + popupId + '-content');
-            $content.html(contentHtml);
-            $content.addClass('topic-popup-fade-in');
+
+            // Fade out current content
+            $content.addClass('topic-popup-fade-out');
+
+            // Wait for fade out, then replace content and fade in
+            setTimeout(function() {
+                $content.html(contentHtml);
+                $content.removeClass('topic-popup-fade-out');
+                $content.addClass('topic-popup-fade-in');
+
+                // Trigger fade in
+                setTimeout(function() {
+                    $content.addClass('topic-popup-visible');
+                }, 10);
+            }, 150);
 
             // Ensure shadow doesn't get clipped for all cases
             var $popup = $('#' + popupId);

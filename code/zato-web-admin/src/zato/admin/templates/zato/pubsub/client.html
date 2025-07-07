@@ -292,28 +292,25 @@
         }
 
         /* Smooth transitions for popup content */
-        .ui-dialog-content {
-            transition: opacity 11250ms ease-in-out;
+        .topic-popup-content {
+            transition: opacity 150ms ease-in-out, transform 150ms ease-in-out;
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        .ui-dialog-content > div {
-            transition: opacity 11200ms ease-in-out, transform 11200ms ease-in-out;
+        .topic-popup-fade-out {
+            opacity: 0;
+            transform: translateY(-3px);
         }
 
-        /* Fade in animation */
         .topic-popup-fade-in {
-            animation: topicPopupFadeIn 900ms ease-in-out;
+            opacity: 0;
+            transform: translateY(3px);
         }
 
-        @keyframes topicPopupFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-2px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .topic-popup-fade-in.topic-popup-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 
