@@ -146,14 +146,6 @@ function showTopicsAlert(pattern, event) {
                    window.csrfToken ||
                    $.cookie('csrftoken');
 
-    console.log('=== TOPIC MATCHES DEBUG ===');
-    console.log('Pattern:', pattern);
-    console.log('Cluster ID:', clusterIdVal);
-    console.log('CSRF Token:', csrfToken);
-    console.log('CSRF elements found:', $('input[name=csrfmiddlewaretoken]').length);
-    console.log('All CSRF inputs:', $('input[name*="csrf"]').toArray());
-    console.log('All meta tokens:', $('meta[name*="csrf"]').toArray());
-
     // Data to be sent to server
     var requestData = {
         cluster_id: clusterIdVal,
@@ -161,19 +153,14 @@ function showTopicsAlert(pattern, event) {
         csrfmiddlewaretoken: csrfToken
     };
 
-    console.log('AJAX Request Data:', JSON.stringify(requestData));
-
     $.ajax({
         url: '/zato/pubsub/topic/get-matches/',
         type: 'POST',
         data: requestData,
         beforeSend: function(xhr) {
-            console.log('AJAX sending request to:', this.url);
-            console.log('AJAX request data (before send):', JSON.stringify(this.data));
         },
         success: function(response) {
-            console.log('AJAX Success Response:', response);
-            console.log('=== POPUP SIZING DEBUG ===');
+
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
@@ -188,12 +175,7 @@ function showTopicsAlert(pattern, event) {
                 var calculatedHeight = Math.min(minHeight + (matchCount * itemHeight), maxHeight);
                 var needsScrolling = calculatedHeight >= maxHeight;
 
-                console.log('Match count:', matchCount);
-                console.log('Calculated height:', calculatedHeight);
-                console.log('Needs scrolling:', needsScrolling);
-
                 var containerClass = needsScrolling ? 'topic-matches-scrollable' : 'topic-matches-container';
-                console.log('Container class:', containerClass);
                 contentHtml += '<div class="' + containerClass + '">';
 
                 response.matches.forEach(function(topic, index) {
@@ -208,14 +190,11 @@ function showTopicsAlert(pattern, event) {
 
                 contentHtml += '</div>';
             } else {
-                console.log('No matches found - using CSS classes');
                 contentHtml += '<div class="topic-matches-header topic-matches-no-results">';
                 contentHtml += 'No matches found';
                 contentHtml += '</div>';
-                console.log('No matches content HTML (CSS classes):', contentHtml);
             }
 
-            console.log('Setting popup content...');
             var $content = $('#' + popupId + '-content');
 
             // Fade out current content
@@ -238,25 +217,16 @@ function showTopicsAlert(pattern, event) {
             $popup.css('overflow', 'visible');
             $popup.parent('.ui-dialog').css('overflow', 'visible');
 
-            // Check popup dimensions after content is set
-            setTimeout(function() {
-                var $popup = $('#' + popupId);
-                var $dialog = $popup.dialog('widget');
-                console.log('Final popup dimensions:');
-                console.log('Dialog width:', $dialog.width());
-                console.log('Dialog height:', $dialog.height());
-                console.log('Content height:', $popup.height());
-            }, 100);
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX Error:', {
-                status: status,
-                error: error,
-                responseText: xhr.responseText,
-                statusCode: xhr.status
+            var $content = $('#' + popupId + '-content');
+            $content.fadeOut(100, function() {
+                $content.html(contentHtml).fadeIn(100, function() {
+
+                });
             });
 
-            var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
+        },
+        error: function(xhr, status, error) {
+        var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 10px; background-color: #f0f0f0;">';
             errorHtml += 'Error: ' + (error || 'Failed to load');
             if (xhr.status) {
                 errorHtml += ' (' + xhr.status + ')';
@@ -280,22 +250,11 @@ function closeTopicMatchesOverlay() {
 
 // Function to render pattern tables
 function renderPatternTables() {
-    console.log('=== PATTERN TABLE DEBUG: Starting renderPatternTables ===');
-    console.log('Found pattern-display elements:', $('.pattern-display').length);
-
     $('.pattern-display').each(function(index) {
         var $container = $(this);
         var patterns = $container.data('patterns');
 
-        console.log('=== PATTERN DEBUG [' + index + '] ===');
-        console.log('Container element:', $container[0]);
-        console.log('Raw patterns data:', patterns);
-        console.log('Patterns type:', typeof patterns);
-        console.log('Patterns length:', patterns ? patterns.length : 'N/A');
-        console.log('Container HTML before:', $container.html());
-
         if (!patterns || patterns.trim() === '') {
-            console.log('No patterns found, showing empty message');
             $container.html('<em>No patterns</em>');
             return;
         }
@@ -305,16 +264,11 @@ function renderPatternTables() {
             return String.fromCharCode(parseInt(code, 16));
         });
 
-
         var patternLines = patterns.split('\n').filter(function(line) {
             return line.trim() !== '';
         });
 
-        console.log('Pattern lines after split and filter:', patternLines);
-        console.log('Pattern lines count:', patternLines.length);
-
         if (patternLines.length === 0) {
-            console.log('No pattern lines after filtering');
             $container.html('<em>No patterns</em>');
             return;
         }
@@ -350,9 +304,7 @@ function renderPatternTables() {
         tableHtml += '</div>';
 
         $container.html(tableHtml);
-
     });
-
 }
 
 // Initialize custom inline editing for pattern values
@@ -417,8 +369,6 @@ function initializePatternEditing() {
                         // Update the "Show matches" link
                         var $showLink = $link.closest('.pattern-row').find('.pattern-link');
                         $showLink.attr('data-pattern', newPattern);
-
-                        console.log('Pattern updated successfully:', newPattern);
                     } else {
                         alert('Failed to update pattern: ' + (response.message || 'Unknown error'));
                     }
@@ -428,7 +378,6 @@ function initializePatternEditing() {
                     $link.removeClass('editing').show();
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error updating pattern:', error);
                     alert('Failed to update pattern: ' + error);
 
                     // Restore link
@@ -463,10 +412,6 @@ function initializePatternEditing() {
 }
 
 $(document).ready(function() {
-    console.log('=== PUBSUB CLIENT DEBUG: Document ready ===');
-    console.log('Table HTML:', $('#data-table').html());
-    console.log('Table rows count:', $('#data-table tbody tr').length);
-
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubClient;
@@ -474,34 +419,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
 
-    // Call the render function after the page loads
-    console.log('=== CALLING renderPatternTables ===');
     renderPatternTables();
-    console.log('=== PUBSUB CLIENT DEBUG: Setup complete ===');
 
-    // Setup form submission handlers for pattern consolidation (using event delegation)
     $(document).on('submit', '#create-form', function(e) {
-        console.log('=== FORM SUBMIT DEBUG: Create form submit triggered ===');
-        console.log('Form data before consolidation:', $(this).serialize());
-        consolidatePatterns('create');
-        console.log('Form data after consolidation:', $(this).serialize());
-        console.log('Pattern hidden field value:', $('#create-pattern-hidden').val());
+        consolidatePatterns('#create-pattern-display');
     });
     $(document).on('submit', '#edit-form', function(e) {
-        console.log('=== FORM SUBMIT DEBUG: Edit form submit triggered ===');
-        console.log('Form data before consolidation:', $(this).serialize());
-        consolidatePatterns('edit');
-        console.log('Form data after consolidation:', $(this).serialize());
-        console.log('Pattern hidden field value:', $('#edit-pattern-hidden').val());
+        consolidatePatterns('#edit-pattern-display');
     });
 
-    // Add event handlers for access type change (both create and edit forms) using event delegation
     $(document).on('change', '#id_access_type', function() {
-        console.log('=== ACCESS TYPE DEBUG: Create access type changed to:', $(this).val());
         updatePatternTypeOptions('create');
     });
     $(document).on('change', '#id_edit-access_type', function() {
-        console.log('=== ACCESS TYPE DEBUG: Edit access type changed to:', $(this).val());
         updatePatternTypeOptions('edit');
     });
 
@@ -511,32 +441,23 @@ $(document).ready(function() {
         showTopicsAlert(pattern, event);
     });
 
-    console.log('=== PUBSUB CLIENT DEBUG: Event handlers attached ===');
-
     // Set up before_submit_hook to consolidate patterns before form submission
     $.fn.zato.data_table.before_submit_hook = function(form) {
-        console.log('=== BEFORE SUBMIT HOOK: Called with form:', form.attr('id'));
         var formId = form.attr('id');
         if (formId === 'create-form') {
-            console.log('=== BEFORE SUBMIT HOOK: Consolidating patterns for create ===');
             consolidatePatterns('create');
         } else if (formId === 'edit-form') {
-            console.log('=== BEFORE SUBMIT HOOK: Consolidating patterns for edit ===');
             consolidatePatterns('edit');
         }
-        console.log('=== BEFORE SUBMIT HOOK: Form data after consolidation:', form.serialize());
         return true; // Allow form submission to continue
     };
 })
 
 $.fn.zato.pubsub.client.create = function() {
-    console.log('=== CREATE DEBUG: Create function called ===');
     $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
-    console.log('=== CREATE DEBUG: _create_edit called ===');
 
     // Function to populate security definitions and initialize form
     function initializeCreateForm() {
-        console.log('=== CREATE DEBUG: Populating security definitions and initializing pattern options ===');
         populateSecurityDefinitions('create');
         updatePatternTypeOptions('create');
     }
@@ -546,14 +467,12 @@ $.fn.zato.pubsub.client.create = function() {
     setTimeout(function() {
         var selectElement = $('#id_sec_base_id');
         if (selectElement.length > 0) {
-            console.log('=== CREATE DEBUG: Select element found, initializing form ===');
             initializeCreateForm();
         } else {
             // Use MutationObserver to watch for the element if not immediately available
             var observer = new MutationObserver(function(mutations) {
                 var selectElement = $('#id_sec_base_id');
                 if (selectElement.length > 0) {
-                    console.log('=== CREATE DEBUG: Select element found via observer, initializing form ===');
                     initializeCreateForm();
                     observer.disconnect();
                 }
@@ -564,29 +483,20 @@ $.fn.zato.pubsub.client.create = function() {
 
     // Set callback to re-render pattern tables after successful create
     $.fn.zato.data_table.on_submit_complete_callback = function() {
-        console.log('=== CREATE CALLBACK: Re-rendering pattern tables after create ===');
+
         renderPatternTables();
     };
 }
 
 $.fn.zato.pubsub.client.edit = function(id) {
-    console.log('=== EDIT DEBUG: Function called with id:', id);
-    console.log('=== EDIT DEBUG: Data table keys:', Object.keys($.fn.zato.data_table.data));
-    console.log('=== EDIT DEBUG: Data table entry for id ' + id + ':', $.fn.zato.data_table.data[id]);
-    console.log('=== EDIT DEBUG: Stack trace:', new Error().stack);
 
     var instance = $.fn.zato.data_table.data[id];
-    console.log('=== EDIT DEBUG: Instance retrieved:', instance);
 
     if (instance === null) {
-        console.log('=== EDIT DEBUG: Instance is null - this should not happen!');
-        console.log('=== EDIT DEBUG: All data table entries:', $.fn.zato.data_table.data);
         return;
     }
 
     if (instance === undefined) {
-        console.log('=== EDIT DEBUG: Instance is undefined - ID not found in data table');
-        console.log('=== EDIT DEBUG: All data table entries:', $.fn.zato.data_table.data);
         return;
     }
 
@@ -600,25 +510,21 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // This cell was created in new_row function with the raw pattern data
     var $row = $('#tr_' + id);
     var patternData = $row.find('td:eq(9)').text();
-    console.log('=== EDIT DEBUG: Pattern data from hidden cell:', patternData);
 
     // If no data found in hidden cell, try to get it from data-patterns attribute
     if (!patternData || patternData.trim() === '') {
         patternData = $row.find('.pattern-display').attr('data-patterns');
-        console.log('=== EDIT DEBUG: Pattern data from data-patterns attribute:', patternData);
     }
 
     // If still no data, try instance.pattern as last resort
     if (!patternData || patternData.trim() === '') {
         patternData = instance.pattern;
-        console.log('=== EDIT DEBUG: Pattern data from instance:', patternData);
     }
 
     // Decode any HTML entities in the pattern data
     if (patternData) {
         patternData = patternData.replace(/\\u003D/g, '=');
         patternData = patternData.replace(/\\u000A/g, '\n');
-        console.log('=== EDIT DEBUG: Final decoded patterns:', patternData);
     }
 
     // Populate patterns
@@ -626,7 +532,6 @@ $.fn.zato.pubsub.client.edit = function(id) {
 
     // Function to populate security definitions and initialize form
     function initializeEditForm() {
-        console.log('=== EDIT DEBUG: Populating security definitions and initializing pattern options ===');
         populateSecurityDefinitions('edit', instance.sec_base_id);
         updatePatternTypeOptions('edit');
     }
@@ -634,14 +539,12 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // Always populate security definitions via AJAX when select element becomes available
     var selectElement = $('#id_edit-sec_base_id');
     if (selectElement.length > 0) {
-        console.log('=== EDIT DEBUG: Select element found, initializing form ===');
         initializeEditForm();
     } else {
         // Wait for the select element to be added to the DOM
         var observer = new MutationObserver(function(mutations) {
             var selectElement = $('#id_edit-sec_base_id');
             if (selectElement.length > 0) {
-                console.log('=== EDIT DEBUG: Select element found via observer, initializing form ===');
                 initializeEditForm();
                 observer.disconnect();
             }
@@ -653,14 +556,9 @@ $.fn.zato.pubsub.client.edit = function(id) {
     setTimeout(function() {
         var accessTypeSelect = $('#edit-access_type');
         if (accessTypeSelect.length > 0) {
-            console.log('=== ACCESS TYPE DEBUG: Adding change listener to edit access type select');
-            accessTypeSelect.off('change.debug').on('change.debug', function() {
-                console.log('=== ACCESS TYPE CHANGE DEBUG: Event triggered ===');
-                console.log('=== ACCESS TYPE DEBUG: New value:', $(this).val());
-                console.log('=== ACCESS TYPE DEBUG: Previous value:', $(this).data('prev-value'));
 
+            accessTypeSelect.off('change.debug').on('change.debug', function() {
                 // Log all form fields before and after
-                console.log('=== FORM FIELDS BEFORE ACCESS TYPE CHANGE:');
                 logAllFormFields('edit');
 
                 // Store new value for next comparison
@@ -668,7 +566,6 @@ $.fn.zato.pubsub.client.edit = function(id) {
 
                 // Log again after a short delay to catch any changes
                 setTimeout(function() {
-                    console.log('=== FORM FIELDS AFTER ACCESS TYPE CHANGE:');
                     logAllFormFields('edit');
                 }, 100);
             });
@@ -680,7 +577,6 @@ $.fn.zato.pubsub.client.edit = function(id) {
 
     // Set callback to re-render pattern tables after successful edit
     $.fn.zato.data_table.on_submit_complete_callback = function() {
-        console.log('=== EDIT CALLBACK: Re-rendering pattern tables after edit ===');
         renderPatternTables();
     };
 }
@@ -689,53 +585,42 @@ $.fn.zato.pubsub.client.edit = function(id) {
 function logAllFormFields(prefix) {
     var form = $('#' + prefix + '-form');
     if (form.length === 0) {
-        console.log('=== FORM DEBUG: Form not found with prefix:', prefix);
         return;
     }
-
-    console.log('=== FORM DEBUG: All form fields for prefix "' + prefix + '":');
 
     // Log all input fields
     form.find('input').each(function() {
         var $input = $(this);
-        console.log('  Input [' + ($input.attr('name') || 'no-name') + '] type=' + $input.attr('type') + ' value="' + $input.val() + '" id=' + ($input.attr('id') || 'no-id'));
     });
 
     // Log all select fields
     form.find('select').each(function() {
         var $select = $(this);
-        console.log('  Select [' + ($select.attr('name') || 'no-name') + '] value="' + $select.val() + '" id=' + ($select.attr('id') || 'no-id') + ' options=' + $select.find('option').length);
     });
 
     // Log all textarea fields
     form.find('textarea').each(function() {
         var $textarea = $(this);
-        console.log('  Textarea [' + ($textarea.attr('name') || 'no-name') + '] value="' + $textarea.val() + '" id=' + ($textarea.attr('id') || 'no-id'));
     });
 
     // Log pattern container specifically
     var patternContainer = $('#' + prefix + '-pattern-container');
     if (patternContainer.length > 0) {
-        console.log('  Pattern container rows:', patternContainer.find('.pattern-row').length);
         patternContainer.find('.pattern-row').each(function(index) {
             var $row = $(this);
             var typeSelect = $row.find('select[name$="_type_' + index + '"]');
             var valueInput = $row.find('input[name$="_' + index + '"]');
-            console.log('    Pattern row ' + index + ': type="' + (typeSelect.val() || 'empty') + '" value="' + (valueInput.val() || 'empty') + '"');
         });
     }
 
     // Log hidden pattern field
     var hiddenPattern = $('#' + prefix + '-pattern-hidden');
     if (hiddenPattern.length > 0) {
-        console.log('  Hidden pattern field value:', hiddenPattern.val());
     }
 }
 
 // Add debugging for plus/minus button clicks
 $(document).on('click', '.pattern-add-button', function() {
-    console.log('=== PLUS BUTTON DEBUG: Add pattern button clicked ===');
-    console.log('=== FORM FIELDS BEFORE ADDING PATTERN:');
 
     // Determine which form we're in
     var form = $(this).closest('form');
@@ -748,14 +633,11 @@ $(document).on('click', '.pattern-add-button', function() {
 
     // Log after a short delay to catch the new row
     setTimeout(function() {
-        console.log('=== FORM FIELDS AFTER ADDING PATTERN:');
         logAllFormFields(prefix);
     }, 100);
 });
 
 $(document).on('click', '.pattern-remove-button', function() {
-    console.log('=== MINUS BUTTON DEBUG: Remove pattern button clicked ===');
-    console.log('=== FORM FIELDS BEFORE REMOVING PATTERN:');
 
     // Determine which form we're in
     var form = $(this).closest('form');
@@ -768,16 +650,11 @@ $(document).on('click', '.pattern-remove-button', function() {
 
     // Log after a short delay to catch the removal
     setTimeout(function() {
-        console.log('=== FORM FIELDS AFTER REMOVING PATTERN:');
         logAllFormFields(prefix);
     }, 100);
 });
 
 $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
-    console.log('=== NEW_ROW DEBUG: item:', item);
-    console.log('=== NEW_ROW DEBUG: data:', data);
-    console.log('=== NEW_ROW DEBUG: item.id:', item.id);
-    console.log('=== NEW_ROW DEBUG: typeof item.id:', typeof item.id);
 
     var row = '';
 
@@ -900,28 +777,23 @@ function removePatternRow(button) {
 }
 
 function consolidatePatterns(formType) {
-    console.log('=== CONSOLIDATE DEBUG: Starting consolidatePatterns for:', JSON.stringify(formType, null, 2));
     var container = $('#' + formType + '-patterns-container');
-    console.log('Container found:', JSON.stringify(container.length > 0, null, 2));
     var patterns = [];
 
     container.find('.pattern-row').each(function(index) {
         var patternType = $(this).find('.pattern-type-select').val();
         var patternValue = $(this).find('.pattern-input').val().trim();
-        console.log('Row ' + index + ':', JSON.stringify({Type: patternType, Value: patternValue}, null, 2));
+
         if (patternValue) {
             var combined = patternType + '=' + patternValue;
             patterns.push(combined);
-            console.log('Added pattern:', JSON.stringify(combined, null, 2));
+
         }
     });
 
     var consolidated = patterns.join('\n');
-    console.log('Final consolidated patterns:', JSON.stringify(consolidated, null, 2));
     var hiddenField = $('#' + formType + '-pattern-hidden');
-    console.log('Hidden field found:', JSON.stringify(hiddenField.length > 0, null, 2));
     hiddenField.val(consolidated);
-    console.log('Hidden field value set to:', JSON.stringify(hiddenField.val(), null, 2));
 }
 
 function populatePatterns(formType, patternString) {
@@ -980,9 +852,6 @@ function populateSecurityDefinitions(formType, selectedId) {
     var select = $(selectId);
     var selectContainer = select.parent();
 
-    console.log('=== AJAX DEBUG: Making request to get security definitions ===');
-    console.log('=== AJAX DEBUG: formType:', formType, 'clusterId:', clusterId, 'selectId:', selectId);
-
     // Show spinner with smooth transition and minimum display time
     var startTime = Date.now();
 
@@ -1008,11 +877,6 @@ function populateSecurityDefinitions(formType, selectedId) {
             form_type: formType
         },
         success: function(response) {
-            console.log('=== AJAX DEBUG: Received response:', JSON.stringify(response));
-            console.log('=== AJAX DEBUG: Security definitions count:', response.security_definitions ? response.security_definitions.length : 0);
-            if (response.security_definitions && response.security_definitions.length > 0) {
-                console.log('=== AJAX DEBUG: Security definitions details:', JSON.stringify(response.security_definitions));
-            }
 
             // Re-declare variables for callback scope
             var select = $(selectId);
@@ -1035,7 +899,7 @@ function populateSecurityDefinitions(formType, selectedId) {
                     select.empty();
 
                     if (response.security_definitions && response.security_definitions.length > 0) {
-                        console.log('=== AJAX DEBUG: Showing select dropdown with', response.security_definitions.length, 'definitions');
+
 
                         // Populate select with available security definitions
                         $.each(response.security_definitions, function(index, item) {
@@ -1073,7 +937,6 @@ function populateSecurityDefinitions(formType, selectedId) {
             }, remainingTime);
         },
         error: function(xhr, status, error) {
-            console.error('Failed to load security definitions:', error);
             // Remove spinner on error
             var select = $(selectId);
             var selectContainer = select.parent();
