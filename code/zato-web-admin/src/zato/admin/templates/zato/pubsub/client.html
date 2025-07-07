@@ -222,6 +222,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-top: 3px;
         }
 
         .topic-matches-found-header {
@@ -235,7 +236,8 @@
         }
 
         .topic-matches-no-results {
-            box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+            flex-grow: 1;
+            margin-bottom: 0;
         }
 
         .topic-matches-container {
@@ -293,6 +295,9 @@
 
         /* Smooth transitions for popup content */
         .topic-popup-content {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 80px !important;
             transition: opacity 150ms ease-in-out, transform 150ms ease-in-out;
             opacity: 1;
             transform: translateY(0);
