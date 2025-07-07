@@ -11,7 +11,7 @@
             --pattern-pub-bg: #FFE8CC;
             --pattern-sub-bg: #e8f0ff;
             --pattern-unknown-bg: #f5f5f5;
-            --pattern-border-color: #999;
+            --pattern-border-color: #aaa;
             --pattern-border-color2: #ccc;
         }
 
@@ -163,6 +163,15 @@
 
         .pattern-link:hover {
             text-decoration: underline;
+        }
+
+        /* Change cell background when link is hovered, remove link background */
+        .pattern-link-cell:has(.pattern-link:hover) {
+            background-color: var(--zato-seablue-light3) !important;
+        }
+
+        .pattern-link-cell .pattern-link:hover {
+            background-color: transparent !important;
         }
 
         /* Prevent table row hover effects */

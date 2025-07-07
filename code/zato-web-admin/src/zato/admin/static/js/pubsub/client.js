@@ -14,7 +14,7 @@ $.fn.zato.data_table.PubSubClient = new Class({
 
 // Function to show topics alert
 function showTopicsAlert(pattern) {
-    alert('Show topics for: ' + pattern);
+    alert('Show matches for: ' + pattern);
 }
 
 // Function to render pattern tables
@@ -71,7 +71,7 @@ function renderPatternTables() {
             tableHtml += '<div class="pattern-type ' + typeClass + '">' + type + '</div>';
             tableHtml += '<div class="pattern-value">' + value + '</div>';
             tableHtml += '<div class="pattern-link-cell">';
-            tableHtml += '<a href="javascript:void(0)" onclick="showTopicsAlert(\'' + patternLine.replace(/'/g, "\\''") + '\')" class="pattern-link">Show topics</a>';
+            tableHtml += '<a href="javascript:void(0)" onclick="showTopicsAlert(\'' + patternLine.replace(/'/g, "\\''") + '\')" class="pattern-link">Show matches</a>';
             tableHtml += '</div>';
             tableHtml += '</div>';
         });
