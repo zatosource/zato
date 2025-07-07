@@ -46,11 +46,11 @@ class Index(_Index):
             'cluster_id': self.req.zato.cluster_id,
         })
 
-        logger.error(f"=== PUBSUB CLIENT DEBUG: Backend response.ok: {response.ok}")
+        logger.info(f"=== PUBSUB CLIENT DEBUG: Backend response.ok: {response.ok}")
         if response.ok:
-            logger.error(f"=== PUBSUB CLIENT DEBUG: Backend response.data: {response.data}")
+            logger.info(f"=== PUBSUB CLIENT DEBUG: Backend response.data: {response.data}")
             for i, item in enumerate(response.data):
-                logger.error(f"=== PUBSUB CLIENT DEBUG: Item {i}: {item}")
+                logger.info(f"=== PUBSUB CLIENT DEBUG: Item {i}: {item}")
 
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
