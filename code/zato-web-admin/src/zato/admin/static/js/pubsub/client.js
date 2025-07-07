@@ -12,9 +12,147 @@ $.fn.zato.data_table.PubSubClient = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Function to show topics alert
-function showTopicsAlert(pattern) {
-    alert('Show matches for: ' + pattern);
+// Function to show topics popup with matching results
+function showTopicsAlert(pattern, event) {
+    // Close any existing popup
+    closeTopicMatchesOverlay();
+
+    // Get click position from event or try to find the clicked element
+    var clickX, clickY;
+    if (event && event.pageX !== undefined) {
+        clickX = event.pageX;
+        clickY = event.pageY;
+    } else {
+        // Fallback: find the pattern link element
+        var $link = $('a[onclick*="' + pattern.replace(/'/g, "\\'") + '"]').first();
+        if ($link.length) {
+            var offset = $link.offset();
+            clickX = offset.left + $link.outerWidth();
+            clickY = offset.top;
+        } else {
+            clickX = 200;
+            clickY = 200;
+        }
+    }
+
+    var popupHtml = `
+        <div id="topic-matches-popup" style="
+            position: absolute;
+            left: ${clickX + 10}px;
+            top: ${clickY}px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 12px;
+            max-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            font-size: 13px;
+            line-height: 1.4;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="font-weight: bold; color: #333; font-size: 12px;">Pattern: ${pattern}</div>
+                <button onclick="closeTopicMatchesOverlay()" style="
+                    background: none;
+                    border: none;
+                    font-size: 14px;
+                    cursor: pointer;
+                    color: #999;
+                    padding: 0;
+                    line-height: 1;
+                    margin-left: 8px;
+                ">&times;</button>
+            </div>
+            <div id="topic-matches-content">
+                <div style="text-align: center; padding: 8px; color: #666;">
+                    <div style="display: inline-block; width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="margin-top: 4px; font-size: 11px;">Loading...</div>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+
+    $('body').append(popupHtml);
+
+    // Adjust position if popup would go off screen
+    var $popup = $('#topic-matches-popup');
+    var popupWidth = $popup.outerWidth();
+    var popupHeight = $popup.outerHeight();
+    var windowWidth = $(window).width();
+    var windowHeight = $(window).height();
+    var scrollTop = $(window).scrollTop();
+
+    if (clickX + popupWidth > windowWidth - 20) {
+        $popup.css('left', Math.max(20, windowWidth - popupWidth - 20) + 'px');
+    }
+    if (clickY + popupHeight > windowHeight + scrollTop - 20) {
+        $popup.css('top', Math.max(scrollTop + 20, clickY - popupHeight - 10) + 'px');
+    }
+
+    // Make AJAX call to get matching topics
+    $.ajax({
+        url: '/zato/pubsub/topic/get-matches/',
+        type: 'POST',
+        data: {
+            cluster_id: $('#id_cluster').val() || cluster_id,
+            pattern: pattern,
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            var contentHtml = '';
+
+            if (response.matches && response.matches.length > 0) {
+                contentHtml = '<div style="margin-bottom: 6px; font-weight: bold; color: #2c5aa0; font-size: 11px;">Found ' + response.matches.length + ' match' + (response.matches.length === 1 ? '' : 'es') + ':</div>';
+                contentHtml += '<div style="max-height: 250px; overflow-y: auto;">';
+
+                response.matches.forEach(function(topic, index) {
+                    if (index > 0) contentHtml += '<div style="border-top: 1px solid #eee; margin: 4px 0;"></div>';
+                    contentHtml += '<div style="padding: 2px 0;">';
+                    contentHtml += '<div style="font-weight: bold; color: #333; font-size: 12px;">' + topic.name + '</div>';
+                    if (topic.description) {
+                        contentHtml += '<div style="color: #666; font-size: 11px; margin-top: 1px;">' + topic.description + '</div>';
+                    }
+                    contentHtml += '</div>';
+                });
+
+                contentHtml += '</div>';
+            } else {
+                contentHtml = '<div style="text-align: center; padding: 8px; color: #666; font-size: 11px;">';
+                contentHtml += 'No matches found';
+                contentHtml += '</div>';
+            }
+
+            $('#topic-matches-content').html(contentHtml);
+        },
+        error: function(xhr, status, error) {
+            var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 11px;">';
+            errorHtml += 'Error: ' + (error || 'Failed to load');
+            errorHtml += '</div>';
+
+            $('#topic-matches-content').html(errorHtml);
+        }
+    });
+
+    // Close popup when clicking elsewhere
+    $(document).on('click.topic-matches', function(e) {
+        if (!$(e.target).closest('#topic-matches-popup').length) {
+            closeTopicMatchesOverlay();
+        }
+    });
+}
+
+// Function to close the topics popup
+function closeTopicMatchesOverlay() {
+    $('#topic-matches-popup').remove();
+    $(document).off('click.topic-matches');
 }
 
 // Function to render pattern tables
@@ -92,6 +230,113 @@ function renderPatternTables() {
 
     });
 
+}
+
+// Initialize custom inline editing for pattern values
+function initializePatternEditing() {
+    $('.pattern-editable').off('click.patternEdit').on('click.patternEdit', function(e) {
+        e.preventDefault();
+        var $link = $(this);
+        var currentValue = $link.data('value');
+        var clientId = $link.data('pk');
+        var prefix = $link.data('prefix');
+        var original = $link.data('original');
+
+        // Don't edit if already editing
+        if ($link.hasClass('editing')) {
+            return;
+        }
+
+        // Create input element
+        var $input = $('<input type="text" class="pattern-edit-input">');
+        $input.val(currentValue);
+
+        // Replace link with input
+        $link.addClass('editing').hide();
+        $link.after($input);
+        $input.focus().select();
+
+        // Handle save on Enter or blur
+        function saveEdit() {
+            var newValue = $input.val().trim();
+
+            if (newValue === currentValue) {
+                // No change, just restore
+                $input.remove();
+                $link.removeClass('editing').show();
+                return;
+            }
+
+            if (!newValue) {
+                alert('Pattern value cannot be empty');
+                $input.focus();
+                return;
+            }
+
+            // Save via AJAX
+            $.ajax({
+                url: '/zato/pubsub/client/update-pattern/',
+                type: 'POST',
+                data: {
+                    pk: clientId,
+                    name: 'pattern_value',
+                    value: newValue,
+                    prefix: prefix,
+                    original: original,
+                    csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content')
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Update the link with new value
+                        var newPattern = prefix + newValue;
+                        $link.text(newValue).data('value', newValue).data('original', newPattern);
+
+                        // Update the "Show matches" link
+                        var $showLink = $link.closest('.pattern-row').find('.pattern-link');
+                        $showLink.attr('onclick', "showTopicsAlert('" + newPattern.replace(/'/g, "\\'") + "')");
+
+                        console.log('Pattern updated successfully:', newPattern);
+                    } else {
+                        alert('Failed to update pattern: ' + (response.message || 'Unknown error'));
+                    }
+
+                    // Restore link
+                    $input.remove();
+                    $link.removeClass('editing').show();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating pattern:', error);
+                    alert('Failed to update pattern: ' + error);
+
+                    // Restore link
+                    $input.remove();
+                    $link.removeClass('editing').show();
+                }
+            });
+        }
+
+        // Handle cancel on Escape
+        function cancelEdit() {
+            $input.remove();
+            $link.removeClass('editing').show();
+        }
+
+        // Bind events
+        $input.on('keydown', function(e) {
+            if (e.keyCode === 13) { // Enter
+                e.preventDefault();
+                saveEdit();
+            } else if (e.keyCode === 27) { // Escape
+                e.preventDefault();
+                cancelEdit();
+            }
+        });
+
+        $input.on('blur', function() {
+            // Small delay to allow for other events
+            setTimeout(saveEdit, 100);
+        });
+    });
 }
 
 $(document).ready(function() {
