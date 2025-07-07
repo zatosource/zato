@@ -310,8 +310,8 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.pubsub.client.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'API client [{0}] deleted',
-        'Are you sure you want to delete API client [{0}]?',
+        'API client `{0}` deleted',
+        'Are you sure you want to delete API client `{0}`?',
         true);
 }
 

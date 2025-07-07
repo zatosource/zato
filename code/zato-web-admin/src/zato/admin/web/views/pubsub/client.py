@@ -73,6 +73,13 @@ class GetSecurityDefinitions(View):
             'cluster_id': request.zato.cluster_id,
         })
 
+        # Security definitions to filter out
+        filtered_names = {
+            'Rule engine default user',
+            'admin.invoke',
+            'ide_publisher'
+        }
+
         choices = []
         if response.ok:
 
@@ -89,14 +96,22 @@ class GetSecurityDefinitions(View):
                     for perm in permissions_response.data:
                         used_sec_ids.add(perm['sec_base_id'])
 
-                # Only include security definitions that are not already used
+                # Only include security definitions that are not already used and not filtered out
                 for item in response.data:
-                    if item['id'] not in used_sec_ids:
+                    is_not_used = item['id'] not in used_sec_ids
+                    is_not_filtered = item['name'] not in filtered_names
+                    is_not_zato = not item['name'].startswith('zato')
+
+                    if is_not_used and is_not_filtered and is_not_zato:
                         choices.append({'id': item['id'], 'name': item['name']})
             else:
-                # For edit form, include all security definitions
+                # For edit form, include all security definitions except filtered ones
                 for item in response.data:
-                    choices.append({'id': item['id'], 'name': item['name']})
+                    is_not_filtered = item['name'] not in filtered_names
+                    is_not_zato = not item['name'].startswith('zato')
+
+                    if is_not_filtered and is_not_zato:
+                        choices.append({'id': item['id'], 'name': item['name']})
 
         return JsonResponse({'security_definitions': choices})
 
