@@ -7,11 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
+
+# Django
+from django.http import HttpResponse
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, method_allowed
 from zato.common.odb.model import PubSubTopic
 
 # ################################################################################################################################
@@ -83,18 +88,33 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetMatches(_Index):
-    method_allowed = 'POST'
-    url_name = 'pubsub-topic-get-matches'
-    service_name = 'zato.pubsub.topic.get-matches'
+@method_allowed('POST')
+def get_matches(req):
+    """Retrieves a list of topics matching a pattern."""
+    cluster_id = req.POST.get('cluster_id')
+    pattern = req.POST.get('pattern')
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'pattern'
-        output_required = 'matches',
-        output_repeated = True
+    service_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+        'cluster_id': cluster_id,
+        'pattern': pattern,
+    })
 
-    def handle(self):
-        return self.req_resp_func(self.request, self.service_name, self.SimpleIO, method='POST')
+    if service_response.ok:
+        return HttpResponse(
+            json.dumps({
+                'msg': 'Topics retrieved successfully',
+                'matches': service_response.data
+            }),
+            content_type='application/json'
+        )
+    else:
+        return HttpResponse(
+            json.dumps({
+                'error': service_response.details or 'Error retrieving matching topics'
+            }),
+            content_type='application/json',
+            status=500
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################

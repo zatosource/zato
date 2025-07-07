@@ -14,8 +14,7 @@ $.fn.zato.data_table.PubSubClient = new Class({
 
 // Function to show topics popup with matching results
 function showTopicsAlert(pattern, event) {
-    // Close any existing popup
-    closeTopicMatchesOverlay();
+    // Don't close existing popups - allow multiple
 
     // Get click position from event or try to find the clicked element
     var clickX, clickY;
@@ -35,37 +34,13 @@ function showTopicsAlert(pattern, event) {
         }
     }
 
+    // Create unique popup ID to allow multiple popups
+    var popupId = 'topic-matches-popup-' + Date.now();
+
+    // Create popup content HTML
     var popupHtml = `
-        <div id="topic-matches-popup" style="
-            position: absolute;
-            left: ${clickX + 10}px;
-            top: ${clickY}px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 12px;
-            max-width: 300px;
-            max-height: 400px;
-            overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            font-size: 13px;
-            line-height: 1.4;
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div style="font-weight: bold; color: #333; font-size: 12px;">Pattern: ${pattern}</div>
-                <button onclick="closeTopicMatchesOverlay()" style="
-                    background: none;
-                    border: none;
-                    font-size: 14px;
-                    cursor: pointer;
-                    color: #999;
-                    padding: 0;
-                    line-height: 1;
-                    margin-left: 8px;
-                ">&times;</button>
-            </div>
-            <div id="topic-matches-content">
+        <div id="${popupId}" title="Pattern: ${pattern}" style="font-size: 13px; line-height: 1.4;">
+            <div id="${popupId}-content">
                 <div style="text-align: center; padding: 8px; color: #666;">
                     <div style="display: inline-block; width: 12px; height: 12px; border: 1px solid #ddd; border-top: 1px solid #666; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                     <div style="margin-top: 4px; font-size: 11px;">Loading...</div>
@@ -80,33 +55,99 @@ function showTopicsAlert(pattern, event) {
         </style>
     `;
 
+    // Add to page and create dialog
     $('body').append(popupHtml);
 
+    // Create draggable dialog using jQuery UI
+    $('#' + popupId).dialog({
+        autoOpen: true,
+        width: 280,
+        height: 'auto',
+        maxHeight: 350,
+        resizable: false,
+        draggable: true,
+        position: { my: "left top", at: "left+" + (clickX + 10) + " top+" + clickY, of: window },
+        close: function() {
+            $(this).dialog('destroy').remove();
+        }
+    });
+
+    // Customize the close button to be a small "x" on the right
+    var $dialog = $('#' + popupId).dialog('widget');
+    var $titlebar = $dialog.find('.ui-dialog-titlebar');
+    var $closeBtn = $titlebar.find('.ui-dialog-titlebar-close');
+
+    // Style the close button
+    $closeBtn.html('×').css({
+        'position': 'absolute',
+        'right': '4px',
+        'top': '50%',
+        'transform': 'translateY(-50%)',
+        'width': '14px',
+        'height': '14px',
+        'font-size': '12px',
+        'line-height': '12px',
+        'text-align': 'center',
+        'padding': '0',
+        'border': 'none',
+        'background': 'none',
+        'color': '#999'
+    });
+
+    // Adjust title bar to make room for close button
+    $titlebar.css('position', 'relative');
+    $titlebar.find('.ui-dialog-title').css('padding-right', '20px');
+
     // Adjust position if popup would go off screen
-    var $popup = $('#topic-matches-popup');
-    var popupWidth = $popup.outerWidth();
-    var popupHeight = $popup.outerHeight();
+    var $popup = $('#' + popupId);
+    var dialog = $popup.dialog('widget');
+    var dialogWidth = dialog.outerWidth();
+    var dialogHeight = dialog.outerHeight();
     var windowWidth = $(window).width();
     var windowHeight = $(window).height();
     var scrollTop = $(window).scrollTop();
 
-    if (clickX + popupWidth > windowWidth - 20) {
-        $popup.css('left', Math.max(20, windowWidth - popupWidth - 20) + 'px');
+    var newPosition = {};
+    if (clickX + dialogWidth > windowWidth - 20) {
+        newPosition.left = Math.max(20, windowWidth - dialogWidth - 20);
     }
-    if (clickY + popupHeight > windowHeight + scrollTop - 20) {
-        $popup.css('top', Math.max(scrollTop + 20, clickY - popupHeight - 10) + 'px');
+    if (clickY + dialogHeight > windowHeight + scrollTop - 20) {
+        newPosition.top = Math.max(scrollTop + 20, clickY - dialogHeight - 10);
+    }
+
+    if (newPosition.left !== undefined || newPosition.top !== undefined) {
+        dialog.css(newPosition);
     }
 
     // Make AJAX call to get matching topics
+    var clusterIdVal = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+
+    // Try multiple ways to find CSRF token
+    var csrfToken = $('input[name=csrfmiddlewaretoken]').val() ||
+                   $('input[name="csrfmiddlewaretoken"]').val() ||
+                   $('[name=csrfmiddlewaretoken]').val() ||
+                   $('meta[name=csrf-token]').attr('content') ||
+                   window.csrfToken ||
+                   $.cookie('csrftoken');
+
+    console.log('=== TOPIC MATCHES DEBUG ===');
+    console.log('Pattern:', pattern);
+    console.log('Cluster ID:', clusterIdVal);
+    console.log('CSRF Token:', csrfToken);
+    console.log('CSRF elements found:', $('input[name=csrfmiddlewaretoken]').length);
+    console.log('All CSRF inputs:', $('input[name*="csrf"]').toArray());
+    console.log('All meta tokens:', $('meta[name*="csrf"]').toArray());
+
     $.ajax({
         url: '/zato/pubsub/topic/get-matches/',
         type: 'POST',
         data: {
-            cluster_id: $('#id_cluster').val() || cluster_id,
+            cluster_id: clusterIdVal,
             pattern: pattern,
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+            csrfmiddlewaretoken: csrfToken
         },
         success: function(response) {
+            console.log('AJAX Success Response:', response);
             var contentHtml = '';
 
             if (response.matches && response.matches.length > 0) {
@@ -130,29 +171,36 @@ function showTopicsAlert(pattern, event) {
                 contentHtml += '</div>';
             }
 
-            $('#topic-matches-content').html(contentHtml);
+            $('#' + popupId + '-content').html(contentHtml);
         },
         error: function(xhr, status, error) {
+            console.error('AJAX Error:', {
+                status: status,
+                error: error,
+                responseText: xhr.responseText,
+                statusCode: xhr.status
+            });
+
             var errorHtml = '<div style="text-align: center; padding: 8px; color: #d32f2f; font-size: 11px;">';
             errorHtml += 'Error: ' + (error || 'Failed to load');
+            if (xhr.status) {
+                errorHtml += ' (' + xhr.status + ')';
+            }
             errorHtml += '</div>';
 
-            $('#topic-matches-content').html(errorHtml);
-        }
-    });
-
-    // Close popup when clicking elsewhere
-    $(document).on('click.topic-matches', function(e) {
-        if (!$(e.target).closest('#topic-matches-popup').length) {
-            closeTopicMatchesOverlay();
+            $('#' + popupId + '-content').html(errorHtml);
         }
     });
 }
 
 // Function to close the topics popup
 function closeTopicMatchesOverlay() {
-    $('#topic-matches-popup').remove();
-    $(document).off('click.topic-matches');
+    // Close all topic match popups
+    $('[id^="topic-matches-popup-"]').each(function() {
+        if ($(this).hasClass('ui-dialog-content')) {
+            $(this).dialog('close');
+        }
+    });
 }
 
 // Function to render pattern tables
