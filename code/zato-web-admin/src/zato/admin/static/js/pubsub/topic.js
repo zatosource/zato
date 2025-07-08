@@ -42,7 +42,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', item.description || '<span class="form_hint">---</span>');
+    row += String.format('<td style="text-align:center">{0}</td>', item.description || '<span class="form_hint">---</span>');
     row += String.format('<td style="text-align:center">{0}</td>', item.publisher_count || '0');
     row += String.format('<td style="text-align:center">{0}</td>', item.subscriber_count || '0');
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.edit('{0}')\">Edit</a>", item.id));

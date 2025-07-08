@@ -44,6 +44,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'show_search_form': True,
         }
 
 # ################################################################################################################################
