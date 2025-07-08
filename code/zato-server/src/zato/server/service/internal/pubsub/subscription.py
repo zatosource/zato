@@ -29,8 +29,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched'
-        output_optional = 'topic_name', 'sec_name'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', 'topic_name', 'sec_name'
 
     def get_data(self, session):
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
@@ -40,7 +39,6 @@ class GetList(AdminService):
             item_dict = subscription.asdict()
             item_dict['topic_name'] = topic_name
             item_dict['sec_name'] = sec_name
-
             data.append(item_dict)
 
         return elems_with_opaque(data)
@@ -60,7 +58,7 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
-        output_required = 'id', 'sub_key'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -90,8 +88,16 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
+                # Get topic and security names for the response
+                topic = session.query(PubSubTopic).filter(PubSubTopic.id == item.topic_id).first()
+                security = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.id == item.sec_base_id).first()
+
                 self.response.payload.id = item.id
                 self.response.payload.sub_key = item.sub_key
+                self.response.payload.is_active = item.is_active
+                self.response.payload.created = item.creation_time.isoformat()
+                self.response.payload.topic_name = topic.name
+                self.response.payload.sec_name = security.name
 
             except Exception:
                 self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
