@@ -75,10 +75,11 @@
         /* Reserve exact space for select to prevent layout shifts */
         .security-definition-container {
             position: relative;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             width: 400px;
             height: 22px;
-            vertical-align: top;
+            vertical-align: middle;
         }
 
         .loading-spinner {
@@ -316,6 +317,16 @@
         .topic-popup-fade-in.topic-popup-visible {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        /* Fix alignment for security definition table cells */
+        .form-data td {
+            vertical-align: middle;
+        }
+
+        /* Fix alignment for no security definitions message */
+        .no-security-definitions-message {
+            vertical-align: middle;
         }
     </style>
 
