@@ -58,7 +58,7 @@ class Create(CreateEdit):
         output_required = 'id', 'sub_key'
 
     def success_message(self, item):
-        return 'Successfully created the Pub/Sub subscription'
+        return 'Successfully created the pub/sub subscription'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,14 +74,14 @@ class Edit(CreateEdit):
         output_required = 'id', 'sub_key'
 
     def success_message(self, item):
-        return 'Successfully updated the Pub/Sub subscription'
+        return 'Successfully updated the pub/sub subscription'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'pubsub-subscription-delete'
-    error_message = 'Could not delete the Pub/Sub subscription'
+    error_message = 'Could not delete the pub/sub subscription'
     service_name = 'zato.pubsub.subscription.delete'
 
 # ################################################################################################################################
