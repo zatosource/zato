@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 class GetList(AdminService):
     """ Returns a list of Pub/Sub topics available.
     """
-    _filter_by = PubSubTopic.name,
+    _filter_by = PubSubTopic.name, PubSubTopic.description,
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_topic_get_list_request'
