@@ -52,6 +52,97 @@ class GetList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Create(AdminService):
+    """ Creates a new Pub/Sub subscription.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_subscription_create_request'
+        response_elem = 'zato_pubsub_subscription_create_response'
+        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_optional = 'is_active',
+        output_required = 'id', 'sub_key'
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            try:
+                existing_one = session.query(PubSubSubscription).\
+                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubSubscription.topic_id==self.request.input.topic_id).\
+                    filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
+                    first()
+
+                if existing_one:
+                    raise Exception('A subscription already exists for this topic and security definition')
+
+                # Generate unique subscription key
+                import uuid
+                sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
+
+                item = PubSubSubscription()
+                item.cluster_id = self.request.input.cluster_id
+                item.topic_id = self.request.input.topic_id
+                item.sec_base_id = self.request.input.sec_base_id
+                item.pattern_matched = self.request.input.pattern_matched
+                item.sub_key = sub_key
+                item.is_active = self.request.input.get('is_active', True)
+
+                session.add(item)
+                session.commit()
+
+                self.response.payload.id = item.id
+                self.response.payload.sub_key = item.sub_key
+
+            except Exception:
+                self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
+                session.rollback()
+                raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Edit(AdminService):
+    """ Updates a Pub/Sub subscription.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_subscription_edit_request'
+        response_elem = 'zato_pubsub_subscription_edit_response'
+        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_optional = 'is_active',
+        output_required = 'id', 'sub_key'
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            try:
+                existing_one = session.query(PubSubSubscription).\
+                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubSubscription.topic_id==self.request.input.topic_id).\
+                    filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
+                    filter(PubSubSubscription.id!=self.request.input.id).\
+                    first()
+
+                if existing_one:
+                    raise Exception('A subscription already exists for this topic and security definition')
+
+                item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
+                item.topic_id = self.request.input.topic_id
+                item.sec_base_id = self.request.input.sec_base_id
+                item.pattern_matched = self.request.input.pattern_matched
+                item.is_active = self.request.input.get('is_active', True)
+
+                session.add(item)
+                session.commit()
+
+                self.response.payload.id = item.id
+                self.response.payload.sub_key = item.sub_key
+
+            except Exception:
+                self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
+                session.rollback()
+                raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Delete(AdminService):
     """ Deletes a Pub/Sub subscription.
     """

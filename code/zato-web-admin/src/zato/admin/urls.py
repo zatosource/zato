@@ -735,6 +735,10 @@ urlpatterns += [
 
     url(r'^zato/pubsub/subscription/$',
         login_required(subscription.Index()), name=subscription.Index.url_name),
+    url(r'^zato/pubsub/subscription/create/$',
+        login_required(subscription.Create()), name=subscription.Create.url_name),
+    url(r'^zato/pubsub/subscription/edit/$',
+        login_required(subscription.Edit()), name=subscription.Edit.url_name),
     url(r'^zato/pubsub/subscription/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(subscription.Delete()), name=subscription.Delete.url_name),
 ]
