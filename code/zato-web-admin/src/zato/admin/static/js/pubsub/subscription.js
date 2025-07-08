@@ -88,6 +88,9 @@ $.fn.zato.pubsub.subscription.create = function() {
                 console.log('DEBUG: Setting multiple attribute on select');
                 $('#id_topic_id').attr('multiple', true);
 
+                // Clear any default selections for create form
+                $('#id_topic_id option').prop('selected', false);
+
                 console.log('DEBUG: Creating new SlimSelect for create form');
                 window.topicSelectCreate = new SlimSelect({
                     select: '#id_topic_id',
@@ -221,46 +224,31 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
-    console.log('DEBUG: Edit function called');
-    console.log('DEBUG: SlimSelect available at edit function start?', typeof SlimSelect);
-    console.log('DEBUG: Window SlimSelect type:', typeof window.SlimSelect);
-
     $.fn.zato.data_table.edit('edit', 'Update pub/sub subscription', id);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
-        var currentTopicId = $('#id_edit-topic_id').val();
+        // Get the current topic ID from the hidden input field that contains the actual form data
+        var currentTopicId = $('input[name="edit-topic_id"]').val();
+        if (!currentTopicId) {
+            // Fallback: try to get it from the data table row data
+            var rowData = $.fn.zato.data_table.data[id];
+            if (rowData && rowData.topic_id) {
+                currentTopicId = rowData.topic_id;
+            }
+        }
+
         var currentSecId = $('#id_edit-sec_base_id').val();
         var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
+
         // Initialize SlimSelect after topics are populated via callback
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
-            console.log('DEBUG: populateTopics callback executed for edit');
-            console.log('DEBUG: SlimSelect available?', typeof SlimSelect);
-            console.log('DEBUG: Edit select element exists?', $('#id_edit-topic_id').length);
-            console.log('DEBUG: Edit select element tag:', $('#id_edit-topic_id')[0] ? $('#id_edit-topic_id')[0].tagName : 'none');
-            console.log('DEBUG: Edit select element options count:', $('#id_edit-topic_id option').length);
-
-            // Debug all options in the edit select
-            var editOptions = [];
-            $('#id_edit-topic_id option').each(function() {
-                editOptions.push({
-                    value: $(this).val(),
-                    text: $(this).text(),
-                    selected: $(this).prop('selected')
-                });
-            });
-            console.log('DEBUG: Edit select options:', JSON.stringify(editOptions));
-            console.log('DEBUG: Edit select HTML:', $('#id_edit-topic_id')[0].outerHTML);
-
             if (window.topicSelectEdit) {
-                console.log('DEBUG: Destroying existing topicSelectEdit');
                 window.topicSelectEdit.destroy();
             }
 
             try {
-                console.log('DEBUG: Setting multiple attribute on edit select');
                 $('#id_edit-topic_id').attr('multiple', true);
 
-                console.log('DEBUG: Creating new SlimSelect for edit form');
                 window.topicSelectEdit = new SlimSelect({
                     select: '#id_edit-topic_id',
                     settings: {
@@ -269,14 +257,6 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
                         closeOnSelect: false
                     }
                 });
-                console.log('DEBUG: SlimSelect edit created successfully, type:', typeof window.topicSelectEdit);
-
-                // Debug SlimSelect edit data
-                if (window.topicSelectEdit && window.topicSelectEdit.getData) {
-                    console.log('DEBUG: SlimSelect edit data:', JSON.stringify(window.topicSelectEdit.getData()));
-                }
-
-                // SlimSelect reads from the original select element automatically
 
                 // Force dropdown to be clickable and visible for edit form
                 setTimeout(function() {
