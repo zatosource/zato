@@ -31,11 +31,11 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     var is_active = item.is_active == true
     var created_date = new Date(item.created);
-    var created_formatted = created_date.getFullYear() + '-' + 
-                           String(created_date.getMonth() + 1).padStart(2, '0') + '-' + 
+    var created_formatted = created_date.getFullYear() + '-' +
+                           String(created_date.getMonth() + 1).padStart(2, '0') + '-' +
                            String(created_date.getDate()).padStart(2, '0') + ' ' +
-                           String(created_date.getHours()).padStart(2, '0') + ':' + 
-                           String(created_date.getMinutes()).padStart(2, '0') + ':' + 
+                           String(created_date.getHours()).padStart(2, '0') + ':' +
+                           String(created_date.getMinutes()).padStart(2, '0') + ':' +
                            String(created_date.getSeconds()).padStart(2, '0');
 
     row += "<td class='numbering'>&nbsp;</td>";
