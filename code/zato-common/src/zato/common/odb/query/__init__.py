@@ -23,8 +23,8 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubTopic, SecurityBase, Server, Service, \
-    SMTP, SQLConnectionPool, OutgoingSAP
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
+    Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -62,6 +62,7 @@ class _QueryConfig:
         """
         return query_func.__name__ in {
             'http_soap_list',
+            'pubsub_permission_list',
         }
 
 # ################################################################################################################################
@@ -883,9 +884,7 @@ def pubsub_permission(session, cluster_id, id):
     return _pubsub_permission(session, cluster_id, id).one()
 
 @query_wrapper
-def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=False):
-    # Import PubSubSubscription here to avoid circular imports
-    from zato.common.odb.model import PubSubSubscription
+def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=False, **config):
 
     # Subquery to count subscriptions per security definition
     subscription_count = session.query(
@@ -897,7 +896,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
     ).group_by(PubSubSubscription.sec_base_id).subquery()
 
     # Main query with subscription counts
-    return session.query(
+    query = session.query(
         PubSubPermission,
         SecurityBase.name.label('name'),
         func.coalesce(subscription_count.c.subscription_count, 0).label('subscription_count')
@@ -907,15 +906,38 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
         subscription_count, PubSubPermission.sec_base_id == subscription_count.c.sec_base_id
     ).filter(
         PubSubPermission.cluster_id == cluster_id
-    ).order_by(SecurityBase.name)
+    )
+
+    # Handle search filtering
+    if search_query := config.get('query', []):
+        search_query = search_query if isinstance(search_query, (list, tuple)) else [search_query]
+        filters = []
+
+        for criterion in search_query:
+            # Search in both security definition name and pattern
+            name_filter = SecurityBase.name.contains(criterion)
+            pattern_filter = PubSubPermission.pattern.contains(criterion)
+
+            if criterion.startswith('-'):
+                name_filter = not_(name_filter)
+                pattern_filter = not_(pattern_filter)
+
+            # OR between name and pattern for each criterion
+            filters.append(or_(name_filter, pattern_filter))
+
+        # AND between different search terms
+        if filters:
+            query = query.filter(and_(*filters))
+
+    return query.order_by(SecurityBase.name)
 
 # ################################################################################################################################
 
 def _pubsub_subscription(session, cluster_id):
-    from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase, HTTPSOAP
+
     return session.query(
-        PubSubSubscription, 
-        PubSubTopic.name.label('topic_name'), 
+        PubSubSubscription,
+        PubSubTopic.name.label('topic_name'),
         SecurityBase.name.label('sec_name'),
         HTTPSOAP.name.label('rest_push_endpoint_name')
     ).\
