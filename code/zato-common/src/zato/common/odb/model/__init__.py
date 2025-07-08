@@ -1383,6 +1383,8 @@ class PubSubSubscription(Base):
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
     pattern_matched = Column(String(400), nullable=False)
 
+    delivery_type = Column(String(20), nullable=False)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -1391,6 +1393,9 @@ class PubSubSubscription(Base):
 
     sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    rest_push_endpoint = relationship('HTTPSOAP', backref=backref('pubsub_rest_push_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 # ################################################################################################################################
