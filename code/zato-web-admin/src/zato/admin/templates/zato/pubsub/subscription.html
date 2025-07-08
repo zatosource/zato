@@ -30,10 +30,17 @@
             opacity: 0;
         }
 
-        /* Fix delivery type row alignment */
+        /* Use flexbox for delivery type row alignment */
+        tr:has(#id_delivery_type) td:last-child,
+        tr:has(#id_edit-delivery_type) td:last-child {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
         #id_delivery_type, #id_edit-delivery_type,
-        #id_rest_push_endpoint_id, #id_edit-rest_push_endpoint_id {
-            vertical-align: top !important;
+        #rest-endpoint-create, #rest-endpoint-edit {
+            flex-shrink: 0 !important;
         }
 
         /* Hide topic and security definition selects by default to prevent flash */
@@ -193,8 +200,8 @@
                             <td>{{ create_form.sec_base_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top; width:150px; height:40px;">Delivery type</td>
-                            <td style="vertical-align:top; width:400px; height:40px;">{{ create_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-create" style="width:50%; display:none;">{{ create_form.rest_push_endpoint_id }}</span></td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;">Delivery type</td>
+                            <td style="vertical-align:baseline; width:400px; height:40px;">{{ create_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-create" style="width:50%; display:none;">{{ create_form.rest_push_endpoint_id }}</span></td>
                         </tr>
 
                         <tr>
@@ -226,8 +233,8 @@
                             <td>{{ edit_form.sec_base_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top; width:150px; height:40px;">Delivery type</td>
-                            <td style="vertical-align:top; width:400px; height:40px;">{{ edit_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-edit" style="width:50%; display:inline-block;">{{ edit_form.rest_push_endpoint_id }}</span></td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;">Delivery type</td>
+                            <td style="vertical-align:baseline; width:400px; height:40px;">{{ edit_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-edit" style="width:50%; display:inline-block;">{{ edit_form.rest_push_endpoint_id }}</span></td>
                         </tr>
 
                         <tr>
