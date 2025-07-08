@@ -1356,6 +1356,7 @@ class PubSubSubscription(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    pattern_matched = Column(String(400), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
