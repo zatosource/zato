@@ -74,8 +74,17 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
+    // Get the row data to construct descriptive identifier
+    var row = $('#tr_' + id);
+    var sec_name = row.find('td:eq(4)').text(); // Security name column
+    var topic_name = row.find('td:eq(5)').text(); // Topic name column
+    var sub_key = row.find('td:eq(2)').text(); // Sub key column
+    var delivery_type = row.find('td:eq(6)').text(); // Delivery type column
+
+    var descriptor = 'Security: ' + sec_name + '\nTopic: ' + topic_name + '\nSub key: ' + sub_key + '\nDelivery: ' + delivery_type + '\n\n';
+
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Pub/sub subscription `{0}` deleted',
-        'Are you sure you want to delete pub/sub subscription `{0}`?',
+        'Pub/sub subscription deleted:\n' + descriptor,
+        'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor,
         true);
 }
