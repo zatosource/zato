@@ -120,11 +120,11 @@
                 <form novalidate action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Description</td>
+                            <td style="vertical-align:middle"><label for="id_description">Description</label></td>
                             <td>{{ create_form.description }} </td>
                         </tr>
 
@@ -146,11 +146,11 @@
                 <form novalidate action="{% url "pubsub-topic-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Description</td>
+                            <td style="vertical-align:middle"><label for="id_edit-description">Description</label></td>
                             <td>{{ edit_form.description }} </td>
                         </tr>
 
