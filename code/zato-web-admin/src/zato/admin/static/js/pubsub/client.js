@@ -458,7 +458,8 @@ $.fn.zato.pubsub.client.create = function() {
 
     // Function to populate security definitions and initialize form
     function initializeCreateForm() {
-        populateSecurityDefinitions('create');
+        var selectId = '#id_sec_base_id';
+        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/client/get-security-definitions/', selectId);
         updatePatternTypeOptions('create');
     }
 
@@ -532,7 +533,8 @@ $.fn.zato.pubsub.client.edit = function(id) {
 
     // Function to populate security definitions and initialize form
     function initializeEditForm() {
-        populateSecurityDefinitions('edit', instance.sec_base_id);
+        var selectId = '#id_edit-sec_base_id';
+        $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/client/get-security-definitions/', selectId);
         updatePatternTypeOptions('edit');
     }
 
@@ -846,104 +848,7 @@ function populatePatterns(formType, patternString) {
     updatePatternTypeOptions(formType);
 }
 
-function populateSecurityDefinitions(formType, selectedId) {
-    var selectId = formType === 'create' ? '#id_sec_base_id' : '#id_edit-sec_base_id';
-    var clusterId = $('#cluster_id').val();
-    var select = $(selectId);
-    var selectContainer = select.parent();
 
-    // Show spinner with smooth transition and minimum display time
-    var startTime = Date.now();
-
-    // Hide select and clear existing content (prevent overlay if form opened twice)
-    select.hide();
-    selectContainer.find('.no-security-definitions-message').remove();
-    selectContainer.find('.loading-spinner').remove();
-
-    // Add spinner
-    var spinner = $('<span class="loading-spinner" style="font-style: italic; color: #666;">Loading ..</span>');
-    selectContainer.append(spinner);
-
-    // Smooth fade-in for spinner
-    setTimeout(function() {
-        spinner.addClass('show');
-    }, 50);
-
-    $.ajax({
-        url: '/zato/pubsub/client/get-security-definitions/',
-        type: 'GET',
-        data: {
-            cluster_id: clusterId,
-            form_type: formType
-        },
-        success: function(response) {
-
-            // Re-declare variables for callback scope
-            var select = $(selectId);
-            var selectContainer = select.parent();
-            var spinner = selectContainer.find('.loading-spinner');
-
-            // Ensure minimum display time for smooth UX (prevent flicker)
-            var elapsedTime = Date.now() - startTime;
-            var minDisplayTime = 300; // 300ms minimum
-            var remainingTime = Math.max(0, minDisplayTime - elapsedTime);
-
-            setTimeout(function() {
-                // Fade out spinner
-                spinner.removeClass('show');
-
-                setTimeout(function() {
-                    // Remove spinner and clear any existing messages
-                    selectContainer.find('.loading-spinner').remove();
-                    selectContainer.find('.no-security-definitions-message').remove();
-                    select.empty();
-
-                    if (response.security_definitions && response.security_definitions.length > 0) {
-
-
-                        // Populate select with available security definitions
-                        $.each(response.security_definitions, function(index, item) {
-                            var option = $('<option></option>')
-                                .attr('value', item.id)
-                                .text(item.name);
-                            if (selectedId && item.id == selectedId) {
-                                option.attr('selected', 'selected');
-                            } else if (index === 0 && !selectedId) {
-                                option.attr('selected', 'selected');
-                            }
-                            select.append(option);
-                        });
-
-                        // Show the select dropdown with smooth transition
-                        select.show().removeClass('hide').addClass('security-select');
-
-                        // Enable OK button since we have security definitions
-                        var okButton = select.closest('form').find('input[type="submit"]');
-                        okButton.prop('disabled', false);
-                    } else {
-                        // No security definitions available - show appropriate message
-                        var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
-                        var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
-
-                        // Add message with link
-                        var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=1" target="_blank">Click to create one</a></span>');
-                        selectContainer.append(messageElement);
-
-                        // Disable OK button to prevent form submission
-                        var okButton = select.closest('form').find('input[type="submit"]');
-                        okButton.prop('disabled', true);
-                    }
-                }, 300); // Wait for fade-out transition
-            }, remainingTime);
-        },
-        error: function(xhr, status, error) {
-            // Remove spinner on error
-            var select = $(selectId);
-            var selectContainer = select.parent();
-            selectContainer.find('.loading-spinner').remove();
-        }
-    });
-}
 
 function updatePatternTypeOptions(formType) {
     var accessTypeId = formType === 'create' ? '#id_access_type' : '#id_edit-access_type';

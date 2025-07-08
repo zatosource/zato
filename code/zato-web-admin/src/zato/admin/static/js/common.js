@@ -62,6 +62,8 @@ $.namespace('zato.cloud.microsoft_365');
 $.namespace('zato.cloud.salesforce');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
+$.namespace('zato.common');
+$.namespace('zato.common.security');
 $.namespace('zato.data_table');
 $.namespace('zato.data_table.multirow');
 $.namespace('zato.definition');

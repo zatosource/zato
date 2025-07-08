@@ -60,10 +60,19 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
 $.fn.zato.pubsub.subscription.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
+    // Populate security definitions after form opens
+    setTimeout(function() {
+        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
+    }, 100);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
     $.fn.zato.data_table.edit('edit', 'Update the pub/sub subscription', id);
+    // Populate security definitions after form opens with current selection
+    setTimeout(function() {
+        var currentSecId = $('#id_edit-sec_base_id').val();
+        $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
+    }, 100);
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
