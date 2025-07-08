@@ -91,6 +91,7 @@ $.namespace('zato.pubsub');
 $.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.client');
 $.namespace('zato.pubsub.subscription');
+$.namespace('zato.pubsub.subscription.data_table');
 $.namespace('zato.query');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
