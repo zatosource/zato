@@ -1342,6 +1342,31 @@ class PubSubTopic(Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PubSubPermission(Base):
+    """ Defines publication/subscription permissions for a security definition.
+    """
+    __tablename__ = 'pubsub_permission'
+    __table_args__ = (
+        UniqueConstraint('sec_base_id', 'pattern', 'access_type', 'cluster_id'),
+        {}
+    )
+
+    id = Column(Integer, Sequence('pubsub_permission_id_seq'), primary_key=True)
+    pattern = Column(String(400), nullable=False)
+    access_type = Column(String(20), nullable=False) # publisher, subscriber or publisher-subscriber
+    is_active = Column(Boolean, nullable=False, default=True)
+    created = Column(DateTime, nullable=False, default=_utcnow)
+    last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_base = relationship('SecurityBase', backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PubSubSubscription(Base):
     """ Represents a subscription of an API client to a topic.
     """
@@ -1366,31 +1391,6 @@ class PubSubSubscription(Base):
 
     sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PubSubPermission(Base):
-    """ Defines publication/subscription permissions for a security definition.
-    """
-    __tablename__ = 'pubsub_permission'
-    __table_args__ = (
-        UniqueConstraint('sec_base_id', 'pattern', 'access_type', 'cluster_id'),
-        {}
-    )
-
-    id = Column(Integer, Sequence('pubsub_permission_id_seq'), primary_key=True)
-    pattern = Column(String(400), nullable=False)
-    access_type = Column(String(20), nullable=False) # publisher, subscriber or publisher-subscriber
-    is_active = Column(Boolean, nullable=False, default=True)
-    created = Column(DateTime, nullable=False, default=_utcnow)
-    last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
-
-    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_base = relationship('SecurityBase', backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 # ################################################################################################################################
