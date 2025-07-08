@@ -20,20 +20,24 @@
             opacity: 1;
         }
 
+        .topic-select,
         .security-select {
             transition: opacity 0.05s ease-out;
         }
 
+        .topic-select.hide,
         .security-select.hide {
             opacity: 0;
         }
 
-        /* Hide security definition selects by default to prevent flash */
+        /* Hide topic and security definition selects by default to prevent flash */
+        #id_topic_id, #id_edit-topic_id,
         #id_sec_base_id, #id_edit-sec_base_id {
             display: none;
         }
 
-        /* No security definitions message consistent with dropdown height */
+        /* No topics/security definitions messages consistent with dropdown height */
+        .no-topics-message,
         .no-security-definitions-message {
             display: inline-block;
             height: 20px;
@@ -41,7 +45,9 @@
             vertical-align: middle;
         }
 
-        /* Fixed height for security definition table cells to prevent layout shifts */
+        /* Fixed height for topic and security definition table cells to prevent layout shifts */
+        tr:has(#id_topic_id) td,
+        tr:has(#id_edit-topic_id) td,
         tr:has(#id_sec_base_id) td,
         tr:has(#id_edit-sec_base_id) td {
             height: 32px !important;
@@ -68,6 +74,9 @@
 
     {% comment %} Security Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/common-security.js"></script>
+
+    {% comment %} PubSub Common Topics JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/common-topics.js"></script>
 
     {% comment %} PubSub Subscription {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>

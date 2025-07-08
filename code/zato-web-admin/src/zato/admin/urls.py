@@ -757,6 +757,8 @@ urlpatterns += [
         login_required(subscription.Delete()), name=subscription.Delete.url_name),
     url(r'^zato/pubsub/subscription/get-security-definitions/$',
         login_required(subscription.get_security_definitions), name='pubsub-subscription-get-security-definitions'),
+    url(r'^zato/pubsub/subscription/get-topics/$',
+        login_required(subscription.get_topics), name='pubsub-subscription-get-topics'),
 ]
 
 # ################################################################################################################################

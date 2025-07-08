@@ -123,5 +123,47 @@ def get_security_definitions(req):
             status=500
         )
 
+@method_allowed('GET')
+def get_topics(req):
+    """ Retrieves a list of topics for pubsub subscriptions.
+    """
+    cluster_id = req.GET.get('cluster_id')
+    form_type = req.GET.get('form_type', 'create')
+
+    logger.info('VIEW get_topics: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+
+    try:
+        # Call the service directly like in other views
+        response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+            'cluster_id': cluster_id
+        })
+
+        topics = []
+        if response and hasattr(response, 'data'):
+            for item in response.data:
+                topics.append({
+                    'id': item.id,
+                    'name': item.name
+                })
+
+        logger.info('VIEW get_topics: returning %d topics', len(topics))
+
+        return HttpResponse(
+            json.dumps({
+                'msg': 'Topics retrieved successfully',
+                'topics': topics
+            }),
+            content_type='application/json'
+        )
+    except Exception as e:
+        logger.error('VIEW get_topics: error=%s', e)
+        return HttpResponse(
+            json.dumps({
+                'error': str(e) or 'Error retrieving topics'
+            }),
+            content_type='application/json',
+            status=500
+        )
+
 # ################################################################################################################################
 # ################################################################################################################################

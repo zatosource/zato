@@ -1,15 +1,15 @@
-// Common security definitions handling utility
+// Common topics handling utility
 
-$.namespace('zato.common.security');
+$.namespace('zato.pubsub.common');
 
 /**
- * Populate security definitions dropdown with AJAX loading and empty state handling
+ * Populate topics dropdown with AJAX loading and empty state handling
  * @param {string} formType - 'create' or 'edit'
- * @param {string} selectedId - Previously selected security definition ID
+ * @param {string} selectedId - Previously selected topic ID
  * @param {string} endpoint - AJAX endpoint URL
  * @param {string} selectId - CSS selector for the dropdown
  */
-$.fn.zato.common.security.populateSecurityDefinitions = function(formType, selectedId, endpoint, selectId) {
+$.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint, selectId) {
     var clusterId = $('#cluster_id').val();
     var select = $(selectId);
     var selectContainer = select.parent();
@@ -19,7 +19,7 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
 
     // Hide select and clear existing content
     select.hide();
-    selectContainer.find('.no-security-definitions-message').remove();
+    selectContainer.find('.no-topics-message').remove();
     selectContainer.find('.loading-spinner').remove();
 
     // Add spinner
@@ -38,34 +38,31 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
             cluster_id: clusterId,
             form_type: formType
         },
-        success: function(response) {
-            // Re-declare variables for callback scope
-            var select = $(selectId);
-            var selectContainer = select.parent();
-            var spinner = selectContainer.find('.loading-spinner');
-
-            // Ensure minimum display time for smooth UX
+        success: function(data) {
+            // Ensure minimum spinner display time for smooth UX
             var elapsedTime = Date.now() - startTime;
-            var minDisplayTime = 300;
-            var remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+            var remainingTime = Math.max(300 - elapsedTime, 0);
 
             setTimeout(function() {
-                // Fade out spinner
-                spinner.removeClass('show');
-
+                // Remove spinner with fade-out
                 setTimeout(function() {
-                    // Remove spinner and clear any existing messages
                     selectContainer.find('.loading-spinner').remove();
-                    selectContainer.find('.no-security-definitions-message').remove();
+
+                    // Clear existing options
                     select.empty();
 
-                    if (response.security_definitions && response.security_definitions.length > 0) {
-                        // Populate select with available security definitions
-                        $.each(response.security_definitions, function(index, item) {
+                    if (data.topics && data.topics.length > 0) {
+                        // Add default option
+                        select.append('<option value="">----------</option>');
+
+                        // Add topic options
+                        $.each(data.topics, function(index, topic) {
                             var option = $('<option></option>')
-                                .attr('value', item.id)
-                                .text(item.name);
-                            if (selectedId && item.id == selectedId) {
+                                .attr('value', topic.id)
+                                .text(topic.name);
+
+                            // Select the previously selected topic or first one
+                            if (selectedId && topic.id == selectedId) {
                                 option.attr('selected', 'selected');
                             } else if (index === 0 && !selectedId) {
                                 option.attr('selected', 'selected');
@@ -74,18 +71,18 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
                         });
 
                         // Show the select dropdown
-                        select.show().removeClass('hide').addClass('security-select');
+                        select.show().removeClass('hide').addClass('topic-select');
 
                         // Enable OK button
                         var okButton = select.closest('form').find('input[type="submit"]');
                         okButton.prop('disabled', false);
                     } else {
-                        // No security definitions available - show message
-                        var hasExistingClients = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
-                        var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
+                        // No topics available - show message
+                        var hasExistingTopics = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
+                        var message = hasExistingTopics ? 'No topics left' : 'No topics available';
 
                         // Add message with link
-                        var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
+                        var messageElement = $('<span class="no-topics-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/pubsub/topic/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
                         selectContainer.append(messageElement);
 
                         // Disable OK button
@@ -100,11 +97,11 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
             selectContainer.find('.loading-spinner').remove();
 
             // Show error message
-            var errorElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #cc0000;">Error loading security definitions</span>');
+            var errorElement = $('<span class="no-topics-message" style="font-style: italic; color: #d00;">Error loading topics</span>');
             selectContainer.append(errorElement);
 
             // Disable OK button
-            var okButton = $(selectId).closest('form').find('input[type="submit"]');
+            var okButton = select.closest('form').find('input[type="submit"]');
             okButton.prop('disabled', true);
         }
     });
