@@ -237,6 +237,7 @@ class PUBSUB(Constants):
     PERMISSION_CREATE = ValueConstant('')
     PERMISSION_EDIT = ValueConstant('')
     PERMISSION_DELETE = ValueConstant('')
+    SUBSCRIPTION_DELETE = ValueConstant('')
 
 code_to_name = {}
 
