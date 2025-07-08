@@ -95,34 +95,19 @@ class Delete(_Delete):
 def get_security_definitions(req):
     """ Retrieves a list of security definitions for pubsub subscriptions.
     """
-    cluster_id = req.GET.get('cluster_id')
     form_type = req.GET.get('form_type', 'create')
 
-    logger.info('VIEW get_security_definitions: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
-    logger.info('VIEW get_security_definitions: request GET parameters: %s', dict(req.GET))
-    logger.info('VIEW get_security_definitions: req.zato.cluster_id=%s', getattr(req.zato, 'cluster_id', None))
-
     try:
-        logger.info('VIEW get_security_definitions: calling get_pubsub_security_definitions with form_type=%s, context=subscription', form_type)
         security_definitions = get_pubsub_security_definitions(req, form_type, 'subscription')
-        logger.info('VIEW get_security_definitions: get_pubsub_security_definitions returned %s', security_definitions)
-
-        logger.info('VIEW get_security_definitions: returning %d definitions', len(security_definitions))
-        for definition in security_definitions:
-            logger.info('VIEW get_security_definitions: definition to return: %s', definition)
-
-        response_data = {
-            'msg': 'Security definitions retrieved successfully',
-            'security_definitions': security_definitions
-        }
-        logger.info('VIEW get_security_definitions: final response data: %s', response_data)
 
         return HttpResponse(
-            json.dumps(response_data),
+            json.dumps({
+                'msg': 'Security definitions retrieved successfully',
+                'security_definitions': security_definitions
+            }),
             content_type='application/json'
         )
     except Exception as e:
-        logger.error('VIEW get_security_definitions: exception occurred: %s', str(e), exc_info=True)
         return HttpResponse(
             json.dumps({
                 'error': str(e) or 'Error retrieving security definitions'
