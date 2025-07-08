@@ -55,7 +55,7 @@ class GetSecurityDefinitions(View):
 
     def get(self, request):
         form_type = request.GET.get('form_type', 'edit')
-        choices = get_pubsub_security_definitions(request, form_type)
+        choices = get_pubsub_security_definitions(request, form_type, 'permission')
         return JsonResponse({'security_definitions': choices})
 
 # ################################################################################################################################
