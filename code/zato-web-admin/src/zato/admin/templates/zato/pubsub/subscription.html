@@ -202,19 +202,19 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Active</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_is_active">Active</label></td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topic</td>
+                            <td style="vertical-align:middle"><label for="id_topic_id">Topic</label></td>
                             <td>{{ create_form.topic_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Security definition</td>
+                            <td style="vertical-align:middle"><label for="id_sec_base_id">Security definition</label></td>
                             <td>{{ create_form.sec_base_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:baseline; width:150px; height:40px;">Delivery type</td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
                             <td style="vertical-align:baseline; width:400px; height:40px;">{{ create_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-create" style="width:50%; display:none;">{{ create_form.rest_push_endpoint_id }}</span></td>
                         </tr>
 
@@ -235,19 +235,19 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Active</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_edit-is_active">Active</label></td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topic</td>
+                            <td style="vertical-align:middle"><label for="id_edit-topic_id">Topic</label></td>
                             <td>{{ edit_form.topic_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Security definition</td>
+                            <td style="vertical-align:middle"><label for="id_edit-sec_base_id">Security definition</label></td>
                             <td>{{ edit_form.sec_base_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:baseline; width:150px; height:40px;">Delivery type</td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_edit-delivery_type">Delivery type</label></td>
                             <td style="vertical-align:baseline; width:400px; height:40px;">{{ edit_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-edit" style="width:50%; display:inline-block;">{{ edit_form.rest_push_endpoint_id }}</span></td>
                         </tr>
 
