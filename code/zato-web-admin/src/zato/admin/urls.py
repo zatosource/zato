@@ -741,6 +741,8 @@ urlpatterns += [
         login_required(subscription.Edit()), name=subscription.Edit.url_name),
     url(r'^zato/pubsub/subscription/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(subscription.Delete()), name=subscription.Delete.url_name),
+    url(r'^zato/pubsub/subscription/get-security-definitions/$',
+        login_required(subscription.GetSecurityDefinitions()), name=subscription.GetSecurityDefinitions.url_name),
 ]
 
 # ################################################################################################################################
