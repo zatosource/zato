@@ -9,8 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Django
+from django.http import JsonResponse
+from django.views import View
+
 # Zato
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
+from zato.admin.web.util import get_pubsub_security_definitions
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import PubSubSubscription
 
@@ -87,10 +92,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-from django.http import JsonResponse
-from zato.admin.web.util import get_pubsub_security_definitions
-
-class GetSecurityDefinitions(_Index):
+class GetSecurityDefinitions(View):
     method_allowed = 'GET'
     url_name = 'pubsub-subscription-get-security-definitions'
     
