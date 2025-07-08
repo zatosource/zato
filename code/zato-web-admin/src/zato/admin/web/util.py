@@ -176,9 +176,19 @@ def was_modified_since(header=None, mtime=0):
 # ################################################################################################################################
 
 def get_pubsub_security_definitions(request, form_type='edit', context='subscription'):
+    logger.info('UTIL get_pubsub_security_definitions: starting with form_type=%s, context=%s, cluster_id=%s', form_type, context, request.zato.cluster_id)
+
     response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
         'cluster_id': request.zato.cluster_id,
     })
+
+    logger.info('UTIL get_pubsub_security_definitions: basic-auth response ok=%s', response.ok)
+    if response.ok:
+        logger.info('UTIL get_pubsub_security_definitions: received %d basic-auth definitions', len(response.data))
+        for item in response.data:
+            logger.info('UTIL get_pubsub_security_definitions: basic-auth definition id=%s, name=%s', item['id'], item['name'])
+    else:
+        logger.error('UTIL get_pubsub_security_definitions: basic-auth response failed')
 
     # Define names to filter out
     filtered_names = {
@@ -186,53 +196,106 @@ def get_pubsub_security_definitions(request, form_type='edit', context='subscrip
         'admin.invoke',
         'ide_publisher'
     }
+    logger.info('UTIL get_pubsub_security_definitions: filtered_names=%s', filtered_names)
 
     choices = []
     if response.ok:
         # Get already used security definitions based on context
         used_sec_ids = set()
+        logger.info('UTIL get_pubsub_security_definitions: checking for used definitions with form_type=%s, context=%s', form_type, context)
 
         if form_type == 'create':
             if context == 'subscription':
+                logger.info('UTIL get_pubsub_security_definitions: getting existing subscriptions to find used security definitions')
                 # For subscriptions page, exclude definitions used by other subscriptions
                 subscriptions_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
                     'cluster_id': request.zato.cluster_id,
                 })
+                logger.info('UTIL get_pubsub_security_definitions: subscriptions response ok=%s', subscriptions_response.ok)
                 if subscriptions_response.ok:
+                    logger.info('UTIL get_pubsub_security_definitions: received %d subscriptions', len(subscriptions_response.data))
+                    # Create a mapping of security names to IDs from the basic auth definitions
+                    sec_name_to_id = {}
+                    for sec_def in response.data:
+                        sec_name_to_id[sec_def['name']] = sec_def['id']
+                    logger.info('UTIL get_pubsub_security_definitions: security name to ID mapping: %s', sec_name_to_id)
+
                     for item in subscriptions_response.data:
+                        logger.info('UTIL get_pubsub_security_definitions: subscription id=%s, security_id=%s, sec_name=%s, name=%s',
+                                   item.get('id'), item.get('security_id'), item.get('sec_name'), item.get('name'))
+
+                        # Check both security_id and sec_name fields
+                        sec_id = None
                         if item.get('security_id'):
-                            used_sec_ids.add(item['security_id'])
+                            sec_id = item['security_id']
+                            logger.info('UTIL get_pubsub_security_definitions: found security_id %s', sec_id)
+                        elif item.get('sec_name'):
+                            # Map security name to ID
+                            sec_name = item['sec_name']
+                            sec_id = sec_name_to_id.get(sec_name)
+                            logger.info('UTIL get_pubsub_security_definitions: mapped sec_name %s to security_id %s', sec_name, sec_id)
+
+                        if sec_id:
+                            used_sec_ids.add(sec_id)
+                            logger.info('UTIL get_pubsub_security_definitions: added security_id %s to used_sec_ids', sec_id)
+                else:
+                    logger.error('UTIL get_pubsub_security_definitions: subscriptions response failed')
             elif context == 'permission':
+                logger.info('UTIL get_pubsub_security_definitions: getting existing permissions to find used security definitions')
                 # For permissions page, exclude definitions used by other permissions
                 permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
                     'cluster_id': request.zato.cluster_id,
                 })
+                logger.info('UTIL get_pubsub_security_definitions: permissions response ok=%s', permissions_response.ok)
                 if permissions_response.ok:
+                    logger.info('UTIL get_pubsub_security_definitions: received %d permissions', len(permissions_response.data))
                     for item in permissions_response.data:
+                        logger.info('UTIL get_pubsub_security_definitions: permission id=%s, sec_base_id=%s, name=%s', item.get('id'), item.get('sec_base_id'), item.get('name'))
                         if item.get('sec_base_id'):
                             used_sec_ids.add(item['sec_base_id'])
+                            logger.info('UTIL get_pubsub_security_definitions: added sec_base_id %s to used_sec_ids', item['sec_base_id'])
+                else:
+                    logger.error('UTIL get_pubsub_security_definitions: permissions response failed')
             elif context == 'client':
+                logger.info('UTIL get_pubsub_security_definitions: getting existing permissions for client context')
                 # For client context, we might want different filtering logic
                 # For now, treat it similar to permissions since clients are related to permissions
                 permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
                     'cluster_id': request.zato.cluster_id,
                 })
+                logger.info('UTIL get_pubsub_security_definitions: permissions response ok=%s', permissions_response.ok)
                 if permissions_response.ok:
+                    logger.info('UTIL get_pubsub_security_definitions: received %d permissions for client context', len(permissions_response.data))
                     for item in permissions_response.data:
+                        logger.info('UTIL get_pubsub_security_definitions: permission id=%s, sec_base_id=%s, name=%s', item.get('id'), item.get('sec_base_id'), item.get('name'))
                         if item.get('sec_base_id'):
                             used_sec_ids.add(item['sec_base_id'])
+                            logger.info('UTIL get_pubsub_security_definitions: added sec_base_id %s to used_sec_ids', item['sec_base_id'])
+                else:
+                    logger.error('UTIL get_pubsub_security_definitions: permissions response failed for client context')
+        else:
+            logger.info('UTIL get_pubsub_security_definitions: form_type is not create, skipping usage filtering')
+
+        logger.info('UTIL get_pubsub_security_definitions: used_sec_ids=%s', used_sec_ids)
 
         for item in response.data:
             is_not_used = item['id'] not in used_sec_ids
             is_not_filtered = item['name'] not in filtered_names
             is_not_zato = not item['name'].startswith('zato')
 
+            logger.info('UTIL get_pubsub_security_definitions: checking definition id=%s, name=%s: is_not_used=%s, is_not_filtered=%s, is_not_zato=%s',
+                       item['id'], item['name'], is_not_used, is_not_filtered, is_not_zato)
+
             if is_not_used and is_not_filtered and is_not_zato:
                 choices.append({
                     'id': item['id'],
                     'name': item['name']
                 })
+                logger.info('UTIL get_pubsub_security_definitions: including definition id=%s, name=%s', item['id'], item['name'])
+            else:
+                logger.info('UTIL get_pubsub_security_definitions: excluding definition id=%s, name=%s', item['id'], item['name'])
 
+    logger.info('UTIL get_pubsub_security_definitions: returning %d choices: %s', len(choices), choices)
     return choices
 
 def get_pubsub_security_choices(request, form_type='edit', context='subscription'):
@@ -247,8 +310,12 @@ def get_pubsub_security_choices(request, form_type='edit', context='subscription
     Returns:
         List of tuples (id, name) for Django form choices
     """
+    logger.info('UTIL get_pubsub_security_choices: called with form_type=%s, context=%s', form_type, context)
     definitions = get_pubsub_security_definitions(request, form_type, context)
-    return [(item['id'], item['name']) for item in definitions]
+    logger.info('UTIL get_pubsub_security_choices: get_pubsub_security_definitions returned %d definitions', len(definitions))
+    choices = [(item['id'], item['name']) for item in definitions]
+    logger.info('UTIL get_pubsub_security_choices: returning %d choices: %s', len(choices), choices)
+    return choices
 
 # ################################################################################################################################
 # ################################################################################################################################
