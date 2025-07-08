@@ -11,6 +11,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query import pubsub_subscription_list
@@ -29,16 +30,17 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', 'topic_name', 'sec_name'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', 'topic_name', 'sec_name', 'delivery_type'
 
     def get_data(self, session):
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
         data = []
 
-        for subscription, topic_name, sec_name in result:
+        for subscription, topic_name, sec_name, rest_push_endpoint_name in result:
             item_dict = subscription.asdict()
             item_dict['topic_name'] = topic_name
             item_dict['sec_name'] = sec_name
+            item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name or ''
             data.append(item_dict)
 
         return elems_with_opaque(data)
@@ -56,8 +58,8 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', 'topic_id', 'sec_base_id'
-        input_optional = 'is_active',
+        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
 
     def handle(self):
@@ -82,6 +84,8 @@ class Create(AdminService):
                 item.sec_base_id = self.request.input.sec_base_id
                 item.sub_key = sub_key
                 item.is_active = self.request.input.get('is_active', True)
+                item.delivery_type = self.request.input.delivery_type
+                item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
                 # Ensure pattern_matched is set to default value immediately before save
                 item.pattern_matched = '*'
 
@@ -113,8 +117,8 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id'
-        input_optional = 'is_active',
+        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key'
 
     def handle(self):
@@ -133,6 +137,8 @@ class Edit(AdminService):
                 item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
                 item.topic_id = self.request.input.topic_id
                 item.sec_base_id = self.request.input.sec_base_id
+                item.delivery_type = self.request.input.delivery_type
+                item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
                 item.pattern_matched = '*'  # Set explicitly to default pattern
                 item.is_active = self.request.input.get('is_active', True)
 

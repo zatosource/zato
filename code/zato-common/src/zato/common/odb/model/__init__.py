@@ -1394,7 +1394,7 @@ class PubSubSubscription(Base):
     sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
-    rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     rest_push_endpoint = relationship('HTTPSOAP', backref=backref('pubsub_rest_push_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
