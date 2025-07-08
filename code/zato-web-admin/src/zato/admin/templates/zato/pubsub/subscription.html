@@ -5,6 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/slimselect.min.css">
     <style>
         /* Smooth transitions for security definitions loading */
         .loading-spinner {
@@ -104,6 +105,9 @@
 
     {% comment %} PubSub Common Topics JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/common-topics.js"></script>
+
+    {% comment %} SlimSelect {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/slimselect.min.js"></script>
 
     {% comment %} PubSub Subscription {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>

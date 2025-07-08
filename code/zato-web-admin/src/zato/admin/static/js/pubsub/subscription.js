@@ -55,7 +55,21 @@ $.fn.zato.pubsub.subscription.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
     // Populate topics and security definitions after form opens
     setTimeout(function() {
-        $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id');
+        // Initialize SlimSelect after topics are populated via callback
+        $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id', function() {
+            if (window.topicSelectCreate) {
+                window.topicSelectCreate.destroy();
+            }
+            window.topicSelectCreate = new SlimSelect({
+                select: '#id_topic_id',
+                settings: {
+                    multiple: true,
+                    closeOnSelect: false,
+                    searchPlaceholder: 'Search topics...',
+                    placeholderText: 'Select topics'
+                }
+            });
+        });
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
     }, 200);
@@ -68,7 +82,21 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
         var currentTopicId = $('#id_edit-topic_id').val();
         var currentSecId = $('#id_edit-sec_base_id').val();
         var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
-        $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id');
+        // Initialize SlimSelect after topics are populated via callback
+        $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
+            if (window.topicSelectEdit) {
+                window.topicSelectEdit.destroy();
+            }
+            window.topicSelectEdit = new SlimSelect({
+                select: '#id_edit-topic_id',
+                settings: {
+                    multiple: true,
+                    closeOnSelect: false,
+                    searchPlaceholder: 'Search topics...',
+                    placeholderText: 'Select topics'
+                }
+            });
+        });
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit');
     }, 200);
