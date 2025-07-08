@@ -13,6 +13,17 @@ from django import forms
 from zato.admin.web.util import get_pubsub_security_choices
 from zato.common.api import PubSub
 
+def get_rest_endpoint_choices(req):
+    response = req.zato.client.invoke('zato.http-soap.get-list', {
+        'cluster_id': req.zato.cluster_id,
+        'connection': 'outgoing',
+        'transport': 'plain_http'
+    })
+    choices = [('', '---')]
+    for item in response.data:
+        choices.append((item.id, item.name))
+    return choices
+
 class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     topic_id = forms.ChoiceField(widget=forms.Select())
@@ -37,8 +48,8 @@ class CreateForm(forms.Form):
             self.fields['topic_id'].choices = []
             # Use filtered security definitions for PubSub clients
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create')
-            # REST endpoints will be populated dynamically via AJAX
-            self.fields['rest_push_endpoint_id'].choices = []
+            # Populate REST endpoints
+            self.fields['rest_push_endpoint_id'].choices = get_rest_endpoint_choices(req)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
