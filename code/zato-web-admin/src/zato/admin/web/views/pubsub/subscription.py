@@ -98,7 +98,7 @@ def get_security_definitions(req):
     form_type = req.GET.get('form_type', 'create')
 
     try:
-        security_definitions = get_pubsub_security_definitions(req, form_type)
+        security_definitions = get_pubsub_security_definitions(req, form_type, 'subscription')
 
         return HttpResponse(
             json.dumps({
