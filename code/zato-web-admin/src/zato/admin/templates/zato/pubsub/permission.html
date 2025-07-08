@@ -449,11 +449,11 @@
                 <form novalidate action="{% url "pubsub-permission-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Security definition</td>
+                            <td style="vertical-align:middle"><label for="id_sec_base_id">Security definition</label></td>
                             <td><div class="security-definition-container">{{ create_form.sec_base_id }}</div></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Access type</td>
+                            <td style="vertical-align:middle"><label for="id_access_type">Access type</label></td>
                             <td>{{ create_form.access_type }}</td>
                         </tr>
                         <tr>
@@ -491,11 +491,11 @@
                     {{ edit_form.id }}
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Security definition</td>
+                            <td style="vertical-align:middle;width:20%"><label for="id_edit-sec_base_id">Security definition</label></td>
                             <td><div class="security-definition-container">{{ edit_form.sec_base_id }}</div></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Access type</td>
+                            <td style="vertical-align:middle"><label for="id_edit-access_type">Access type</label></td>
                             <td>{{ edit_form.access_type }}</td>
                         </tr>
                         <tr>
