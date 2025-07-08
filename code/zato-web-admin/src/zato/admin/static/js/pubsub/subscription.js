@@ -57,9 +57,8 @@ $.fn.zato.pubsub.subscription.create = function() {
     setTimeout(function() {
         $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
-        $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null, '/zato/pubsub/subscription/get-rest-endpoints/', '#id_rest_push_endpoint_id');
         $.fn.zato.pubsub.subscription.setupDeliveryTypeHandler('create');
-    }, 100);
+    }, 200);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
@@ -71,9 +70,8 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
         var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
-        $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, '/zato/pubsub/subscription/get-rest-endpoints/', '#id_edit-rest_push_endpoint_id');
         $.fn.zato.pubsub.subscription.setupDeliveryTypeHandler('edit');
-    }, 100);
+    }, 200);
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
@@ -87,56 +85,7 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
         true);
 }
 
-$.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedValue, url, selectId) {
-    var clusterId = $("#cluster_id").val() || $("#id_edit-cluster_id").val();
-    var $select = $(selectId);
-    var $loadingSpinner = $('<span class="loading-spinner">Loading...</span>');
 
-    // Show loading spinner
-    $select.after($loadingSpinner);
-    setTimeout(function() {
-        $loadingSpinner.addClass('show');
-    }, 10);
-
-    $.get(url, {
-        cluster_id: clusterId,
-        form_type: form_type
-    }, function(data) {
-        $select.empty();
-        $select.append('<option value="">-- Select REST endpoint --</option>');
-
-        if (data.rest_endpoints && data.rest_endpoints.length > 0) {
-            $.each(data.rest_endpoints, function(index, endpoint) {
-                var option = $('<option></option>')
-                    .attr('value', endpoint.id)
-                    .text(endpoint.name);
-
-                if (selectedValue && endpoint.id == selectedValue) {
-                    option.attr('selected', 'selected');
-                }
-
-                $select.append(option);
-            });
-        } else {
-            $select.append('<option value="" disabled>No REST endpoints available</option>');
-        }
-
-        // Remove loading spinner and show select
-        $loadingSpinner.removeClass('show');
-        setTimeout(function() {
-            $loadingSpinner.remove();
-            $select.show();
-        }, 50);
-    }).fail(function() {
-        $select.empty();
-        $select.append('<option value="" disabled>Error loading REST endpoints</option>');
-        $loadingSpinner.removeClass('show');
-        setTimeout(function() {
-            $loadingSpinner.remove();
-            $select.show();
-        }, 50);
-    });
-}
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeHandler = function(form_type) {
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
@@ -145,14 +94,16 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeHandler = function(form_type) {
     var $deliveryType = $(deliveryTypeId);
     var $restEndpoint = $(restEndpointId);
 
+    if ($deliveryType.length === 0 || $restEndpoint.length === 0) {
+        return;
+    }
+
     function toggleRestEndpoint() {
         if ($deliveryType.val() === 'push') {
             $restEndpoint.prop('disabled', false);
-            $restEndpoint.closest('tr').show();
         } else {
             $restEndpoint.prop('disabled', true);
             $restEndpoint.val('');
-            $restEndpoint.closest('tr').hide();
         }
     }
 
