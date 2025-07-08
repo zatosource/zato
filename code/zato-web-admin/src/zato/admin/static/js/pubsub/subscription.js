@@ -46,6 +46,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', item.pattern_matched || '');
     row += String.format('<td style="text-align:center">{0}</td>', created_formatted);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
@@ -56,6 +57,14 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
 
     return row;
+}
+
+$.fn.zato.pubsub.subscription.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
+}
+
+$.fn.zato.pubsub.subscription.edit = function(id) {
+    $.fn.zato.data_table.edit('edit', 'Update the pub/sub subscription', id);
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
