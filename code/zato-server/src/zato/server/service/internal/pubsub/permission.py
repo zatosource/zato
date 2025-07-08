@@ -14,15 +14,16 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
+    _filter_by = PubSubPermission.pattern,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_permission_get_list_request'
         response_elem = 'zato_pubsub_permission_get_list_response'
         input_required = 'cluster_id',
