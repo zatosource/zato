@@ -66,7 +66,18 @@ $.fn.zato.pubsub.subscription.create = function() {
             console.log('DEBUG: Select element exists?', $('#id_topic_id').length);
             console.log('DEBUG: Select element tag:', $('#id_topic_id')[0] ? $('#id_topic_id')[0].tagName : 'none');
             console.log('DEBUG: Select element options count:', $('#id_topic_id option').length);
-            console.log('DEBUG: CSS files loaded count:', $('link[href*="slimselect"]').length);
+
+            // Debug all options in the select
+            var options = [];
+            $('#id_topic_id option').each(function() {
+                options.push({
+                    value: $(this).val(),
+                    text: $(this).text(),
+                    selected: $(this).prop('selected')
+                });
+            });
+            console.log('DEBUG: Select options:', JSON.stringify(options));
+            console.log('DEBUG: Select HTML:', $('#id_topic_id')[0].outerHTML);
 
             if (window.topicSelectCreate) {
                 console.log('DEBUG: Destroying existing topicSelectCreate');
@@ -74,14 +85,16 @@ $.fn.zato.pubsub.subscription.create = function() {
             }
 
             try {
+                console.log('DEBUG: Setting multiple attribute on select');
+                $('#id_topic_id').attr('multiple', true);
+
                 console.log('DEBUG: Creating new SlimSelect for create form');
                 window.topicSelectCreate = new SlimSelect({
                     select: '#id_topic_id',
                     settings: {
-                        multiple: true,
-                        closeOnSelect: false,
                         searchPlaceholder: 'Search topics...',
-                        placeholderText: 'Select topics'
+                        placeholderText: 'Select topics',
+                        closeOnSelect: false
                     }
                 });
                 console.log('DEBUG: SlimSelect created successfully, type:', typeof window.topicSelectCreate);
@@ -89,6 +102,29 @@ $.fn.zato.pubsub.subscription.create = function() {
                 console.log('DEBUG: Original select display:', $('#id_topic_id').css('display'));
                 console.log('DEBUG: Original select visibility:', $('#id_topic_id').css('visibility'));
                 console.log('DEBUG: SlimSelect main elements:', $('.ss-main').length);
+
+                // Debug SlimSelect data
+                if (window.topicSelectCreate && window.topicSelectCreate.getData) {
+                    console.log('DEBUG: SlimSelect data:', JSON.stringify(window.topicSelectCreate.getData()));
+                }
+
+                // SlimSelect should automatically read from the original select element
+
+                // Force dropdown to be clickable and visible
+                setTimeout(function() {
+                    $('.ss-main.topic-select').off('click').on('click', function(e) {
+                        if (window.topicSelectCreate && window.topicSelectCreate.open) {
+                            window.topicSelectCreate.open();
+                        }
+                    });
+
+                    // Ensure dropdown content is properly styled
+                    $('.ss-content.topic-select').css({
+                        'display': 'block',
+                        'visibility': 'visible',
+                        'z-index': '9999'
+                    });
+                }, 100);
             } catch (error) {
                 console.error('DEBUG: Error creating SlimSelect:', error);
             }
@@ -100,6 +136,84 @@ $.fn.zato.pubsub.subscription.create = function() {
             // Force show SlimSelect container if it's hidden
             $('.ss-main').show();
             console.log('DEBUG: After forcing SlimSelect show:', $('.ss-main').css('display'));
+
+            // Debug SlimSelect dropdown interaction
+            console.log('DEBUG: SlimSelect single element found:', $('.ss-single').length);
+            console.log('DEBUG: SlimSelect multi element found:', $('.ss-multi').length);
+            console.log('DEBUG: SlimSelect content found:', $('.ss-content').length);
+            console.log('DEBUG: SlimSelect list found:', $('.ss-list').length);
+            console.log('DEBUG: SlimSelect options found:', $('.ss-option').length);
+
+            // Debug SlimSelect container structure in detail
+            var ssMain = $('.ss-main');
+            console.log('DEBUG: ss-main found:', ssMain.length);
+            if (ssMain.length > 0) {
+                console.log('DEBUG: ss-main HTML:', ssMain[0].outerHTML.substring(0, 500));
+                console.log('DEBUG: ss-main children:', ssMain.children().length);
+                var mainChildren = [];
+                ssMain.children().each(function(i, el) {
+                    mainChildren.push({
+                        index: i,
+                        className: el.className,
+                        tagName: el.tagName,
+                        id: el.id,
+                        style: el.style.cssText,
+                        innerHTML: el.innerHTML.substring(0, 100)
+                    });
+                });
+                console.log('DEBUG: ss-main children details:', JSON.stringify(mainChildren));
+            }
+
+            // Debug SlimSelect values container
+            var ssValues = $('.ss-values');
+            console.log('DEBUG: ss-values found:', ssValues.length);
+            if (ssValues.length > 0) {
+                console.log('DEBUG: ss-values HTML:', ssValues[0].outerHTML.substring(0, 300));
+                var valuesChildren = [];
+                ssValues.children().each(function(i, el) {
+                    valuesChildren.push({
+                        index: i,
+                        className: el.className,
+                        tagName: el.tagName,
+                        textContent: el.textContent
+                    });
+                });
+                console.log('DEBUG: ss-values children:', JSON.stringify(valuesChildren));
+            }
+
+            // Debug all SlimSelect related elements
+            var allSsElements = $('[class*="ss-"]');
+            console.log('DEBUG: All ss- elements found:', allSsElements.length);
+            var ssElementsInfo = [];
+            allSsElements.each(function(i, el) {
+                ssElementsInfo.push({
+                    index: i,
+                    className: el.className,
+                    tagName: el.tagName,
+                    id: el.id,
+                    display: $(el).css('display'),
+                    visibility: $(el).css('visibility')
+                });
+            });
+            console.log('DEBUG: All ss- elements info:', JSON.stringify(ssElementsInfo));
+
+            // Debug SlimSelect instance properties
+            if (window.topicSelectCreate) {
+                console.log('DEBUG: SlimSelect settings:', JSON.stringify({
+                    isMultiple: window.topicSelectCreate.settings ? window.topicSelectCreate.settings.isMultiple : 'no settings',
+                    closeOnSelect: window.topicSelectCreate.settings ? window.topicSelectCreate.settings.closeOnSelect : 'no settings',
+                    disabled: window.topicSelectCreate.settings ? window.topicSelectCreate.settings.disabled : 'no settings'
+                }));
+            }
+
+            // Add click listener to debug dropdown opening for multi-select
+            $('.ss-multi').on('click', function() {
+                console.log('DEBUG: SlimSelect multi clicked');
+                setTimeout(function() {
+                    console.log('DEBUG: After click - ss-list display:', $('.ss-list').css('display'));
+                    console.log('DEBUG: After click - ss-option count:', $('.ss-option').length);
+                }, 100);
+            });
         });
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
@@ -125,23 +239,60 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
             console.log('DEBUG: Edit select element tag:', $('#id_edit-topic_id')[0] ? $('#id_edit-topic_id')[0].tagName : 'none');
             console.log('DEBUG: Edit select element options count:', $('#id_edit-topic_id option').length);
 
+            // Debug all options in the edit select
+            var editOptions = [];
+            $('#id_edit-topic_id option').each(function() {
+                editOptions.push({
+                    value: $(this).val(),
+                    text: $(this).text(),
+                    selected: $(this).prop('selected')
+                });
+            });
+            console.log('DEBUG: Edit select options:', JSON.stringify(editOptions));
+            console.log('DEBUG: Edit select HTML:', $('#id_edit-topic_id')[0].outerHTML);
+
             if (window.topicSelectEdit) {
                 console.log('DEBUG: Destroying existing topicSelectEdit');
                 window.topicSelectEdit.destroy();
             }
 
             try {
+                console.log('DEBUG: Setting multiple attribute on edit select');
+                $('#id_edit-topic_id').attr('multiple', true);
+
                 console.log('DEBUG: Creating new SlimSelect for edit form');
                 window.topicSelectEdit = new SlimSelect({
                     select: '#id_edit-topic_id',
                     settings: {
-                        multiple: true,
-                        closeOnSelect: false,
                         searchPlaceholder: 'Search topics...',
-                        placeholderText: 'Select topics'
+                        placeholderText: 'Select topics',
+                        closeOnSelect: false
                     }
                 });
                 console.log('DEBUG: SlimSelect edit created successfully, type:', typeof window.topicSelectEdit);
+
+                // Debug SlimSelect edit data
+                if (window.topicSelectEdit && window.topicSelectEdit.getData) {
+                    console.log('DEBUG: SlimSelect edit data:', JSON.stringify(window.topicSelectEdit.getData()));
+                }
+
+                // SlimSelect reads from the original select element automatically
+
+                // Force dropdown to be clickable and visible for edit form
+                setTimeout(function() {
+                    $('.ss-main.topic-select').off('click').on('click', function(e) {
+                        if (window.topicSelectEdit && window.topicSelectEdit.open) {
+                            window.topicSelectEdit.open();
+                        }
+                    });
+
+                    // Ensure dropdown content is properly styled
+                    $('.ss-content.topic-select').css({
+                        'display': 'block',
+                        'visibility': 'visible',
+                        'z-index': '9999'
+                    });
+                }, 100);
             } catch (error) {
                 console.error('DEBUG: Error creating SlimSelect edit:', error);
             }
