@@ -39,20 +39,6 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        import logging
-        logger = logging.getLogger(__name__)
-
-        # Get the data that will be sent to the frontend
-        response = self.req.zato.client.invoke('zato.pubsub.permission.get-list', {
-            'cluster_id': self.req.zato.cluster_id,
-        })
-
-        logger.info(f"=== PUBSUB PERMISSION DEBUG: Backend response.ok: {response.ok}")
-        if response.ok:
-            logger.info(f"=== PUBSUB PERMISSION DEBUG: Backend response.data: {response.data}")
-            for i, item in enumerate(response.data):
-                logger.info(f"=== PUBSUB PERMISSION DEBUG: Item {i}: {item}")
-
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
 

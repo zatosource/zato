@@ -13,15 +13,15 @@ from contextlib import closing
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list
-from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.common.util.sql import set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
-    _filter_by = PubSubPermission.pattern,
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_permission_get_list_request'
@@ -30,8 +30,12 @@ class GetList(AdminService):
         output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def get_data(self, session):
+        query_config = {}
+        if self.request.input['query']:
+            query_config['query'] = self.request.input['query'].strip().split()
+
         # Get the query results which now return tuples of (PubSubPermission, name, subscription_count)
-        query_results = pubsub_permission_list(session, self.request.input.cluster_id, False)
+        query_results = pubsub_permission_list(session, self.request.input.cluster_id, False, **query_config)
 
         # Convert tuples to dictionaries with the expected structure
         processed_results = []
@@ -52,6 +56,7 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(AdminService):
@@ -115,6 +120,7 @@ class Create(AdminService):
                 self.response.payload.name = sec_base.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
@@ -161,6 +167,7 @@ class Edit(AdminService):
                 self.response.payload.name = permission.sec_base.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a pub/sub permission.
@@ -186,4 +193,5 @@ class Delete(AdminService):
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
                 self.broker_client.publish(self.request.input)
 
+# ################################################################################################################################
 # ################################################################################################################################
