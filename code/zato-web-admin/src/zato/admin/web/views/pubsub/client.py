@@ -16,6 +16,7 @@ from django.views import View
 # Zato
 from zato.admin.web.forms.pubsub.client import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.util import get_pubsub_security_definitions
 from zato.common.odb.model import PubSubPermission
 
 # ################################################################################################################################
@@ -67,52 +68,7 @@ class GetSecurityDefinitions(View):
 
     def get(self, request):
         form_type = request.GET.get('form_type', 'edit')
-
-        # Get existing basic auth definitions for AJAX response
-        response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
-            'cluster_id': request.zato.cluster_id,
-        })
-
-        # Security definitions to filter out
-        filtered_names = {
-            'Rule engine default user',
-            'admin.invoke',
-            'ide_publisher'
-        }
-
-        choices = []
-        if response.ok:
-
-            # If this is for create form, exclude security definitions that already have patterns
-
-            if form_type == 'create':
-                # Get existing pubsub permissions to find which security definitions are already used
-                permissions_response = request.zato.client.invoke('zato.pubsub.client.get-list', {
-                    'cluster_id': request.zato.cluster_id,
-                })
-
-                used_sec_ids = set()
-                if permissions_response.ok:
-                    for perm in permissions_response.data:
-                        used_sec_ids.add(perm['sec_base_id'])
-
-                # Only include security definitions that are not already used and not filtered out
-                for item in response.data:
-                    is_not_used = item['id'] not in used_sec_ids
-                    is_not_filtered = item['name'] not in filtered_names
-                    is_not_zato = not item['name'].startswith('zato')
-
-                    if is_not_used and is_not_filtered and is_not_zato:
-                        choices.append({'id': item['id'], 'name': item['name']})
-            else:
-                # For edit form, include all security definitions except filtered ones
-                for item in response.data:
-                    is_not_filtered = item['name'] not in filtered_names
-                    is_not_zato = not item['name'].startswith('zato')
-
-                    if is_not_filtered and is_not_zato:
-                        choices.append({'id': item['id'], 'name': item['name']})
-
+        choices = get_pubsub_security_definitions(request, form_type)
         return JsonResponse({'security_definitions': choices})
 
 # ################################################################################################################################

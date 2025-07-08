@@ -5,6 +5,30 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+        /* Smooth transitions for security definitions loading */
+        .loading-spinner {
+            opacity: 0;
+            transition: opacity 0.05s ease-in;
+        }
+
+        .loading-spinner.show {
+            opacity: 1;
+        }
+
+        .security-select {
+            transition: opacity 0.05s ease-out;
+        }
+
+        .security-select.hide {
+            opacity: 0;
+        }
+
+        /* Hide security definition selects by default to prevent flash */
+        #id_sec_base_id, #id_edit-sec_base_id {
+            display: none;
+        }
+    </style>
 {% endblock %}
 
 {% block "extra_js" %}
@@ -16,6 +40,9 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Security Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/common-security.js"></script>
 
     {% comment %} PubSub Subscription {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>

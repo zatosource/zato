@@ -86,3 +86,18 @@ class Delete(_Delete):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+from django.http import JsonResponse
+from zato.admin.web.util import get_pubsub_security_definitions
+
+class GetSecurityDefinitions(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-subscription-get-security-definitions'
+    
+    def get(self, req):
+        form_type = req.GET.get('form_type', 'create')
+        security_definitions = get_pubsub_security_definitions(req, form_type)
+        return JsonResponse({'security_definitions': security_definitions})
+
+# ################################################################################################################################
+# ################################################################################################################################
