@@ -176,13 +176,11 @@ def was_modified_since(header=None, mtime=0):
 # ################################################################################################################################
 
 def get_pubsub_security_definitions(request, form_type='edit'):
-
-    # Get existing basic auth definitions
     response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
         'cluster_id': request.zato.cluster_id,
     })
 
-    # Security definitions to filter out
+    # Define names to filter out
     filtered_names = {
         'Rule engine default user',
         'admin.invoke',
@@ -191,34 +189,15 @@ def get_pubsub_security_definitions(request, form_type='edit'):
 
     choices = []
     if response.ok:
-        if form_type == 'create':
+        for item in response.data:
+            is_not_filtered = item['name'] not in filtered_names
+            is_not_zato = not item['name'].startswith('zato')
 
-            # Get existing pubsub permissions to find which security definitions are already used
-            clients_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-                'cluster_id': request.zato.cluster_id,
-            })
-
-            used_sec_ids = set()
-            if clients_response.ok:
-                for item in clients_response.data:
-                    used_sec_ids.add(item['sec_base_id'])
-
-            # Only include security definitions that are not already used and not filtered out
-            for item in response.data:
-                is_not_used = item['id'] not in used_sec_ids
-                is_not_filtered = item['name'] not in filtered_names
-                is_not_zato = not item['name'].startswith('zato')
-
-                if is_not_used and is_not_filtered and is_not_zato:
-                    choices.append({'id': item['id'], 'name': item['name']})
-        else:
-            # For edit form, include all security definitions except filtered ones
-            for item in response.data:
-                is_not_filtered = item['name'] not in filtered_names
-                is_not_zato = not item['name'].startswith('zato')
-
-                if is_not_filtered and is_not_zato:
-                    choices.append({'id': item['id'], 'name': item['name']})
+            if is_not_filtered and is_not_zato:
+                choices.append({
+                    'id': item['id'],
+                    'name': item['name']
+                })
 
     return choices
 
