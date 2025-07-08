@@ -13,7 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import PubSub
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.model import HTTPBasicAuth, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO

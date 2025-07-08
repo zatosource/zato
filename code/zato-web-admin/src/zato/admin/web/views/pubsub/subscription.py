@@ -95,15 +95,10 @@ class Delete(_Delete):
 def get_security_definitions(req):
     """ Retrieves a list of security definitions for pubsub subscriptions.
     """
-    cluster_id = req.GET.get('cluster_id')
     form_type = req.GET.get('form_type', 'create')
-
-    logger.info('VIEW get_security_definitions: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
     try:
         security_definitions = get_pubsub_security_definitions(req, form_type)
-
-        logger.info('VIEW get_security_definitions: returning %d definitions', len(security_definitions))
 
         return HttpResponse(
             json.dumps({
@@ -113,7 +108,6 @@ def get_security_definitions(req):
             content_type='application/json'
         )
     except Exception as e:
-        logger.error('VIEW get_security_definitions: error=%s', e)
         return HttpResponse(
             json.dumps({
                 'error': str(e) or 'Error retrieving security definitions'
@@ -121,6 +115,9 @@ def get_security_definitions(req):
             content_type='application/json',
             status=500
         )
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def get_topics(req):
@@ -163,6 +160,9 @@ def get_topics(req):
             content_type='application/json',
             status=500
         )
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def get_rest_endpoints(req):
