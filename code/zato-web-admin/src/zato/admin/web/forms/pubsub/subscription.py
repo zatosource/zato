@@ -21,7 +21,7 @@ class CreateForm(forms.Form):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         if req:
             # Topics will be populated dynamically via AJAX
-            self.fields['topic_id'].choices = [('', '----------')]
+            self.fields['topic_id'].choices = []
             # Use filtered security definitions for PubSub clients
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create')
 
@@ -32,6 +32,6 @@ class EditForm(CreateForm):
         super(EditForm, self).__init__(prefix, post_data, req)
         if req:
             # Topics will be populated dynamically via AJAX
-            self.fields['topic_id'].choices = [('', '----------')]
+            self.fields['topic_id'].choices = []
             # Use filtered security definitions for edit (allows all available ones)
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'edit')

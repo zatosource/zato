@@ -52,9 +52,6 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint
                     select.empty();
 
                     if (data.topics && data.topics.length > 0) {
-                        // Add default option
-                        select.append('<option value="">----------</option>');
-
                         // Add topic options
                         $.each(data.topics, function(index, topic) {
                             var option = $('<option></option>')
