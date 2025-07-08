@@ -12,11 +12,10 @@ import logging
 
 # Django
 from django.http import HttpResponse
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import PubSubTopic
 
 # ################################################################################################################################
@@ -90,10 +89,8 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def get_matches(req):
-    """Retrieves a list of topics matching a pattern."""
-    import logging
-    logger = logging.getLogger('zato')
-
+    """ Retrieves a list of topics matching a pattern.
+    """
     cluster_id = req.POST.get('cluster_id')
     pattern = req.POST.get('pattern')
 
