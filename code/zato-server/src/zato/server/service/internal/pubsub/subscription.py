@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import Cluster, PubSubSubscription
+from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
