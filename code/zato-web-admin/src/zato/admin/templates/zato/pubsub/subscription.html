@@ -10,6 +10,10 @@
         .loading-spinner {
             opacity: 0;
             transition: opacity 0.05s ease-in;
+            display: inline-block;
+            height: 20px;
+            line-height: 20px;
+            vertical-align: top;
         }
 
         .loading-spinner.show {
@@ -27,6 +31,21 @@
         /* Hide security definition selects by default to prevent flash */
         #id_sec_base_id, #id_edit-sec_base_id {
             display: none;
+        }
+
+        /* No security definitions message consistent with dropdown height */
+        .no-security-definitions-message {
+            display: inline-block;
+            height: 20px;
+            line-height: 20px;
+            vertical-align: top;
+        }
+
+        /* Fixed height for security definition table cells to prevent layout shifts */
+        tr:has(#id_sec_base_id) td,
+        tr:has(#id_edit-sec_base_id) td {
+            height: 32px !important;
+            vertical-align: middle;
         }
     </style>
 {% endblock %}
