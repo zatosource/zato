@@ -68,16 +68,19 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint
                             select.append(option);
                         });
 
-                        // Show the select dropdown
-                        select.show().removeClass('hide').addClass('topic-select');
+                        // Don't show the select yet - let callback handle it
+                        select.removeClass('hide').addClass('topic-select');
 
                         // Enable OK button
                         var okButton = select.closest('form').find('input[type="submit"]');
                         okButton.prop('disabled', false);
 
-                        // Execute callback if provided
+                        // Execute callback if provided (callback will show the select)
                         if (callback && typeof callback === 'function') {
                             callback();
+                        } else {
+                            // If no callback, show the select (fallback for non-SlimSelect usage)
+                            select.show();
                         }
                     } else {
                         // No topics available - show message
