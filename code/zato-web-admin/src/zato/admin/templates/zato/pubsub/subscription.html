@@ -57,6 +57,10 @@
 
     {% if cluster_id %}
 
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a>
+        </div>
+
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -69,6 +73,7 @@
                         <th><a href="#">Pattern Matched</a></th>
                         <th style="text-align:center"><a href="#">Created</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
@@ -89,6 +94,7 @@
                         <td>{{ item.pattern_matched }}</td>
                         <td style="text-align:center">{{ item.created|date:"Y-m-d H:i:s" }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
+                        <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -107,6 +113,73 @@
         </div>
 
 {% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:14%">Topic</td>
+                            <td>{{ create_form.topic_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Security</td>
+                            <td>{{ create_form.sec_base_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pattern Matched</td>
+                            <td>{{ create_form.pattern_matched }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:14%">Topic</td>
+                            <td>{{ edit_form.topic_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Security</td>
+                            <td>{{ edit_form.sec_base_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pattern Matched</td>
+                            <td>{{ edit_form.pattern_matched }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
 
     {% endif %} {% comment %}cluster_id{% endcomment %}
 

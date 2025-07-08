@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.admin.web.views import Delete as _Delete, Index as _Index
+from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import PubSubSubscription
 
 # ################################################################################################################################
@@ -36,7 +37,44 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        return {}
+        create_form = CreateForm(req=self.req)
+        edit_form = EditForm(prefix='edit', req=self.req)
+        return {
+            'create_form': create_form,
+            'edit_form': edit_form,
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Create(CreateEdit):
+    method_allowed = 'POST'
+    url_name = 'pubsub-subscription-create'
+    service_name = 'zato.pubsub.subscription.create'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_optional = 'is_active',
+        output_required = 'id', 'sub_key'
+
+    def success_message(self, item):
+        return 'Successfully created the Pub/Sub subscription'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Edit(CreateEdit):
+    method_allowed = 'POST'
+    url_name = 'pubsub-subscription-edit'
+    service_name = 'zato.pubsub.subscription.edit'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_optional = 'is_active',
+        output_required = 'id', 'sub_key'
+
+    def success_message(self, item):
+        return 'Successfully updated the Pub/Sub subscription'
 
 # ################################################################################################################################
 # ################################################################################################################################
