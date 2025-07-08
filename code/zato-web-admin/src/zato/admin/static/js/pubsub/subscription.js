@@ -32,26 +32,19 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
 
     var is_active = item.is_active == true
-    var created_date = new Date(item.created);
-    var created_formatted = created_date.getFullYear() + '-' +
-                           String(created_date.getMonth() + 1).padStart(2, '0') + '-' +
-                           String(created_date.getDate()).padStart(2, '0') + ' ' +
-                           String(created_date.getHours()).padStart(2, '0') + ':' +
-                           String(created_date.getMinutes()).padStart(2, '0') + ':' +
-                           String(created_date.getSeconds()).padStart(2, '0');
+    var delivery_type = item.delivery_type || 'N/A';
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td>{0}</td>', item.topic_name);
-    row += String.format('<td>{0}</td>', item.sec_name);
-    row += String.format('<td style="text-align:center">{0}</td>', created_formatted);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.sec_name);
+    row += String.format('<td>{0}</td>', item.topic_name);
+    row += String.format('<td>{0}</td>', delivery_type);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.created || "");
 
     if(include_tr) {
         row += '</tr>';
