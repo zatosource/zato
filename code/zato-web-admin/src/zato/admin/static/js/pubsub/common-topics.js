@@ -8,8 +8,9 @@ $.namespace('zato.pubsub.common');
  * @param {string} selectedId - Previously selected topic ID
  * @param {string} endpoint - AJAX endpoint URL
  * @param {string} selectId - CSS selector for the dropdown
+ * @param {Function} callback - Optional callback to execute after topics are loaded
  */
-$.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint, selectId) {
+$.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint, selectId, callback) {
     var clusterId = $('#cluster_id').val();
     var select = $(selectId);
     var selectContainer = select.parent();
@@ -73,6 +74,11 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedId, endpoint
                         // Enable OK button
                         var okButton = select.closest('form').find('input[type="submit"]');
                         okButton.prop('disabled', false);
+
+                        // Execute callback if provided
+                        if (callback && typeof callback === 'function') {
+                            callback();
+                        }
                     } else {
                         // No topics available - show message
                         var hasExistingTopics = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
