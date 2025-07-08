@@ -7,16 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 
 # Django
-from django.http import JsonResponse
-from django.views import View
+from django.http import HttpResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import PubSubSubscription
 
 # ################################################################################################################################
@@ -92,14 +92,36 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetSecurityDefinitions(View):
-    method_allowed = 'GET'
-    url_name = 'pubsub-subscription-get-security-definitions'
-    
-    def get(self, req):
-        form_type = req.GET.get('form_type', 'create')
+@method_allowed('GET')
+def get_security_definitions(req):
+    """ Retrieves a list of security definitions for pubsub subscriptions.
+    """
+    cluster_id = req.GET.get('cluster_id')
+    form_type = req.GET.get('form_type', 'create')
+
+    logger.info('VIEW get_security_definitions: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+
+    try:
         security_definitions = get_pubsub_security_definitions(req, form_type)
-        return JsonResponse({'security_definitions': security_definitions})
+
+        logger.info('VIEW get_security_definitions: returning %d definitions', len(security_definitions))
+
+        return HttpResponse(
+            json.dumps({
+                'msg': 'Security definitions retrieved successfully',
+                'security_definitions': security_definitions
+            }),
+            content_type='application/json'
+        )
+    except Exception as e:
+        logger.error('VIEW get_security_definitions: error=%s', e)
+        return HttpResponse(
+            json.dumps({
+                'error': str(e) or 'Error retrieving security definitions'
+            }),
+            content_type='application/json',
+            status=500
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
