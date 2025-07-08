@@ -29,10 +29,29 @@
         }
 
         .pattern-row {
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            display: grid !important;
+            grid-template-columns: 80px 1fr 30px 30px !important;
+            grid-gap: 8px !important;
+            align-items: center !important;
+            margin-bottom: 8px !important;
+            background: rgba(0,0,0,0.02) !important;
+            border-radius: 4px !important;
+        }
+
+        .pattern-row select {
+            grid-column: 1 !important;
+        }
+
+        .pattern-row input {
+            grid-column: 2 !important;
+        }
+
+        .pattern-row .pattern-add-button {
+            grid-column: 3 !important;
+        }
+
+        .pattern-row .pattern-remove-button {
+            grid-column: 4 !important;
         }
 
         .pattern-type-select {
@@ -121,9 +140,9 @@
         /* Pattern rows in edit forms should display as proper rows */
         #create-patterns-container .pattern-row,
         #edit-patterns-container .pattern-row {
-            display: flex;
-            align-items: center;
-            gap: 0px;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
             margin-bottom: 6px;
             padding: 2px 0;
         }
@@ -457,7 +476,7 @@
                             <td>{{ create_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top">Patterns</td>
+                            <td style="vertical-align:middle">Patterns</td>
                             <td>
                                 <div id="create-patterns-container">
                                     <div class="pattern-row">
@@ -499,7 +518,7 @@
                             <td>{{ edit_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top">Patterns</td>
+                            <td style="vertical-align:middle">Patterns</td>
                             <td>
                                 <div id="edit-patterns-container">
                                     <div class="pattern-row">
