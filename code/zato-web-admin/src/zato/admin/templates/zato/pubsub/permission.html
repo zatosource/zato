@@ -25,17 +25,11 @@
         }
 
         .form-data td:nth-child(2) {
-            width: 82%;
+            vertical-align: baseline;
         }
 
         .pattern-row {
-            display: grid !important;
-            grid-template-columns: 80px 1fr 30px 30px !important;
-            grid-gap: 8px !important;
-            align-items: center !important;
             margin-bottom: 8px !important;
-            background: rgba(0,0,0,0.02) !important;
-            border-radius: 4px !important;
         }
 
         .pattern-row select {
@@ -476,7 +470,7 @@
                             <td>{{ create_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Patterns</td>
+                            <td style="vertical-align:baseline">Patterns</td>
                             <td>
                                 <div id="create-patterns-container">
                                     <div class="pattern-row">
@@ -518,7 +512,7 @@
                             <td>{{ edit_form.access_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Patterns</td>
+                            <td style="vertical-align:baseline">Patterns</td>
                             <td>
                                 <div id="edit-patterns-container">
                                     <div class="pattern-row">
