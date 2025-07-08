@@ -31,6 +31,11 @@
         }
 
         /* Use flexbox for delivery type row alignment */
+        tr:has(#id_delivery_type),
+        tr:has(#id_edit-delivery_type) {
+            transform: translateY(-5px) !important;
+        }
+
         tr:has(#id_delivery_type) td:last-child,
         tr:has(#id_edit-delivery_type) td:last-child {
             display: flex !important;
