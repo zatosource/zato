@@ -88,15 +88,14 @@
             '_numbering',
             '_selection',
             'sub_key',
-            'topic_name',
-            'sec_name',
-            '_created',
             '_is_active',
+            'sec_name',
+            'topic_name',
+            'delivery_type',
             '_edit',
             '_delete',
             'id',
             'is_active',
-            'created',
         ]
     }
     </script>
@@ -127,11 +126,11 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Subscription key</a></th>
-                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Active</a></th>
                         <th><a href="#">Security definition</a></th>
-                        <th style="text-align:center"><a href="#">Created</a></th>
-                        <th style="text-align:center"><a href="#">Active</a></th>
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Delivery type</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
@@ -146,18 +145,17 @@
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
-                        <td class="impexp"><input type="checkbox" /></td>
+                        <td class='impexp'><input type='checkbox' /></td>
                         <td>{{ item.sub_key }}</td>
-                        <td>{{ item.topic_name }}</td>
-                        <td>{{ item.sec_name }}</td>
-                        <td style="text-align:center">{{ item.created|date:"Y-m-d H:i:s" }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
+                        <td>{{ item.sec_name }}</td>
+                        <td>{{ item.topic_name }}</td>
+                        <td>{{ item.delivery_type|default:"N/A" }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.created }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
