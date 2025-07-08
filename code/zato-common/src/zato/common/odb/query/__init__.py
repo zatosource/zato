@@ -912,18 +912,16 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 # ################################################################################################################################
 
 def _pubsub_subscription(session, cluster_id):
-    from zato.common.odb.model import PubSubSubscription, PubSubTopic, PubSubPermission, SecurityBase
+    from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase
     return session.query(
         PubSubSubscription, 
         PubSubTopic.name.label('topic_name'), 
-        PubSubPermission.id.label('client_id'),
-        PubSubPermission.pattern.label('sec_name')
+        SecurityBase.name.label('sec_name')
     ).\
         join(PubSubTopic, PubSubSubscription.topic_id == PubSubTopic.id).\
-        join(PubSubPermission, PubSubSubscription.sec_base_id == PubSubPermission.id).\
+        join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
-        filter(PubSubPermission.access_type.in_([pubsub_subscriber, pubsub_publisher_subscriber])).\
-        order_by(PubSubTopic.name, PubSubPermission.pattern)
+        order_by(PubSubTopic.name, SecurityBase.name)
 
 def pubsub_subscription(session, cluster_id, id):
     """ An individual Pub/Sub subscription.

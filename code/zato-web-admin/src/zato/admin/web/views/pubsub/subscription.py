@@ -37,8 +37,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created'
-        output_optional = 'topic_name', 'sec_name',
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
         output_repeated = True
 
     def handle(self):
@@ -60,7 +59,7 @@ class Create(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
-        output_required = 'id', 'sub_key'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
 
     def success_message(self, item):
         return 'Successfully created the pub/sub subscription'
