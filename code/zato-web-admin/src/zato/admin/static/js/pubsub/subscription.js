@@ -63,7 +63,7 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
-    $.fn.zato.data_table.edit('edit', 'Update the pub/sub subscription', id);
+    $.fn.zato.data_table.edit('edit', 'Update pub/sub subscription', id);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
         var currentTopicId = $('#id_edit-topic_id').val();
@@ -74,14 +74,9 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
-    // Get the row data to construct descriptive identifier
-    var row = $('#tr_' + id);
-    var sec_name = row.find('td:eq(4)').text(); // Security name column
-    var topic_name = row.find('td:eq(5)').text(); // Topic name column
-    var sub_key = row.find('td:eq(2)').text(); // Sub key column
-    var delivery_type = row.find('td:eq(6)').text(); // Delivery type column
 
-    var descriptor = 'Security: ' + sec_name + '\nTopic: ' + topic_name + '\nSub key: ' + sub_key + '\nDelivery: ' + delivery_type + '\n\n';
+    var instance = $.fn.zato.data_table.data[id];
+    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + instance.topic_name + '\nKey: ' + instance.sub_key + '\nDelivery: ' + (instance.delivery_type || 'N/A') + '\n\n';
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
