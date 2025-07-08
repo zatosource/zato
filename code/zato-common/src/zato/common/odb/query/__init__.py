@@ -912,14 +912,16 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 # ################################################################################################################################
 
 def _pubsub_subscription(session, cluster_id):
-    from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase
+    from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase, HTTPSOAP
     return session.query(
         PubSubSubscription, 
         PubSubTopic.name.label('topic_name'), 
-        SecurityBase.name.label('sec_name')
+        SecurityBase.name.label('sec_name'),
+        HTTPSOAP.name.label('rest_push_endpoint_name')
     ).\
         join(PubSubTopic, PubSubSubscription.topic_id == PubSubTopic.id).\
         join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
+        outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
         order_by(PubSubTopic.name, SecurityBase.name)
 
