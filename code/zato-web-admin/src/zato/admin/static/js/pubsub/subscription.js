@@ -57,7 +57,7 @@ $.fn.zato.pubsub.subscription.create = function() {
     setTimeout(function() {
         $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
-
+        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
     }, 200);
 }
 
@@ -70,7 +70,7 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
         var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
-
+        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit');
     }, 200);
 }
 
@@ -83,4 +83,30 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
         'Pub/sub subscription deleted:\n' + descriptor,
         'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor,
         true);
+}
+
+$.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) {
+    var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
+    var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
+
+    var $deliveryType = $(deliveryTypeId);
+    var $restEndpointSpan = $(restEndpointSpanId);
+
+    if ($deliveryType.length === 0 || $restEndpointSpan.length === 0) {
+        return;
+    }
+
+    function toggleRestEndpointVisibility() {
+        if ($deliveryType.val() === 'push') {
+            $restEndpointSpan.css('display', 'inline-block');
+        } else {
+            $restEndpointSpan.hide();
+        }
+    }
+
+    // Set initial state
+    toggleRestEndpointVisibility();
+
+    // Handle delivery type changes
+    $deliveryType.on('change', toggleRestEndpointVisibility);
 }
