@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}Pub/sub Subscriptions{% endblock %}
+{% block html_title %}Pub/sub subscriptions{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -43,7 +43,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">pub/sub Subscriptions</h2>
+<h2 class="zato">Pub/sub subscriptions</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -66,9 +66,9 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Subscription Key</a></th>
+                        <th><a href="#">Subscription key</a></th>
                         <th><a href="#">Topic</a></th>
-                        <th><a href="#">API Client</a></th>
+                        <th><a href="#">API client</a></th>
                         <th style="text-align:center"><a href="#">Created</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
                         <th>&nbsp;</th>
