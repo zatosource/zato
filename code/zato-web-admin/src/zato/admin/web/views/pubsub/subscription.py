@@ -32,7 +32,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched'
+        output_required = 'id', 'sub_key', 'is_active', 'created'
         output_optional = 'topic_name', 'sec_name',
         output_repeated = True
 
@@ -53,7 +53,7 @@ class Create(CreateEdit):
     service_name = 'zato.pubsub.subscription.create'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_required = 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
         output_required = 'id', 'sub_key'
 
@@ -69,7 +69,7 @@ class Edit(CreateEdit):
     service_name = 'zato.pubsub.subscription.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
         output_required = 'id', 'sub_key'
 

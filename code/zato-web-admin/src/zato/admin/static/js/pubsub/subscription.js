@@ -41,9 +41,8 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td>{0}</td>', item.topic_name || '');
-    row += String.format('<td>{0}</td>', item.sec_name || '');
-    row += String.format('<td>{0}</td>', item.pattern_matched || '');
+    row += String.format('<td>{0}</td>', item.topic_name);
+    row += String.format('<td>{0}</td>', item.sec_name);
     row += String.format('<td style="text-align:center">{0}</td>', created_formatted);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
