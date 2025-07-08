@@ -1,8 +1,8 @@
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.PubSubClient = new Class({
+$.fn.zato.data_table.PubSubPermission = new Class({
     toString: function() {
-        var s = '<PubSubClient id:{0} name:{1} pattern:{2} access_type:{3}>';
+        var s = '<PubSubPermission id:{0} name:{1} pattern:{2} access_type:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.pattern ? this.pattern : '(none)',
@@ -191,7 +191,7 @@ function showTopicsAlert(pattern, event) {
                 contentHtml += '</div>';
             } else {
                 contentHtml += '<div class="topic-matches-header topic-matches-no-results">';
-                contentHtml += 'No matches found';
+                contentHtml += 'No matching topics found';
                 contentHtml += '</div>';
             }
 
@@ -313,7 +313,7 @@ function initializePatternEditing() {
         e.preventDefault();
         var $link = $(this);
         var currentValue = $link.data('value');
-        var clientId = $link.data('pk');
+        var permissionId = $link.data('pk');
         var prefix = $link.data('prefix');
         var original = $link.data('original');
 
@@ -350,10 +350,10 @@ function initializePatternEditing() {
 
             // Save via AJAX
             $.ajax({
-                url: '/zato/pubsub/client/update-pattern/',
+                url: '/zato/pubsub/permission/update-pattern/',
                 type: 'POST',
                 data: {
-                    pk: clientId,
+                    pk: permissionId,
                     name: 'pattern_value',
                     value: newValue,
                     prefix: prefix,
@@ -414,8 +414,8 @@ function initializePatternEditing() {
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubClient;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.client.data_table.new_row;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubPermission;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.permission.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['sec_base_id', 'access_type']);
 
@@ -453,13 +453,16 @@ $(document).ready(function() {
     };
 })
 
-$.fn.zato.pubsub.client.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new API client', null);
+$.fn.zato.pubsub.permission = {};
+$.fn.zato.pubsub.permission.data_table = {};
+
+$.fn.zato.pubsub.permission.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new permission', null);
 
     // Function to populate security definitions and initialize form
     function initializeCreateForm() {
         var selectId = '#id_sec_base_id';
-        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/client/get-security-definitions/', selectId);
+        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/permission/get-security-definitions/', selectId);
         updatePatternTypeOptions('create');
     }
 
@@ -489,7 +492,7 @@ $.fn.zato.pubsub.client.create = function() {
     };
 }
 
-$.fn.zato.pubsub.client.edit = function(id) {
+$.fn.zato.pubsub.permission.edit = function(id) {
 
     var instance = $.fn.zato.data_table.data[id];
 
@@ -501,7 +504,7 @@ $.fn.zato.pubsub.client.edit = function(id) {
         return;
     }
 
-    $.fn.zato.data_table._create_edit('edit', 'Update the API client', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update permission `' + instance.name + '`', id);
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
@@ -534,7 +537,7 @@ $.fn.zato.pubsub.client.edit = function(id) {
     // Function to populate security definitions and initialize form
     function initializeEditForm() {
         var selectId = '#id_edit-sec_base_id';
-        $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/client/get-security-definitions/', selectId);
+        $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/permission/get-security-definitions/', selectId);
         updatePatternTypeOptions('edit');
     }
 
@@ -656,7 +659,7 @@ $(document).on('click', '.pattern-remove-button', function() {
     }, 100);
 });
 
-$.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
+$.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr) {
 
     var row = '';
 
@@ -689,8 +692,8 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', pattern_display_html);
     row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
     row += String.format('<td style="text-align:center">{0}</td>', item.subscription_count || '0');
-    row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.edit(\'{0}\')">Edit</a></td>', item.id);
-    row += String.format('<td><a href="javascript:$.fn.zato.pubsub.client.delete_(\'{0}\')">Delete</a></td>', item.id);
+    row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
+    row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
     row += String.format('<td style="display:none">{0}</td>', item.id); // id (hidden)
     row += String.format('<td style="display:none">{0}</td>', item.pattern || ''); // _pattern (hidden)
     row += String.format('<td style="display:none">{0}</td>', item.access_type || ''); // _access_type (hidden)
@@ -703,10 +706,10 @@ $.fn.zato.pubsub.client.data_table.new_row = function(item, data, include_tr) {
     return row;
 }
 
-$.fn.zato.pubsub.client.delete_ = function(id) {
+$.fn.zato.pubsub.permission.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'API client `{0}` deleted',
-        'Are you sure you want to delete API client `{0}`?',
+        'Permission `{0}` deleted',
+        'Are you sure you want to delete permission `{0}`?',
         true);
 }
 

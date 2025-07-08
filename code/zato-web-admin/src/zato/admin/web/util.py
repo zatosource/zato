@@ -194,7 +194,7 @@ def get_pubsub_security_definitions(request, form_type='edit'):
         if form_type == 'create':
 
             # Get existing pubsub permissions to find which security definitions are already used
-            clients_response = request.zato.client.invoke('zato.pubsub.client.get-list', {
+            clients_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
                 'cluster_id': request.zato.cluster_id,
             })
 

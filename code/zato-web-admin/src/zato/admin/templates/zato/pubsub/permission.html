@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}Pub/sub API Clients{% endblock %}
+{% block html_title %}Pub/sub Permissions{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -345,8 +345,8 @@
     {% comment %} Security Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/common-security.js"></script>
 
-    {% comment %} PubSub Client {% endcomment %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/client.js"></script>
+    {% comment %} PubSub Permission {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/permission.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
@@ -370,7 +370,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub API clients</h2>
+<h2 class="zato">Pub/sub permissions</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -382,7 +382,7 @@
 
         <div class='page_prompt'>
             <br/>
-            <a href="javascript:$.fn.zato.pubsub.client.create()">Create a new API client</a>
+            <a href="javascript:$.fn.zato.pubsub.permission.create()">Create a new permission</a>
         </div>
 
         <div id="markup">
@@ -422,9 +422,9 @@
                         </td>
                         <td style="text-align:center">{{ item.access_type|capfirst }}</td>
                         <td style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
-                        <td><a href="javascript:$.fn.zato.pubsub.client.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.permission.edit('{{ item.id }}')">Edit</a></td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.client.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.permission.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.pattern }}</td>
 
@@ -446,7 +446,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "pubsub-client-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "pubsub-permission-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Security definition</td>
@@ -487,7 +487,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "pubsub-client-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "pubsub-permission-edit" %}" method="post" id="edit-form">
                     {{ edit_form.id }}
                     <table class="form-data">
                         <tr>
