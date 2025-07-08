@@ -31,7 +31,7 @@ def get_rest_endpoint_choices(req):
 
 class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    topic_id = forms.ChoiceField(widget=forms.Select())
+    topic_id = forms.MultipleChoiceField(widget=forms.SelectMultiple())
     sec_base_id = forms.ChoiceField(widget=forms.Select())
     delivery_type = forms.ChoiceField(
         choices=[

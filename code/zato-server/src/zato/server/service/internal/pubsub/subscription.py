@@ -7,13 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import uuid
 from contextlib import closing
 from traceback import format_exc
 
 # Zato
 from zato.common.api import PubSub
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import HTTPBasicAuth, PubSubSubscription, PubSubTopic
+from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -65,43 +66,61 @@ class Create(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                existing_one = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.topic_id==self.request.input.topic_id).\
-                    filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                    first()
+                # Handle multiple topic IDs
+                topic_ids = self.request.input.topic_id
+                if isinstance(topic_ids, str):
+                    topic_ids = [topic_ids]
+                elif not isinstance(topic_ids, list):
+                    topic_ids = [topic_ids]
 
-                if existing_one:
-                    raise Exception('A subscription already exists for this topic and security definition')
+                created_subscriptions = []
 
-                # Generate unique subscription key
-                import uuid
-                sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
+                for topic_id in topic_ids:
+                    # Check if subscription already exists for this topic
+                    existing_one = session.query(PubSubSubscription).\
+                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                        filter(PubSubSubscription.topic_id==topic_id).\
+                        filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
+                        first()
 
-                item = PubSubSubscription()
-                item.cluster_id = self.request.input.cluster_id
-                item.topic_id = self.request.input.topic_id
-                item.sec_base_id = self.request.input.sec_base_id
-                item.sub_key = sub_key
-                item.is_active = self.request.input.get('is_active', True)
-                item.delivery_type = self.request.input.delivery_type
-                item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
-                # Ensure pattern_matched is set to default value immediately before save
-                item.pattern_matched = '*'
+                    if existing_one:
+                        continue  # Skip if already exists
 
-                session.add(item)
+                    sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
+
+                    item = PubSubSubscription()
+                    item.cluster_id = self.request.input.cluster_id
+                    item.topic_id = topic_id
+                    item.sec_base_id = self.request.input.sec_base_id
+                    item.sub_key = sub_key
+                    item.is_active = self.request.input.get('is_active', True)
+                    item.delivery_type = self.request.input.delivery_type
+                    item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
+                    # Ensure pattern_matched is set to default value immediately before save
+                    item.pattern_matched = '*'
+
+                    session.add(item)
+                    created_subscriptions.append(item)
+
                 session.commit()
 
-                # Get topic and security names for the response
-                topic = session.query(PubSubTopic).filter(PubSubTopic.id == item.topic_id).first()
-                security = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.id == item.sec_base_id).first()
+                # Return info for the first created subscription
+                if created_subscriptions:
+                    first_item = created_subscriptions[0]
 
-                self.response.payload.id = item.id
-                self.response.payload.sub_key = item.sub_key
-                self.response.payload.is_active = item.is_active
-                self.response.payload.created = item.creation_time.isoformat()
-                self.response.payload.topic_name = topic.name
-                self.response.payload.sec_name = security.name
+                    # Get topic and security names for the response
+                    topic = session.query(PubSubTopic).filter(PubSubTopic.id == first_item.topic_id).first()
+                    from zato.common.odb.model import SecurityBase
+                    security = session.query(SecurityBase).filter(SecurityBase.id == first_item.sec_base_id).first()
+
+                    self.response.payload.id = first_item.id
+                    self.response.payload.sub_key = first_item.sub_key
+                    self.response.payload.is_active = first_item.is_active
+                    self.response.payload.created = first_item.created.isoformat()
+                    self.response.payload.topic_name = topic.name if topic else ''
+                    self.response.payload.sec_name = security.name if security else ''
+                else:
+                    raise Exception('No new subscriptions were created (all may already exist)')
 
             except Exception:
                 self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
@@ -124,9 +143,16 @@ class Edit(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
+                # Handle topic_id potentially being a list - use first value for edit
+                topic_id = self.request.input.topic_id
+                if isinstance(topic_id, list) and len(topic_id) > 0:
+                    topic_id = topic_id[0]
+                elif isinstance(topic_id, list) and len(topic_id) == 0:
+                    raise Exception('No topic selected')
+
                 existing_one = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.topic_id==self.request.input.topic_id).\
+                    filter(PubSubSubscription.topic_id==topic_id).\
                     filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
                     filter(PubSubSubscription.id!=self.request.input.id).\
                     first()
@@ -135,7 +161,7 @@ class Edit(AdminService):
                     raise Exception('A subscription already exists for this topic and security definition')
 
                 item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
-                item.topic_id = self.request.input.topic_id
+                item.topic_id = topic_id
                 item.sec_base_id = self.request.input.sec_base_id
                 item.delivery_type = self.request.input.delivery_type
                 item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
