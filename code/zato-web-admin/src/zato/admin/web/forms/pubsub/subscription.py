@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select_from_service
 from zato.admin.web.util import get_pubsub_security_choices
 
 class CreateForm(forms.Form):
@@ -21,7 +20,8 @@ class CreateForm(forms.Form):
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         if req:
-            add_select_from_service(self, req, 'zato.pubsub.topic.get-list', 'topic_id', True)
+            # Topics will be populated dynamically via AJAX
+            self.fields['topic_id'].choices = [('', '----------')]
             # Use filtered security definitions for PubSub clients
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create')
 
@@ -31,5 +31,7 @@ class EditForm(CreateForm):
     def __init__(self, prefix=None, post_data=None, req=None):
         super(EditForm, self).__init__(prefix, post_data, req)
         if req:
+            # Topics will be populated dynamically via AJAX
+            self.fields['topic_id'].choices = [('', '----------')]
             # Use filtered security definitions for edit (allows all available ones)
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'edit')
