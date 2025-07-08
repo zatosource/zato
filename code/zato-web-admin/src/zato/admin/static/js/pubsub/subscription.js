@@ -1,5 +1,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 
+$.namespace('zato.pubsub.subscription');
+
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
         var s = '<PubSubSubscription id:{0} sub_key:{1} topic_name:{2} sec_name:{3} pattern_matched:{4}>';
@@ -60,17 +62,20 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
 $.fn.zato.pubsub.subscription.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
-    // Populate security definitions after form opens
+    // Populate topics and security definitions after form opens
     setTimeout(function() {
+        $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
     }, 100);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
     $.fn.zato.data_table.edit('edit', 'Update the pub/sub subscription', id);
-    // Populate security definitions after form opens with current selection
+    // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
+        var currentTopicId = $('#id_edit-topic_id').val();
         var currentSecId = $('#id_edit-sec_base_id').val();
+        $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id');
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
     }, 100);
 }
