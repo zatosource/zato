@@ -58,7 +58,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_required = 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
         output_required = 'id', 'sub_key'
 
@@ -82,9 +82,10 @@ class Create(AdminService):
                 item.cluster_id = self.request.input.cluster_id
                 item.topic_id = self.request.input.topic_id
                 item.sec_base_id = self.request.input.sec_base_id
-                item.pattern_matched = self.request.input.pattern_matched
                 item.sub_key = sub_key
                 item.is_active = self.request.input.get('is_active', True)
+                # Ensure pattern_matched is set to default value immediately before save
+                item.pattern_matched = '*'
 
                 session.add(item)
                 session.commit()
@@ -106,7 +107,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'pattern_matched'
+        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id'
         input_optional = 'is_active',
         output_required = 'id', 'sub_key'
 
@@ -126,7 +127,7 @@ class Edit(AdminService):
                 item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
                 item.topic_id = self.request.input.topic_id
                 item.sec_base_id = self.request.input.sec_base_id
-                item.pattern_matched = self.request.input.pattern_matched
+                item.pattern_matched = '*'  # Set explicitly to default pattern
                 item.is_active = self.request.input.get('is_active', True)
 
                 session.add(item)
