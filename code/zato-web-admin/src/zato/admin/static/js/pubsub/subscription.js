@@ -161,14 +161,11 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
                 console.log('[DEBUG] Edit: SlimSelect created successfully');
                 console.log('[DEBUG] Edit: SlimSelect getSelected():', JSON.stringify(window.topicSelectEdit.getSelected()));
 
-                // Force set selected after SlimSelect is initialized
-                if (currentTopicIds && currentTopicIds.length > 0) {
-                    console.log('[DEBUG] Edit: Force setting selected topics:', JSON.stringify(currentTopicIds));
-                    setTimeout(function() {
-                        window.topicSelectEdit.setSelected(currentTopicIds);
-                        console.log('[DEBUG] Edit: After setSelected, getSelected():', JSON.stringify(window.topicSelectEdit.getSelected()));
-                    }, 100);
-                }
+                // Hide the original select element
+                $('#id_edit-topic_id').hide();
+                console.log('[DEBUG] Edit: Original select hidden');
+
+                // The topics should already be selected from the HTML options
 
                 // Force dropdown to be clickable and visible for edit form
                 setTimeout(function() {
