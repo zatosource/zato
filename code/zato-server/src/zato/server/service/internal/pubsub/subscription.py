@@ -222,22 +222,31 @@ class Edit(AdminService):
                 topic_id_list = [int(topic_id) for topic_id in topic_id_list]
                 self.logger.info('[DEBUG] Edit.handle: normalized topic_id_list=%s', topic_id_list)
 
-                # Use the sub_key from input
-                original_sub_key = self.request.input.sub_key
-                self.logger.info('[DEBUG] Edit.handle: using sub_key=%s', original_sub_key)
+                # The input sub_key is actually the subscription ID, find the real sub_key
+                subscription_id = self.request.input.sub_key
+                self.logger.info('[DEBUG] Edit.handle: using subscription_id=%s', subscription_id)
 
-                # Delete all existing subscriptions that would conflict with the new ones
-                # (same topic_id, sec_base_id, cluster_id combination)
-                for topic_id in topic_id_list:
-                    existing_subscriptions = session.query(PubSubSubscription).\
-                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                        filter(PubSubSubscription.topic_id==topic_id).\
-                        filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                        all()
+                # Find one existing subscription to get the actual sub_key
+                sub = session.query(PubSubSubscription).\
+                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubSubscription.id==subscription_id).\
+                    first()
 
-                    for existing_sub in existing_subscriptions:
-                        session.delete(existing_sub)
-                        self.logger.info('[DEBUG] Edit.handle: deleted conflicting subscription id=%s topic_id=%s sub_key=%s', existing_sub.id, existing_sub.topic_id, existing_sub.sub_key)
+                if not sub:
+                    raise Exception(f'Subscription with ID {subscription_id} not found')
+
+                sub_key = sub.sub_key
+                self.logger.info('[DEBUG] Edit.handle: found sub_key=%s for id=%s', sub_key, subscription_id)
+
+                # Delete ALL existing subscriptions with the same sub_key
+                existing_subscriptions = session.query(PubSubSubscription).\
+                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubSubscription.sub_key==sub_key).\
+                    all()
+
+                for existing_sub in existing_subscriptions:
+                    session.delete(existing_sub)
+                    self.logger.info('[DEBUG] Edit.handle: deleted existing subscription id=%s topic_id=%s sub_key=%s', existing_sub.id, existing_sub.topic_id, existing_sub.sub_key)
 
                 # Flush deletes to database before creating new subscriptions
                 session.flush()
@@ -254,11 +263,11 @@ class Edit(AdminService):
                     new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
                     new_subscription.pattern_matched = '*' # type: ignore
                     new_subscription.is_active = self.request.input.get('is_active', True)
-                    new_subscription.sub_key = original_sub_key  # Keep the same sub_key
+                    new_subscription.sub_key = sub_key
 
                     session.add(new_subscription)
                     created_subscriptions.append(new_subscription)
-                    self.logger.info('[DEBUG] Edit.handle: created new subscription topic_id=%s sub_key=%s', topic_id, original_sub_key)
+                    self.logger.info('[DEBUG] Edit.handle: created new subscription topic_id=%s sub_key=%s', topic_id, sub_key)
 
                 session.commit()
 
@@ -271,7 +280,7 @@ class Edit(AdminService):
                 self.logger.info('[DEBUG] Edit.handle: created subscriptions for topics=%s', topic_names)
 
                 # Return subscription info with topic names list
-                self.response.payload.sub_key = original_sub_key
+                self.response.payload.sub_key = sub_key
                 self.response.payload.topic_name_list = topic_names
 
             except Exception:
