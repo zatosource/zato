@@ -165,7 +165,29 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     var displaySubKey = (typeof item.sub_key === 'string' && item.sub_key.indexOf('-') > -1) ? item.sub_key : item.id;
     row += String.format('<td>{0}</td>', displaySubKey);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', (item.delivery_type === 'pull' ? 'Pull' : 'Push'));
+
+    // For Push delivery type, add a link to the REST endpoint if available
+    if(item.delivery_type === 'pull') {
+        row += String.format('<td>{0}</td>', 'Pull');
+    } else {
+        // Push delivery type with endpoint
+        if(item.rest_push_endpoint_id) {
+            // Simply extract the name from the select
+            var endpointName = '';
+            $('#id_edit-rest_push_endpoint_id option').each(function() {
+                if($(this).val() == item.rest_push_endpoint_id) {
+                    endpointName = $(this).text();
+                    return false;
+                }
+            });
+
+            // Add the endpoint link to the row
+            row += String.format('<td>Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
+                encodeURIComponent(endpointName), endpointName);
+        } else {
+            row += String.format('<td>Push</td>');
+        }
+    }
     // Convert topic names to links (only if not already HTML links)
     var topicLinksHtml = '';
     if (item.topic_name) {
@@ -284,6 +306,8 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         var currentSecId = $('#id_edit-sec_base_id').val();
         var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
 
+
+
         // Initialize SlimSelect after topics are populated via callback
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
             if (window.topicSelectEdit) {
@@ -342,8 +366,38 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
 $.fn.zato.pubsub.subscription.stripHtml = function(html) {
     var temp = document.createElement('div');
     temp.innerHTML = html;
-    return temp.textContent || temp.innerText || '';
+    return temp.textContent || temp.innerText || "";
 };
+
+// Callback function for create/edit forms
+$.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, xhr) {
+    var ret_data = $.parseJSON(data.responseText);
+
+    // Store the selected endpoint name in the response data when the form is submitted
+    if(!ret_data.has_error && ret_data.delivery_type === 'push' && ret_data.rest_push_endpoint_id) {
+        // Get the selected endpoint name from the form
+        var endpointName = $('#id_edit-rest_push_endpoint_id option:selected').text();
+        if(endpointName && endpointName !== 'Select a REST endpoint') {
+            // Add the name to the return data so it's available for the row update
+            ret_data.rest_push_endpoint_name = endpointName;
+
+            // Update the data table's data object with this information
+            if(ret_data.id && $.fn.zato.data_table.data[ret_data.id]) {
+                $.fn.zato.data_table.data[ret_data.id].rest_push_endpoint_name = endpointName;
+            }
+        }
+    }
+
+    // Publish message to status_msg topic
+    $.fn.zato.user_message(ret_data.message);
+
+    if(ret_data.has_error) {
+        return false;
+    } else {
+        $.fn.zato.data_table.refresh();
+        return true;
+    }
+}
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
