@@ -125,7 +125,7 @@ class Edit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'sub_key'
+        output_required = 'id', 'sub_key', 'topic_name', 'sec_name', 'delivery_type', 'is_active'
 
     def handle(self):
         logger.info('[DEBUG] Edit.handle: Request method=%s', self.req.method)

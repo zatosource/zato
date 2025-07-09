@@ -443,6 +443,22 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
     console.log('[DEBUG] _on_submit: Form element:', form);
     console.log('[DEBUG] _on_submit: Form action:', form.attr('action'));
 
+    // Check if this is a subscription form and validate topics
+    var formAction = form.attr('action');
+    if (formAction && formAction.includes('/pubsub/subscription/')) {
+        var topicSelect = form.find('select[name="topic_id"], select[name="edit-topic_id"]');
+        if (topicSelect.length > 0) {
+            var selectedTopics = topicSelect.val();
+            console.log('[DEBUG] _on_submit: Topic validation - selected topics:', JSON.stringify(selectedTopics));
+
+            if (!selectedTopics || selectedTopics.length === 0) {
+                alert('Please select at least one topic before submitting.');
+                console.log('[DEBUG] _on_submit: Form submission blocked - no topics selected');
+                return;
+            }
+        }
+    }
+
     // Log all form inputs before serialization
     form.find(':input').each(function() {
         var $this = $(this);
@@ -713,6 +729,16 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     }
     else {
         prefix = '';
+    }
+
+    // For edit actions, use server response data when available
+    if(action == 'edit' && data) {
+        // Start with server response data
+        Object.keys(data).forEach(function(key) {
+            if(key !== 'message' && data[key] !== undefined && data[key] !== null) {
+                instance[key] = data[key];
+            }
+        });
     }
 
     let name = '';
@@ -1042,12 +1068,17 @@ $.fn.zato.data_table.on_submit = function(action) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
+    console.log('[DEBUG] on_submit_complete: Starting with status=' + JSON.stringify(status) + ', action=' + JSON.stringify(action));
 
     if(status == 'success') {
+        console.log('[DEBUG] on_submit_complete: Raw response data=' + JSON.stringify(data.responseText));
 
         var json = $.parseJSON(data.responseText);
+        console.log('[DEBUG] on_submit_complete: Parsed JSON=' + JSON.stringify(json));
+
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
+        console.log('[DEBUG] on_submit_complete: Generated row HTML=' + JSON.stringify(row));
 
         // There are forms (like the one for subscriptions) where create action does create an object
         // but it is not displayed in current data_table so we treat it as an update actually,
@@ -1065,7 +1096,9 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
             $('#data-table > tbody:last').prepend(row);
         }
         else {
+            console.log('[DEBUG] on_submit_complete: Updating existing row with id=' + JSON.stringify(json.id));
             var tr = $('#tr_'+ json.id).html(row);
+            console.log('[DEBUG] on_submit_complete: Updated row element=' + JSON.stringify(tr.length));
             tr.addClass('updated');
         }
     }
