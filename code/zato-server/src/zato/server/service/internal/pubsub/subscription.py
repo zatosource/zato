@@ -186,9 +186,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'id', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
+        input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', AsIs('topic_name_list')
+        output_required = 'sub_key', AsIs('topic_name_list')
 
     def handle(self):
         self.logger.info('[DEBUG] Edit.handle: Starting subscription edit')
@@ -196,7 +196,7 @@ class Edit(AdminService):
         self.logger.info('[DEBUG] Edit.handle: Request input.__dict__=%s', getattr(self.request.input, '__dict__', 'no __dict__'))
 
         # Log specific input fields
-        for attr in ['id', 'topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
+        for attr in ['sub_key', 'topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
             if hasattr(self.request.input, attr):
                 value = getattr(self.request.input, attr)
                 self.logger.info('[DEBUG] Edit.handle: Input %s type=%s, value=%s', attr, type(value), value)
@@ -218,10 +218,9 @@ class Edit(AdminService):
                 topic_id_list = [int(topic_id) for topic_id in topic_id_list]
                 self.logger.info('[DEBUG] Edit.handle: normalized topic_id_list=%s', topic_id_list)
 
-                # Get the original subscription to preserve sub_key
-                original_item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
-                original_sub_key = original_item.sub_key
-                self.logger.info('[DEBUG] Edit.handle: original sub_key=%s', original_sub_key)
+                # Use the sub_key from input
+                original_sub_key = self.request.input.sub_key
+                self.logger.info('[DEBUG] Edit.handle: using sub_key=%s', original_sub_key)
 
                 # Delete all existing subscriptions with this sub_key
                 existing_subscriptions = session.query(PubSubSubscription).\
@@ -272,7 +271,6 @@ class Edit(AdminService):
                 self.logger.info('[DEBUG] Edit.handle: created subscriptions for topics=%s', topic_names)
 
                 # Return subscription info with topic names list
-                self.response.payload.id = created_subscriptions[0].id if created_subscriptions else original_item.id
                 self.response.payload.sub_key = original_sub_key
                 self.response.payload.topic_name_list = topic_names
 
