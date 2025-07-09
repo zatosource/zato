@@ -1373,7 +1373,7 @@ class PubSubSubscription(Base):
     __tablename__ = 'pubsub_subscription'
     __table_args__ = (
         UniqueConstraint('topic_id', 'sec_base_id', 'cluster_id'),
-        Index('pubsub_sub_key_idx', 'sub_key', unique=True),
+        Index('pubsub_sub_key_idx', 'sub_key', unique=False),
     )
 
     id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
