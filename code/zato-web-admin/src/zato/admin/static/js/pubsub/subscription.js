@@ -158,8 +158,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.sec_name);
+    row += String.format('<td>{0}</td>', item.sub_key || '');
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.delivery_type || 'pull');
+    row += String.format('<td>{0}</td>', (item.delivery_type === 'pull' ? 'Pull' : 'Push'));
     // Convert topic names to links (only if not already HTML links)
     var topicLinksHtml = '';
     if (item.topic_name) {
@@ -183,7 +184,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.delivery_type || '');
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.sub_key || '');
 
     if(include_tr) {
         row += '</tr>';
