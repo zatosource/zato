@@ -224,7 +224,7 @@
                         <td>{{ item.sec_name }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ item.delivery_type|default:"N/A" }}</td>
-                        <td>{{ item.topic_name }}</td>
+                        <td>{{ item.topic_name|safe }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 

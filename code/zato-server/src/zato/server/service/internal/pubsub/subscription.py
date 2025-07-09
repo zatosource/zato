@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import uuid
 from contextlib import closing
 from traceback import format_exc
+from urllib.parse import quote
 
 # Zato
 from zato.common.api import PubSub
@@ -54,10 +55,17 @@ class GetList(AdminService):
             grouped_data[sec_key]['topic_names'].append(topic_name)
             grouped_data[sec_key]['topic_ids'].append(subscription.topic_id)
 
-        # Convert grouped data to list and format topic names
+        # Convert grouped data to list and format topic names as links
         data = []
         for item_dict in grouped_data.values():
-            item_dict['topic_name'] = ', '.join(item_dict['topic_names'])
+            # Create links for each topic name
+            topic_links = []
+            for topic_name in item_dict['topic_names']:
+                topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(
+                    quote(topic_name), topic_name)
+                topic_links.append(topic_link)
+
+            item_dict['topic_name'] = ', '.join(topic_links)
             del item_dict['topic_names']
             del item_dict['topic_ids']
             data.append(item_dict)
@@ -79,7 +87,7 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
 
     def handle(self):
         self.logger.info('[DEBUG] Create.handle: Starting subscription creation')
@@ -137,12 +145,25 @@ class Create(AdminService):
 
                 session.commit()
 
-                # Return info for the first created subscription
+                # Return info for the created subscriptions - get all topic names
                 if created_subscriptions:
                     first_item = created_subscriptions[0]
 
-                    # Get topic and security names for the response
-                    topic = session.query(PubSubTopic).filter(PubSubTopic.id == first_item.topic_id).first()
+                    # Get all topic names for this subscription group
+                    topic_names = []
+                    for subscription in created_subscriptions:
+                        topic = session.query(PubSubTopic).filter(PubSubTopic.id == subscription.topic_id).first()
+                        if topic:
+                            topic_names.append(topic.name)
+
+                    # Create links for each topic name
+                    topic_links = []
+                    for topic_name in topic_names:
+                        topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(
+                            quote(topic_name), topic_name)
+                        topic_links.append(topic_link)
+
+                    # Get security name
                     from zato.common.odb.model import SecurityBase
                     security = session.query(SecurityBase).filter(SecurityBase.id == first_item.sec_base_id).first()
 
@@ -150,8 +171,9 @@ class Create(AdminService):
                     self.response.payload.sub_key = first_item.sub_key
                     self.response.payload.is_active = first_item.is_active
                     self.response.payload.created = first_item.created.isoformat()
-                    self.response.payload.topic_name = topic.name if topic else ''
+                    self.response.payload.topic_name = ', '.join(topic_links)
                     self.response.payload.sec_name = security.name if security else ''
+                    self.response.payload.delivery_type = first_item.delivery_type
                 else:
                     self.logger.info('[DEBUG] Create.handle: No new subscriptions created - some may already exist')
                     # Find an existing subscription to return in response
