@@ -213,40 +213,34 @@ $.fn.zato.pubsub.subscription.create = function() {
                 window.topicSelectCreate.destroy();
             }
 
-            try {
-                $('#id_topic_id').attr('multiple', true);
+            $('#id_topic_id').attr('multiple', true);
 
-                // Clear any default selections for create form
-                $('#id_topic_id option').prop('selected', false);
-                window.topicSelectCreate = new SlimSelect({
-                    select: '#id_topic_id',
-                    settings: {
-                        searchPlaceholder: 'Search topics...',
-                        placeholderText: 'Select topics',
-                        closeOnSelect: false
+            // Clear any default selections for create form
+            $('#id_topic_id option').prop('selected', false);
+            window.topicSelectCreate = new SlimSelect({
+                select: '#id_topic_id',
+                settings: {
+                    searchPlaceholder: 'Search topics...',
+                    placeholderText: 'Select topics',
+                    closeOnSelect: false
+                }
+            });
+
+            // Force dropdown to be clickable and visible
+            setTimeout(function() {
+                $('.ss-main.topic-select').off('click').on('click', function(e) {
+                    if (window.topicSelectCreate && window.topicSelectCreate.open) {
+                        window.topicSelectCreate.open();
                     }
                 });
-                // SlimSelect should automatically read from the original select element
 
-                // Force dropdown to be clickable and visible
-                setTimeout(function() {
-                    $('.ss-main.topic-select').off('click').on('click', function(e) {
-                        if (window.topicSelectCreate && window.topicSelectCreate.open) {
-                            window.topicSelectCreate.open();
-                        }
-                    });
-
-                    // Ensure dropdown content is properly styled
-                    $('.ss-content.topic-select').css({
-                        'display': 'block',
-                        'visibility': 'visible',
-                        'z-index': '9999'
-                    });
-                }, 100);
-            } catch (error) {
-                // Fallback: show the original select
-                $('#id_topic_id').show();
-            }
+                // Ensure dropdown content is properly styled
+                $('.ss-content.topic-select').css({
+                    'display': 'block',
+                    'visibility': 'visible',
+                    'z-index': '9999'
+                });
+            }, 100);
             // Force show SlimSelect container if it's hidden
             $('.ss-main').show();
         });
@@ -296,42 +290,35 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
                 window.topicSelectEdit.destroy();
             }
 
-            try {
-                $('#id_edit-topic_id').attr('multiple', true);
+            $('#id_edit-topic_id').attr('multiple', true);
 
-                window.topicSelectEdit = new SlimSelect({
-                    select: '#id_edit-topic_id',
-                    settings: {
-                        searchPlaceholder: 'Search topics...',
-                        placeholderText: 'Select topics',
-                        closeOnSelect: false
+            window.topicSelectEdit = new SlimSelect({
+                select: '#id_edit-topic_id',
+                settings: {
+                    searchPlaceholder: 'Search topics...',
+                    placeholderText: 'Select topics',
+                    closeOnSelect: false
+                }
+            });
+
+            // Hide the original select element
+            $('#id_edit-topic_id').hide();
+
+            // Force dropdown to be clickable and visible for edit form
+            setTimeout(function() {
+                $('.ss-main.topic-select').off('click').on('click', function(e) {
+                    if (window.topicSelectEdit && window.topicSelectEdit.open) {
+                        window.topicSelectEdit.open();
                     }
                 });
 
-                // Hide the original select element
-                $('#id_edit-topic_id').hide();
-
-                // The topics should already be selected from the HTML options
-
-                // Force dropdown to be clickable and visible for edit form
-                setTimeout(function() {
-                    $('.ss-main.topic-select').off('click').on('click', function(e) {
-                        if (window.topicSelectEdit && window.topicSelectEdit.open) {
-                            window.topicSelectEdit.open();
-                        }
-                    });
-
-                    // Ensure dropdown content is properly styled
-                    $('.ss-content.topic-select').css({
-                        'display': 'block',
-                        'visibility': 'visible',
-                        'z-index': '9999'
-                    });
-                }, 100);
-            } catch (error) {
-                // Fallback: show the original select
-                $('#id_edit-topic_id').show();
-            }
+                // Ensure dropdown content is properly styled
+                $('.ss-content.topic-select').css({
+                    'display': 'block',
+                    'visibility': 'visible',
+                    'z-index': '9999'
+                });
+            }, 100);
             // Force show SlimSelect container if it's hidden
             $('.ss-main').show();
         });
