@@ -89,17 +89,12 @@ $(document).ready(function() {
 
 // Function to populate REST endpoints
 $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId) {
-    console.log('[DEBUG] populateRestEndpoints: Called with form_type:', form_type, 'selectedId:', selectedId);
-
     var selectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
     var $select = $(selectId);
     var spanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
     var $span = $(spanId);
 
-    console.log('[DEBUG] populateRestEndpoints: Select ID:', selectId, 'element found:', $select.length > 0);
-
     if ($select.length === 0) {
-        console.log('[DEBUG] populateRestEndpoints: Select element not found:', selectId);
         return;
     }
 
@@ -121,8 +116,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             form_type: form_type
         },
         success: function(response) {
-            console.log('[DEBUG] populateRestEndpoints: Received endpoints:', response.rest_endpoints);
-
             if (response.rest_endpoints && response.rest_endpoints.length > 0) {
                 $.each(response.rest_endpoints, function(index, endpoint) {
                     var selected = selectedId && selectedId == endpoint.id ? 'selected="selected"' : '';
@@ -142,7 +135,7 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             }
         },
         error: function(xhr, status, error) {
-            console.log('[DEBUG] populateRestEndpoints: Error loading endpoints:', error);
+            console.log('Error loading endpoints:', error);
         }
     });
 };
@@ -208,8 +201,6 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 }
 
 $.fn.zato.pubsub.subscription.create = function() {
-    console.log('[DEBUG] pubsub.subscription.create: Starting create function');
-
     // Hide REST endpoint span immediately before form opens
     $('#rest-endpoint-create').hide();
 
@@ -273,11 +264,8 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
     if (typeof sub_key === 'string' && sub_key.match(/^\d+$/)) {
         id = parseInt(sub_key, 10);
     }
-    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key/id:', JSON.stringify({sub_key: sub_key, id: id}));
-    console.log('[DEBUG] Full data table data:', $.fn.zato.data_table.data);
 
     // Hide REST endpoint span immediately to prevent flicker during form population
-    console.log('[DEBUG] Edit: Hiding REST endpoint span immediately');
     $('#rest-endpoint-edit').hide();
 
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', id);
@@ -285,47 +273,32 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
     setTimeout(function() {
         // Set the sub_key in the hidden field
         $('#id_edit-sub_key').val(sub_key);
-        console.log('[DEBUG] Set sub_key field to:', JSON.stringify(sub_key));
 
         // Get the current topic names from the data table row data
         var currentTopicNames = null;
 
         var instance = $.fn.zato.data_table.data[id];
-        console.log('[DEBUG] Edit: Direct access instance using id:', id, instance);
-        console.log('[DEBUG] Edit: Found instance data for sub_key:', JSON.stringify({sub_key: sub_key, instance: instance}));
 
         if (instance && instance.topic_name) {
-            console.log('[DEBUG] Edit: Raw topic_name:', JSON.stringify({value: instance.topic_name, type: typeof instance.topic_name}));
             // Convert comma-separated string to array of topic names
             currentTopicNames = instance.topic_name.split(',').map(function(name) {
                 return name.trim();
             });
-            console.log('[DEBUG] Edit: Parsed topic names to array:', JSON.stringify(currentTopicNames));
         } else {
-            console.log('[DEBUG] Edit: No topic names found in row data');
         }
 
         var currentSecId = $('#id_edit-sec_base_id').val();
         var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
-        console.log('[DEBUG] Edit: REST endpoint ID from row data:', JSON.stringify(currentRestEndpointId));
 
         // Initialize SlimSelect after topics are populated via callback
-        console.log('[DEBUG] Edit: About to call populateTopics with currentTopicNames:', JSON.stringify(currentTopicNames));
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
-            console.log('[DEBUG] Edit: populateTopics callback triggered');
-            console.log('[DEBUG] Edit: Select element HTML after populate:', JSON.stringify($('#id_edit-topic_id')[0].outerHTML));
-            console.log('[DEBUG] Edit: Selected options after populate:', JSON.stringify($('#id_edit-topic_id option:selected').map(function() { return {value: this.value, text: this.text}; }).get()));
-
             if (window.topicSelectEdit) {
-                console.log('[DEBUG] Edit: Destroying existing SlimSelect');
                 window.topicSelectEdit.destroy();
             }
 
             try {
                 $('#id_edit-topic_id').attr('multiple', true);
-                console.log('[DEBUG] Edit: Set multiple attribute on select');
 
-                console.log('[DEBUG] Edit: Creating new SlimSelect instance');
                 window.topicSelectEdit = new SlimSelect({
                     select: '#id_edit-topic_id',
                     settings: {
@@ -334,12 +307,9 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
                         closeOnSelect: false
                     }
                 });
-                console.log('[DEBUG] Edit: SlimSelect created successfully');
-                console.log('[DEBUG] Edit: SlimSelect getSelected():', JSON.stringify(window.topicSelectEdit.getSelected()));
 
                 // Hide the original select element
                 $('#id_edit-topic_id').hide();
-                console.log('[DEBUG] Edit: Original select hidden');
 
                 // The topics should already be selected from the HTML options
 
@@ -367,26 +337,17 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         });
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
 
-        // Debug: Check delivery type before setup
-        var currentDeliveryType = $('#id_edit-delivery_type').val();
-        console.log('[DEBUG] Edit: Current delivery type before setup:', currentDeliveryType);
-        console.log('[DEBUG] Edit: REST endpoint span visibility before setup:', $('#rest-endpoint-edit').css('display'));
-
         // Immediately hide REST endpoint span if not push to prevent flicker
+        var currentDeliveryType = $('#id_edit-delivery_type').val();
         if (currentDeliveryType !== 'push') {
-            console.log('[DEBUG] Edit: Pre-hiding REST endpoint span for non-push delivery type');
             $('#rest-endpoint-edit').hide();
         }
 
         // Setup delivery type visibility first, then conditionally populate REST endpoints
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit');
 
-        // Debug: Check after setup
-        console.log('[DEBUG] Edit: REST endpoint span visibility after setup:', $('#rest-endpoint-edit').css('display'));
-
         // Populate REST endpoints regardless of delivery type to avoid a flicker
         // when switching to push, but they'll remain hidden if not push type
-        console.log('[DEBUG] Edit: Pre-populating REST endpoints (will remain hidden if not push type)');
         $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId);
     }, 200);
 }
@@ -414,12 +375,8 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 }
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) {
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Called with form_type:', form_type);
-
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
     var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
-
-    console.log('[DEBUG] setupDeliveryTypeVisibility: IDs - deliveryType:', deliveryTypeId, 'restEndpointSpan:', restEndpointSpanId);
 
     var $deliveryType = $(deliveryTypeId);
     var $restEndpointSpan = $(restEndpointSpanId);
@@ -427,42 +384,27 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) 
     // Hide the span immediately to prevent any flash
     $restEndpointSpan.hide();
 
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Elements found - deliveryType:', $deliveryType.length, 'restEndpointSpan:', $restEndpointSpan.length);
-
     if ($deliveryType.length === 0 || $restEndpointSpan.length === 0) {
-        console.log('[DEBUG] setupDeliveryTypeVisibility: Missing elements, returning');
         return;
     }
 
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Current delivery type value:', $deliveryType.val());
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Current REST span display:', $restEndpointSpan.css('display'));
-
     function toggleRestEndpointVisibility() {
         var deliveryTypeValue = $deliveryType.val();
-        console.log('[DEBUG] toggleRestEndpointVisibility: Called with delivery type:', deliveryTypeValue);
 
         // Instead of immediately showing, prepare for showing but let the populateRestEndpoints function
         // handle the actual visibility after endpoints are loaded
         if (deliveryTypeValue === 'push') {
-            console.log('[DEBUG] toggleRestEndpointVisibility: Preparing to show REST endpoint span');
             // Call populateRestEndpoints which will handle the visibility
             var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[$("#id_edit-sub_key").val()].rest_push_endpoint_id : null;
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
         } else {
-            console.log('[DEBUG] toggleRestEndpointVisibility: Hiding REST endpoint span');
             $restEndpointSpan.hide();
         }
-
-        console.log('[DEBUG] toggleRestEndpointVisibility: Final REST span display:', $restEndpointSpan.css('display'));
     }
 
     // Set initial state
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Setting initial state');
     toggleRestEndpointVisibility();
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Initial state set');
 
     // Handle delivery type changes
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Setting up change handler');
     $deliveryType.on('change', toggleRestEndpointVisibility);
-    console.log('[DEBUG] setupDeliveryTypeVisibility: Change handler set up complete');
 }
