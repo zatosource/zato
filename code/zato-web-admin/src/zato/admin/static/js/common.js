@@ -439,8 +439,36 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table._on_submit = function(form, callback) {
+    console.log('[DEBUG] _on_submit: Form submission starting');
+    console.log('[DEBUG] _on_submit: Form element:', form);
+    console.log('[DEBUG] _on_submit: Form action:', form.attr('action'));
+
+    // Log all form inputs before serialization
+    form.find(':input').each(function() {
+        var $this = $(this);
+        console.log('[DEBUG] _on_submit: Input name=' + $this.attr('name') + ', type=' + $this.attr('type') + ', value=' + JSON.stringify($this.val()));
+    });
+
     let serialized = form.serialize();
-    console.log('Serialized -> '+ serialized);
+    console.log('[DEBUG] _on_submit: Serialized form data:', serialized);
+
+    // Parse serialized data to show structure
+    var formData = {};
+    serialized.split('&').forEach(function(pair) {
+        var parts = pair.split('=');
+        var key = decodeURIComponent(parts[0]);
+        var value = decodeURIComponent(parts[1] || '');
+        if (formData[key]) {
+            if (!Array.isArray(formData[key])) {
+                formData[key] = [formData[key]];
+            }
+            formData[key].push(value);
+        } else {
+            formData[key] = value;
+        }
+    });
+    console.log('[DEBUG] _on_submit: Parsed form data:', JSON.stringify(formData, null, 2));
+
     $.fn.zato.post(form.attr('action'), callback, serialized);
 }
 

@@ -57,9 +57,59 @@ class Create(CreateEdit):
     service_name = 'zato.pubsub.subscription.create'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_required = 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
+
+    def handle(self):
+        logger.info('[DEBUG] Create.handle: Request method=%s', self.req.method)
+        logger.info('[DEBUG] Create.handle: Request POST data=%s', dict(self.req.POST))
+        logger.info('[DEBUG] Create.handle: Request GET data=%s', dict(self.req.GET))
+
+        # Check topic_id specifically
+        topic_id_list = self.req.POST.getlist('create-topic_id')
+        logger.info('[DEBUG] Create.handle: topic_id_list type=%s, value=%s', type(topic_id_list), topic_id_list)
+
+        return super().handle()
+
+    def _get_input_dict(self):
+        """Override to properly map form fields to service input"""
+        input_dict = super()._get_input_dict()
+
+        # Map topic_id form field (which can be multiple) to topic_id_list service input
+        if self.req.method == 'POST':
+            topic_ids = self.req.POST.getlist('create-topic_id')
+            input_dict['topic_id_list'] = topic_ids
+            logger.info('[DEBUG] Create._get_input_dict: Mapped topic_id_list=%s', topic_ids)
+
+        return input_dict
+
+    def pre_process_input_dict(self, input_dict):
+        """Override to handle form field mapping before service call"""
+        super().pre_process_input_dict(input_dict)
+
+        # Extract topic IDs from form POST data
+        if self.req.method == 'POST':
+            topic_ids = self.req.POST.getlist('topic_id')
+            input_dict['topic_id_list'] = topic_ids
+            logger.info('[DEBUG] Create.pre_process_input_dict: Set topic_id_list=%s', topic_ids)
+
+            # Map other form fields
+            field_mapping = {
+                'sec_base_id': 'sec_base_id',
+                'delivery_type': 'delivery_type',
+                'is_active': 'is_active',
+                'rest_push_endpoint_id': 'rest_push_endpoint_id'
+            }
+
+            for form_field, service_field in field_mapping.items():
+                value = self.req.POST.get(form_field)
+                if value:
+                    if service_field == 'is_active':
+                        input_dict[service_field] = value == 'on'
+                    else:
+                        input_dict[service_field] = value
+                    logger.info('[DEBUG] Create.pre_process_input_dict: Set %s=%s', service_field, input_dict[service_field])
 
     def success_message(self, item):
         return 'Successfully created pub/sub subscription'
@@ -73,9 +123,59 @@ class Edit(CreateEdit):
     service_name = 'zato.pubsub.subscription.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_required = 'id', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key'
+
+    def handle(self):
+        logger.info('[DEBUG] Edit.handle: Request method=%s', self.req.method)
+        logger.info('[DEBUG] Edit.handle: Request POST data=%s', dict(self.req.POST))
+        logger.info('[DEBUG] Edit.handle: Request GET data=%s', dict(self.req.GET))
+
+        # Check topic_id specifically
+        topic_id_list = self.req.POST.getlist('edit-topic_id')
+        logger.info('[DEBUG] Edit.handle: topic_id_list type=%s, value=%s', type(topic_id_list), topic_id_list)
+
+        return super().handle()
+
+    def _get_input_dict(self):
+        """Override to properly map form fields to service input"""
+        input_dict = super()._get_input_dict()
+
+        # Map topic_id form field (which can be multiple) to topic_id_list service input
+        if self.req.method == 'POST':
+            topic_ids = self.req.POST.getlist('edit-topic_id')
+            input_dict['topic_id_list'] = topic_ids
+            logger.info('[DEBUG] Edit._get_input_dict: Mapped topic_id_list=%s', topic_ids)
+
+        return input_dict
+
+    def pre_process_input_dict(self, input_dict):
+        """Override to handle form field mapping before service call"""
+        super().pre_process_input_dict(input_dict)
+
+        # Extract topic IDs from form POST data
+        if self.req.method == 'POST':
+            topic_ids = self.req.POST.getlist('edit-topic_id')
+            input_dict['topic_id_list'] = topic_ids
+            logger.info('[DEBUG] Edit.pre_process_input_dict: Set topic_id_list=%s', topic_ids)
+
+            # Map other form fields
+            field_mapping = {
+                'edit-sec_base_id': 'sec_base_id',
+                'edit-delivery_type': 'delivery_type',
+                'edit-is_active': 'is_active',
+                'edit-rest_push_endpoint_id': 'rest_push_endpoint_id'
+            }
+
+            for form_field, service_field in field_mapping.items():
+                value = self.req.POST.get(form_field)
+                if value:
+                    if service_field == 'is_active':
+                        input_dict[service_field] = value == 'on'
+                    else:
+                        input_dict[service_field] = value
+                    logger.info('[DEBUG] Edit.pre_process_input_dict: Set %s=%s', service_field, input_dict[service_field])
 
     def success_message(self, item):
         return 'Successfully updated pub/sub subscription'
