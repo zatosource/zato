@@ -117,19 +117,20 @@ class Create(AdminService):
                         filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
                         first()
 
+                    # Skip if it already exists
                     if existing_one:
-                        continue  # Skip if already exists
+                        continue
 
                     item = PubSubSubscription()
                     item.cluster_id = self.request.input.cluster_id
                     item.topic_id = topic_id
                     item.sec_base_id = self.request.input.sec_base_id
-                    item.sub_key = sub_key
+                    item.sub_key = sub_key # type: ignore
                     item.is_active = self.request.input.get('is_active', True)
                     item.delivery_type = self.request.input.delivery_type
                     item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
                     # Ensure pattern_matched is set to default value immediately before save
-                    item.pattern_matched = '*'
+                    item.pattern_matched = '*' # type: ignore
 
                     session.add(item)
                     created_subscriptions.append(item)
@@ -247,11 +248,11 @@ class Edit(AdminService):
                 for topic_id in topic_id_list:
                     new_subscription = PubSubSubscription()
                     new_subscription.cluster_id = self.request.input.cluster_id
-                    new_subscription.topic_id = topic_id
+                    new_subscription.topic_id = topic_id # type: ignore
                     new_subscription.sec_base_id = self.request.input.sec_base_id
                     new_subscription.delivery_type = self.request.input.delivery_type
                     new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
-                    new_subscription.pattern_matched = '*'
+                    new_subscription.pattern_matched = '*' # type: ignore
                     new_subscription.is_active = self.request.input.get('is_active', True)
                     new_subscription.sub_key = original_sub_key  # Keep the same sub_key
 
