@@ -85,6 +85,8 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
     var selectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
     var $select = $(selectId);
+    var spanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
+    var $span = $(spanId);
 
     console.log('[DEBUG] populateRestEndpoints: Select ID:', selectId, 'element found:', $select.length > 0);
 
@@ -92,6 +94,9 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
         console.log('[DEBUG] populateRestEndpoints: Select element not found:', selectId);
         return;
     }
+
+    // Hide span to prevent flicker during loading
+    $span.hide();
 
     // Clear existing options
     $select.empty();
@@ -120,6 +125,12 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             // Trigger chosen update if using chosen plugin
             if ($select.hasClass('chosen-select') || $select.next('.chosen-container').length > 0) {
                 $select.trigger('chosen:updated');
+            }
+
+            // Show the span only if this is a push delivery type and we have a selected value
+            var deliveryType = form_type === 'create' ? $('#id_delivery_type').val() : $('#id_edit-delivery_type').val();
+            if (deliveryType === 'push') {
+                $span.show();
             }
         },
         error: function(xhr, status, error) {
@@ -340,13 +351,10 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         // Debug: Check after setup
         console.log('[DEBUG] Edit: REST endpoint span visibility after setup:', $('#rest-endpoint-edit').css('display'));
 
-        // Only populate REST endpoints if delivery type is push
-        if (currentDeliveryType === 'push') {
-            console.log('[DEBUG] Edit: Populating REST endpoints for push delivery type');
-            $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId);
-        } else {
-            console.log('[DEBUG] Edit: Skipping REST endpoints population for delivery type:', currentDeliveryType);
-        }
+        // Populate REST endpoints regardless of delivery type to avoid a flicker
+        // when switching to push, but they'll remain hidden if not push type
+        console.log('[DEBUG] Edit: Pre-populating REST endpoints (will remain hidden if not push type)');
+        $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId);
     }, 200);
 }
 
@@ -397,9 +405,13 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) 
         var deliveryTypeValue = $deliveryType.val();
         console.log('[DEBUG] toggleRestEndpointVisibility: Called with delivery type:', deliveryTypeValue);
 
+        // Instead of immediately showing, prepare for showing but let the populateRestEndpoints function
+        // handle the actual visibility after endpoints are loaded
         if (deliveryTypeValue === 'push') {
-            console.log('[DEBUG] toggleRestEndpointVisibility: Showing REST endpoint span');
-            $restEndpointSpan.css('display', 'inline-block');
+            console.log('[DEBUG] toggleRestEndpointVisibility: Preparing to show REST endpoint span');
+            // Call populateRestEndpoints which will handle the visibility
+            var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[$("#id_edit-sub_key").val()].rest_push_endpoint_id : null;
+            $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
         } else {
             console.log('[DEBUG] toggleRestEndpointVisibility: Hiding REST endpoint span');
             $restEndpointSpan.hide();
