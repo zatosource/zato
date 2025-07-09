@@ -24,10 +24,14 @@ $(document).ready(function() {
 })
 
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
+    console.log('[DEBUG] new_row: Called with item=', JSON.stringify(item));
+    console.log('[DEBUG] new_row: include_tr=', JSON.stringify(include_tr));
+
     var row = '';
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+        console.log('[DEBUG] new_row: Created row with id=tr_' + item.id);
     }
 
     var is_active = item.is_active == true
@@ -213,14 +217,26 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
 }
 
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
+    console.log('[DEBUG] delete_: Called with id=', JSON.stringify(id));
+    console.log('[DEBUG] delete_: Current data_table.data=', JSON.stringify($.fn.zato.data_table.data));
 
     var instance = $.fn.zato.data_table.data[id];
+    console.log('[DEBUG] delete_: Found instance=', JSON.stringify(instance));
+
+    if (!instance) {
+        console.error('[DEBUG] delete_: No instance found for id=', id);
+        return;
+    }
+
     var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + instance.topic_name + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
+    console.log('[DEBUG] delete_: Descriptor=', JSON.stringify(descriptor));
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
         'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor,
         true);
+
+    console.log('[DEBUG] delete_: Called data_table.delete_ with id=', JSON.stringify(id));
 }
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) {
