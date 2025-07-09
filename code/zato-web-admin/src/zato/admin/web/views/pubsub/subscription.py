@@ -59,7 +59,7 @@ class Create(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
 
     def handle(self):
         logger.info('[DEBUG] Create.handle: Request method=%s', self.req.method)

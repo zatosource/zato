@@ -731,8 +731,8 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         prefix = '';
     }
 
-    // For edit actions, use server response data when available
-    if(action == 'edit' && data) {
+    // For edit and create actions, use server response data when available
+    if((action == 'edit' || action == 'create') && data) {
         // Start with server response data
         Object.keys(data).forEach(function(key) {
             if(key !== 'message' && data[key] !== undefined && data[key] !== null) {
