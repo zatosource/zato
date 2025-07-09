@@ -37,7 +37,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type', 'rest_push_endpoint_id'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type', \
+            'rest_push_endpoint_id', 'rest_push_endpoint_name'
         output_repeated = True
 
     def handle(self):
@@ -74,8 +75,6 @@ class Create(CreateEdit):
         return input_dict
 
     def pre_process_input_dict(self, input_dict):
-        """Override to handle form field mapping before service call"""
-        super().pre_process_input_dict(input_dict)
 
         # Extract topic IDs from form POST data
         if self.req.method == 'POST':

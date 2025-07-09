@@ -188,7 +188,8 @@
             'is_active',
             'delivery_type',
             'rest_push_endpoint_id',
-            'sub_key',
+
+            'rest_push_endpoint_name',
         ]
     }
     </script>
@@ -234,6 +235,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -246,7 +249,7 @@
                         <td>{{ item.sub_key }}</td>
 
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
-                        <td>{% if item.delivery_type == 'pull' %}Pull{% else %}Push{% endif %}</td>
+                        <td>{% if item.delivery_type == 'pull' %}Pull{% else %}Push{% endif %} [{{ item.rest_push_endpoint_name }}] </td>
                         <td>{{ item.topic_name|safe }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
@@ -256,6 +259,8 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.delivery_type }}</td>
                         <td class='ignore'>{{ item.rest_push_endpoint_id }}</td>
+
+                        <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
