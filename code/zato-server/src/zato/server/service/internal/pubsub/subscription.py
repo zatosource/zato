@@ -14,7 +14,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import PubSub
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubSubscription, PubSubTopic
+from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs
@@ -192,7 +192,7 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'sub_key', AsIs('topic_name_list')
+        output_required = 'id', 'sub_key', AsIs('topic_name_list'), 'topic_name', 'sec_name', 'delivery_type', 'is_active'
 
     def handle(self):
         self.logger.info('[DEBUG] Edit.handle: Starting subscription edit')
@@ -279,9 +279,19 @@ class Edit(AdminService):
 
                 self.logger.info('[DEBUG] Edit.handle: created subscriptions for topics=%s', topic_names)
 
-                # Return subscription info with topic names list
+                # Return subscription info with topic names for frontend display
+                self.response.payload.id = subscription_id  # Frontend needs this to update table row
                 self.response.payload.sub_key = sub_key
                 self.response.payload.topic_name_list = topic_names
+                # Convert to comma-separated string for table display
+                self.response.payload.topic_name = ', '.join(topic_names)
+
+                # Add other fields needed for table display
+                # Get security name from sec_base_id
+                sec_base = session.query(SecurityBase).filter(SecurityBase.id == self.request.input.sec_base_id).one_or_none()
+                self.response.payload.sec_name = sec_base.name if sec_base else ''
+                self.response.payload.delivery_type = self.request.input.delivery_type
+                self.response.payload.is_active = self.request.input.is_active
 
             except Exception:
                 self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
