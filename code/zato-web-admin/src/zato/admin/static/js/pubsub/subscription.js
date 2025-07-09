@@ -42,6 +42,55 @@ $(document).ready(function() {
     };
 })
 
+// Function to populate REST endpoints
+$.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId) {
+    console.log('[DEBUG] populateRestEndpoints: Called with form_type:', form_type, 'selectedId:', selectedId);
+
+    var selectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
+    var $select = $(selectId);
+
+    console.log('[DEBUG] populateRestEndpoints: Select ID:', selectId, 'element found:', $select.length > 0);
+
+    if ($select.length === 0) {
+        console.log('[DEBUG] populateRestEndpoints: Select element not found:', selectId);
+        return;
+    }
+
+    // Clear existing options
+    $select.empty();
+    $select.append('<option value="">Select a REST endpoint</option>');
+
+    // Get cluster ID
+    var clusterId = $('#cluster_id').val();
+
+    $.ajax({
+        url: '/zato/pubsub/subscription/get-rest-endpoints/',
+        type: 'GET',
+        data: {
+            cluster_id: clusterId,
+            form_type: form_type
+        },
+        success: function(response) {
+            console.log('[DEBUG] populateRestEndpoints: Received endpoints:', response.rest_endpoints);
+
+            if (response.rest_endpoints && response.rest_endpoints.length > 0) {
+                $.each(response.rest_endpoints, function(index, endpoint) {
+                    var selected = selectedId && selectedId == endpoint.id ? 'selected="selected"' : '';
+                    $select.append('<option value="' + endpoint.id + '" ' + selected + '>' + endpoint.name + '</option>');
+                });
+            }
+
+            // Trigger chosen update if using chosen plugin
+            if ($select.hasClass('chosen-select') || $select.next('.chosen-container').length > 0) {
+                $select.trigger('chosen:updated');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.log('[DEBUG] populateRestEndpoints: Error loading endpoints:', error);
+        }
+    });
+};
+
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
@@ -136,13 +185,20 @@ $.fn.zato.pubsub.subscription.create = function() {
             $('.ss-main').show();
         });
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
+
+        // Setup delivery type visibility first, then populate REST endpoints for create form
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
+        $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
     }, 200);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(sub_key) {
     console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key:', JSON.stringify(sub_key));
-    console.log('[DEBUG] Full data table data:', JSON.stringify($.fn.zato.data_table.data));
+    console.log('[DEBUG] Full data table data:', $.fn.zato.data_table.data);
+
+    // Hide REST endpoint span immediately to prevent flicker during form population
+    console.log('[DEBUG] Edit: Hiding REST endpoint span immediately');
+    $('#rest-endpoint-edit').hide();
 
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', sub_key);
     // Populate topics and security definitions after form opens with current selections
@@ -227,7 +283,31 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
             $('.ss-main').show();
         });
         $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
+
+        // Debug: Check delivery type before setup
+        var currentDeliveryType = $('#id_edit-delivery_type').val();
+        console.log('[DEBUG] Edit: Current delivery type before setup:', currentDeliveryType);
+        console.log('[DEBUG] Edit: REST endpoint span visibility before setup:', $('#rest-endpoint-edit').css('display'));
+
+        // Immediately hide REST endpoint span if not push to prevent flicker
+        if (currentDeliveryType !== 'push') {
+            console.log('[DEBUG] Edit: Pre-hiding REST endpoint span for non-push delivery type');
+            $('#rest-endpoint-edit').hide();
+        }
+
+        // Setup delivery type visibility first, then conditionally populate REST endpoints
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit');
+
+        // Debug: Check after setup
+        console.log('[DEBUG] Edit: REST endpoint span visibility after setup:', $('#rest-endpoint-edit').css('display'));
+
+        // Only populate REST endpoints if delivery type is push
+        if (currentDeliveryType === 'push') {
+            console.log('[DEBUG] Edit: Populating REST endpoints for push delivery type');
+            $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId);
+        } else {
+            console.log('[DEBUG] Edit: Skipping REST endpoints population for delivery type:', currentDeliveryType);
+        }
     }, 200);
 }
 
@@ -254,27 +334,48 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 }
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) {
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Called with form_type:', form_type);
+
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
     var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
+
+    console.log('[DEBUG] setupDeliveryTypeVisibility: IDs - deliveryType:', deliveryTypeId, 'restEndpointSpan:', restEndpointSpanId);
 
     var $deliveryType = $(deliveryTypeId);
     var $restEndpointSpan = $(restEndpointSpanId);
 
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Elements found - deliveryType:', $deliveryType.length, 'restEndpointSpan:', $restEndpointSpan.length);
+
     if ($deliveryType.length === 0 || $restEndpointSpan.length === 0) {
+        console.log('[DEBUG] setupDeliveryTypeVisibility: Missing elements, returning');
         return;
     }
 
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Current delivery type value:', $deliveryType.val());
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Current REST span display:', $restEndpointSpan.css('display'));
+
     function toggleRestEndpointVisibility() {
-        if ($deliveryType.val() === 'push') {
+        var deliveryTypeValue = $deliveryType.val();
+        console.log('[DEBUG] toggleRestEndpointVisibility: Called with delivery type:', deliveryTypeValue);
+
+        if (deliveryTypeValue === 'push') {
+            console.log('[DEBUG] toggleRestEndpointVisibility: Showing REST endpoint span');
             $restEndpointSpan.css('display', 'inline-block');
         } else {
+            console.log('[DEBUG] toggleRestEndpointVisibility: Hiding REST endpoint span');
             $restEndpointSpan.hide();
         }
+
+        console.log('[DEBUG] toggleRestEndpointVisibility: Final REST span display:', $restEndpointSpan.css('display'));
     }
 
     // Set initial state
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Setting initial state');
     toggleRestEndpointVisibility();
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Initial state set');
 
     // Handle delivery type changes
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Setting up change handler');
     $deliveryType.on('change', toggleRestEndpointVisibility);
+    console.log('[DEBUG] setupDeliveryTypeVisibility: Change handler set up complete');
 }
