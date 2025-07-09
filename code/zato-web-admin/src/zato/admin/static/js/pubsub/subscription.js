@@ -103,17 +103,17 @@ $.fn.zato.pubsub.subscription.create = function() {
     }, 200);
 }
 
-$.fn.zato.pubsub.subscription.edit = function(id) {
-    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for id:', id);
+$.fn.zato.pubsub.subscription.edit = function(sub_key) {
+    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key:', sub_key);
 
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', sub_key);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
         // Get the current topic ID from the hidden input field that contains the actual form data
         var currentTopicId = $('input[name="edit-topic_id"]').val();
         if (!currentTopicId) {
             // Fallback: try to get it from the data table row data
-            var rowData = $.fn.zato.data_table.data[id];
+            var rowData = $.fn.zato.data_table.data[sub_key];
             if (rowData && rowData.topic_id) {
                 currentTopicId = rowData.topic_id;
             }
