@@ -172,7 +172,6 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     } else {
         // Push delivery type with endpoint
         if(item.rest_push_endpoint_id) {
-            // Simply extract the name from the select
             var endpointName = '';
             $('#id_edit-rest_push_endpoint_id option').each(function() {
                 if($(this).val() == item.rest_push_endpoint_id) {
