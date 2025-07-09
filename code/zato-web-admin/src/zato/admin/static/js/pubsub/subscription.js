@@ -4,9 +4,8 @@ $.namespace('zato.pubsub.subscription');
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} sub_key:{1} topic_name:{2} sec_name:{3} pattern_matched:{4}>';
+        var s = '<PubSubSubscription id:{0} topic_name:{1} sec_name:{2} pattern_matched:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.sub_key ? this.sub_key : '(none)',
                                 this.topic_name ? this.topic_name : '(none)',
                                 this.sec_name ? this.sec_name : '(none)',
                                 this.pattern_matched ? this.pattern_matched : '(none)');
@@ -34,11 +33,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     var is_active = item.is_active == true
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.sec_name);
-    row += String.format('<td>{0}</td>', item.topic_name);
+    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.delivery_type || 'pull');
+    row += String.format('<td>{0}</td>', item.topic_name);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
@@ -172,7 +170,7 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
     var instance = $.fn.zato.data_table.data[id];
-    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + instance.topic_name + '\nKey: ' + instance.sub_key + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
+    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + instance.topic_name + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
