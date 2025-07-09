@@ -96,6 +96,17 @@
             --ss-value-padding: 0.0625rem 0.25rem;
         }
 
+        .ss-content .ss-list .ss-option.ss-highlighted, .ss-content .ss-list .ss-option:not(.ss-disabled).ss-selected {
+            background-color: transparent !important;
+            color: #006fbf !important;
+            font-weight: 600;
+        }
+
+        .ss-content .ss-list .ss-option:hover:not(.ss-highlighted):not(.ss-selected) {
+            background-color: #eee;
+            color: #333 !important;
+        }
+
         /* SlimSelect smaller font sizes for topic selections */
         .ss-main.topic-select .ss-values .ss-value .ss-value-text {
             font-size: var(--ss-small-font-size) !important;
