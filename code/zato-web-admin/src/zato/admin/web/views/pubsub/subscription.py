@@ -145,8 +145,8 @@ class Edit(CreateEdit):
             }
 
             for form_field, service_field in field_mapping.items():
-                if service_field in self.req.POST and self.req.POST[service_field]:
-                    value = self.req.POST[service_field]
+                if form_field in self.req.POST and self.req.POST[form_field]:
+                    value = self.req.POST[form_field]
                     if service_field == 'is_active':
                         input_dict[service_field] = value == 'on'
                     else:
