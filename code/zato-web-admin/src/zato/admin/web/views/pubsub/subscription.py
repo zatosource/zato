@@ -123,9 +123,9 @@ class Edit(CreateEdit):
     service_name = 'zato.pubsub.subscription.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
+        input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key'
+        output_required = 'sub_key'
 
     def handle(self):
         logger.info('[DEBUG] Edit.handle: Request method=%s', self.req.method)
@@ -162,6 +162,7 @@ class Edit(CreateEdit):
 
             # Map other form fields
             field_mapping = {
+                'edit-sub_key': 'sub_key',
                 'edit-sec_base_id': 'sec_base_id',
                 'edit-delivery_type': 'delivery_type',
                 'edit-is_active': 'is_active',
