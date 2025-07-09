@@ -22,6 +22,43 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
 
+    // Override the close function to clean up spinners and selects
+    var originalClose = $.fn.zato.data_table.close;
+    $.fn.zato.data_table.close = function(elem) {
+        // Clean up any spinners and reset visibility states
+        $('.loading-spinner').remove();
+        $('.topic-select, .security-select').removeClass('hide');
+        $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
+        $('#rest-endpoint-edit').hide();
+
+        // Call the original close function
+        return originalClose(elem);
+    };
+
+    // Override the create_edit function to ensure proper cleanup before opening a new form
+    var originalCreateEdit = $.fn.zato.data_table._create_edit;
+    $.fn.zato.data_table._create_edit = function(form_type, title, id) {
+        // Clean up any previous state completely
+        $('.loading-spinner').remove();
+        $('.ss-main').remove();
+
+        // Destroy any existing SlimSelect instances
+        if (window.topicSelectCreate) {
+            try { window.topicSelectCreate.destroy(); } catch (e) {}
+            window.topicSelectCreate = null;
+        }
+        if (window.topicSelectEdit) {
+            try { window.topicSelectEdit.destroy(); } catch (e) {}
+            window.topicSelectEdit = null;
+        }
+
+        // Reset select element visibility
+        $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
+
+        // Call the original create_edit function
+        return originalCreateEdit(form_type, title, id);
+    };
+
     // Override the on_submit function to add validation
     var originalOnSubmit = $.fn.zato.data_table.on_submit;
     $.fn.zato.data_table.on_submit = function(action) {
