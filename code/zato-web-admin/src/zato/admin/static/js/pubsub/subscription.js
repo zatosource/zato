@@ -164,6 +164,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
 
     if(include_tr) {
         row += '</tr>';
@@ -261,7 +262,8 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         }
 
         var currentSecId = $('#id_edit-sec_base_id').val();
-        var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
+        var currentRestEndpointId = rowData.rest_push_endpoint_id || '';
+        console.log('[DEBUG] Edit: REST endpoint ID from row data:', JSON.stringify(currentRestEndpointId));
 
         // Initialize SlimSelect after topics are populated via callback
         console.log('[DEBUG] Edit: About to call populateTopics with currentTopicNames:', JSON.stringify(currentTopicNames));

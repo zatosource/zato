@@ -33,7 +33,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', 'delivery_type', 'rest_push_endpoint_id'
 
     def get_data(self, session):
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
