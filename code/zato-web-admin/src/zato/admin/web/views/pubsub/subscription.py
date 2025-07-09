@@ -62,6 +62,7 @@ class Create(CreateEdit):
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
 
     def handle(self):
+
         logger.info('[DEBUG] Create.handle: Request method=%s', self.req.method)
         logger.info('[DEBUG] Create.handle: Request POST data=%s', dict(self.req.POST))
         logger.info('[DEBUG] Create.handle: Request GET data=%s', dict(self.req.GET))
@@ -70,11 +71,9 @@ class Create(CreateEdit):
         topic_id_list = self.req.POST.getlist('create-topic_id')
         logger.info('[DEBUG] Create.handle: topic_id_list type=%s, value=%s', type(topic_id_list), topic_id_list)
 
-        return super().handle()
-
     def _get_input_dict(self):
-        """Override to properly map form fields to service input"""
-        input_dict = super()._get_input_dict()
+
+        input_dict = {}
 
         # Map topic_id form field (which can be multiple) to topic_id_list service input
         if self.req.method == 'POST':
@@ -136,11 +135,10 @@ class Edit(CreateEdit):
         topic_id_list = self.req.POST.getlist('edit-topic_id')
         logger.info('[DEBUG] Edit.handle: topic_id_list type=%s, value=%s', type(topic_id_list), topic_id_list)
 
-        return super().handle()
 
     def _get_input_dict(self):
 
-        input_dict = super()._get_input_dict()
+        input_dict = {}
 
         # Map topic_id form field (which can be multiple) to topic_id_list service input
         if self.req.method == 'POST':
