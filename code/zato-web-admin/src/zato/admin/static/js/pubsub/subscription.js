@@ -21,6 +21,25 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
+
+    // Override the on_submit function to add validation
+    var originalOnSubmit = $.fn.zato.data_table.on_submit;
+    $.fn.zato.data_table.on_submit = function(action) {
+        // Validate push delivery type
+        var deliveryTypeId = action === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
+        var restEndpointId = action === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
+
+        var deliveryType = $(deliveryTypeId).val();
+        var restEndpoint = $(restEndpointId).val();
+
+        if (deliveryType === 'push' && (!restEndpoint || restEndpoint === '')) {
+            alert('Please select a REST endpoint when using Push delivery type.');
+            return false;
+        }
+
+        // Call original on_submit if validation passes
+        return originalOnSubmit.call(this, action);
+    };
 })
 
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
