@@ -90,28 +90,15 @@ class Create(AdminService):
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
 
     def handle(self):
-        self.logger.info('[DEBUG] Create.handle: Starting subscription creation')
-        self.logger.info('[DEBUG] Create.handle: Request input type=%s', type(self.request.input))
-        self.logger.info('[DEBUG] Create.handle: Request input.__dict__=%s', getattr(self.request.input, '__dict__', 'no __dict__'))
-
-        # Log specific input fields
-        for attr in ['topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
-            if hasattr(self.request.input, attr):
-                value = getattr(self.request.input, attr)
-                self.logger.info('[DEBUG] Create.handle: Input %s type=%s, value=%s', attr, type(value), value)
-
         with closing(self.odb.session()) as session:
             try:
                 # Handle multiple topic IDs
                 topic_ids = self.request.input.topic_id_list
-                self.logger.info('[DEBUG] Create.handle: topic_ids before processing type=%s, value=%s', type(topic_ids), topic_ids)
 
                 if isinstance(topic_ids, str):
                     topic_ids = [topic_ids]
                 elif not isinstance(topic_ids, list):
                     topic_ids = [topic_ids]
-
-                self.logger.info('[DEBUG] Create.handle: topic_ids after processing type=%s, value=%s', type(topic_ids), topic_ids)
 
                 created_subscriptions = []
                 # Generate single sub_key for all subscriptions in this operation
@@ -175,7 +162,6 @@ class Create(AdminService):
                     self.response.payload.sec_name = security.name if security else ''
                     self.response.payload.delivery_type = first_item.delivery_type
                 else:
-                    self.logger.info('[DEBUG] Create.handle: No new subscriptions created - some may already exist')
                     # Find an existing subscription to return in response
                     first_topic_id = topic_ids[0] if topic_ids else None
                     if first_topic_id:
@@ -217,21 +203,9 @@ class Edit(AdminService):
         output_required = 'id', 'sub_key', AsIs('topic_name_list'), 'topic_name', 'sec_name', 'delivery_type', 'is_active'
 
     def handle(self):
-        self.logger.info('[DEBUG] Edit.handle: Starting subscription edit')
-        self.logger.info('[DEBUG] Edit.handle: Request input type=%s', type(self.request.input))
-        self.logger.info('[DEBUG] Edit.handle: Request input.__dict__=%s', getattr(self.request.input, '__dict__', 'no __dict__'))
-
-        # Log specific input fields
-        for attr in ['sub_key', 'topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
-            if hasattr(self.request.input, attr):
-                value = getattr(self.request.input, attr)
-                self.logger.info('[DEBUG] Edit.handle: Input %s type=%s, value=%s', attr, type(value), value)
-
         with closing(self.odb.session()) as session:
             try:
-                # Handle topic_id_list - process all topics for edit
                 topic_id_list = self.request.input.topic_id_list
-                self.logger.info('[DEBUG] Edit.handle: topic_id_list before processing type=%s, value=%s', type(topic_id_list), topic_id_list)
 
                 # Normalize topic_id_list to always be a list
                 if not isinstance(topic_id_list, list):
@@ -242,11 +216,8 @@ class Edit(AdminService):
 
                 # Convert string IDs to integers
                 topic_id_list = [int(topic_id) for topic_id in topic_id_list]
-                self.logger.info('[DEBUG] Edit.handle: normalized topic_id_list=%s', topic_id_list)
 
-                # The input sub_key is actually the subscription ID, find the real sub_key
                 subscription_id = self.request.input.sub_key
-                self.logger.info('[DEBUG] Edit.handle: using subscription_id=%s', subscription_id)
 
                 # Find one existing subscription to get the actual sub_key
                 sub = session.query(PubSubSubscription).\
@@ -258,7 +229,6 @@ class Edit(AdminService):
                     raise Exception(f'Subscription with ID {subscription_id} not found')
 
                 sub_key = sub.sub_key
-                self.logger.info('[DEBUG] Edit.handle: found sub_key=%s for id=%s', sub_key, subscription_id)
 
                 # Delete ALL existing subscriptions with the same sub_key
                 existing_subscriptions = session.query(PubSubSubscription).\
@@ -268,17 +238,14 @@ class Edit(AdminService):
 
                 for existing_sub in existing_subscriptions:
                     session.delete(existing_sub)
-                    self.logger.info('[DEBUG] Edit.handle: deleted existing subscription id=%s topic_id=%s sub_key=%s', existing_sub.id, existing_sub.topic_id, existing_sub.sub_key)
 
                 # Flush deletes to database before creating new subscriptions
                 session.flush()
-                self.logger.info('[DEBUG] Edit.handle: flushed deletions to database')
 
                 # Create new subscriptions for each topic with the same sub_key
                 created_subscriptions = []
                 for topic_id in topic_id_list:
                     sub_key = str(uuid.uuid4())
-                    self.logger.info('[DEBUG] Create.handle: Creating subscription for topic_id=%s with sub_key=%s', topic_id, sub_key)
 
                     new_subscription = PubSubSubscription()
                     new_subscription.cluster_id = self.request.input.cluster_id
@@ -292,22 +259,14 @@ class Edit(AdminService):
 
                     session.add(new_subscription)
                     created_subscriptions.append(new_subscription)
-                    self.logger.info('[DEBUG] Create.handle: Added subscription to session - topic_id=%s sub_key=%s', topic_id, sub_key)
 
                 session.commit()
-                self.logger.info('[DEBUG] Create.handle: Database commit successful, created %d subscriptions', len(created_subscriptions))
-
-                # Log the actual subscription IDs after commit
-                for sub in created_subscriptions:
-                    self.logger.info('[DEBUG] Create.handle: Committed subscription id=%s sub_key=%s topic_id=%s', sub.id, sub.sub_key, sub.topic_id)
 
                 # Get topic names for the created subscriptions
                 topic_names = []
                 for sub in created_subscriptions:
                     topic = session.query(PubSubTopic).filter(PubSubTopic.id == sub.topic_id).one()
                     topic_names.append(topic.name)
-
-                self.logger.info('[DEBUG] Create.handle: created subscriptions for topics=%s', topic_names)
 
                 # Return subscription info with topic names for frontend display
                 self.response.payload.id = subscription_id  # Frontend needs this to update table row
@@ -340,19 +299,11 @@ class Delete(AdminService):
         input_required = 'id',
 
     def handle(self):
-        self.logger.info('[DEBUG] Delete.handle: Starting subscription deletion')
-        self.logger.info('[DEBUG] Delete.handle: Input data=%s', self.request.input)
-        self.logger.info('[DEBUG] Delete.handle: Subscription ID to delete=%s', self.request.input.id)
-
         with closing(self.odb.session()) as session:
             try:
-                self.logger.info('[DEBUG] Delete.handle: Querying for subscription with ID=%s', self.request.input.id)
                 subscription = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.id==self.request.input.id).\
                     one()
-
-                self.logger.info('[DEBUG] Delete.handle: Found subscription to delete: id=%s sub_key=%s topic_id=%s sec_base_id=%s',
-                               subscription.id, subscription.sub_key, subscription.topic_id, subscription.sec_base_id)
 
                 # Find all subscriptions with the same sub_key and sec_base_id (multi-topic subscription group)
                 related_subscriptions = session.query(PubSubSubscription).\
@@ -360,31 +311,20 @@ class Delete(AdminService):
                     filter(PubSubSubscription.sec_base_id==subscription.sec_base_id).\
                     all()
 
-                self.logger.info('[DEBUG] Delete.handle: Found %d related subscriptions with same sub_key=%s',
-                               len(related_subscriptions), subscription.sub_key)
-
                 # Delete all related subscriptions
                 for related_sub in related_subscriptions:
-                    self.logger.info('[DEBUG] Delete.handle: Deleting related subscription id=%s topic_id=%s',
-                                   related_sub.id, related_sub.topic_id)
                     session.delete(related_sub)
 
-                self.logger.info('[DEBUG] Delete.handle: Marked %d subscriptions for deletion in session', len(related_subscriptions))
-
                 session.commit()
-                self.logger.info('[DEBUG] Delete.handle: Database commit successful')
 
             except Exception:
-                self.logger.error('[DEBUG] Delete.handle: Exception during deletion, e:`%s`', format_exc())
+                self.logger.error('Could not delete Pub/Sub subscription, e:`%s`', format_exc())
                 session.rollback()
-                self.logger.info('[DEBUG] Delete.handle: Database rollback completed')
                 raise
             else:
-                self.logger.info('[DEBUG] Delete.handle: Publishing broker message for sub_key=%s', subscription.sub_key)
                 self.request.input.action = PUBSUB.SUBSCRIPTION_DELETE.value
                 self.request.input.sub_key = subscription.sub_key
                 self.broker_client.publish(self.request.input)
-                self.logger.info('[DEBUG] Delete.handle: Broker message published successfully')
 
 # ################################################################################################################################
 # ################################################################################################################################
