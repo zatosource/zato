@@ -373,21 +373,6 @@ $.fn.zato.pubsub.subscription.stripHtml = function(html) {
 $.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, xhr) {
     var ret_data = $.parseJSON(data.responseText);
 
-    // Store the selected endpoint name in the response data when the form is submitted
-    if(!ret_data.has_error && ret_data.delivery_type === 'push' && ret_data.rest_push_endpoint_id) {
-        // Get the selected endpoint name from the form
-        var endpointName = $('#id_edit-rest_push_endpoint_id option:selected').text();
-        if(endpointName && endpointName !== 'Select a REST endpoint') {
-            // Add the name to the return data so it's available for the row update
-            ret_data.rest_push_endpoint_name = endpointName;
-
-            // Update the data table's data object with this information
-            if(ret_data.id && $.fn.zato.data_table.data[ret_data.id]) {
-                $.fn.zato.data_table.data[ret_data.id].rest_push_endpoint_name = endpointName;
-            }
-        }
-    }
-
     // Publish message to status_msg topic
     $.fn.zato.user_message(ret_data.message);
 
