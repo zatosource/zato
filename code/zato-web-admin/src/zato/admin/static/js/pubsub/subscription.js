@@ -216,6 +216,12 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
     }, 200);
 }
 
+$.fn.zato.pubsub.subscription.stripHtml = function(html) {
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+};
+
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     console.log('[DEBUG] delete_: Called with id=', JSON.stringify(id));
     console.log('[DEBUG] delete_: Current data_table.data=', JSON.stringify($.fn.zato.data_table.data));
@@ -228,7 +234,8 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
         return;
     }
 
-    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + instance.topic_name + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
+    var cleanTopicName = $.fn.zato.pubsub.subscription.stripHtml(instance.topic_name);
+    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
     console.log('[DEBUG] delete_: Descriptor=', JSON.stringify(descriptor));
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
