@@ -48,15 +48,18 @@ class GetList(AdminService):
                 item_dict['sec_name'] = sec_name
                 item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name or ''
                 item_dict['topic_names'] = []
+                item_dict['topic_ids'] = []
                 grouped_data[sec_key] = item_dict
 
             grouped_data[sec_key]['topic_names'].append(topic_name)
+            grouped_data[sec_key]['topic_ids'].append(subscription.topic_id)
 
         # Convert grouped data to list and format topic names
         data = []
         for item_dict in grouped_data.values():
             item_dict['topic_name'] = ', '.join(item_dict['topic_names'])
             del item_dict['topic_names']
+            del item_dict['topic_ids']
             data.append(item_dict)
 
         return elems_with_opaque(data)
@@ -222,30 +225,26 @@ class Edit(AdminService):
                 original_sub_key = self.request.input.sub_key
                 self.logger.info('[DEBUG] Edit.handle: using sub_key=%s', original_sub_key)
 
-                # Delete all existing subscriptions with this sub_key
-                existing_subscriptions = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.sub_key==original_sub_key).\
-                    all()
-
-                for existing_sub in existing_subscriptions:
-                    session.delete(existing_sub)
-                    self.logger.info('[DEBUG] Edit.handle: deleted existing subscription id=%s topic_id=%s', existing_sub.id, existing_sub.topic_id)
-
-                # Create new subscriptions for each topic with the same sub_key, skipping existing ones
-                created_subscriptions = []
+                # Delete all existing subscriptions that would conflict with the new ones
+                # (same topic_id, sec_base_id, cluster_id combination)
                 for topic_id in topic_id_list:
-                    # Check if subscription already exists for this topic and security definition
-                    existing_one = session.query(PubSubSubscription).\
+                    existing_subscriptions = session.query(PubSubSubscription).\
                         filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                         filter(PubSubSubscription.topic_id==topic_id).\
                         filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                        first()
+                        all()
 
-                    if existing_one:
-                        self.logger.info('[DEBUG] Edit.handle: skipping topic_id=%s, subscription already exists', topic_id)
-                        continue
+                    for existing_sub in existing_subscriptions:
+                        session.delete(existing_sub)
+                        self.logger.info('[DEBUG] Edit.handle: deleted conflicting subscription id=%s topic_id=%s sub_key=%s', existing_sub.id, existing_sub.topic_id, existing_sub.sub_key)
 
+                # Flush deletes to database before creating new subscriptions
+                session.flush()
+                self.logger.info('[DEBUG] Edit.handle: flushed deletions to database')
+
+                # Create new subscriptions for each topic with the same sub_key
+                created_subscriptions = []
+                for topic_id in topic_id_list:
                     new_subscription = PubSubSubscription()
                     new_subscription.cluster_id = self.request.input.cluster_id
                     new_subscription.topic_id = topic_id
@@ -267,7 +266,7 @@ class Edit(AdminService):
                 for sub in created_subscriptions:
                     topic = session.query(PubSubTopic).filter(PubSubTopic.id == sub.topic_id).one()
                     topic_names.append(topic.name)
-                
+
                 self.logger.info('[DEBUG] Edit.handle: created subscriptions for topics=%s', topic_names)
 
                 # Return subscription info with topic names list
