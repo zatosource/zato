@@ -32,7 +32,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', 'topic_name', 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', 'delivery_type'
 
     def get_data(self, session):
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
@@ -188,7 +188,7 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'id', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key'
+        output_required = 'id', 'sub_key', AsIs('topic_name_list')
 
     def handle(self):
         self.logger.info('[DEBUG] Edit.handle: Starting subscription edit')
@@ -263,9 +263,18 @@ class Edit(AdminService):
 
                 session.commit()
 
-                # Return the first created subscription's info (they all have the same sub_key)
-                self.response.payload.id = created_subscriptions[0].id
+                # Get topic names for the created subscriptions
+                topic_names = []
+                for sub in created_subscriptions:
+                    topic = session.query(PubSubTopic).filter(PubSubTopic.id == sub.topic_id).one()
+                    topic_names.append(topic.name)
+                
+                self.logger.info('[DEBUG] Edit.handle: created subscriptions for topics=%s', topic_names)
+
+                # Return subscription info with topic names list
+                self.response.payload.id = created_subscriptions[0].id if created_subscriptions else original_item.id
                 self.response.payload.sub_key = original_sub_key
+                self.response.payload.topic_name_list = topic_names
 
             except Exception:
                 self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
