@@ -29,7 +29,7 @@ $(document).ready(function() {
         $('.loading-spinner').remove();
         $('.topic-select, .security-select').removeClass('hide');
         $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
-        $('#rest-endpoint-edit').hide();
+        $('#rest-endpoint-edit, #rest-endpoint-create').hide();
 
         // Call the original close function
         return originalClose(elem);
@@ -54,6 +54,14 @@ $(document).ready(function() {
 
         // Reset select element visibility
         $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
+
+        // Ensure REST endpoint spans are hidden before opening any form
+        $('#rest-endpoint-create, #rest-endpoint-edit').hide();
+
+        // Reset delivery type to pull (default)
+        if (form_type === 'create') {
+            $('#id_delivery_type').val('pull');
+        }
 
         // Call the original create_edit function
         return originalCreateEdit(form_type, title, id);
@@ -187,7 +195,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 $.fn.zato.pubsub.subscription.create = function() {
     console.log('[DEBUG] pubsub.subscription.create: Starting create function');
 
-    $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
+    // Hide REST endpoint span immediately before form opens
+    $('#rest-endpoint-create').hide();
+
+    $.fn.zato.data_table._create_edit('create', 'Create a pub/sub subscription', null);
     // Populate topics and security definitions after form opens
     setTimeout(function() {
         // Initialize SlimSelect after topics are populated via callback
@@ -390,6 +401,9 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) 
 
     var $deliveryType = $(deliveryTypeId);
     var $restEndpointSpan = $(restEndpointSpanId);
+
+    // Hide the span immediately to prevent any flash
+    $restEndpointSpan.hide();
 
     console.log('[DEBUG] setupDeliveryTypeVisibility: Elements found - deliveryType:', $deliveryType.length, 'restEndpointSpan:', $restEndpointSpan.length);
 
