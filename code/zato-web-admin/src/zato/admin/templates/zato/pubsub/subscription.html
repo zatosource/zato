@@ -162,11 +162,10 @@
         return [
             '_numbering',
             '_selection',
-            'sub_key',
-            '_is_active',
             'sec_name',
-            'topic_name',
+            '_is_active',
             'delivery_type',
+            'topic_name',
             '_edit',
             '_delete',
             'id',
@@ -201,11 +200,11 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Sub key</a></th>
+
+                        <th style="width:1%; white-space:nowrap;">Security definition</th>
                         <th><a href="#">Active</a></th>
-                        <th>Security definition</th>
-                        <th>Topic</th>
                         <th>Delivery type</th>
+                        <th>Topics</th>
                         <th>Edit</th>
                         <th>Delete</th>
 
@@ -221,11 +220,11 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class='impexp'><input type='checkbox' /></td>
-                        <td>{{ item.sub_key }}</td>
-                        <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
+
                         <td>{{ item.sec_name }}</td>
-                        <td>{{ item.topic_name }}</td>
+                        <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ item.delivery_type|default:"N/A" }}</td>
+                        <td>{{ item.topic_name }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
