@@ -104,33 +104,52 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(sub_key) {
-    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key:', sub_key);
+    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key:', JSON.stringify(sub_key));
+    console.log('[DEBUG] Full data table data:', JSON.stringify($.fn.zato.data_table.data));
 
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', sub_key);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
-        // Get the current topic ID from the hidden input field that contains the actual form data
-        var currentTopicId = $('input[name="edit-topic_id"]').val();
-        if (!currentTopicId) {
-            // Fallback: try to get it from the data table row data
-            var rowData = $.fn.zato.data_table.data[sub_key];
-            if (rowData && rowData.topic_id) {
-                currentTopicId = rowData.topic_id;
-            }
+        // Set the sub_key in the hidden field
+        $('#id_edit-sub_key').val(sub_key);
+        console.log('[DEBUG] Set sub_key field to:', JSON.stringify(sub_key));
+
+        // Get the current topic names from the data table row data
+        var currentTopicNames = null;
+        var rowData = $.fn.zato.data_table.data[sub_key];
+        console.log('[DEBUG] Edit: Full row data for sub_key:', JSON.stringify({sub_key: sub_key, rowData: rowData}));
+
+        if (rowData && rowData.topic_name) {
+            console.log('[DEBUG] Edit: Raw topic_name:', JSON.stringify({value: rowData.topic_name, type: typeof rowData.topic_name}));
+            // Convert comma-separated string to array of topic names
+            currentTopicNames = rowData.topic_name.split(',').map(function(name) {
+                return name.trim();
+            });
+            console.log('[DEBUG] Edit: Parsed topic names to array:', JSON.stringify(currentTopicNames));
+        } else {
+            console.log('[DEBUG] Edit: No topic names found in row data');
         }
 
         var currentSecId = $('#id_edit-sec_base_id').val();
         var currentRestEndpointId = $('#id_edit-rest_push_endpoint_id').val();
 
         // Initialize SlimSelect after topics are populated via callback
-        $.fn.zato.pubsub.common.populateTopics('edit', currentTopicId, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
+        console.log('[DEBUG] Edit: About to call populateTopics with currentTopicNames:', JSON.stringify(currentTopicNames));
+        $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
+            console.log('[DEBUG] Edit: populateTopics callback triggered');
+            console.log('[DEBUG] Edit: Select element HTML after populate:', JSON.stringify($('#id_edit-topic_id')[0].outerHTML));
+            console.log('[DEBUG] Edit: Selected options after populate:', JSON.stringify($('#id_edit-topic_id option:selected').map(function() { return {value: this.value, text: this.text}; }).get()));
+
             if (window.topicSelectEdit) {
+                console.log('[DEBUG] Edit: Destroying existing SlimSelect');
                 window.topicSelectEdit.destroy();
             }
 
             try {
                 $('#id_edit-topic_id').attr('multiple', true);
+                console.log('[DEBUG] Edit: Set multiple attribute on select');
 
+                console.log('[DEBUG] Edit: Creating new SlimSelect instance');
                 window.topicSelectEdit = new SlimSelect({
                     select: '#id_edit-topic_id',
                     settings: {
@@ -139,6 +158,17 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
                         closeOnSelect: false
                     }
                 });
+                console.log('[DEBUG] Edit: SlimSelect created successfully');
+                console.log('[DEBUG] Edit: SlimSelect getSelected():', JSON.stringify(window.topicSelectEdit.getSelected()));
+
+                // Force set selected after SlimSelect is initialized
+                if (currentTopicIds && currentTopicIds.length > 0) {
+                    console.log('[DEBUG] Edit: Force setting selected topics:', JSON.stringify(currentTopicIds));
+                    setTimeout(function() {
+                        window.topicSelectEdit.setSelected(currentTopicIds);
+                        console.log('[DEBUG] Edit: After setSelected, getSelected():', JSON.stringify(window.topicSelectEdit.getSelected()));
+                    }, 100);
+                }
 
                 // Force dropdown to be clickable and visible for edit form
                 setTimeout(function() {
