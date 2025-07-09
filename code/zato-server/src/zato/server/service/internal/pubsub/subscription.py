@@ -203,43 +203,69 @@ class Edit(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                # Handle topic_id_list - use first value for edit
+                # Handle topic_id_list - process all topics for edit
                 topic_id_list = self.request.input.topic_id_list
                 self.logger.info('[DEBUG] Edit.handle: topic_id_list before processing type=%s, value=%s', type(topic_id_list), topic_id_list)
 
-                # Extract single topic_id from list for edit operation
-                if isinstance(topic_id_list, list) and len(topic_id_list) > 0:
-                    topic_id = topic_id_list[0]
-                elif isinstance(topic_id_list, list) and len(topic_id_list) == 0:
+                # Normalize topic_id_list to always be a list
+                if not isinstance(topic_id_list, list):
+                    topic_id_list = [topic_id_list]
+
+                if not topic_id_list:
                     raise Exception('No topic selected')
-                else:
-                    topic_id = topic_id_list
 
-                self.logger.info('[DEBUG] Edit.handle: topic_id after processing type=%s, value=%s', type(topic_id), topic_id)
+                # Convert string IDs to integers
+                topic_id_list = [int(topic_id) for topic_id in topic_id_list]
+                self.logger.info('[DEBUG] Edit.handle: normalized topic_id_list=%s', topic_id_list)
 
-                existing_one = session.query(PubSubSubscription).\
+                # Get the original subscription to preserve sub_key
+                original_item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
+                original_sub_key = original_item.sub_key
+                self.logger.info('[DEBUG] Edit.handle: original sub_key=%s', original_sub_key)
+
+                # Delete all existing subscriptions with this sub_key
+                existing_subscriptions = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.topic_id==topic_id).\
-                    filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                    filter(PubSubSubscription.id!=self.request.input.id).\
-                    first()
+                    filter(PubSubSubscription.sub_key==original_sub_key).\
+                    all()
 
-                if existing_one:
-                    raise Exception('A subscription already exists for this topic and security definition')
+                for existing_sub in existing_subscriptions:
+                    session.delete(existing_sub)
+                    self.logger.info('[DEBUG] Edit.handle: deleted existing subscription id=%s topic_id=%s', existing_sub.id, existing_sub.topic_id)
 
-                item = session.query(PubSubSubscription).filter(PubSubSubscription.id==self.request.input.id).one()
-                item.topic_id = topic_id
-                item.sec_base_id = self.request.input.sec_base_id
-                item.delivery_type = self.request.input.delivery_type
-                item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
-                item.pattern_matched = '*'  # Set explicitly to default pattern
-                item.is_active = self.request.input.get('is_active', True)
+                # Create new subscriptions for each topic with the same sub_key, skipping existing ones
+                created_subscriptions = []
+                for topic_id in topic_id_list:
+                    # Check if subscription already exists for this topic and security definition
+                    existing_one = session.query(PubSubSubscription).\
+                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                        filter(PubSubSubscription.topic_id==topic_id).\
+                        filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
+                        first()
 
-                session.add(item)
+                    if existing_one:
+                        self.logger.info('[DEBUG] Edit.handle: skipping topic_id=%s, subscription already exists', topic_id)
+                        continue
+
+                    new_subscription = PubSubSubscription()
+                    new_subscription.cluster_id = self.request.input.cluster_id
+                    new_subscription.topic_id = topic_id
+                    new_subscription.sec_base_id = self.request.input.sec_base_id
+                    new_subscription.delivery_type = self.request.input.delivery_type
+                    new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
+                    new_subscription.pattern_matched = '*'
+                    new_subscription.is_active = self.request.input.get('is_active', True)
+                    new_subscription.sub_key = original_sub_key  # Keep the same sub_key
+
+                    session.add(new_subscription)
+                    created_subscriptions.append(new_subscription)
+                    self.logger.info('[DEBUG] Edit.handle: created new subscription topic_id=%s sub_key=%s', topic_id, original_sub_key)
+
                 session.commit()
 
-                self.response.payload.id = item.id
-                self.response.payload.sub_key = item.sub_key
+                # Return the first created subscription's info (they all have the same sub_key)
+                self.response.payload.id = created_subscriptions[0].id
+                self.response.payload.sub_key = original_sub_key
 
             except Exception:
                 self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
