@@ -33,21 +33,34 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', 'delivery_type', 'rest_push_endpoint_id'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', 'delivery_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name'
 
     def get_data(self, session):
+        self.logger.info('GetList.get_data starting, cluster_id:%s', self.request.input.cluster_id)
+
+        # Get the raw query result
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
+
+        # Debug the raw result
+        for idx, row in enumerate(result):
+            subscription, topic_name, sec_name, rest_push_endpoint_name = row
+            self.logger.info('GetList raw result[%s] topic:%s sec:%s endpoint_name:%s', idx, topic_name, sec_name, rest_push_endpoint_name)
+            self.logger.info('GetList raw result[%s] subscription.id:%s sub_key:%s delivery_type:%s is_active:%s rest_push_endpoint_id:%s',
+                            idx, subscription.id, subscription.sub_key, subscription.delivery_type,
+                            subscription.is_active, subscription.rest_push_endpoint_id)
 
         # Group subscriptions by security definition
         grouped_data = {}
 
         for subscription, topic_name, sec_name, rest_push_endpoint_name in result:
             sec_key = '{}_{}_{}_{}'.format(subscription.sec_base_id, subscription.sub_key, subscription.delivery_type, subscription.is_active)
+            self.logger.info('Processing subscription, sec_key:%s topic:%s sec:%s endpoint_name:%s',
+                            sec_key, topic_name, sec_name, rest_push_endpoint_name)
 
             if sec_key not in grouped_data:
                 item_dict = subscription.asdict()
                 item_dict['sec_name'] = sec_name
-                item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name or ''
+                self.logger.info('Set rest_push_endpoint_name to: %s for sec_key: %s', item_dict['rest_push_endpoint_name'], sec_key)
                 item_dict['topic_names'] = []
                 item_dict['topic_ids'] = []
                 grouped_data[sec_key] = item_dict
@@ -57,7 +70,12 @@ class GetList(AdminService):
 
         # Convert grouped data to list and format topic names as links
         data = []
-        for item_dict in grouped_data.values():
+        for sec_key, item_dict in grouped_data.items():
+            # Debug the grouped data item before processing
+            self.logger.info('Processing grouped item with sec_key:%s delivery_type:%s rest_push_endpoint_id:%s rest_push_endpoint_name:%s',
+                            sec_key, item_dict.get('delivery_type'), item_dict.get('rest_push_endpoint_id'),
+                            item_dict.get('rest_push_endpoint_name', 'NOT_SET'))
+
             # Create links for each topic name
             topic_links = []
             for topic_name in item_dict['topic_names']:
@@ -70,6 +88,12 @@ class GetList(AdminService):
             del item_dict['topic_ids']
             data.append(item_dict)
 
+            # Debug the final item
+            self.logger.info('Final item: id:%s delivery_type:%s rest_push_endpoint_name:%s',
+                            item_dict.get('id'), item_dict.get('delivery_type'),
+                            item_dict.get('rest_push_endpoint_name', 'NOT_SET'))
+
+        self.logger.info('GetList.get_data returning %s items', len(data))
         return elems_with_opaque(data)
 
     def handle(self):
