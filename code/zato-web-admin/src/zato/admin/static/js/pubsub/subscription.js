@@ -173,12 +173,19 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
         // Push delivery type with endpoint
         if(item.rest_push_endpoint_id) {
             var endpointName = '';
-            $('#id_edit-rest_push_endpoint_id option').each(function() {
-                if($(this).val() == item.rest_push_endpoint_id) {
-                    endpointName = $(this).text();
-                    return false;
-                }
-            });
+            var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
+
+            // Check both selects for the endpoint name
+            for(var i=0; i<selectIds.length; i++) {
+                $(selectIds[i] + ' option').each(function() {
+                    if($(this).val() == item.rest_push_endpoint_id) {
+                        endpointName = $(this).text();
+                        return false;
+                    }
+                });
+
+                if(endpointName) break;
+            }
 
             // Add the endpoint link to the row
             row += String.format('<td>Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
