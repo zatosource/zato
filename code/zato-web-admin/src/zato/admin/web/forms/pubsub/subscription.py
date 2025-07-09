@@ -53,8 +53,8 @@ class CreateForm(forms.Form):
             self.fields['topic_id'].choices = []
             # Use filtered security definitions for PubSub clients
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create', 'subscription')
-            # Populate REST endpoints
-            self.fields['rest_push_endpoint_id'].choices = get_rest_endpoint_choices(req)
+            # Set default option for REST endpoints
+            self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -66,5 +66,5 @@ class EditForm(CreateForm):
             self.fields['topic_id'].choices = []
             # Use filtered security definitions for edit (allows all available ones)
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'edit', 'subscription')
-            # REST endpoints will be populated dynamically via AJAX
-            self.fields['rest_push_endpoint_id'].choices = []
+            # Set default option for REST endpoints (will be populated via AJAX)
+            self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
