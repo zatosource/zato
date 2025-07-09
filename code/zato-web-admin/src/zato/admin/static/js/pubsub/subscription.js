@@ -36,7 +36,18 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', item.sec_name);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.delivery_type || 'pull');
-    row += String.format('<td>{0}</td>', item.topic_name);
+    // Convert topic names to links
+    var topicLinksHtml = '';
+    if (item.topic_name) {
+        var topicNames = item.topic_name.split(', ');
+        var topicLinks = topicNames.map(function(topicName) {
+            var trimmedName = topicName.trim();
+            return String.format('<a href="/zato/pubsub/topic/?cluster=1&query={0}">{1}</a>', 
+                                encodeURIComponent(trimmedName), trimmedName);
+        });
+        topicLinksHtml = topicLinks.join(', ');
+    }
+    row += String.format('<td>{0}</td>', topicLinksHtml);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
