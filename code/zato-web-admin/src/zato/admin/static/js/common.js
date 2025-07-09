@@ -1080,6 +1080,12 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
         console.log('[DEBUG] on_submit_complete: Generated row HTML=' + JSON.stringify(row));
 
+        // Special handling for subscription - make sure we're using the actual UUID sub_key from the server response
+        if (json.sub_key && json.sub_key.indexOf('-') > -1 && $.fn.zato.data_table.data[json.id]) {
+            console.log('[DEBUG] on_submit_complete: Setting UUID sub_key on data object:', json.sub_key);
+            $.fn.zato.data_table.data[json.id].sub_key = json.sub_key;
+        }
+
         // There are forms (like the one for subscriptions) where create action does create an object
         // but it is not displayed in current data_table so we treat it as an update actually,
         // and new_row_func_update_in_place is the flag to enable this behaviour.

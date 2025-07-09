@@ -147,6 +147,16 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
     });
 };
 
+$.fn.zato.pubsub.subscription.data_table = {};
+
+// Hook to ensure the UUID sub_key is properly preserved in the data
+$.fn.zato.data_table.add_row_hook = function(instance, name, html_elem, data) {
+    // Make sure to preserve the real UUID sub_key from server response
+    if (name === 'sub_key' && data && data.sub_key && typeof data.sub_key === 'string' && data.sub_key.indexOf('-') > -1) {
+        instance.sub_key = data.sub_key;
+    }
+};
+
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
@@ -158,7 +168,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.sec_name);
-    row += String.format('<td>{0}</td>', item.sub_key || '');
+    // Use the UUID sub_key if available, otherwise show the ID
+    var displaySubKey = (typeof item.sub_key === 'string' && item.sub_key.indexOf('-') > -1) ? item.sub_key : item.id;
+    row += String.format('<td>{0}</td>', displaySubKey);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', (item.delivery_type === 'pull' ? 'Pull' : 'Push'));
     // Convert topic names to links (only if not already HTML links)
@@ -180,13 +192,13 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
         }
     }
     row += String.format('<td>{0}</td>', topicLinksHtml);
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.edit({0});'>Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.pubsub.subscription.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type || '');
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.sub_key || '');
+    row += String.format("<td class='ignore'>{0}</td>", (typeof item.sub_key === 'string' && item.sub_key.indexOf('-') > -1) ? item.sub_key : '');
 
     if(include_tr) {
         row += '</tr>';
@@ -256,14 +268,19 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(sub_key) {
-    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key:', JSON.stringify(sub_key));
+    // Convert sub_key to numeric ID if it's a string but contains numeric ID
+    var id = sub_key;
+    if (typeof sub_key === 'string' && sub_key.match(/^\d+$/)) {
+        id = parseInt(sub_key, 10);
+    }
+    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for sub_key/id:', JSON.stringify({sub_key: sub_key, id: id}));
     console.log('[DEBUG] Full data table data:', $.fn.zato.data_table.data);
 
     // Hide REST endpoint span immediately to prevent flicker during form population
     console.log('[DEBUG] Edit: Hiding REST endpoint span immediately');
     $('#rest-endpoint-edit').hide();
 
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', sub_key);
+    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', id);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
         // Set the sub_key in the hidden field
@@ -272,13 +289,15 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
 
         // Get the current topic names from the data table row data
         var currentTopicNames = null;
-        var rowData = $.fn.zato.data_table.data[sub_key];
-        console.log('[DEBUG] Edit: Full row data for sub_key:', JSON.stringify({sub_key: sub_key, rowData: rowData}));
 
-        if (rowData && rowData.topic_name) {
-            console.log('[DEBUG] Edit: Raw topic_name:', JSON.stringify({value: rowData.topic_name, type: typeof rowData.topic_name}));
+        var instance = $.fn.zato.data_table.data[id];
+        console.log('[DEBUG] Edit: Direct access instance using id:', id, instance);
+        console.log('[DEBUG] Edit: Found instance data for sub_key:', JSON.stringify({sub_key: sub_key, instance: instance}));
+
+        if (instance && instance.topic_name) {
+            console.log('[DEBUG] Edit: Raw topic_name:', JSON.stringify({value: instance.topic_name, type: typeof instance.topic_name}));
             // Convert comma-separated string to array of topic names
-            currentTopicNames = rowData.topic_name.split(',').map(function(name) {
+            currentTopicNames = instance.topic_name.split(',').map(function(name) {
                 return name.trim();
             });
             console.log('[DEBUG] Edit: Parsed topic names to array:', JSON.stringify(currentTopicNames));
@@ -287,7 +306,7 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         }
 
         var currentSecId = $('#id_edit-sec_base_id').val();
-        var currentRestEndpointId = rowData.rest_push_endpoint_id || '';
+        var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
         console.log('[DEBUG] Edit: REST endpoint ID from row data:', JSON.stringify(currentRestEndpointId));
 
         // Initialize SlimSelect after topics are populated via callback
