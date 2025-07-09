@@ -36,13 +36,27 @@ class GetList(AdminService):
 
     def get_data(self, session):
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
-        data = []
+
+        # Group subscriptions by security definition
+        grouped_data = {}
 
         for subscription, topic_name, sec_name, rest_push_endpoint_name in result:
-            item_dict = subscription.asdict()
-            item_dict['topic_name'] = topic_name
-            item_dict['sec_name'] = sec_name
-            item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name or ''
+            sec_key = '{}_{}_{}_{}'.format(subscription.sec_base_id, subscription.sub_key, subscription.delivery_type, subscription.is_active)
+
+            if sec_key not in grouped_data:
+                item_dict = subscription.asdict()
+                item_dict['sec_name'] = sec_name
+                item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name or ''
+                item_dict['topic_names'] = []
+                grouped_data[sec_key] = item_dict
+
+            grouped_data[sec_key]['topic_names'].append(topic_name)
+
+        # Convert grouped data to list and format topic names
+        data = []
+        for item_dict in grouped_data.values():
+            item_dict['topic_name'] = ', '.join(item_dict['topic_names'])
+            del item_dict['topic_names']
             data.append(item_dict)
 
         return elems_with_opaque(data)
@@ -89,6 +103,8 @@ class Create(AdminService):
                 self.logger.info('[DEBUG] Create.handle: topic_ids after processing type=%s, value=%s', type(topic_ids), topic_ids)
 
                 created_subscriptions = []
+                # Generate single sub_key for all subscriptions in this operation
+                sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
 
                 for topic_id in topic_ids:
                     # Check if subscription already exists for this topic
@@ -100,8 +116,6 @@ class Create(AdminService):
 
                     if existing_one:
                         continue  # Skip if already exists
-
-                    sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
 
                     item = PubSubSubscription()
                     item.cluster_id = self.request.input.cluster_id
