@@ -139,7 +139,7 @@ class Edit(CreateEdit):
         return super().handle()
 
     def _get_input_dict(self):
-        """Override to properly map form fields to service input"""
+
         input_dict = super()._get_input_dict()
 
         # Map topic_id form field (which can be multiple) to topic_id_list service input
@@ -151,7 +151,7 @@ class Edit(CreateEdit):
         return input_dict
 
     def pre_process_input_dict(self, input_dict):
-        """Override to handle form field mapping before service call"""
+
         super().pre_process_input_dict(input_dict)
 
         # Extract topic IDs from form POST data
