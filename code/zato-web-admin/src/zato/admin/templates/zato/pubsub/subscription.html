@@ -87,43 +87,51 @@
             width: 100% !important;
         }
 
+        /* SlimSelect styling variables */
+        :root {
+            --ss-small-font-size: 0.7rem;
+            --ss-small-line-height: 0.75rem;
+            --ss-option-padding: 0.325rem 0.25rem;
+            --ss-value-padding: 0.0625rem 0.25rem;
+        }
+
         /* SlimSelect smaller font sizes for topic selections */
         .ss-main.topic-select .ss-values .ss-value .ss-value-text {
-            font-size: 9px !important;
-            line-height: 12px !important;
+            font-size: var(--ss-small-font-size) !important;
+            line-height: var(--ss-small-line-height) !important;
         }
 
         .ss-main.topic-select .ss-content .ss-list .ss-option {
-            font-size: 9px !important;
-            padding: 2px 4px !important;
-            line-height: 12px !important;
+            font-size: var(--ss-small-font-size) !important;
+            padding: var(--ss-option-padding) !important;
+            line-height: var(--ss-small-line-height) !important;
         }
 
         /* Alternative selectors for dropdown options */
         .ss-main.topic-select .ss-option {
-            font-size: 9px !important;
-            padding: 2px 4px !important;
-            line-height: 12px !important;
+            font-size: var(--ss-small-font-size) !important;
+            padding: var(--ss-option-padding) !important;
+            line-height: var(--ss-small-line-height) !important;
         }
 
         .ss-content .ss-option {
-            font-size: 9px !important;
-            padding: 2px 4px !important;
-            line-height: 12px !important;
+            font-size: var(--ss-small-font-size) !important;
+            padding: var(--ss-option-padding) !important;
+            line-height: var(--ss-small-line-height) !important;
         }
 
         .ss-main.topic-select .ss-values .ss-value {
-            font-size: 9px !important;
-            padding: 1px 4px !important;
+            font-size: var(--ss-small-font-size) !important;
+            padding: var(--ss-value-padding) !important;
         }
 
         /* SlimSelect search input styling */
         .ss-search input[placeholder*="Search topics"] {
-            font-size: 9px !important;
+            font-size: var(--ss-small-font-size) !important;
         }
 
         .ss-content.topic-select .ss-search input {
-            font-size: 9px !important;
+            font-size: var(--ss-small-font-size) !important;
         }
 
     </style>
