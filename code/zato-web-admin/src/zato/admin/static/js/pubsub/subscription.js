@@ -52,6 +52,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 }
 
 $.fn.zato.pubsub.subscription.create = function() {
+    console.log('[DEBUG] pubsub.subscription.create: Starting create function');
 
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
     // Populate topics and security definitions after form opens
@@ -105,7 +106,9 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
-    $.fn.zato.data_table.edit('edit', 'Update pub/sub subscription', id);
+    console.log('[DEBUG] pubsub.subscription.edit: Starting edit function for id:', id);
+
+    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', id);
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
         // Get the current topic ID from the hidden input field that contains the actual form data

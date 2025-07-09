@@ -17,6 +17,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.sql import elems_with_opaque
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -59,19 +60,33 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name'
 
     def handle(self):
+        self.logger.info('[DEBUG] Create.handle: Starting subscription creation')
+        self.logger.info('[DEBUG] Create.handle: Request input type=%s', type(self.request.input))
+        self.logger.info('[DEBUG] Create.handle: Request input.__dict__=%s', getattr(self.request.input, '__dict__', 'no __dict__'))
+
+        # Log specific input fields
+        for attr in ['topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
+            if hasattr(self.request.input, attr):
+                value = getattr(self.request.input, attr)
+                self.logger.info('[DEBUG] Create.handle: Input %s type=%s, value=%s', attr, type(value), value)
+
         with closing(self.odb.session()) as session:
             try:
                 # Handle multiple topic IDs
-                topic_ids = self.request.input.topic_id
+                topic_ids = self.request.input.topic_id_list
+                self.logger.info('[DEBUG] Create.handle: topic_ids before processing type=%s, value=%s', type(topic_ids), topic_ids)
+
                 if isinstance(topic_ids, str):
                     topic_ids = [topic_ids]
                 elif not isinstance(topic_ids, list):
                     topic_ids = [topic_ids]
+
+                self.logger.info('[DEBUG] Create.handle: topic_ids after processing type=%s, value=%s', type(topic_ids), topic_ids)
 
                 created_subscriptions = []
 
@@ -120,7 +135,28 @@ class Create(AdminService):
                     self.response.payload.topic_name = topic.name if topic else ''
                     self.response.payload.sec_name = security.name if security else ''
                 else:
-                    raise Exception('No new subscriptions were created (all may already exist)')
+                    self.logger.info('[DEBUG] Create.handle: No new subscriptions created - some may already exist')
+                    # Find an existing subscription to return in response
+                    first_topic_id = topic_ids[0] if topic_ids else None
+                    if first_topic_id:
+                        existing_item = session.query(PubSubSubscription).\
+                            filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                            filter(PubSubSubscription.topic_id==first_topic_id).\
+                            filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
+                            first()
+
+                        if existing_item:
+                            # Get topic and security names for the response
+                            topic = session.query(PubSubTopic).filter(PubSubTopic.id == existing_item.topic_id).first()
+                            from zato.common.odb.model import SecurityBase
+                            security = session.query(SecurityBase).filter(SecurityBase.id == existing_item.sec_base_id).first()
+
+                            self.response.payload.id = existing_item.id
+                            self.response.payload.sub_key = existing_item.sub_key
+                            self.response.payload.is_active = existing_item.is_active
+                            self.response.payload.created = existing_item.created.isoformat()
+                            self.response.payload.topic_name = topic.name if topic else ''
+                            self.response.payload.sec_name = security.name if security else ''
 
             except Exception:
                 self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
@@ -136,19 +172,36 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'id', 'cluster_id', 'topic_id', 'sec_base_id', 'delivery_type'
+        input_required = 'id', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key'
 
     def handle(self):
+        self.logger.info('[DEBUG] Edit.handle: Starting subscription edit')
+        self.logger.info('[DEBUG] Edit.handle: Request input type=%s', type(self.request.input))
+        self.logger.info('[DEBUG] Edit.handle: Request input.__dict__=%s', getattr(self.request.input, '__dict__', 'no __dict__'))
+
+        # Log specific input fields
+        for attr in ['id', 'topic_id_list', 'sec_base_id', 'delivery_type', 'is_active', 'rest_push_endpoint_id']:
+            if hasattr(self.request.input, attr):
+                value = getattr(self.request.input, attr)
+                self.logger.info('[DEBUG] Edit.handle: Input %s type=%s, value=%s', attr, type(value), value)
+
         with closing(self.odb.session()) as session:
             try:
-                # Handle topic_id potentially being a list - use first value for edit
-                topic_id = self.request.input.topic_id
-                if isinstance(topic_id, list) and len(topic_id) > 0:
-                    topic_id = topic_id[0]
-                elif isinstance(topic_id, list) and len(topic_id) == 0:
+                # Handle topic_id_list - use first value for edit
+                topic_id_list = self.request.input.topic_id_list
+                self.logger.info('[DEBUG] Edit.handle: topic_id_list before processing type=%s, value=%s', type(topic_id_list), topic_id_list)
+
+                # Extract single topic_id from list for edit operation
+                if isinstance(topic_id_list, list) and len(topic_id_list) > 0:
+                    topic_id = topic_id_list[0]
+                elif isinstance(topic_id_list, list) and len(topic_id_list) == 0:
                     raise Exception('No topic selected')
+                else:
+                    topic_id = topic_id_list
+
+                self.logger.info('[DEBUG] Edit.handle: topic_id after processing type=%s, value=%s', type(topic_id), topic_id)
 
                 existing_one = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
