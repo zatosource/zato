@@ -398,7 +398,7 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
     }
 
     var cleanTopicName = $.fn.zato.pubsub.subscription.stripHtml(instance.topic_name);
-    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + (instance.delivery_type || 'pull') + '\n\n';
+    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + (instance.delivery_type || 'pull');
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
