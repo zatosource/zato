@@ -225,18 +225,24 @@ class Common(Constants):
 
 class Groups(Constants):
     code_start = 108000
+
     Edit = ValueConstant('')
     Edit_Member_List = ValueConstant('')
     Delete = ValueConstant('')
 
 class PUBSUB(Constants):
     code_start = 108200
+
     TOPIC_CREATE = ValueConstant('')
     TOPIC_EDIT = ValueConstant('')
     TOPIC_DELETE = ValueConstant('')
+
     PERMISSION_CREATE = ValueConstant('')
     PERMISSION_EDIT = ValueConstant('')
     PERMISSION_DELETE = ValueConstant('')
+
+    SUBSCRIPTION_CREATE = ValueConstant('')
+    SUBSCRIPTION_EDIT = ValueConstant('')
     SUBSCRIPTION_DELETE = ValueConstant('')
 
 code_to_name = {}

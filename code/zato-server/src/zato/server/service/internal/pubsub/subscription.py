@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase
+from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
@@ -39,7 +39,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'pattern_matched', AsIs('topic_name'), 'sec_name', \
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_name'), 'sec_name', \
             'delivery_type', 'rest_push_endpoint_id'
         output_optional = 'rest_push_endpoint_name'
 
@@ -79,8 +79,77 @@ class Create(AdminService):
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
 
     def handle(self):
+
+        input = self.request.input
+
         with closing(self.odb.session()) as session:
-            pass
+            try:
+                # Get cluster and security definition
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                security_def = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
+
+                # Generate a new subscription key
+                sub_key = new_sub_key()
+
+                # Get topics
+                topic_id_list = input.topic_id_list
+                topics = []
+                topic_names = []
+
+                for topic_id in topic_id_list:
+                    topic = session.query(PubSubTopic).\
+                        filter(PubSubTopic.cluster_id==input.cluster_id).\
+                        filter(PubSubTopic.id==topic_id).first()
+
+                    if not topic:
+                        raise Exception('Pub/Sub topic with ID `{}` not found in this cluster'.format(topic_id))
+
+                    topics.append(topic)
+                    topic_names.append(topic.name)
+
+                # Create the subscription
+                subscription = PubSubSubscription()
+                subscription.sub_key = sub_key # type: ignore
+                subscription.is_active = input.is_active
+                subscription.cluster = cluster
+                subscription.sec_base = security_def
+                subscription.delivery_type = input.delivery_type
+
+                # For push subscriptions, set the endpoint
+                if input.delivery_type == 'push' and input.get('rest_push_endpoint_id'):
+                    endpoint = session.query(HTTPSOAP).\
+                        filter(HTTPSOAP.id==input.rest_push_endpoint_id).first()
+                    subscription.rest_push_endpoint = endpoint
+
+                session.add(subscription)
+                session.flush()  # Get the ID of the new subscription
+
+                # Create subscription-topic associations
+                for topic in topics:
+                    sub_topic = PubSubSubscriptionTopic()
+                    sub_topic.subscription = subscription
+                    sub_topic.topic = topic
+                    sub_topic.cluster = cluster
+                    sub_topic.pattern_matched = topic.name
+                    session.add(sub_topic)
+
+                session.commit()
+
+            except Exception:
+                self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
+                session.rollback()
+                raise
+            else:
+                input.action = PUBSUB.SUBSCRIPTION_CREATE.value
+                input.sub_key = sub_key
+                self.broker_client.publish(input)
+
+                self.response.payload.id = subscription.id
+                self.response.payload.sub_key = subscription.sub_key
+                self.response.payload.is_active = subscription.is_active
+                self.response.payload.created = subscription.created
+                self.response.payload.sec_name = security_def.name # type: ignore
+                self.response.payload.delivery_type = subscription.delivery_type
 
 # ################################################################################################################################
 # ################################################################################################################################
