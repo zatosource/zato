@@ -1399,3 +1399,25 @@ class PubSubSubscription(Base):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class PubSubSubscriptionTopic(Base):
+    """ Represents a list of topics assigned to a subscription.
+    """
+    __tablename__ = 'pubsub_subscription_topic'
+    __table_args__ = (
+        UniqueConstraint('subscription_id', 'topic_id', 'cluster_id'),
+    )
+
+    id = Column(Integer, Sequence('pubsub_subscription_topic_id_seq'), primary_key=True)
+
+    subscription_id = Column(Integer, ForeignKey('pubsub_subscription.id', ondelete='CASCADE'), nullable=False)
+    subscription = relationship('PubSubSubscription', backref=backref('topics', order_by=id, cascade='all, delete, delete-orphan'))
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship('PubSubTopic', backref=backref('subscription_topics', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_subscription_topics', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+# ################################################################################################################################
