@@ -75,7 +75,13 @@ class GetList(AdminService):
         # Combine topic links into a single string for each subscription
         data = []
         for sub_id, sub_dict in subscriptions_by_id.items():
-            sub_dict['topic_name'] = ', '.join(topic_links_by_id[sub_id])
+
+            topic_links = topic_links_by_id[sub_id]
+            topic_links = sorted(topic_links)
+            topic_links = ', '.join(topic_links)
+
+            sub_dict['topic_name'] = topic_links
+
             data.append(sub_dict)
 
         return elems_with_opaque(data)
@@ -182,8 +188,10 @@ class Create(AdminService):
                 self.response.payload.is_active = subscription.is_active
                 self.response.payload.created = subscription.created
                 self.response.payload.sec_name = security_def.name # type: ignore
-                self.response.payload.topic_name = ', '.join(topic_name_list)
                 self.response.payload.delivery_type = subscription.delivery_type
+
+                topic_name_list = sorted(topic_name_list)
+                self.response.payload.topic_name = ', '.join(topic_name_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
