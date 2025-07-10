@@ -7,16 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import uuid
 from contextlib import closing
 from traceback import format_exc
 from urllib.parse import quote
 
 # Zato
-from zato.common.api import PubSub
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
+from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -108,8 +107,9 @@ class Create(AdminService):
                     topic_ids = [topic_ids]
 
                 created_subscriptions = []
+
                 # Generate single sub_key for all subscriptions in this operation
-                sub_key = 'zpsk.rest.' + uuid.uuid4().hex[:6]
+                sub_key = new_sub_key()
 
                 for topic_id in topic_ids:
                     # Check if subscription already exists for this topic
@@ -130,7 +130,8 @@ class Create(AdminService):
                     item.sub_key = sub_key # type: ignore
                     item.is_active = self.request.input.get('is_active', True)
                     item.delivery_type = self.request.input.delivery_type
-                    item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
+                    item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id')
+
                     # Ensure pattern_matched is set to default value immediately before save
                     item.pattern_matched = '*' # type: ignore
 
@@ -158,7 +159,6 @@ class Create(AdminService):
                         topic_links.append(topic_link)
 
                     # Get security name
-                    from zato.common.odb.model import SecurityBase
                     security = session.query(SecurityBase).filter(SecurityBase.id == first_item.sec_base_id).first()
 
                     self.response.payload.id = first_item.id
@@ -179,9 +179,9 @@ class Create(AdminService):
                             first()
 
                         if existing_item:
+
                             # Get topic and security names for the response
                             topic = session.query(PubSubTopic).filter(PubSubTopic.id == existing_item.topic_id).first()
-                            from zato.common.odb.model import SecurityBase
                             security = session.query(SecurityBase).filter(SecurityBase.id == existing_item.sec_base_id).first()
 
                             self.response.payload.id = existing_item.id
@@ -252,14 +252,14 @@ class Edit(AdminService):
                 # Create new subscriptions for each topic with the same sub_key
                 created_subscriptions = []
                 for topic_id in topic_id_list:
-                    sub_key = str(uuid.uuid4())
+                    sub_key = new_sub_key()
 
                     new_subscription = PubSubSubscription()
                     new_subscription.cluster_id = self.request.input.cluster_id
                     new_subscription.topic_id = topic_id # type: ignore
                     new_subscription.sec_base_id = self.request.input.sec_base_id
                     new_subscription.delivery_type = self.request.input.delivery_type
-                    new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id') if self.request.input.delivery_type == PubSub.Delivery_Type.Push else None
+                    new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id')
                     new_subscription.pattern_matched = '*' # type: ignore
                     new_subscription.is_active = self.request.input.get('is_active', True)
                     new_subscription.sub_key = sub_key # type: ignore
