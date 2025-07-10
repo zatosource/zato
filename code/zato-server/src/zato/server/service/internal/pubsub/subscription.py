@@ -222,10 +222,31 @@ class Edit(AdminService):
                 # Get the subscription by sub_key
                 self.logger.info('DEBUG - Edit.handle - Looking for subscription with sub_key:`%s` in cluster:`%s`',
                     self.request.input.sub_key, self.request.input.cluster_id)
-                subscription = session.query(PubSubSubscription).\
+
+                # Check if the subscription exists before calling one()
+                subscription_query = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.sub_key==self.request.input.sub_key).\
-                    one()
+                    filter(PubSubSubscription.sub_key==self.request.input.sub_key)
+
+                # Count subscriptions matching these criteria
+                count = subscription_query.count()
+                self.logger.info('DEBUG - Edit.handle - Found `%s` subscriptions matching sub_key:`%s` in cluster:`%s`',
+                    count, self.request.input.sub_key, self.request.input.cluster_id)
+
+                if count == 0:
+                    self.logger.info('DEBUG - Edit.handle - No subscription found with sub_key:`%s` in cluster:`%s`',
+                        self.request.input.sub_key, self.request.input.cluster_id)
+
+                    # Log existing subscriptions for debugging
+                    all_subs = session.query(PubSubSubscription.id, PubSubSubscription.sub_key).\
+                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).all()
+                    self.logger.info('DEBUG - Edit.handle - Available subscriptions in cluster:`%s`: %s',
+                        self.request.input.cluster_id, all_subs)
+
+                    raise Exception(f"Subscription with sub_key '{self.request.input.sub_key}' not found in cluster '{self.request.input.cluster_id}'")
+
+                # Now get the actual subscription
+                subscription = subscription_query.one()
                 self.logger.info('DEBUG - Edit.handle - Found subscription, id:`%s`', subscription.id)
 
                 self.logger.info('DEBUG - Edit.handle - Updating subscription properties, sec_base_id:`%s`, delivery_type:`%s`, is_active:`%s`, rest_push_endpoint_id:`%s`',
