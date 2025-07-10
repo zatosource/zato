@@ -212,11 +212,97 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', AsIs('topic_name_list'), 'topic_name', 'sec_name', 'delivery_type', 'is_active'
+        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type', AsIs('topic_links')
+        output_optional = AsIs('topic_names')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            pass
+            try:
+                # Get the subscription by sub_key
+                subscription = session.query(PubSubSubscription).\
+                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubSubscription.sub_key==self.request.input.sub_key).\
+                    one()
+
+                subscription.sec_base_id = self.request.input.sec_base_id
+                subscription.delivery_type = self.request.input.delivery_type
+
+                subscription.is_active = self.request.input.is_active
+                subscription.rest_push_endpoint_id = self.request.input.rest_push_endpoint_id
+
+                # Get the security definition
+                security_def = session.query(SecurityBase).\
+                    filter(SecurityBase.id==subscription.sec_base_id).\
+                    one()
+
+                # Delete all current topic associations
+                _ = session.query(PubSubSubscriptionTopic).\
+                    filter(PubSubSubscriptionTopic.subscription_id==subscription.id).\
+                    delete()
+
+                # Process topics if any are provided
+                topic_id_list = self.request.input.get('topic_id_list') or []
+                topic_name_list = []
+                topics = []
+
+                if topic_id_list:
+                    # Create new topic associations
+                    for topic_id in topic_id_list:
+                        # Make sure the topic exists
+                        topic = session.query(PubSubTopic).\
+                            filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
+                            filter(PubSubTopic.id==topic_id).\
+                            first()
+
+                        if topic:
+                            topics.append(topic)
+
+                            # Create subscription-topic association
+                            st = PubSubSubscriptionTopic()
+                            st.cluster_id = self.request.input.cluster_id
+                            st.subscription_id = subscription.id
+                            st.topic_id = topic.id
+                            session.add(st)
+
+                            # Create topic HTML link
+                            topic_name = topic.name
+                            topic_link = get_topic_link(topic_name)
+                            topic_name_list.append(topic_link)
+
+                # Commit all changes
+                session.commit()
+
+            except Exception:
+                self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
+                session.rollback()
+                raise
+            else:
+                # Notify broker about the update
+                self.request.input.action = PUBSUB.SUBSCRIPTION_EDIT.value
+                self.broker_client.publish(self.request.input)
+
+                # Set response payload
+                self.response.payload.id = subscription.id
+                self.response.payload.sub_key = subscription.sub_key
+                self.response.payload.is_active = subscription.is_active
+                self.response.payload.sec_name = security_def.name
+                self.response.payload.delivery_type = subscription.delivery_type
+
+                # Sort and join topic links
+                if topic_name_list:
+                    topic_name_list = sorted(topic_name_list)
+                    self.response.payload.topic_links = ', '.join(topic_name_list)
+                else:
+                    self.response.payload.topic_links = []
+
+                # Add plain topic names (without HTML)
+                if topics:
+                    plain_topic_names = []
+                    for topic in topics:
+                        plain_topic_names.append(topic.name)
+                    self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
+                else:
+                    self.response.payload.topic_names = []
 
 # ################################################################################################################################
 # ################################################################################################################################
