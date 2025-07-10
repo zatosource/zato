@@ -53,7 +53,7 @@ class GetList(AdminService):
             subscription, topic_name, sec_name, rest_push_endpoint_name = item
 
             item_dict = subscription.asdict()
-            item_dict['topic_name'] = topic_name
+            item_dict['topic_name'] = get_topic_link(topic_name)
             item_dict['sec_name'] = sec_name
             item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
 
@@ -63,7 +63,11 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            print()
+            print(111, data)
+            print()
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,11 +80,15 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_name'), 'sec_name', 'delivery_type'
 
     def handle(self):
 
+        # Our input
         input = self.request.input
+
+        # A part of what we're returning
+        topic_name_list = []
 
         with closing(self.odb.session()) as session:
             try:
@@ -126,12 +134,18 @@ class Create(AdminService):
 
                 # Create subscription-topic associations
                 for topic in topics:
+
                     sub_topic = PubSubSubscriptionTopic()
                     sub_topic.subscription = subscription
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
                     sub_topic.pattern_matched = topic.name
+
                     session.add(sub_topic)
+
+                    # Append for later use
+                    topic_link = get_topic_link(topic.name)
+                    topic_name_list.append(topic_link)
 
                 session.commit()
 
@@ -149,6 +163,7 @@ class Create(AdminService):
                 self.response.payload.is_active = subscription.is_active
                 self.response.payload.created = subscription.created
                 self.response.payload.sec_name = security_def.name # type: ignore
+                self.response.payload.topic_name = ', '.join(topic_name_list)
                 self.response.payload.delivery_type = subscription.delivery_type
 
 # ################################################################################################################################
