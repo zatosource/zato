@@ -45,28 +45,47 @@ class GetList(AdminService):
 
     def get_data(self, session):
 
-        data = []
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
 
+        # Group by subscription ID
+        subscriptions_by_id = {}
+        topic_links_by_id = {}
+
         for item in result:
-
             subscription, topic_name, sec_name, rest_push_endpoint_name = item
+            sub_id = subscription.id
 
-            item_dict = subscription.asdict()
-            item_dict['topic_name'] = get_topic_link(topic_name)
-            item_dict['sec_name'] = sec_name
-            item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
+            # Create topic link
+            topic_link = get_topic_link(topic_name)
 
-            data.append(item_dict)
+            if sub_id not in subscriptions_by_id:
+
+                # Store the subscription data
+                item_dict = subscription.asdict()
+                item_dict['sec_name'] = sec_name
+                item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
+                subscriptions_by_id[sub_id] = item_dict
+
+                # Initialize topic links list for this subscription
+                topic_links_by_id[sub_id] = []
+
+            # Append topic link to the subscription's topic links
+            topic_links_by_id[sub_id].append(topic_link)
+
+        # Combine topic links into a single string for each subscription
+        data = []
+        for sub_id, sub_dict in subscriptions_by_id.items():
+            sub_dict['topic_name'] = ', '.join(topic_links_by_id[sub_id])
+            data.append(sub_dict)
 
         return elems_with_opaque(data)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
     def handle(self):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
-            print()
-            print(111, data)
-            print()
             self.response.payload[:] = data
 
 # ################################################################################################################################
