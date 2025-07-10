@@ -585,8 +585,8 @@ $.fn.zato.pubsub.permission.edit = function(id) {
                     // Standard case - find the matching option and select it
                     $accessTypeSelect.find('option').each(function() {
                         if ($(this).val() === accessType) {
+                            $accessTypeSelect.val($(this).val());
                             optionFound = true;
-                            $accessTypeSelect.val(accessType);
                             return false;
                         }
                     });
@@ -603,19 +603,21 @@ $.fn.zato.pubsub.permission.edit = function(id) {
                 }
 
                 // Trigger change event to update dependent UI elements
-                $accessTypeSelect.trigger('change');
 
-                // Get pattern data from the hidden cell that contains the raw patterns
-                // This cell was created in new_row function with the raw pattern data
-                var $row = $('#tr_' + id);
-                var patternData = $row.find('td:eq(9)').text();
+// Get pattern data from the hidden cell that contains the raw patterns
+// This cell was created in new_row function with the raw pattern data
+var $row = $('#tr_' + id);
+patternData = $row.find('td:eq(9)').text();
 
-                // If no data found in hidden cell, try to get it from data-patterns attribute
-                if (!patternData || patternData.trim() === '') {
-                    patternData = $row.find('.pattern-display').attr('data-patterns');
-                }
+// If no data found in hidden cell, try to get it from data-patterns attribute
+if (!patternData || patternData.trim() === '') {
+patternData = $row.find('.pattern-display').attr('data-patterns');
+}
 
-                // If still no data, try instance.pattern as last resort
+// If still no data, try instance.pattern as last resort
+if (!patternData || patternData.trim() === '') {
+patternData = instance.pattern;
+}
                 if (!patternData || patternData.trim() === '') {
                     patternData = instance.pattern;
                 }
