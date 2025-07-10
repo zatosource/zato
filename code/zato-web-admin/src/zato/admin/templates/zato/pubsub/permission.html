@@ -437,7 +437,17 @@
                             <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
                             </div>
                         </td>
-                        <td style="text-align:center">{{ item.access_type|capfirst }}</td>
+                                                <td style="text-align:center">
+                            {% if item.access_type == 'publisher' %}
+                                Publisher
+                            {% elif item.access_type == 'subscriber' %}
+                                Subscriber
+                            {% elif item.access_type == 'publisher-subscriber' %}
+                                Publisher &amp; Subscriber
+                            {% else %}
+                                {{ item.access_type|capfirst }}
+                            {% endif %}
+                        </td>
                         <td class='ignore' style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.permission.edit('{{ item.id }}')">Edit</a></td>
