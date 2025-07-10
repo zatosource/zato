@@ -508,7 +508,74 @@ $.fn.zato.pubsub.permission.edit = function(id) {
 
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
-    $('#edit-access_type').val(instance.access_type);
+
+    // Delay setting the access_type to ensure the form is fully initialized
+    setTimeout(function() {
+        // Get the access type select element - try all possible selectors
+        var $accessTypeSelect = $('#id_edit-access_type');
+        if (!$accessTypeSelect.length) {
+            $accessTypeSelect = $('#edit-access_type');
+        }
+        if (!$accessTypeSelect.length) {
+            $accessTypeSelect = $('select[name="edit-access_type"]');
+        }
+        // Fallback to any select in the edit form if all else fails
+        if (!$accessTypeSelect.length) {
+            $accessTypeSelect = $('#edit-div select').filter(function() {
+                return $(this).attr('name') && $(this).attr('name').indexOf('access_type') >= 0;
+            });
+        }
+
+        if ($accessTypeSelect.length) {
+            // Normalize access_type to lowercase for form value matching
+            var accessType = instance.access_type;
+            if (accessType) {
+                accessType = accessType.toLowerCase().trim();
+
+                // Declare option found flag before using it
+                var optionFound = false;
+
+                // Special handling for Publisher-subscriber which needs to map to publisher-subscriber
+                if (accessType === 'publisher-subscriber' ||
+                    accessType === 'publisher & subscriber' ||
+                    accessType === 'publisher&subscriber' ||
+                    accessType === 'publisher-subscriber') {
+                    // Find the publisher-subscriber option
+                    $accessTypeSelect.find('option').each(function() {
+                        var optionValue = $(this).val().toLowerCase();
+                        if (optionValue === 'publisher-subscriber' ||
+                            optionValue.indexOf('publisher') >= 0 && optionValue.indexOf('subscriber') >= 0) {
+                            $accessTypeSelect.val($(this).val());
+                            optionFound = true;
+                            return false;
+                        }
+                    });
+                } else {
+                    // Standard case - find the matching option and select it
+                    $accessTypeSelect.find('option').each(function() {
+                        if ($(this).val() === accessType) {
+                            optionFound = true;
+                            $accessTypeSelect.val(accessType);
+                            return false;
+                        }
+                    });
+
+                    // If exact match not found, try partial match
+                    if (!optionFound) {
+                        $accessTypeSelect.find('option').each(function() {
+                            if (accessType.indexOf($(this).val()) >= 0 || $(this).val().indexOf(accessType) >= 0) {
+                                $accessTypeSelect.val($(this).val());
+                                return false;
+                            }
+                        });
+                    }
+                }
+
+                // Trigger change event to update dependent UI elements
+                $accessTypeSelect.trigger('change');
+            }
+        }
+    }, 100);
 
     // Get pattern data from the hidden cell that contains the raw patterns
     // This cell was created in new_row function with the raw pattern data
@@ -667,6 +734,11 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
+    // Normalize the access_type to lowercase for consistent comparison
+    if (item.access_type) {
+        item.access_type = item.access_type.toLowerCase();
+    }
+
     var access_type_label = '';
 
     if(item.access_type == 'publisher') {
@@ -791,8 +863,9 @@ function consolidatePatterns(formType) {
         var patternType = typeSelect.val();
         var patternValue = patternInput.val().trim();
 
-        // Only include patterns from enabled fields (compatible with access type)
-        if (patternValue && !typeSelect.prop('disabled') && !patternInput.prop('disabled')) {
+        // Include all non-empty patterns, even if they are disabled
+        // This ensures all patterns are preserved regardless of current access type
+        if (patternValue) {
             patterns.push(patternType + '=' + patternValue);
         }
     });
