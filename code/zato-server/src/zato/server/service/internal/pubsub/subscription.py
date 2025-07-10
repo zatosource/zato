@@ -23,6 +23,13 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_topic_link(topic_name:'str') -> 'str':
+    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(quote(topic_name), topic_name)
+    return topic_link
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of Pub/Sub subscriptions available.
     """
@@ -38,42 +45,7 @@ class GetList(AdminService):
 
     def get_data(self, session):
 
-        # Get the raw query result
-        result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
-
-        # Group subscriptions by security definition
-        grouped_data = {}
-
-        for subscription, topic_name, sec_name, rest_push_endpoint_name in result:
-            sec_key = '{}_{}_{}_{}'.format(subscription.sec_base_id, subscription.sub_key, subscription.delivery_type, subscription.is_active)
-
-            if sec_key not in grouped_data:
-                item_dict = subscription.asdict()
-                item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
-
-                item_dict['sec_name'] = sec_name
-                item_dict['topic_names'] = []
-                item_dict['topic_ids'] = []
-                grouped_data[sec_key] = item_dict
-
-            grouped_data[sec_key]['topic_names'].append(topic_name)
-            grouped_data[sec_key]['topic_ids'].append(subscription.topic_id)
-
-        # Convert grouped data to list and format topic names as links
         data = []
-        for sec_key, item_dict in grouped_data.items():
-
-            # Create links for each topic name
-            topic_links = []
-            for topic_name in item_dict['topic_names']:
-                topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(quote(topic_name), topic_name)
-                topic_links.append(topic_link)
-
-            item_dict['topic_name'] = ', '.join(topic_links)
-            del item_dict['topic_names']
-            del item_dict['topic_ids']
-            data.append(item_dict)
-
         data = elems_with_opaque(data)
         return data
 
@@ -97,104 +69,7 @@ class Create(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            try:
-                # Handle multiple topic IDs
-                topic_ids = self.request.input.topic_id_list
-
-                if isinstance(topic_ids, str):
-                    topic_ids = [topic_ids]
-                elif not isinstance(topic_ids, list):
-                    topic_ids = [topic_ids]
-
-                created_subscriptions = []
-
-                # Generate single sub_key for all subscriptions in this operation
-                sub_key = new_sub_key()
-
-                for topic_id in topic_ids:
-                    # Check if subscription already exists for this topic
-                    existing_one = session.query(PubSubSubscription).\
-                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                        filter(PubSubSubscription.topic_id==topic_id).\
-                        filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                        first()
-
-                    # Skip if it already exists
-                    if existing_one:
-                        continue
-
-                    item = PubSubSubscription()
-                    item.cluster_id = self.request.input.cluster_id
-                    item.topic_id = topic_id
-                    item.sec_base_id = self.request.input.sec_base_id
-                    item.sub_key = sub_key # type: ignore
-                    item.is_active = self.request.input.get('is_active', True)
-                    item.delivery_type = self.request.input.delivery_type
-                    item.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id')
-
-                    # Ensure pattern_matched is set to default value immediately before save
-                    item.pattern_matched = '*' # type: ignore
-
-                    session.add(item)
-                    created_subscriptions.append(item)
-
-                session.commit()
-
-                # Return info for the created subscriptions - get all topic names
-                if created_subscriptions:
-                    first_item = created_subscriptions[0]
-
-                    # Get all topic names for this subscription group
-                    topic_names = []
-                    for subscription in created_subscriptions:
-                        topic = session.query(PubSubTopic).filter(PubSubTopic.id == subscription.topic_id).first()
-                        if topic:
-                            topic_names.append(topic.name)
-
-                    # Create links for each topic name
-                    topic_links = []
-                    for topic_name in topic_names:
-                        topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(
-                            quote(topic_name), topic_name)
-                        topic_links.append(topic_link)
-
-                    # Get security name
-                    security = session.query(SecurityBase).filter(SecurityBase.id == first_item.sec_base_id).first()
-
-                    self.response.payload.id = first_item.id
-                    self.response.payload.sub_key = first_item.sub_key
-                    self.response.payload.is_active = first_item.is_active
-                    self.response.payload.created = first_item.created.isoformat()
-                    self.response.payload.topic_name = ', '.join(topic_links)
-                    self.response.payload.sec_name = security.name if security else ''
-                    self.response.payload.delivery_type = first_item.delivery_type
-                else:
-                    # Find an existing subscription to return in response
-                    first_topic_id = topic_ids[0] if topic_ids else None
-                    if first_topic_id:
-                        existing_item = session.query(PubSubSubscription).\
-                            filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                            filter(PubSubSubscription.topic_id==first_topic_id).\
-                            filter(PubSubSubscription.sec_base_id==self.request.input.sec_base_id).\
-                            first()
-
-                        if existing_item:
-
-                            # Get topic and security names for the response
-                            topic = session.query(PubSubTopic).filter(PubSubTopic.id == existing_item.topic_id).first()
-                            security = session.query(SecurityBase).filter(SecurityBase.id == existing_item.sec_base_id).first()
-
-                            self.response.payload.id = existing_item.id
-                            self.response.payload.sub_key = existing_item.sub_key
-                            self.response.payload.is_active = existing_item.is_active
-                            self.response.payload.created = existing_item.created.isoformat()
-                            self.response.payload.topic_name = topic.name if topic else ''
-                            self.response.payload.sec_name = security.name if security else ''
-
-            except Exception:
-                self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
-                session.rollback()
-                raise
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -211,88 +86,7 @@ class Edit(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            try:
-                topic_id_list = self.request.input.topic_id_list
-
-                # Normalize topic_id_list to always be a list
-                if not isinstance(topic_id_list, list):
-                    topic_id_list = [topic_id_list]
-
-                if not topic_id_list:
-                    raise Exception('No topic selected')
-
-                # Convert string IDs to integers
-                topic_id_list = [int(topic_id) for topic_id in topic_id_list]
-
-                subscription_id = self.request.input.sub_key
-
-                # Find one existing subscription to get the actual sub_key
-                sub = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.id==subscription_id).\
-                    first()
-
-                if not sub:
-                    raise Exception(f'Subscription with ID {subscription_id} not found')
-
-                sub_key = sub.sub_key
-
-                # Delete ALL existing subscriptions with the same sub_key
-                existing_subscriptions = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.sub_key==sub_key).\
-                    all()
-
-                for existing_sub in existing_subscriptions:
-                    session.delete(existing_sub)
-
-                # Flush deletes to database before creating new subscriptions
-                session.flush()
-
-                # Create new subscriptions for each topic with the same sub_key
-                created_subscriptions = []
-                for topic_id in topic_id_list:
-                    sub_key = new_sub_key()
-
-                    new_subscription = PubSubSubscription()
-                    new_subscription.cluster_id = self.request.input.cluster_id
-                    new_subscription.topic_id = topic_id # type: ignore
-                    new_subscription.sec_base_id = self.request.input.sec_base_id
-                    new_subscription.delivery_type = self.request.input.delivery_type
-                    new_subscription.rest_push_endpoint_id = self.request.input.get('rest_push_endpoint_id')
-                    new_subscription.pattern_matched = '*' # type: ignore
-                    new_subscription.is_active = self.request.input.get('is_active', True)
-                    new_subscription.sub_key = sub_key # type: ignore
-
-                    session.add(new_subscription)
-                    created_subscriptions.append(new_subscription)
-
-                session.commit()
-
-                # Get topic names for the created subscriptions
-                topic_names = []
-                for sub in created_subscriptions:
-                    topic = session.query(PubSubTopic).filter(PubSubTopic.id == sub.topic_id).one()
-                    topic_names.append(topic.name)
-
-                # Return subscription info with topic names for frontend display
-                self.response.payload.id = subscription_id  # Frontend needs this to update table row
-                self.response.payload.sub_key = sub_key
-                self.response.payload.topic_name_list = topic_names
-                # Convert to comma-separated string for table display
-                self.response.payload.topic_name = ', '.join(topic_names)
-
-                # Add other fields needed for table display
-                # Get security name from sec_base_id
-                sec_base = session.query(SecurityBase).filter(SecurityBase.id == self.request.input.sec_base_id).one_or_none()
-                self.response.payload.sec_name = sec_base.name if sec_base else ''
-                self.response.payload.delivery_type = self.request.input.delivery_type
-                self.response.payload.is_active = self.request.input.is_active
-
-            except Exception:
-                self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
-                session.rollback()
-                raise
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
