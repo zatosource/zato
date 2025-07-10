@@ -31,7 +31,7 @@ def get_topic_link(topic_name:'str') -> 'str':
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of Pub/Sub subscriptions available.
+    """ Returns a list of pub/sub subscriptions available.
     """
     _filter_by = PubSubSubscription.sub_key,
 
@@ -99,7 +99,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new Pub/Sub subscription.
+    """ Creates a new pub/sub subscription.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_create_request'
@@ -137,7 +137,7 @@ class Create(AdminService):
                         filter(PubSubTopic.id==topic_id).first()
 
                     if not topic:
-                        raise Exception('Pub/Sub topic with ID `{}` not found in this cluster'.format(topic_id))
+                        raise Exception('pub/sub topic with ID `{}` not found in this cluster'.format(topic_id))
 
                     topics.append(topic)
                     topic_names.append(topic.name)
@@ -177,7 +177,7 @@ class Create(AdminService):
                 session.commit()
 
             except Exception:
-                self.logger.error('Could not create Pub/Sub subscription, e:`%s`', format_exc())
+                self.logger.error('Could not create pub/sub subscription, e:`%s`', format_exc())
                 session.rollback()
                 raise
             else:
@@ -205,7 +205,7 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates a Pub/Sub subscription.
+    """ Updates a pub/sub subscription.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
@@ -216,66 +216,35 @@ class Edit(AdminService):
         output_optional = AsIs('topic_names')
 
     def handle(self):
-        self.logger.info('DEBUG - Edit.handle - Starting subscription edit, input:`%s`', self.request.input)
         with closing(self.odb.session()) as session:
             try:
-                # Get the subscription by sub_key
-                self.logger.info('DEBUG - Edit.handle - Looking for subscription with sub_key:`%s` in cluster:`%s`',
-                    self.request.input.sub_key, self.request.input.cluster_id)
 
                 # Check if the subscription exists before calling one()
                 subscription_query = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                     filter(PubSubSubscription.sub_key==self.request.input.sub_key)
 
-                # Count subscriptions matching these criteria
-                count = subscription_query.count()
-                self.logger.info('DEBUG - Edit.handle - Found `%s` subscriptions matching sub_key:`%s` in cluster:`%s`',
-                    count, self.request.input.sub_key, self.request.input.cluster_id)
-
-                if count == 0:
-                    self.logger.info('DEBUG - Edit.handle - No subscription found with sub_key:`%s` in cluster:`%s`',
-                        self.request.input.sub_key, self.request.input.cluster_id)
-
-                    # Log existing subscriptions for debugging
-                    all_subs = session.query(PubSubSubscription.id, PubSubSubscription.sub_key).\
-                        filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).all()
-                    self.logger.info('DEBUG - Edit.handle - Available subscriptions in cluster:`%s`: %s',
-                        self.request.input.cluster_id, all_subs)
-
-                    raise Exception(f"Subscription with sub_key '{self.request.input.sub_key}' not found in cluster '{self.request.input.cluster_id}'")
-
                 # Now get the actual subscription
-                subscription = subscription_query.one()
-                self.logger.info('DEBUG - Edit.handle - Found subscription, id:`%s`', subscription.id)
+                sub = subscription_query.one()
 
-                self.logger.info('DEBUG - Edit.handle - Updating subscription properties, sec_base_id:`%s`, delivery_type:`%s`, is_active:`%s`, rest_push_endpoint_id:`%s`',
-                    self.request.input.sec_base_id, self.request.input.delivery_type,
-                    self.request.input.is_active, self.request.input.rest_push_endpoint_id)
-                subscription.sec_base_id = self.request.input.sec_base_id
-                subscription.delivery_type = self.request.input.delivery_type
+                sub.sec_base_id = self.request.input.sec_base_id
+                sub.delivery_type = self.request.input.delivery_type
 
-                subscription.is_active = self.request.input.is_active
-                subscription.rest_push_endpoint_id = self.request.input.rest_push_endpoint_id
+                sub.is_active = self.request.input.is_active
+                sub.rest_push_endpoint_id = self.request.input.rest_push_endpoint_id
 
                 # Get the security definition
-                self.logger.info('DEBUG - Edit.handle - Getting security definition for id:`%s`', subscription.sec_base_id)
-                security_def = session.query(SecurityBase).\
-                    filter(SecurityBase.id==subscription.sec_base_id).\
+                sec_def = session.query(SecurityBase).\
+                    filter(SecurityBase.id==sub.sec_base_id).\
                     one()
-                self.logger.info('DEBUG - Edit.handle - Found security definition, name:`%s`', security_def.name)
 
                 # Delete all current topic associations
-                self.logger.info('DEBUG - Edit.handle - Deleting current topic associations for subscription_id:`%s`', subscription.id)
-                deleted_count = session.query(PubSubSubscriptionTopic).\
-                    filter(PubSubSubscriptionTopic.subscription_id==subscription.id).\
+                _ = session.query(PubSubSubscriptionTopic).\
+                    filter(PubSubSubscriptionTopic.subscription_id==sub.id).\
                     delete()
-                self.logger.info('DEBUG - Edit.handle - Deleted `%s` topic associations', deleted_count)
 
                 # Process topics if any are provided
                 topic_id_list = self.request.input.get('topic_id_list') or []
-                self.logger.info('DEBUG - Edit.handle - Processing `%s` topics from topic_id_list:`%s`',
-                    len(topic_id_list), topic_id_list)
                 topic_name_list = []
                 topics = []
 
@@ -283,87 +252,68 @@ class Edit(AdminService):
                     # Create new topic associations
                     for topic_id in topic_id_list:
                         # Make sure the topic exists
-                        self.logger.info('DEBUG - Edit.handle - Looking for topic id:`%s` in cluster:`%s`',
-                            topic_id, self.request.input.cluster_id)
                         topic = session.query(PubSubTopic).\
                             filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
                             filter(PubSubTopic.id==topic_id).\
                             first()
 
                         if topic:
-                            self.logger.info('DEBUG - Edit.handle - Found topic, id:`%s`, name:`%s`', topic.id, topic.name)
                             topics.append(topic)
 
                             # Create subscription-topic association
-                            self.logger.info('DEBUG - Edit.handle - Creating topic association subscription_id:`%s`, topic_id:`%s`',
-                                subscription.id, topic.id)
-                            st = PubSubSubscriptionTopic()
-                            st.cluster_id = self.request.input.cluster_id
-                            st.subscription_id = subscription.id
-                            st.topic_id = topic.id
-                            session.add(st)
+                            sub_topic = PubSubSubscriptionTopic()
+                            sub_topic.cluster_id = self.request.input.cluster_id
+                            sub_topic.subscription_id = sub.id
+                            sub_topic.topic_id = topic.id
+                            sub_topic.pattern_matched = 'zato.manual' # type: ignore
+
+                            session.add(sub_topic)
 
                             # Create topic HTML link
                             topic_name = topic.name
                             topic_link = get_topic_link(topic_name)
                             topic_name_list.append(topic_link)
-                        else:
-                            self.logger.info('DEBUG - Edit.handle - Topic id:`%s` not found, skipping', topic_id)
 
                 # Commit all changes
-                self.logger.info('DEBUG - Edit.handle - Committing all changes to database')
                 session.commit()
-                self.logger.info('DEBUG - Edit.handle - Changes committed successfully')
 
             except Exception:
-                self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
-                self.logger.info('DEBUG - Edit.handle - Rolling back transaction due to error')
+                self.logger.error('Could not update pub/sub subscription, e:`%s`', format_exc())
                 session.rollback()
                 raise
             else:
                 # Notify broker about the update
-                self.logger.info('DEBUG - Edit.handle - Notifying broker about subscription update, sub_key:`%s`, action:`%s`',
-                    subscription.sub_key, PUBSUB.SUBSCRIPTION_EDIT.value)
                 self.request.input.action = PUBSUB.SUBSCRIPTION_EDIT.value
                 self.broker_client.publish(self.request.input)
 
                 # Set response payload
-                self.logger.info('DEBUG - Edit.handle - Setting response payload')
-                self.response.payload.id = subscription.id
-                self.response.payload.sub_key = subscription.sub_key
-                self.response.payload.is_active = subscription.is_active
-                self.response.payload.sec_name = security_def.name
-                self.response.payload.delivery_type = subscription.delivery_type
+                self.response.payload.id = sub.id
+                self.response.payload.sub_key = sub.sub_key
+                self.response.payload.is_active = sub.is_active
+                self.response.payload.sec_name = sec_def.name
+                self.response.payload.delivery_type = sub.delivery_type
 
-                # Sort and join topic links
-                self.logger.info('DEBUG - Edit.handle - Processing topic links, count:`%s`', len(topic_name_list))
+                # Add topic links
                 if topic_name_list:
                     topic_name_list = sorted(topic_name_list)
                     self.response.payload.topic_links = ', '.join(topic_name_list)
-                    self.logger.info('DEBUG - Edit.handle - Topic links joined: `%s`', self.response.payload.topic_links)
                 else:
                     self.response.payload.topic_links = []
-                    self.logger.info('DEBUG - Edit.handle - No topic links to process')
 
                 # Add plain topic names (without HTML)
-                self.logger.info('DEBUG - Edit.handle - Processing plain topic names, count:`%s`', len(topics))
                 if topics:
                     plain_topic_names = []
                     for topic in topics:
                         plain_topic_names.append(topic.name)
                     self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
-                    self.logger.info('DEBUG - Edit.handle - Plain topic names joined: `%s`', self.response.payload.topic_names)
                 else:
                     self.response.payload.topic_names = []
-                    self.logger.info('DEBUG - Edit.handle - No plain topic names to process')
-
-                self.logger.info('DEBUG - Edit.handle - Subscription edit complete, sub_key:`%s`', subscription.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a Pub/Sub subscription.
+    """ Deletes a pub/sub subscription.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_delete_request'
@@ -390,7 +340,7 @@ class Delete(AdminService):
                 session.commit()
 
             except Exception:
-                self.logger.error('Could not delete Pub/Sub subscription, e:`%s`', format_exc())
+                self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
                 session.rollback()
                 raise
             else:
