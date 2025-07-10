@@ -282,6 +282,18 @@ function renderPatternTables() {
         var $container = $(this);
         var patterns = $container.data('patterns');
 
+        // Get the access_type from the row's hidden cells
+        var $row = $container.closest('tr');
+        var accessType = '';
+
+        // Loop through all .ignore cells to find the one with access_type
+        $row.find('td.ignore').each(function() {
+            var cellText = $(this).text().trim();
+            if (cellText === 'publisher' || cellText === 'subscriber' || cellText === 'publisher-subscriber') {
+                accessType = cellText;
+            }
+        });
+
         if (!patterns || patterns.trim() === '') {
             $container.html('<em>No patterns</em>');
             return;
@@ -307,23 +319,35 @@ function renderPatternTables() {
         var tableHtml = '<div class="pattern-display-container">';
 
         sortedPatternLines.forEach(function(patternLine) {
-            var type, value, typeClass;
+            var type, value, typeClass, isInactive = false;
+            var patternType = '';
 
             if (patternLine.startsWith('pub=')) {
                 type = 'Pub';
                 value = patternLine.substring(4);
                 typeClass = 'pattern-type-pub';
+                patternType = 'publisher';
             } else if (patternLine.startsWith('sub=')) {
                 type = 'Sub';
                 value = patternLine.substring(4);
                 typeClass = 'pattern-type-sub';
+                patternType = 'subscriber';
             } else {
                 type = '?';
                 value = patternLine;
                 typeClass = 'pattern-type-unknown';
             }
 
-            tableHtml += '<div class="pattern-row">';
+            // Check if pattern is incompatible with the access type
+            if (accessType === 'publisher' && patternType === 'subscriber') {
+                isInactive = true;
+            } else if (accessType === 'subscriber' && patternType === 'publisher') {
+                isInactive = true;
+            }
+            // publisher-subscriber can use both types of patterns
+
+            var rowClass = 'pattern-row' + (isInactive ? ' pattern-inactive' : '');
+            tableHtml += '<div class="' + rowClass + '">';
             tableHtml += '<div class="pattern-type ' + typeClass + '">' + type + '</div>';
             tableHtml += '<div class="pattern-value">' + value + '</div>';
             tableHtml += '<div class="pattern-link-cell">';
