@@ -506,6 +506,9 @@ $.fn.zato.pubsub.permission.edit = function(id) {
 
     $.fn.zato.data_table._create_edit('edit', 'Update permission `' + instance.name + '`', id);
 
+    // Hide the form initially to prevent flicker, it will be shown in setTimeout below.
+    $('#edit-div').hide();
+
     $.fn.zato.data_table.reset_form('edit');
     $('#edit-id').val(instance.id);
 
@@ -573,56 +576,60 @@ $.fn.zato.pubsub.permission.edit = function(id) {
 
                 // Trigger change event to update dependent UI elements
                 $accessTypeSelect.trigger('change');
+
+                // Get pattern data from the hidden cell that contains the raw patterns
+                // This cell was created in new_row function with the raw pattern data
+                var $row = $('#tr_' + id);
+                var patternData = $row.find('td:eq(9)').text();
+
+                // If no data found in hidden cell, try to get it from data-patterns attribute
+                if (!patternData || patternData.trim() === '') {
+                    patternData = $row.find('.pattern-display').attr('data-patterns');
+                }
+
+                // If still no data, try instance.pattern as last resort
+                if (!patternData || patternData.trim() === '') {
+                    patternData = instance.pattern;
+                }
+
+                // Decode any HTML entities in the pattern data
+                if (patternData) {
+                    patternData = patternData.replace(/\\u003D/g, '=');
+                    patternData = patternData.replace(/\\u000A/g, '\n');
+                }
+
+                // Populate patterns
+                populatePatterns('edit', patternData);
+
+                // Function to populate security definitions and initialize form
+                function initializeEditForm() {
+                    var selectId = '#id_edit-sec_base_id';
+                    $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/permission/get-security-definitions/', selectId);
+                    updatePatternTypeOptions('edit');
+                }
+
+                // Always populate security definitions via AJAX when select element becomes available
+                var selectElement = $('#id_edit-sec_base_id');
+                if (selectElement.length > 0) {
+                    initializeEditForm();
+                } else {
+                    // Wait for the select element to be added to the DOM
+                    var observer = new MutationObserver(function(mutations) {
+                        var selectElement = $('#id_edit-sec_base_id');
+                        if (selectElement.length > 0) {
+                            initializeEditForm();
+                            observer.disconnect();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
             }
         }
+
+        // Show the form now that it's populated.
+        $('#edit-div').show();
+
     }, 100);
-
-    // Get pattern data from the hidden cell that contains the raw patterns
-    // This cell was created in new_row function with the raw pattern data
-    var $row = $('#tr_' + id);
-    var patternData = $row.find('td:eq(9)').text();
-
-    // If no data found in hidden cell, try to get it from data-patterns attribute
-    if (!patternData || patternData.trim() === '') {
-        patternData = $row.find('.pattern-display').attr('data-patterns');
-    }
-
-    // If still no data, try instance.pattern as last resort
-    if (!patternData || patternData.trim() === '') {
-        patternData = instance.pattern;
-    }
-
-    // Decode any HTML entities in the pattern data
-    if (patternData) {
-        patternData = patternData.replace(/\\u003D/g, '=');
-        patternData = patternData.replace(/\\u000A/g, '\n');
-    }
-
-    // Populate patterns
-    populatePatterns('edit', patternData);
-
-    // Function to populate security definitions and initialize form
-    function initializeEditForm() {
-        var selectId = '#id_edit-sec_base_id';
-        $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/permission/get-security-definitions/', selectId);
-        updatePatternTypeOptions('edit');
-    }
-
-    // Always populate security definitions via AJAX when select element becomes available
-    var selectElement = $('#id_edit-sec_base_id');
-    if (selectElement.length > 0) {
-        initializeEditForm();
-    } else {
-        // Wait for the select element to be added to the DOM
-        var observer = new MutationObserver(function(mutations) {
-            var selectElement = $('#id_edit-sec_base_id');
-            if (selectElement.length > 0) {
-                initializeEditForm();
-                observer.disconnect();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
 
     // Add extensive debugging for access type changes
     setTimeout(function() {
@@ -939,8 +946,11 @@ function updatePatternTypeOptions(formType) {
         var patternValue = input.val().trim();
 
         // Check if current value is incompatible with new access type
-        var isIncompatible = (currentValue === 'pub' && accessType === 'subscriber') ||
+        var isIncompatible = false;
+        if (accessType !== 'publisher-subscriber') {
+            isIncompatible = (currentValue === 'pub' && accessType === 'subscriber') ||
                            (currentValue === 'sub' && accessType === 'publisher');
+        }
 
         // Only disable incompatible fields if they have content
         if (isIncompatible && patternValue !== '') {
