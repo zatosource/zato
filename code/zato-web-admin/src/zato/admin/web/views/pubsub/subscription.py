@@ -37,7 +37,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type', \
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_name', 'delivery_type', \
             'rest_push_endpoint_id', 'rest_push_endpoint_name'
         output_repeated = True
 
@@ -60,7 +60,7 @@ class Create(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_name', 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_name', 'delivery_type'
 
     def _get_input_dict(self):
 
@@ -111,7 +111,7 @@ class Edit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'topic_name', 'sec_name', 'delivery_type', 'is_active'
+        output_required = 'id', 'sub_key', 'topic_links', 'sec_name', 'delivery_type', 'is_active'
 
     def _get_input_dict(self):
 

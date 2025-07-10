@@ -179,7 +179,7 @@
 
             '_is_active',
             '_delivery_type',
-            'topic_name',
+            'topic_links',
 
             '_edit',
             '_delete',
@@ -250,7 +250,7 @@
 
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{% if item.delivery_type == 'pull' %}Pull{% else %}Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>{% endif %}</td>
-                        <td>{{ item.topic_name|safe }}</td>
+                        <td>{{ item.topic_links|safe }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>

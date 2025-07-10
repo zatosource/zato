@@ -4,9 +4,9 @@ $.namespace('zato.pubsub.subscription');
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} topic_name:{1} sec_name:{2} pattern_matched:{3}>';
+        var s = '<PubSubSubscription id:{0} topic_links:{1} sec_name:{2} pattern_matched:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.topic_name ? this.topic_name : '(none)',
+                                this.topic_links ? this.topic_links : '(none)',
                                 this.sec_name ? this.sec_name : '(none)',
                                 this.pattern_matched ? this.pattern_matched : '(none)');
     }
@@ -193,14 +193,14 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
     // Convert topic names to links (only if not already HTML links)
     var topicLinksHtml = '';
-    if (item.topic_name) {
-        // Check if topic_name already contains HTML links
-        if (item.topic_name.indexOf('<a href=') !== -1) {
-            // Already contains HTML links, use as-is
-            topicLinksHtml = item.topic_name;
+    if (item.topic_links) {
+        // Check if topic_links already contains HTML links
+        if (item.topic_links.indexOf('<a href=') !== -1) {
+            // Use as-is, already HTML links
+            topicLinksHtml = item.topic_links;
         } else {
-            // Plain text topic names, convert to links
-            var topicNames = item.topic_name.split(', ');
+            // Convert to HTML links
+            var topicNames = item.topic_links.split(', ');
             var topicLinks = topicNames.map(function(topicName) {
                 var trimmedName = topicName.trim();
                 return String.format('<a href="/zato/pubsub/topic/?cluster=1&query={0}">{1}</a>',
@@ -298,9 +298,9 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
 
         var instance = $.fn.zato.data_table.data[id];
 
-        if (instance && instance.topic_name) {
-            // Convert comma-separated string to array of topic names
-            currentTopicNames = instance.topic_name.split(',').map(function(name) {
+        if (instance && instance.topic_links) {
+            // Extract topic names from HTML links
+            currentTopicNames = instance.topic_links.split(',').map(function(name) {
                 return name.trim();
             });
         } else {
@@ -394,8 +394,8 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
         return;
     }
 
-    var cleanTopicName = $.fn.zato.pubsub.subscription.stripHtml(instance.topic_name);
-    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + (instance.delivery_type || 'pull');
+    var cleanTopicName = $.fn.zato.pubsub.subscription.stripHtml(instance.topic_links);
+    var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + instance.delivery_type;
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,

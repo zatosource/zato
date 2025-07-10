@@ -39,7 +39,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_name'), 'sec_name', \
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', \
             'delivery_type', 'rest_push_endpoint_id'
         output_optional = 'rest_push_endpoint_name'
 
@@ -78,9 +78,8 @@ class GetList(AdminService):
 
             topic_links = topic_links_by_id[sub_id]
             topic_links = sorted(topic_links)
-            topic_links = ', '.join(topic_links)
-
-            sub_dict['topic_name'] = topic_links
+            # Join links with comma and space
+            sub_dict['topic_links'] = ', '.join(topic_links)
 
             data.append(sub_dict)
 
@@ -105,7 +104,7 @@ class Create(AdminService):
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_name'), 'sec_name', 'delivery_type'
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', 'delivery_type'
 
     def handle(self):
 
@@ -191,7 +190,7 @@ class Create(AdminService):
                 self.response.payload.delivery_type = subscription.delivery_type
 
                 topic_name_list = sorted(topic_name_list)
-                self.response.payload.topic_name = ', '.join(topic_name_list)
+                self.response.payload.topic_links = ', '.join(topic_name_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
