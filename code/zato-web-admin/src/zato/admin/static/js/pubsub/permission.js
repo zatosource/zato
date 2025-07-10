@@ -863,9 +863,9 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id); // id (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.pattern); // _pattern (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.access_type); // _access_type (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.sec_base_id); // sec_base_id (hidden)
+    row += String.format('<td class="ignore">{0}</td>', item.pattern); // _pattern (hidden)
+    row += String.format('<td class="ignore">{0}</td>', item.access_type); // _access_type (hidden)
+    row += String.format('<td class="ignore">{0}</td>', item.sec_base_id); // sec_base_id (hidden)
 
     if(include_tr) {
         row += '</tr>';
