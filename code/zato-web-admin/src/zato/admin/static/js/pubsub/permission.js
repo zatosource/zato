@@ -428,11 +428,11 @@ $(document).ready(function() {
         consolidatePatterns('#edit-pattern-display');
     });
 
-    $(document).on('change', '#id_access_type', function() {
-        updatePatternTypeOptions('create');
-    });
-    $(document).on('change', '#id_edit-access_type', function() {
-        updatePatternTypeOptions('edit');
+    // Access type change handler for both forms
+    $(document).on('change', '#id_access_type, #id_edit-access_type', function() {
+        // Determine form type from the ID
+        var formType = $(this).attr('id').includes('edit') ? 'edit' : 'create';
+        updatePatternTypeOptions(formType);
     });
 
     // Use event delegation for pattern link clicks instead of inline onclick
@@ -785,20 +785,21 @@ function consolidatePatterns(formType) {
     var container = $('#' + formType + '-patterns-container');
     var patterns = [];
 
-    container.find('.pattern-row').each(function(index) {
-        var patternType = $(this).find('.pattern-type-select').val();
-        var patternValue = $(this).find('.pattern-input').val().trim();
+    container.find('.pattern-row').each(function() {
+        var typeSelect = $(this).find('.pattern-type-select');
+        var patternInput = $(this).find('.pattern-input');
+        var patternType = typeSelect.val();
+        var patternValue = patternInput.val().trim();
 
-        if (patternValue) {
-            var combined = patternType + '=' + patternValue;
-            patterns.push(combined);
-
+        // Only include patterns from enabled fields (compatible with access type)
+        if (patternValue && !typeSelect.prop('disabled') && !patternInput.prop('disabled')) {
+            patterns.push(patternType + '=' + patternValue);
         }
     });
 
-    var consolidated = patterns.join('\n');
-    var hiddenField = $('#' + formType + '-pattern-hidden');
-    hiddenField.val(consolidated);
+    // Set the consolidated patterns to the hidden field
+    $('#' + formType + '-pattern-hidden').val(patterns.join('\n'));
+    return patterns.join('\n');
 }
 
 function populatePatterns(formType, patternString) {
@@ -862,22 +863,24 @@ function updatePatternTypeOptions(formType) {
         var select = $(this).find('.pattern-type-select');
         var input = $(this).find('.pattern-input');
         var currentValue = select.val();
+        var patternValue = input.val().trim();
 
         // Check if current value is incompatible with new access type
         var isIncompatible = (currentValue === 'pub' && accessType === 'subscriber') ||
                            (currentValue === 'sub' && accessType === 'publisher');
 
-        if (isIncompatible) {
-            // Current value is incompatible - disable the select and input to preserve the pattern
+        // Only disable incompatible fields if they have content
+        if (isIncompatible && patternValue !== '') {
+            // Current value is incompatible and has content - disable to preserve the pattern
             select.prop('disabled', true);
             input.prop('disabled', true);
             // Don't change the options or value - keep them as-is
         } else {
-            // Current value is compatible - ensure it's enabled and rebuild options if needed
+            // Either compatible or empty - enable and rebuild options
             select.prop('disabled', false);
             input.prop('disabled', false);
 
-            // Always rebuild options for compatible patterns to ensure they have the right choices
+            // Rebuild options based on access type
             select.empty();
             if (accessType === 'publisher' || accessType === 'publisher-subscriber') {
                 select.append('<option value="pub">Publish</option>');
@@ -886,11 +889,14 @@ function updatePatternTypeOptions(formType) {
                 select.append('<option value="sub">Subscribe</option>');
             }
 
-            // Set value to current if it exists, otherwise first option
-            if (select.find('option[value="' + currentValue + '"]').length > 0) {
-                select.val(currentValue);
-            } else {
-                select.val(select.find('option:first').val());
+            // For empty fields, set to a compatible value
+            // For non-empty compatible fields, keep current if possible
+            if (patternValue === '' || !isIncompatible) {
+                if (select.find('option[value="' + currentValue + '"]').length > 0) {
+                    select.val(currentValue);
+                } else {
+                    select.val(select.find('option:first').val());
+                }
             }
         }
     });
