@@ -41,7 +41,7 @@ class GetList(AdminService):
         input_required = 'cluster_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', \
             'delivery_type', 'rest_push_endpoint_id'
-        output_optional = 'rest_push_endpoint_name'
+        output_optional = 'rest_push_endpoint_name', AsIs('topic_names')
 
     def get_data(self, session):
 
@@ -49,37 +49,39 @@ class GetList(AdminService):
 
         # Group by subscription ID
         subscriptions_by_id = {}
-        topic_links_by_id = {}
+        topic_names_by_id = {}
 
         for item in result:
             subscription, topic_name, sec_name, rest_push_endpoint_name = item
             sub_id = subscription.id
 
-            # Create topic link
-            topic_link = get_topic_link(topic_name)
-
             if sub_id not in subscriptions_by_id:
 
-                # Store the subscription data
                 item_dict = subscription.asdict()
                 item_dict['sec_name'] = sec_name
                 item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
                 subscriptions_by_id[sub_id] = item_dict
 
-                # Initialize topic links list for this subscription
-                topic_links_by_id[sub_id] = []
+                # Initialize topic names list for this subscription
+                topic_names_by_id[sub_id] = []
 
-            # Append topic link to the subscription's topic links
-            topic_links_by_id[sub_id].append(topic_link)
+            # Store plain topic name if not already present
+            if topic_name not in topic_names_by_id[sub_id]:
+                topic_names_by_id[sub_id].append(topic_name)
 
-        # Combine topic links into a single string for each subscription
+        # Process data for each subscription
         data = []
         for sub_id, sub_dict in subscriptions_by_id.items():
 
-            topic_links = topic_links_by_id[sub_id]
-            topic_links = sorted(topic_links)
-            # Join links with comma and space
+            # Sort topic names
+            sorted_topic_names = sorted(topic_names_by_id[sub_id])
+
+            # Create topic links
+            topic_links = [get_topic_link(name) for name in sorted_topic_names]
+
+            # Store both fields
             sub_dict['topic_links'] = ', '.join(topic_links)
+            sub_dict['topic_names'] = ', '.join(sorted_topic_names)
 
             data.append(sub_dict)
 
@@ -105,6 +107,7 @@ class Create(AdminService):
         input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', 'delivery_type'
+        output_optional = AsIs('topic_names')
 
     def handle(self):
 
@@ -191,6 +194,12 @@ class Create(AdminService):
 
                 topic_name_list = sorted(topic_name_list)
                 self.response.payload.topic_links = ', '.join(topic_name_list)
+
+                # Add plain topic names (without HTML)
+                plain_topic_names = []
+                for topic in topics:
+                    plain_topic_names.append(topic.name)
+                self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
 
 # ################################################################################################################################
 # ################################################################################################################################
