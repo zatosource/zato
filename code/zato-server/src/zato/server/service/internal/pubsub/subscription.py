@@ -13,7 +13,8 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionPattern, PubSubSubscriptionTopic, \
+    PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
