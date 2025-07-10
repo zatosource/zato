@@ -89,8 +89,18 @@ $(document).ready(function() {
 
 // Function to populate REST endpoints
 $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId) {
+    console.log('DEBUG populateRestEndpoints called:', JSON.stringify({
+        form_type: form_type,
+        selectedId: selectedId
+    }));
+
     var selectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
     var $select = $(selectId);
+
+    console.log('DEBUG populateRestEndpoints:', JSON.stringify({
+        selectId: selectId,
+        selectExists: $select.length > 0
+    }));
     var spanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
     var $span = $(spanId);
 
@@ -116,22 +126,85 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             form_type: form_type
         },
         success: function(response) {
-            if (response.rest_endpoints && response.rest_endpoints.length > 0) {
-                $.each(response.rest_endpoints, function(index, endpoint) {
-                    var selected = selectedId && selectedId == endpoint.id ? 'selected="selected"' : '';
-                    $select.append('<option value="' + endpoint.id + '" ' + selected + '>' + endpoint.name + '</option>');
-                });
+            console.log('DEBUG populateRestEndpoints.success:', JSON.stringify({
+                responseLength: response ? response.length : 0,
+                responseType: typeof response,
+                responseValue: response,
+                selectedId: selectedId
+            }));
+
+            $select.empty();
+            $select.append($('<option>', {
+                value: '',
+                text: 'Select a REST endpoint'
+            }));
+
+            var endpoints;
+            try {
+                // Check if response is already an object or needs parsing
+                if (typeof response === 'object') {
+                    endpoints = response.rest_endpoints || [];
+                } else {
+                    endpoints = $.parseJSON(response).rest_endpoints || [];
+                }
+            } catch (e) {
+                console.error('Error parsing REST endpoints:', e, 'Response:', response);
+                endpoints = [];
             }
 
-            // Trigger chosen update if using chosen plugin
-            if ($select.hasClass('chosen-select') || $select.next('.chosen-container').length > 0) {
+            console.log('DEBUG populateRestEndpoints.success endpoints:', JSON.stringify({
+                endpointsCount: endpoints ? endpoints.length : 0,
+                firstEndpoint: endpoints && endpoints.length > 0 ? endpoints[0] : null,
+                endpoints: endpoints
+            }));
+
+            $.each(endpoints, function(idx, endpoint) {
+                $select.append($('<option>', {
+                    value: endpoint.id,
+                    text: endpoint.name
+                }));
+            });
+
+            if(selectedId) {
+                $select.val(selectedId);
+                console.log('DEBUG populateRestEndpoints.success: Set selected value to', JSON.stringify(selectedId));
                 $select.trigger('chosen:updated');
             }
 
             // Show the span only if this is a push delivery type and we have a selected value
             var deliveryType = form_type === 'create' ? $('#id_delivery_type').val() : $('#id_edit-delivery_type').val();
+            console.log('DEBUG populateRestEndpoints.success forcing span visibility:', JSON.stringify({
+                form_type: form_type,
+                deliveryType: deliveryType,
+                spanSelector: spanId,
+                spanExists: $span.length > 0,
+                isVisible: $span.is(':visible')
+            }));
+
+            // Force show the span if delivery type is push, regardless of any other conditions
             if (deliveryType === 'push') {
                 $span.show();
+
+                // If Chosen plugin is being used
+                if ($select.next('.chosen-container').length > 0) {
+                    // Hide the native select element
+                    $select.hide();
+
+                    // Show the Chosen container
+                    // Force proper width on Chosen container
+                    $select.next('.chosen-container').css('width', '100%');
+
+                    // Trigger Chosen update to refresh the dropdown
+                    $select.trigger('chosen:updated');
+                }
+
+                console.log('DEBUG populateRestEndpoints.success AFTER forcing visibility:', JSON.stringify({
+                    isVisibleNow: $span.is(':visible'),
+                    selectVisible: $select.is(':visible'),
+                    chosenExists: $select.next('.chosen-container').length > 0,
+                    chosenWidth: $select.next('.chosen-container').css('width'),
+                    displayStyle: $span.css('display')
+                }));
             }
         },
         error: function(xhr, status, error) {
@@ -350,8 +423,15 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
         // Immediately hide REST endpoint span if not push to prevent flicker
         var currentDeliveryType = $('#id_edit-delivery_type').val();
+        console.log('DEBUG edit function: Check if should hide rest endpoint span', JSON.stringify({
+            currentDeliveryType: currentDeliveryType,
+            shouldHide: currentDeliveryType !== 'push',
+            restEndpointEditExists: $('#rest-endpoint-edit').length > 0,
+            isCurrentlyVisible: $('#rest-endpoint-edit').is(':visible')
+        }));
         if (currentDeliveryType !== 'push') {
             $('#rest-endpoint-edit').hide();
+            console.log('DEBUG edit function: REST endpoint span hidden');
         }
 
         // Setup delivery type visibility first, then conditionally populate REST endpoints
@@ -403,22 +483,46 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
     var $deliveryType = $(deliveryTypeId);
     var $restEndpointSpan = $(restEndpointSpanId);
 
+    console.log('DEBUG setupDeliveryTypeVisibility:', JSON.stringify({
+        form_type: form_type,
+        instance_id: instance_id,
+        deliveryTypeId: deliveryTypeId,
+        restEndpointSpanId: restEndpointSpanId,
+        deliveryTypeExists: $deliveryType.length > 0,
+        restEndpointSpanExists: $restEndpointSpan.length > 0,
+        currentDeliveryValue: $deliveryType.val()
+    }));
+
     // Hide the span immediately to prevent any flash
     $restEndpointSpan.hide();
 
     if ($deliveryType.length === 0 || $restEndpointSpan.length === 0) {
+        console.log('DEBUG setupDeliveryTypeVisibility: Elements not found, returning');
         return;
     }
 
     function toggleRestEndpointVisibility() {
         var deliveryTypeValue = $deliveryType.val();
 
+        console.log('DEBUG toggleRestEndpointVisibility called:', JSON.stringify({
+            deliveryTypeValue: deliveryTypeValue,
+            instance_id: instance_id,
+            form_type: form_type,
+            condition_old: (deliveryTypeValue === 'push' && instance_id),
+            condition_new: (deliveryTypeValue === 'push')
+        }));
+
         // Instead of immediately showing, prepare for showing but let the populateRestEndpoints function
         // handle the actual visibility after endpoints are loaded
-        if (deliveryTypeValue === 'push' && instance_id) {
+        if (deliveryTypeValue === 'push') {
             var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
+            console.log('DEBUG toggleRestEndpointVisibility: Will populate endpoints', JSON.stringify({
+                selectedId: selectedId,
+                dataTableData: form_type === 'edit' ? $.fn.zato.data_table.data[instance_id] : 'N/A'
+            }));
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
         } else {
+            console.log('DEBUG toggleRestEndpointVisibility: Hiding rest endpoint span');
             $restEndpointSpan.hide();
         }
     }
