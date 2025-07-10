@@ -214,9 +214,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.delivery_type || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.sub_key || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.sub_key);
 
     if(include_tr) {
         row += '</tr>';
@@ -277,26 +277,23 @@ $.fn.zato.pubsub.subscription.create = function() {
     }, 200);
 }
 
-$.fn.zato.pubsub.subscription.edit = function(sub_key) {
-    // Convert sub_key to numeric ID if it's a string but contains numeric ID
-    var id = sub_key;
-    if (typeof sub_key === 'string' && sub_key.match(/^\d+$/)) {
-        id = parseInt(sub_key, 10);
-    }
+$.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     // Hide REST endpoint span immediately to prevent flicker during form population
     $('#rest-endpoint-edit').hide();
 
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id);
+
     // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
+
+        var instance = $.fn.zato.data_table.data[instance_id];
+
         // Set the sub_key in the hidden field
-        $('#id_edit-sub_key').val(sub_key);
+        $('#id_edit-sub_key').val(instance.sub_key);
 
         // Get the current topic names from the data table row data
         var currentTopicNames = null;
-
-        var instance = $.fn.zato.data_table.data[id];
 
         if (instance && instance.topic_links) {
             // Extract topic names from HTML links
@@ -358,7 +355,7 @@ $.fn.zato.pubsub.subscription.edit = function(sub_key) {
         }
 
         // Setup delivery type visibility first, then conditionally populate REST endpoints
-        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit');
+        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
 
         // Populate REST endpoints regardless of delivery type to avoid a flicker
         // when switching to push, but they'll remain hidden if not push type
@@ -390,10 +387,6 @@ $.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, xhr) {
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
 
-    if (!instance) {
-        return;
-    }
-
     var cleanTopicName = $.fn.zato.pubsub.subscription.stripHtml(instance.topic_links);
     var descriptor = 'Security: ' + instance.sec_name + '\nTopic: ' + cleanTopicName + '\nDelivery: ' + instance.delivery_type;
 
@@ -403,7 +396,7 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
         true);
 }
 
-$.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) {
+$.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, instance_id) {
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
     var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
 
@@ -422,9 +415,8 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type) 
 
         // Instead of immediately showing, prepare for showing but let the populateRestEndpoints function
         // handle the actual visibility after endpoints are loaded
-        if (deliveryTypeValue === 'push') {
-            // Call populateRestEndpoints which will handle the visibility
-            var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[$("#id_edit-sub_key").val()].rest_push_endpoint_id : null;
+        if (deliveryTypeValue === 'push' && instance_id) {
+            var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
         } else {
             $restEndpointSpan.hide();
