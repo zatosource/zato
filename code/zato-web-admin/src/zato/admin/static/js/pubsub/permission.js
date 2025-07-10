@@ -955,6 +955,35 @@ function populatePatterns(formType, patternString) {
     var patterns = patternString.split('\n').filter(function(p) { return p.trim() !== ''; });
     if (patterns.length === 0) {
         patterns = [''];
+    } else {
+        // Group patterns by type
+        var pubPatterns = [];
+        var subPatterns = [];
+        var otherPatterns = [];
+
+        patterns.forEach(function(pattern) {
+            if (pattern.startsWith('pub=')) {
+                pubPatterns.push(pattern);
+            } else if (pattern.startsWith('sub=')) {
+                subPatterns.push(pattern);
+            } else {
+                otherPatterns.push(pattern);
+            }
+        });
+
+        // Sort each group alphabetically
+        pubPatterns.sort(function(a, b) {
+            return a.substring(4).localeCompare(b.substring(4));
+        });
+
+        subPatterns.sort(function(a, b) {
+            return a.substring(4).localeCompare(b.substring(4));
+        });
+
+        otherPatterns.sort();
+
+        // Combine patterns in the desired order: pub first, then sub, then others
+        patterns = [].concat(pubPatterns, subPatterns, otherPatterns);
     }
 
     patterns.forEach(function(pattern, index) {
