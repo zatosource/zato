@@ -22,7 +22,6 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
-
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_permission_get_list_request'
         response_elem = 'zato_pubsub_permission_get_list_response'
@@ -30,15 +29,15 @@ class GetList(AdminService):
         output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def get_data(self, session):
+
         query_config = {}
+
         if self.request.input['query']:
             query_config['query'] = self.request.input['query'].strip().split()
 
-        # Get the query results which now return tuples of (PubSubPermission, name, subscription_count)
         query_results = pubsub_permission_list(session, self.request.input.cluster_id, False, **query_config)
-
-        # Convert tuples to dictionaries with the expected structure
         processed_results = []
+
         for result in query_results:
             permission, name, subscription_count = result
             processed_results.append({
