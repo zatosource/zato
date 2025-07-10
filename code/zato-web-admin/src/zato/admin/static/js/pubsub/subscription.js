@@ -142,10 +142,9 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
 $.fn.zato.pubsub.subscription.data_table = {};
 
-// Hook to ensure the UUID sub_key is properly preserved in the data
 $.fn.zato.data_table.add_row_hook = function(instance, name, html_elem, data) {
-    // Make sure to preserve the real UUID sub_key from server response
-    if (name === 'sub_key' && data && data.sub_key && typeof data.sub_key === 'string' && data.sub_key.indexOf('-') > -1) {
+
+    if (name === 'sub_key') {
         instance.sub_key = data.sub_key;
     }
 };
@@ -161,9 +160,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.sec_name);
-    // Use the UUID sub_key if available, otherwise show the ID
-    var displaySubKey = (typeof item.sub_key === 'string' && item.sub_key.indexOf('-') > -1) ? item.sub_key : item.id;
-    row += String.format('<td>{0}</td>', displaySubKey);
+    row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
 
     // For Push delivery type, add a link to the REST endpoint if available
@@ -219,7 +216,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type || '');
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
-    row += String.format("<td class='ignore'>{0}</td>", (typeof item.sub_key === 'string' && item.sub_key.indexOf('-') > -1) ? item.sub_key : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.sub_key || '');
 
     if(include_tr) {
         row += '</tr>';
