@@ -104,14 +104,14 @@ class Create(CreateEdit):
 # ################################################################################################################################
 
 class Edit(CreateEdit):
-    form_prefix = 'edit-'
+    method_allowed = 'POST'
+    url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'rest_push_endpoint_id'
-        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type', 'topic_links'
-        output_optional = 'topic_names'
+        output_required = 'id', 'sub_key', 'topic_links', 'sec_name', 'delivery_type', 'is_active'
 
     def _get_input_dict(self):
 
