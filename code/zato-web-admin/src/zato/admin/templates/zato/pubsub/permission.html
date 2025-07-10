@@ -367,12 +367,15 @@
             '_numbering',
             '_selection',
             'name',
+
             'pattern',
             'access_type',
-            'subscription_count',
+            '_subscription_count',
+
             '_edit',
             '_delete',
             'id',
+
             '_pattern',
             '_access_type',
             'sec_base_id'
@@ -409,13 +412,13 @@
 
                         <th><a href="#">Patterns</a></th>
                         <th style="text-align:center"><a href="#">Access type</a></th>
-                        <th style="text-align:center"><a href="#">Subscriptions</a></th>
-                        <th>&nbsp;</th>
+                        <th class='ignore' style="text-align:center"><a href="#">Subscriptions</a></th>
 
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -435,13 +438,13 @@
                             </div>
                         </td>
                         <td style="text-align:center">{{ item.access_type|capfirst }}</td>
-                        <td style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
-                        <td><a href="javascript:$.fn.zato.pubsub.permission.edit('{{ item.id }}')">Edit</a></td>
+                        <td class='ignore' style="text-align:center">{{ item.subscription_count|default:"0" }}</td>
 
+                        <td><a href="javascript:$.fn.zato.pubsub.permission.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.permission.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.pattern }}</td>
 
+                        <td class='ignore'>{{ item.pattern }}</td>
                         <td class='ignore'>{{ item.access_type }}</td>
                         <td class='ignore'>{{ item.sec_base_id }}</td>
                     </tr>
