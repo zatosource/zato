@@ -46,13 +46,24 @@ class GetList(AdminService):
     def get_data(self, session):
 
         data = []
-        data = elems_with_opaque(data)
-        return data
+        result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
+
+        for item in result:
+
+            subscription, topic_name, sec_name, rest_push_endpoint_name = item
+
+            item_dict = subscription.asdict()
+            item_dict['topic_name'] = topic_name
+            item_dict['sec_name'] = sec_name
+            item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
+
+            data.append(item_dict)
+
+        return elems_with_opaque(data)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            data = self.get_data(session)
-            self.response.payload[:] = data
+            self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
 # ################################################################################################################################
