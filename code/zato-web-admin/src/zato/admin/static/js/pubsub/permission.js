@@ -301,37 +301,8 @@ function renderPatternTables() {
             return;
         }
 
-        // Sort patterns - pub patterns first, then sub patterns
-        var pubPatterns = [];
-        var subPatterns = [];
-        var otherPatterns = [];
-
-        // Group patterns by type
-        patternLines.forEach(function(patternLine) {
-            if (patternLine.startsWith('pub=')) {
-                pubPatterns.push(patternLine);
-            } else if (patternLine.startsWith('sub=')) {
-                subPatterns.push(patternLine);
-            } else {
-                otherPatterns.push(patternLine);
-            }
-        });
-
-        // Sort each group alphabetically by pattern value
-        pubPatterns.sort(function(a, b) {
-            return a.substring(4).localeCompare(b.substring(4));
-        });
-
-        subPatterns.sort(function(a, b) {
-            return a.substring(4).localeCompare(b.substring(4));
-        });
-
-        otherPatterns.sort(function(a, b) {
-            return a.localeCompare(b);
-        });
-
-        // Combine patterns in the desired order: pub, then sub, then others
-        var sortedPatternLines = [].concat(pubPatterns, subPatterns, otherPatterns);
+        // Sort patterns - pub first, then sub, and alphabetically within each type
+        var sortedPatternLines = sortPatternsByTypeAndValue(patternLines);
 
         var tableHtml = '<div class="pattern-display-container">';
 
@@ -512,6 +483,38 @@ $(document).ready(function() {
         return true; // Allow form submission to continue
     };
 })
+
+// Helper function to sort patterns by type (pub first, then sub) and alphabetically within each type
+function sortPatternsByTypeAndValue(patterns) {
+    // Group patterns by type
+    var pubPatterns = [];
+    var subPatterns = [];
+    var otherPatterns = [];
+
+    patterns.forEach(function(pattern) {
+        if (pattern.startsWith('pub=')) {
+            pubPatterns.push(pattern);
+        } else if (pattern.startsWith('sub=')) {
+            subPatterns.push(pattern);
+        } else {
+            otherPatterns.push(pattern);
+        }
+    });
+
+    // Sort each group alphabetically
+    pubPatterns.sort(function(a, b) {
+        return a.substring(4).localeCompare(b.substring(4));
+    });
+
+    subPatterns.sort(function(a, b) {
+        return a.substring(4).localeCompare(b.substring(4));
+    });
+
+    otherPatterns.sort();
+
+    // Combine patterns in the desired order
+    return [].concat(pubPatterns, subPatterns, otherPatterns);
+}
 
 $.fn.zato.pubsub.permission = {};
 $.fn.zato.pubsub.permission.data_table = {};
@@ -956,34 +959,8 @@ function populatePatterns(formType, patternString) {
     if (patterns.length === 0) {
         patterns = [''];
     } else {
-        // Group patterns by type
-        var pubPatterns = [];
-        var subPatterns = [];
-        var otherPatterns = [];
-
-        patterns.forEach(function(pattern) {
-            if (pattern.startsWith('pub=')) {
-                pubPatterns.push(pattern);
-            } else if (pattern.startsWith('sub=')) {
-                subPatterns.push(pattern);
-            } else {
-                otherPatterns.push(pattern);
-            }
-        });
-
-        // Sort each group alphabetically
-        pubPatterns.sort(function(a, b) {
-            return a.substring(4).localeCompare(b.substring(4));
-        });
-
-        subPatterns.sort(function(a, b) {
-            return a.substring(4).localeCompare(b.substring(4));
-        });
-
-        otherPatterns.sort();
-
-        // Combine patterns in the desired order: pub first, then sub, then others
-        patterns = [].concat(pubPatterns, subPatterns, otherPatterns);
+        // Sort patterns - pub first, then sub, and alphabetically within each type
+        patterns = sortPatternsByTypeAndValue(patterns);
     }
 
     patterns.forEach(function(pattern, index) {
