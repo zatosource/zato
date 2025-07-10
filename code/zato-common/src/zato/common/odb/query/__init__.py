@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,8 +23,8 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
-    Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
+    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
+    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
