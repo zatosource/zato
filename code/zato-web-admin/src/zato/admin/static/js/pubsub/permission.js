@@ -301,9 +301,41 @@ function renderPatternTables() {
             return;
         }
 
+        // Sort patterns - pub patterns first, then sub patterns
+        var pubPatterns = [];
+        var subPatterns = [];
+        var otherPatterns = [];
+
+        // Group patterns by type
+        patternLines.forEach(function(patternLine) {
+            if (patternLine.startsWith('pub=')) {
+                pubPatterns.push(patternLine);
+            } else if (patternLine.startsWith('sub=')) {
+                subPatterns.push(patternLine);
+            } else {
+                otherPatterns.push(patternLine);
+            }
+        });
+
+        // Sort each group alphabetically by pattern value
+        pubPatterns.sort(function(a, b) {
+            return a.substring(4).localeCompare(b.substring(4));
+        });
+
+        subPatterns.sort(function(a, b) {
+            return a.substring(4).localeCompare(b.substring(4));
+        });
+
+        otherPatterns.sort(function(a, b) {
+            return a.localeCompare(b);
+        });
+
+        // Combine patterns in the desired order: pub, then sub, then others
+        var sortedPatternLines = [].concat(pubPatterns, subPatterns, otherPatterns);
+
         var tableHtml = '<div class="pattern-display-container">';
 
-        patternLines.forEach(function(patternLine) {
+        sortedPatternLines.forEach(function(patternLine) {
             var type, value, typeClass;
 
             if (patternLine.startsWith('pub=')) {
