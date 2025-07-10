@@ -216,14 +216,21 @@ class Edit(AdminService):
         output_optional = AsIs('topic_names')
 
     def handle(self):
+        self.logger.info('DEBUG - Edit.handle - Starting subscription edit, input:`%s`', self.request.input)
         with closing(self.odb.session()) as session:
             try:
                 # Get the subscription by sub_key
+                self.logger.info('DEBUG - Edit.handle - Looking for subscription with sub_key:`%s` in cluster:`%s`',
+                    self.request.input.sub_key, self.request.input.cluster_id)
                 subscription = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                     filter(PubSubSubscription.sub_key==self.request.input.sub_key).\
                     one()
+                self.logger.info('DEBUG - Edit.handle - Found subscription, id:`%s`', subscription.id)
 
+                self.logger.info('DEBUG - Edit.handle - Updating subscription properties, sec_base_id:`%s`, delivery_type:`%s`, is_active:`%s`, rest_push_endpoint_id:`%s`',
+                    self.request.input.sec_base_id, self.request.input.delivery_type,
+                    self.request.input.is_active, self.request.input.rest_push_endpoint_id)
                 subscription.sec_base_id = self.request.input.sec_base_id
                 subscription.delivery_type = self.request.input.delivery_type
 
@@ -231,17 +238,23 @@ class Edit(AdminService):
                 subscription.rest_push_endpoint_id = self.request.input.rest_push_endpoint_id
 
                 # Get the security definition
+                self.logger.info('DEBUG - Edit.handle - Getting security definition for id:`%s`', subscription.sec_base_id)
                 security_def = session.query(SecurityBase).\
                     filter(SecurityBase.id==subscription.sec_base_id).\
                     one()
+                self.logger.info('DEBUG - Edit.handle - Found security definition, name:`%s`', security_def.name)
 
                 # Delete all current topic associations
-                _ = session.query(PubSubSubscriptionTopic).\
+                self.logger.info('DEBUG - Edit.handle - Deleting current topic associations for subscription_id:`%s`', subscription.id)
+                deleted_count = session.query(PubSubSubscriptionTopic).\
                     filter(PubSubSubscriptionTopic.subscription_id==subscription.id).\
                     delete()
+                self.logger.info('DEBUG - Edit.handle - Deleted `%s` topic associations', deleted_count)
 
                 # Process topics if any are provided
                 topic_id_list = self.request.input.get('topic_id_list') or []
+                self.logger.info('DEBUG - Edit.handle - Processing `%s` topics from topic_id_list:`%s`',
+                    len(topic_id_list), topic_id_list)
                 topic_name_list = []
                 topics = []
 
@@ -249,15 +262,20 @@ class Edit(AdminService):
                     # Create new topic associations
                     for topic_id in topic_id_list:
                         # Make sure the topic exists
+                        self.logger.info('DEBUG - Edit.handle - Looking for topic id:`%s` in cluster:`%s`',
+                            topic_id, self.request.input.cluster_id)
                         topic = session.query(PubSubTopic).\
                             filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
                             filter(PubSubTopic.id==topic_id).\
                             first()
 
                         if topic:
+                            self.logger.info('DEBUG - Edit.handle - Found topic, id:`%s`, name:`%s`', topic.id, topic.name)
                             topics.append(topic)
 
                             # Create subscription-topic association
+                            self.logger.info('DEBUG - Edit.handle - Creating topic association subscription_id:`%s`, topic_id:`%s`',
+                                subscription.id, topic.id)
                             st = PubSubSubscriptionTopic()
                             st.cluster_id = self.request.input.cluster_id
                             st.subscription_id = subscription.id
@@ -268,20 +286,28 @@ class Edit(AdminService):
                             topic_name = topic.name
                             topic_link = get_topic_link(topic_name)
                             topic_name_list.append(topic_link)
+                        else:
+                            self.logger.info('DEBUG - Edit.handle - Topic id:`%s` not found, skipping', topic_id)
 
                 # Commit all changes
+                self.logger.info('DEBUG - Edit.handle - Committing all changes to database')
                 session.commit()
+                self.logger.info('DEBUG - Edit.handle - Changes committed successfully')
 
             except Exception:
                 self.logger.error('Could not update Pub/Sub subscription, e:`%s`', format_exc())
+                self.logger.info('DEBUG - Edit.handle - Rolling back transaction due to error')
                 session.rollback()
                 raise
             else:
                 # Notify broker about the update
+                self.logger.info('DEBUG - Edit.handle - Notifying broker about subscription update, sub_key:`%s`, action:`%s`',
+                    subscription.sub_key, PUBSUB.SUBSCRIPTION_EDIT.value)
                 self.request.input.action = PUBSUB.SUBSCRIPTION_EDIT.value
                 self.broker_client.publish(self.request.input)
 
                 # Set response payload
+                self.logger.info('DEBUG - Edit.handle - Setting response payload')
                 self.response.payload.id = subscription.id
                 self.response.payload.sub_key = subscription.sub_key
                 self.response.payload.is_active = subscription.is_active
@@ -289,20 +315,28 @@ class Edit(AdminService):
                 self.response.payload.delivery_type = subscription.delivery_type
 
                 # Sort and join topic links
+                self.logger.info('DEBUG - Edit.handle - Processing topic links, count:`%s`', len(topic_name_list))
                 if topic_name_list:
                     topic_name_list = sorted(topic_name_list)
                     self.response.payload.topic_links = ', '.join(topic_name_list)
+                    self.logger.info('DEBUG - Edit.handle - Topic links joined: `%s`', self.response.payload.topic_links)
                 else:
                     self.response.payload.topic_links = []
+                    self.logger.info('DEBUG - Edit.handle - No topic links to process')
 
                 # Add plain topic names (without HTML)
+                self.logger.info('DEBUG - Edit.handle - Processing plain topic names, count:`%s`', len(topics))
                 if topics:
                     plain_topic_names = []
                     for topic in topics:
                         plain_topic_names.append(topic.name)
                     self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
+                    self.logger.info('DEBUG - Edit.handle - Plain topic names joined: `%s`', self.response.payload.topic_names)
                 else:
                     self.response.payload.topic_names = []
+                    self.logger.info('DEBUG - Edit.handle - No plain topic names to process')
+
+                self.logger.info('DEBUG - Edit.handle - Subscription edit complete, sub_key:`%s`', subscription.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
