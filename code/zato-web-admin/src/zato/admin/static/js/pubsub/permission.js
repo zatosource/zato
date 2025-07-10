@@ -12,6 +12,34 @@ $.fn.zato.data_table.PubSubPermission = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Custom delete function to handle row removal from the data table correctly.
+$.fn.zato.data_table.delete_item = function(id) {
+    var url = '/zato/pubsub/permission/delete/' + id;
+    var instance = $.fn.zato.data_table.data[id];
+    var msg = 'Are you sure you want to delete permission `' + instance.name + '`?';
+
+    zato.modal.show_dialog(msg, function() {
+        $.ajax({
+            url: url,
+            type: 'POST',
+            success: function(data) {
+                if (data.result === 'ok') {
+                    var table = $('#data-table').dataTable();
+                    var row = $('#tr_' + id)[0];
+                    if (row) {
+                        table.fnDeleteRow(row);
+                    }
+                    zato.modal.show_info('Permission `' + instance.name + '` has been deleted.');
+                } else {
+                    zato.modal.show_error(data.error);
+                }
+            }
+        });
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Function to show topics popup with matching results
 function showTopicsAlert(pattern, event) {
     // Don't close existing popups - allow multiple
@@ -770,13 +798,13 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', pattern_display_html);
     row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
-    row += String.format('<td style="text-align:center">{0}</td>', item.subscription_count || '0');
+    row += String.format('<td style="display:none" style="text-align:center">{0}</td>', item.subscription_count);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pubsub.permission.delete_(\'{0}\')">Delete</a></td>', item.id);
     row += String.format('<td style="display:none">{0}</td>', item.id); // id (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.pattern || ''); // _pattern (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.access_type || ''); // _access_type (hidden)
-    row += String.format('<td style="display:none">{0}</td>', item.sec_base_id || ''); // sec_base_id (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.pattern); // _pattern (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.access_type); // _access_type (hidden)
+    row += String.format('<td style="display:none">{0}</td>', item.sec_base_id); // sec_base_id (hidden)
 
     if(include_tr) {
         row += '</tr>';
