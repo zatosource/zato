@@ -328,6 +328,12 @@ def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=rand
 
 # ################################################################################################################################
 
+def new_sub_key() -> 'str':
+    sub_key = 'zpsk.rest.' + uuid4().hex[:6]
+    return sub_key
+
+# ################################################################################################################################
+
 def get_user_config_name(name:'str') -> 'str':
     items = name.split(os.sep)
     file_name = items[-1]
