@@ -941,10 +941,12 @@ def _pubsub_subscription(session, cluster_id):
         SecurityBase.name.label('sec_name'),
         HTTPSOAP.name.label('rest_push_endpoint_name')
     ).\
-        join(PubSubTopic, PubSubSubscription.topic_id == PubSubTopic.id).\
+        join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
+        join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
         join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
+        filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
         order_by(PubSubTopic.name, SecurityBase.name)
 
 def pubsub_subscription(session, cluster_id, id):
@@ -958,6 +960,18 @@ def pubsub_subscription(session, cluster_id, id):
 def pubsub_subscription_list(session, cluster_id, filter_by=None, needs_columns=False):
     """ A list of Pub/Sub subscriptions.
     """
-    return _pubsub_subscription(session, cluster_id)
+    query = _pubsub_subscription(session, cluster_id)
+
+    # Apply any additional filtering if provided
+    if filter_by:
+        if isinstance(filter_by, (list, tuple)):
+            for filter_criterion in filter_by:
+                query = query.filter(filter_criterion)
+        else:
+            query = query.filter(filter_by)
+
+    # Group by subscription ID to handle subscriptions with multiple topics
+    # This ensures we get one row per subscription with the first topic name
+    return query
 
 # ################################################################################################################################
