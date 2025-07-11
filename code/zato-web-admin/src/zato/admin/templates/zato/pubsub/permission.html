@@ -444,7 +444,7 @@
 
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        <td><a href="{% url 'security-basic-auth' %}?cluster={{ cluster_id }}&query={{ item.name|urlencode }}">{{ item.name }}</a></td>
 
                         <td>
                             <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
