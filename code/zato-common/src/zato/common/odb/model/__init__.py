@@ -1392,6 +1392,9 @@ class PubSubSubscription(Base):
     rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     rest_push_endpoint = relationship('HTTPSOAP', backref=backref('pubsub_rest_push_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
+    push_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    push_service = relationship('Service', backref=backref('pubsub_push_services', order_by=id, cascade='all, delete, delete-orphan'))
+
 # ################################################################################################################################
 # ################################################################################################################################
 
