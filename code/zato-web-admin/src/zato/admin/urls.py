@@ -759,6 +759,8 @@ urlpatterns += [
         login_required(subscription.get_topics), name='pubsub-subscription-get-topics'),
     url(r'^zato/pubsub/subscription/get-rest-endpoints/$',
         login_required(subscription.get_rest_endpoints), name='pubsub-subscription-get-rest-endpoints'),
+    url(r'^zato/pubsub/subscription/get-service-list/$',
+        login_required(subscription.get_service_list), name='pubsub-subscription-get-service-list'),
 ]
 
 # ################################################################################################################################
