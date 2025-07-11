@@ -697,7 +697,7 @@ patternData = instance.pattern;
                     $container.empty();
 
                     // Add hidden input for the security definition ID
-                    $container.append('<input type="hidden" id="id_edit-sec_base_id" name="sec_base_id" value="' + instance.sec_base_id + '"/>');
+                    $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
                     // Display the security definition name as a link
                     var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
