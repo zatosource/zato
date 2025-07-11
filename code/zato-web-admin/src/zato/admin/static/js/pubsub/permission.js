@@ -546,7 +546,7 @@ $.fn.zato.pubsub.permission.create = function() {
     // Function to populate security definitions and initialize form
     function initializeCreateForm() {
         var selectId = '#id_sec_base_id';
-        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/permission/get-security-definitions/', selectId);
+        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/permission/get-security-definitions/?form_type=create', selectId);
         updatePatternTypeOptions('create');
     }
 
