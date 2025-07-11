@@ -15,7 +15,7 @@ from django.http import HttpResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
-from zato.admin.web.util import get_pubsub_security_definitions
+from zato.admin.web.util import get_pubsub_security_definitions, get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
 from zato.common.odb.model import PubSubSubscription
 
@@ -271,6 +271,40 @@ def get_rest_endpoints(req):
         return HttpResponse(
             json.dumps({
                 'error': str(e) or 'Error retrieving REST endpoints'
+            }),
+            content_type='application/json',
+            status=500
+        )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_service_list(req):
+    """ Retrieves a list of services for pubsub subscriptions.
+    """
+    cluster_id = req.GET.get('cluster_id')
+    form_type = req.GET.get('form_type', 'create')
+
+    logger.info('VIEW get_service_list: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+
+    try:
+        services = get_service_list(req)
+
+        logger.info('VIEW get_service_list: returning %d services', len(services))
+
+        return HttpResponse(
+            json.dumps({
+                'msg': 'Services retrieved successfully',
+                'services': services
+            }),
+            content_type='application/json'
+        )
+    except Exception as e:
+        logger.error('VIEW get_service_list: error=%s', e)
+        return HttpResponse(
+            json.dumps({
+                'error': str(e) or 'Error retrieving services'
             }),
             content_type='application/json',
             status=500
