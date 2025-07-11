@@ -258,9 +258,9 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId)
         if (response.services && response.services.length > 0) {
             response.services.forEach(function(service) {
                 var option = $('<option></option>')
-                    .attr('value', service.name)
-                    .text(service.name);
-                if (selectedId && service.name === selectedId) {
+                    .attr('value', service.service_name)
+                    .text(service.service_name);
+                if (selectedId && service.service_name === selectedId) {
                     option.attr('selected', 'selected');
                 }
                 $serviceSelect.append(option);
@@ -271,15 +271,22 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId)
             console.log('DEBUG populateServices: no services found in response');
         }
 
-        // Apply Chosen styling
+        // Destroy existing Chosen instance if it exists
         if ($serviceSelect.hasClass('chzn-done')) {
-            $serviceSelect.trigger('chosen:updated');
-        } else {
-            $serviceSelect.chosen({
-                width: '100%',
-                placeholder_text_single: 'Select a service'
-            });
+            $serviceSelect.chosen('destroy');
         }
+
+        // Apply Chosen styling
+        $serviceSelect.chosen({
+            width: '100%',
+            placeholder_text_single: 'Select a service'
+        });
+
+        // Force Chosen container width
+        setTimeout(function() {
+            var $chosenContainer = $serviceSelect.next('.chosen-container');
+            $chosenContainer.css('width', '100%');
+        }, 10);
 
         // Show the service span
         $(serviceSpanId).show();
