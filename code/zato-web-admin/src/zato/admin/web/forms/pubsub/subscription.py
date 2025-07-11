@@ -53,7 +53,10 @@ class CreateForm(forms.Form):
         required=False,
         widget=forms.Select()
     )
-
+    push_service_name = forms.ChoiceField(
+        required=False,
+        widget=forms.Select()
+    )
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         if req:
