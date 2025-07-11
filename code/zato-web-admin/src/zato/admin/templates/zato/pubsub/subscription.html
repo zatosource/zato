@@ -79,12 +79,16 @@
             width: 50% !important;
         }
 
-        #rest-endpoint-create, #rest-endpoint-edit {
+        #rest-endpoint-create,
+        #rest-endpoint-edit,
+        #push-service-create,
+        #push-service-edit {
             width: 100% !important;
         }
 
-        #rest-endpoint-create select, #rest-endpoint-edit select {
-            width: 100% !important;
+        #id_rest_push_endpoint_id_chosen.chosen-container,
+        #id_push_service_name_chosen.chosen-container {
+            min-width: 98% !important;
         }
 
         /* SlimSelect styling variables */
@@ -296,7 +300,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
-                            <td style="vertical-align:baseline; width:400px; height:40px;">{{ create_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-create" style="width:50%; display:none;">{{ create_form.rest_push_endpoint_id }}</span></td>
+                            <td style="vertical-align:baseline; width:400px; height:40px;">
+                                {{ create_form.delivery_type }}
+                                &nbsp;
+                                {{ create_form.push_type }}
+                                &nbsp;
+                                <span id="rest-endpoint-create" style="width:50%; display:none;">
+                                    {{ create_form.rest_push_endpoint_id }}
+                                </span>
+                            </td>
                         </tr>
 
                         <tr>
@@ -328,8 +340,15 @@
                             <td>{{ edit_form.topic_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_edit-delivery_type">Delivery type</label></td>
-                            <td style="vertical-align:baseline; width:400px; height:40px;">{{ edit_form.delivery_type }} &nbsp;&nbsp;&nbsp; <span id="rest-endpoint-edit" style="width:50%; display:inline-block;">{{ edit_form.rest_push_endpoint_id }}</span></td>
+                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
+                            <td style="vertical-align:baseline; width:400px; height:40px;">
+                                {{ edit_form.delivery_type }}
+                                {{ edit_form.push_type }}
+                                &nbsp;&nbsp;&nbsp;
+                                <span id="rest-endpoint-create" style="width:50%; display:none;">
+                                    {{ edit_form.rest_push_endpoint_id }}
+                                </span>
+                            </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
