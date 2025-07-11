@@ -57,15 +57,22 @@ class CreateForm(forms.Form):
         required=False,
         widget=forms.Select()
     )
+
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         if req:
+
             # Topics will be populated dynamically via AJAX
             self.fields['topic_id'].choices = []
+
             # Use filtered security definitions for PubSub clients
             self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create', 'subscription')
+
             # Set default option for REST endpoints
             self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
+
+            # Set default option for service select
+            self.fields['push_service_name'].choices = [('', 'Select a service')]
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
