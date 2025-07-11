@@ -145,8 +145,6 @@ urlpatterns += [
 
     url(r'^zato/security/basic-auth/$',
         login_required(basic_auth.Index()), name=basic_auth.Index.url_name),
-    url(r'^zato/security/basic-auth/$',
-        login_required(basic_auth.Index()), name=basic_auth.Index.url_name),
     url(r'^zato/security/basic-auth/create/$',
         login_required(basic_auth.Create()), name=basic_auth.Create.url_name),
     url(r'^zato/security/basic-auth/edit/$',
