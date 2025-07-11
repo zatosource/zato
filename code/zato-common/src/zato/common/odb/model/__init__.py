@@ -1382,6 +1382,7 @@ class PubSubSubscription(Base):
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     delivery_type = Column(String(20), nullable=False)
+    push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1392,8 +1393,8 @@ class PubSubSubscription(Base):
     rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     rest_push_endpoint = relationship('HTTPSOAP', backref=backref('pubsub_rest_push_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
-    push_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
-    push_service = relationship('Service', backref=backref('pubsub_push_services', order_by=id, cascade='all, delete, delete-orphan'))
+    # This is equivalent to service.name but cannot be turned into a foreing key
+    push_service_name = Column(String(400), nullable=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

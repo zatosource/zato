@@ -40,7 +40,7 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
         output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_base_id', 'sec_name', \
-            'delivery_type', 'rest_push_endpoint_id'
+            'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_names')
 
     def get_data(self, session):
@@ -105,7 +105,7 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'rest_push_endpoint_id'
+        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_names')
 
@@ -211,7 +211,7 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'rest_push_endpoint_id'
+        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type', AsIs('topic_links')
         output_optional = AsIs('topic_names')
 

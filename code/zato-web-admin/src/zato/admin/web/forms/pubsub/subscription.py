@@ -41,6 +41,14 @@ class CreateForm(forms.Form):
         initial=PubSub.Delivery_Type.Pull,
         widget=forms.Select()
     )
+    push_type = forms.ChoiceField(
+        choices=[
+            (PubSub.Push_Type.REST, 'REST'),
+            (PubSub.Push_Type.Service, 'Service')
+        ],
+        initial=PubSub.Push_Type.REST,
+        widget=forms.Select()
+    )
     rest_push_endpoint_id = forms.ChoiceField(
         required=False,
         widget=forms.Select()

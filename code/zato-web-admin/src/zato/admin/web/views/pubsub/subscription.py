@@ -38,7 +38,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_base_id', 'sec_name', 'delivery_type', \
-            'rest_push_endpoint_id', 'rest_push_endpoint_name'
+            'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name'
         output_repeated = True
 
     def handle(self):
