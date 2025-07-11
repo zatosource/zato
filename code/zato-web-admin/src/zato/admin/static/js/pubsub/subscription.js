@@ -30,6 +30,7 @@ $(document).ready(function() {
         $('.topic-select, .security-select').removeClass('hide');
         $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
         $('#rest-endpoint-edit, #rest-endpoint-create').hide();
+        $('#push-type-edit, #push-type-create').hide();
 
         // Call the original close function
         return originalClose(elem);
@@ -55,8 +56,9 @@ $(document).ready(function() {
         // Reset select element visibility
         $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
 
-        // Ensure REST endpoint spans are hidden before opening any form
+        // Ensure REST endpoint and push type spans are hidden before opening any form
         $('#rest-endpoint-create, #rest-endpoint-edit').hide();
+        $('#push-type-create, #push-type-edit').hide();
 
         // Reset delivery type to pull (default)
         if (form_type === 'create') {
@@ -505,58 +507,37 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, instance_id) {
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
+    var pushTypeSpanId = form_type === 'create' ? '#push-type-create' : '#push-type-edit';
     var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
 
     var $deliveryType = $(deliveryTypeId);
+    var $pushTypeSpan = $(pushTypeSpanId);
     var $restEndpointSpan = $(restEndpointSpanId);
 
-    console.log('DEBUG setupDeliveryTypeVisibility:', JSON.stringify({
-        form_type: form_type,
-        instance_id: instance_id,
-        deliveryTypeId: deliveryTypeId,
-        restEndpointSpanId: restEndpointSpanId,
-        deliveryTypeExists: $deliveryType.length > 0,
-        restEndpointSpanExists: $restEndpointSpan.length > 0,
-        currentDeliveryValue: $deliveryType.val()
-    }));
-
-    // Hide the span immediately to prevent any flash
+    // Hide spans immediately to prevent any flash
+    $pushTypeSpan.hide();
     $restEndpointSpan.hide();
 
-    if ($deliveryType.length === 0 || $restEndpointSpan.length === 0) {
-        console.log('DEBUG setupDeliveryTypeVisibility: Elements not found, returning');
+    if ($deliveryType.length === 0 || $pushTypeSpan.length === 0 || $restEndpointSpan.length === 0) {
         return;
     }
 
-    function toggleRestEndpointVisibility() {
+    function togglePushAndRestEndpointVisibility() {
         var deliveryTypeValue = $deliveryType.val();
 
-        console.log('DEBUG toggleRestEndpointVisibility called:', JSON.stringify({
-            deliveryTypeValue: deliveryTypeValue,
-            instance_id: instance_id,
-            form_type: form_type,
-            condition_old: (deliveryTypeValue === 'push' && instance_id),
-            condition_new: (deliveryTypeValue === 'push')
-        }));
-
-        // Instead of immediately showing, prepare for showing but let the populateRestEndpoints function
-        // handle the actual visibility after endpoints are loaded
         if (deliveryTypeValue === 'push') {
+            $pushTypeSpan.show();
             var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
-            console.log('DEBUG toggleRestEndpointVisibility: Will populate endpoints', JSON.stringify({
-                selectedId: selectedId,
-                dataTableData: form_type === 'edit' ? $.fn.zato.data_table.data[instance_id] : 'N/A'
-            }));
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
         } else {
-            console.log('DEBUG toggleRestEndpointVisibility: Hiding rest endpoint span');
+            $pushTypeSpan.hide();
             $restEndpointSpan.hide();
         }
     }
 
     // Set initial state
-    toggleRestEndpointVisibility();
+    togglePushAndRestEndpointVisibility();
 
     // Handle delivery type changes
-    $deliveryType.on('change', toggleRestEndpointVisibility);
+    $deliveryType.on('change', togglePushAndRestEndpointVisibility);
 }
