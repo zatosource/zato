@@ -215,46 +215,23 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
 // Function to populate Services
 $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId) {
-    console.log('DEBUG populateServices called:', JSON.stringify({
-        form_type: form_type,
-        selectedId: selectedId
-    }));
-
     var cluster_id = $('#cluster_id').val() || $('#id_edit-cluster_id').val();
     if (!cluster_id) {
-        console.log('DEBUG populateServices: no cluster_id found');
         return;
     }
-
     var serviceSelectId = form_type === 'create' ? '#id_push_service_name' : '#id_edit-push_service_name';
     var serviceSpanId = form_type === 'create' ? '#push-service-create' : '#push-service-edit';
-
-    console.log('DEBUG populateServices: using selectors:', JSON.stringify({
-        serviceSelectId: serviceSelectId,
-        serviceSpanId: serviceSpanId,
-        cluster_id: cluster_id
-    }));
-
     $.get('/zato/pubsub/subscription/get-service-list/', {
         cluster_id: cluster_id,
         form_type: form_type
     })
     .done(function(response) {
-        console.log('DEBUG populateServices success:', JSON.stringify({
-            responseKeys: Object.keys(response),
-            servicesCount: response.services ? response.services.length : 0
-        }));
-
         var $serviceSelect = $(serviceSelectId);
         if ($serviceSelect.length === 0) {
-            console.log('DEBUG populateServices: service select not found:', serviceSelectId);
             return;
         }
-
-        // Clear existing options
         $serviceSelect.empty();
         $serviceSelect.append('<option value="">Select a service</option>');
-
         if (response.services && response.services.length > 0) {
             response.services.forEach(function(service) {
                 var option = $('<option></option>')
@@ -265,40 +242,13 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId)
                 }
                 $serviceSelect.append(option);
             });
-
-            console.log('DEBUG populateServices: added', response.services.length, 'services to select');
+        }
+        if ($serviceSelect.data('chosen')) {
+            $serviceSelect.trigger('chosen:updated');
         } else {
-            console.log('DEBUG populateServices: no services found in response');
+            $serviceSelect.chosen({width: '98%'});
         }
-
-        // Destroy existing Chosen instance if it exists
-        if ($serviceSelect.hasClass('chzn-done')) {
-            $serviceSelect.chosen('destroy');
-        }
-
-        // Apply Chosen styling
-        $serviceSelect.chosen({
-            width: '100%',
-            placeholder_text_single: 'Select a service'
-        });
-
-        // Force Chosen container width
-        setTimeout(function() {
-            var $chosenContainer = $serviceSelect.next('.chosen-container');
-            $chosenContainer.css('width', '100%');
-        }, 10);
-
-        // Show the service span
         $(serviceSpanId).show();
-
-        console.log('DEBUG populateServices: completed, span shown:', serviceSpanId);
-    })
-    .fail(function(xhr, status, error) {
-        console.log('DEBUG populateServices error:', JSON.stringify({
-            status: status,
-            error: error,
-            responseText: xhr.responseText
-        }));
     });
 }
 
@@ -633,17 +583,28 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
     function toggleEndpointTypeVisibility() {
         var pushTypeValue = $pushType.val();
-
         if (pushTypeValue === 'rest') {
             $restEndpointSpan.show();
             $serviceSpan.hide();
             var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId);
+            var $restSelect = form_type === 'create' ? $('#id_rest_push_endpoint_id') : $('#id_edit-rest_push_endpoint_id');
+            if ($restSelect.length && $restSelect.data('chosen')) {
+                $restSelect.trigger('chosen:updated');
+            } else if ($restSelect.length) {
+                $restSelect.chosen({width: '98%'});
+            }
         } else if (pushTypeValue === 'service') {
             $restEndpointSpan.hide();
             $serviceSpan.show();
             var selectedServiceId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].push_service_name : null;
             $.fn.zato.pubsub.subscription.populateServices(form_type, selectedServiceId);
+            var $serviceSelect = form_type === 'create' ? $('#id_push_service_name') : $('#id_edit-push_service_name');
+            if ($serviceSelect.length && $serviceSelect.data('chosen')) {
+                $serviceSelect.trigger('chosen:updated');
+            } else if ($serviceSelect.length) {
+                $serviceSelect.chosen({width: '98%'});
+            }
         } else {
             $restEndpointSpan.hide();
             $serviceSpan.hide();
