@@ -868,7 +868,11 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.name);
+    // Format security definition name as a clickable link
+    var secLink = String.format('<a href="/zato/security/basic-auth/?cluster1&query={0}">{1}</a>',
+                              encodeURIComponent(item.name),
+                              item.name);
+    row += String.format('<td>{0}</td>', secLink);
     row += String.format('<td>{0}</td>', pattern_display_html);
     row += String.format('<td style="text-align:center">{0}</td>', access_type_label);
     row += String.format('<td style="display:none" style="text-align:center">{0}</td>', item.subscription_count);
