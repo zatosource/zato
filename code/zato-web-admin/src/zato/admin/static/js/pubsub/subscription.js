@@ -190,10 +190,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
                     // Hide the native select element
                     $select.hide();
 
-                    // Show the Chosen container
-                    // Force proper width on Chosen container
-                    $select.next('.chosen-container').css('width', '100%');
-
                     // Trigger Chosen update to refresh the dropdown
                     $select.trigger('chosen:updated');
                 }
