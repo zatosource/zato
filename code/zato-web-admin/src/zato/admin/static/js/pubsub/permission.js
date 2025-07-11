@@ -475,9 +475,19 @@ $(document).ready(function() {
     renderPatternTables();
 
     $(document).on('submit', '#create-form', function(e) {
+        if (!validatePatterns('create')) {
+            e.preventDefault();
+            alert('At least one pattern is required.');
+            return false;
+        }
         consolidatePatterns('#create-pattern-display');
     });
     $(document).on('submit', '#edit-form', function(e) {
+        if (!validatePatterns('edit')) {
+            e.preventDefault();
+            alert('At least one pattern is required.');
+            return false;
+        }
         consolidatePatterns('#edit-pattern-display');
     });
 
@@ -497,10 +507,21 @@ $(document).ready(function() {
     // Set up before_submit_hook to consolidate patterns before form submission
     $.fn.zato.data_table.before_submit_hook = function(form) {
         var formId = form.attr('id');
+        var formType = '';
+
         if (formId === 'create-form') {
-            consolidatePatterns('create');
+            formType = 'create';
         } else if (formId === 'edit-form') {
-            consolidatePatterns('edit');
+            formType = 'edit';
+        }
+
+        if (formType && !validatePatterns(formType)) {
+            alert('At least one pattern with a non-empty value is required.');
+            return false; // Prevent form submission
+        }
+
+        if (formType) {
+            consolidatePatterns(formType);
         }
         return true; // Allow form submission to continue
     };
