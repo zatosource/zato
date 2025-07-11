@@ -430,7 +430,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
             // Create a hidden input with the security definition ID
             var hiddenInput = $('<input>', {
                 type: 'hidden',
-                name: 'sec_base_id',
+                name: 'edit-sec_base_id',
                 value: currentSecId
             });
 

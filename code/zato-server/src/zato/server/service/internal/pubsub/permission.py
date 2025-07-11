@@ -128,7 +128,7 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_permission_edit_request'
         response_elem = 'zato_pubsub_permission_edit_response'
         input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id'
+        input_optional = 'cluster_id',
         output_required = 'id', 'name'
 
     def handle(self):
