@@ -761,6 +761,23 @@ patternData = instance.pattern;
     };
 }
 
+// Function to validate that at least one pattern has a non-empty value
+function validatePatterns(formType) {
+    var container = $('#' + formType + '-patterns-container');
+    var hasValidPattern = false;
+
+    // Check each pattern input to find at least one with non-whitespace content
+    container.find('.pattern-input').each(function() {
+        var pattern = $(this).val().trim();
+        if (pattern !== '') {
+            hasValidPattern = true;
+            return false; // Break the each loop
+        }
+    });
+
+    return hasValidPattern;
+}
+
 // Function to log all form fields
 function logAllFormFields(prefix) {
     var form = $('#' + prefix + '-form');
