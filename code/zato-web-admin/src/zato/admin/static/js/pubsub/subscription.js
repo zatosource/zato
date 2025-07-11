@@ -419,7 +419,35 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
             // Force show SlimSelect container if it's hidden
             $('.ss-main').show();
         });
-        $.fn.zato.common.security.populateSecurityDefinitions('edit', currentSecId, '/zato/pubsub/subscription/get-security-definitions/', '#id_edit-sec_base_id');
+        // Instead of showing a dropdown for security definition, show it as a link and keep a hidden input
+        if(instance.sec_name) {
+            // Hide the security definition select
+            $('#id_edit-sec_base_id').hide();
+
+            // Clear any existing content in the container
+            $('#edit-sec-def-container').empty();
+
+            // Create a hidden input with the security definition ID
+            var hiddenInput = $('<input>', {
+                type: 'hidden',
+                name: 'sec_base_id',
+                value: currentSecId
+            });
+
+            // Create a link to the security definition
+            var secDefLink = $('<a>', {
+                href: '/zato/security/basic-auth/?cluster=1&query=' + encodeURIComponent(instance.sec_name),
+                target: '_blank',
+                text: instance.sec_name
+            });
+
+            // Add the hidden input and link to the container
+            $('#edit-sec-def-container').append(hiddenInput).append(secDefLink);
+        } else {
+            // If no security definition, still hide the select
+            $('#id_edit-sec_base_id').hide();
+            $('#edit-sec-def-container').text('(None)');
+        }
 
         // Immediately hide REST endpoint span if not push to prevent flicker
         var currentDeliveryType = $('#id_edit-delivery_type').val();
