@@ -176,6 +176,7 @@ def was_modified_since(header=None, mtime=0):
 # ################################################################################################################################
 
 def get_pubsub_security_definitions(request, form_type='edit', context='subscription'):
+
     response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
         'cluster_id': request.zato.cluster_id,
     })
@@ -250,16 +251,7 @@ def get_pubsub_security_definitions(request, form_type='edit', context='subscrip
     return choices
 
 def get_pubsub_security_choices(request, form_type='edit', context='subscription'):
-    """
-    Get filtered security definitions for Django form choices (tuples format).
-
-    Args:
-        request: Django HTTP request object with zato client
-        form_type: 'create' or 'edit' - affects filtering logic
-        context: 'subscription', 'permission', or 'client' - determines what to filter
-
-    Returns:
-        List of tuples (id, name) for Django form choices
+    """ Get filtered security definitions for Django form choices (tuples format).
     """
     definitions = get_pubsub_security_definitions(request, form_type, context)
     return [(item['id'], item['name']) for item in definitions]
