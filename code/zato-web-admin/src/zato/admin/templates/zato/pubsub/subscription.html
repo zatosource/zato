@@ -303,7 +303,9 @@
                             <td style="vertical-align:baseline; width:400px; height:40px;">
                                 {{ create_form.delivery_type }}
                                 &nbsp;
-                                {{ create_form.push_type }}
+                                <span id="push-type-create" style="display:none;">
+                                    {{ create_form.push_type }}
+                                </span>
                                 &nbsp;
                                 <span id="rest-endpoint-create" style="width:50%; display:none;">
                                     {{ create_form.rest_push_endpoint_id }}
@@ -343,7 +345,9 @@
                             <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
                             <td style="vertical-align:baseline; width:400px; height:40px;">
                                 {{ edit_form.delivery_type }}
-                                {{ edit_form.push_type }}
+                                <span id="push-type-edit" style="display:none;">
+                                    {{ edit_form.push_type }}
+                                </span>
                                 &nbsp;&nbsp;&nbsp;
                                 <span id="rest-endpoint-create" style="width:50%; display:none;">
                                     {{ edit_form.rest_push_endpoint_id }}
