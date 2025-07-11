@@ -687,10 +687,24 @@ patternData = instance.pattern;
                 // Populate patterns
                 populatePatterns('edit', patternData);
 
-                // Function to populate security definitions and initialize form
+                // Function to display security definition name and add hidden input for ID
                 function initializeEditForm() {
-                    var selectId = '#id_edit-sec_base_id';
-                    $.fn.zato.common.security.populateSecurityDefinitions('edit', instance.sec_base_id, '/zato/pubsub/permission/get-security-definitions/', selectId);
+                    // Store the security definition ID in a hidden field
+                    var $container = $('.security-definition-container');
+
+                    // Clear all existing content from the container
+                    $container.empty();
+
+                    // Add hidden input for the security definition ID
+                    $container.append('<input type="hidden" id="id_edit-sec_base_id" name="sec_base_id" value="' + instance.sec_base_id + '"/>');
+
+                    // Display the security definition name as a link
+                    var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
+                    var clusterID = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+                    var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+                    $container.append(secLink);
+
+                    // Update pattern options based on current access type
                     updatePatternTypeOptions('edit');
                 }
 
