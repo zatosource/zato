@@ -209,7 +209,8 @@ function showTopicsAlert(pattern, event) {
                 response.matches.forEach(function(topic, index) {
                     if (index > 0) contentHtml += '<div class="topic-divider"></div>';
                     contentHtml += '<div class="topic-item">';
-                    contentHtml += '<div class="topic-item-name">' + topic.name + '</div>';
+                    var encodedTopicName = encodeURIComponent(topic.name);
+                    contentHtml += '<div class="topic-item-name"><a href="/zato/pubsub/topic/?cluster=1' + '&query=' + encodedTopicName + '" target="_blank">' + topic.name + '</a></div>';
                     if (topic.description) {
                         contentHtml += '<div class="topic-item-description">' + topic.description + '</div>';
                     }
