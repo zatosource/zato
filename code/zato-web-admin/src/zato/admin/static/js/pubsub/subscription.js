@@ -233,6 +233,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
+
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
 
@@ -286,10 +287,13 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.sub_key);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.sec_base_id);
 
     if(include_tr) {
         row += '</tr>';
@@ -376,10 +380,9 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         } else {
         }
 
-        var currentSecId = instance ? instance.sec_base_id : '';
+        // Get security ID from original form field before we remove it
+        var currentSecId = instance.sec_base_id;
         var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
-
-
 
         // Initialize SlimSelect after topics are populated via callback
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
