@@ -376,7 +376,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         } else {
         }
 
-        var currentSecId = $('#id_edit-sec_base_id').val();
+        var currentSecId = instance ? instance.sec_base_id : '';
         var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
 
 
@@ -421,8 +421,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         });
         // Instead of showing a dropdown for security definition, show it as a link and keep a hidden input
         if(instance.sec_name) {
-            // Hide the security definition select
-            $('#id_edit-sec_base_id').hide();
+            // Remove the security definition select to prevent duplicate form fields
+            $('#id_edit-sec_base_id').remove();
 
             // Clear any existing content in the container
             $('#edit-sec-def-container').empty();
@@ -444,8 +444,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
             // Add the hidden input and link to the container
             $('#edit-sec-def-container').append(hiddenInput).append(secDefLink);
         } else {
-            // If no security definition, still hide the select
-            $('#id_edit-sec_base_id').hide();
+            // If no security definition, still remove the select
+            $('#id_edit-sec_base_id').remove();
             $('#edit-sec-def-container').text('(None)');
         }
 
