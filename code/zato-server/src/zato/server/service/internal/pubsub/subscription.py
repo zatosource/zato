@@ -39,7 +39,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', \
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_base_id', 'sec_name', \
             'delivery_type', 'rest_push_endpoint_id'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_names')
 
@@ -216,8 +216,6 @@ class Edit(AdminService):
         output_optional = AsIs('topic_names')
 
     def handle(self):
-
-        self.logger.info('INPUT TO EDIT IS: %s', self.request.input)
 
         with closing(self.odb.session()) as session:
             try:
