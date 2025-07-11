@@ -232,7 +232,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     var is_active = item.is_active == true
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.sec_name);
+    row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
 

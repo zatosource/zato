@@ -245,7 +245,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class='impexp'><input type='checkbox' /></td>
-                        <td>{{ item.sec_name }}</td>
+                        <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
                         <td>{{ item.sub_key }}</td>
 
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
