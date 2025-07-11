@@ -216,6 +216,9 @@ class Edit(AdminService):
         output_optional = AsIs('topic_names')
 
     def handle(self):
+
+        self.logger.info('INPUT TO EDIT IS: %s', self.request.input)
+
         with closing(self.odb.session()) as session:
             try:
 
