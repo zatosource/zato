@@ -221,7 +221,6 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             host=args.host,
             port=args.port,
             users_file=args.users_file,
-            has_debug=args.has_debug
         )
 
         # Configure gunicorn options
