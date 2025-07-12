@@ -66,8 +66,13 @@ class Backend:
 # ################################################################################################################################
 
     def create_topic(self, cid:'str', source:'str', topic_name:'str') -> 'None':
-        self.topics[topic_name] = Topic(name=topic_name)
+
+        topic = Topic()
+        topic.name = topic_name
+
+        self.topics[topic_name] = topic
         self.subs_by_topic[topic_name] = {}
+
         logger.info(f'[{cid}] Created new topic: {topic_name} ({source}')
 
 # ################################################################################################################################
@@ -123,11 +128,12 @@ class Backend:
         logger.info(f'[{cid}] Published message to topic {topic_name} ({username}{ext_client_part})')
 
         # Return success response
-        return PubResponse(
-            is_ok=True,
-            msg_id=msg_id,
-            cid=cid,
-        )
+        response = PubResponse()
+        response.is_ok = True
+        response.msg_id = msg_id
+        response.cid = cid
+
+        return response
 
 # ################################################################################################################################
 
