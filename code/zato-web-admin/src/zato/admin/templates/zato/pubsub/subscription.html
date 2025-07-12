@@ -201,6 +201,7 @@
 
             'rest_push_endpoint_name',
             'sec_base_id',
+            'push_type',
         ]
     }
     </script>
@@ -248,6 +249,7 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -274,6 +276,7 @@
 
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
                         <td class='ignore'>{{ item.sec_base_id }}</td>
+                        <td class='ignore'>{{ item.push_type }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

@@ -164,10 +164,10 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             if ($select.next('.chosen-container').length > 0) {
                 $select.chosen('destroy');
             }
-            
+
             // Remove the selected attribute from all options
             $select.find('option').prop('selected', false);
-            
+
             // Set selected attribute directly on the HTML option element
             if (selectedId) {
                 $select.find('option[value="' + selectedId + '"]').prop('selected', true);
@@ -175,7 +175,7 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
                 // If no specific ID, select the first option (the default one)
                 $select.find('option:first').prop('selected', true);
             }
-            
+
             // Initialize Chosen on the properly prepared select element
             $select.chosen({width: '98%'});
 
@@ -525,6 +525,11 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         if (currentDeliveryType !== 'push') {
             $('#rest-endpoint-edit').hide();
             console.log('DEBUG edit function: REST endpoint span hidden');
+        }
+
+        // Set the correct push_type value from instance data
+        if(instance.push_type) {
+            $('#id_edit-push_type').val(instance.push_type);
         }
 
         // Setup delivery type visibility first, then conditionally populate REST endpoints
