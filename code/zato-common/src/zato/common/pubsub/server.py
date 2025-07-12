@@ -6,6 +6,10 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Must come first
+from gevent import monkey;
+_ = monkey.patch_all()
+
 # stdlib
 import uuid
 from dataclasses import asdict
@@ -14,21 +18,21 @@ from json import dumps, loads
 from logging import getLogger
 
 # Zato
+from zato.common.pubsub.models import DEFAULT_EXPIRATION, DEFAULT_PRIORITY
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
-from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
+
+# gunicorn
+from gunicorn.app.base import BaseApplication
 
 # werkzeug
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request
 from werkzeug.middleware.proxy_fix import ProxyFix
-
-# gunicorn
-from gunicorn.app.base import BaseApplication
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -130,6 +134,7 @@ class PubSubRESTServer:
 
         # Set up URL routing with direct mapping to handler methods
         self.url_map = Map([
+
             # Topic operations - publish
             Rule('/pubsub/topic/<topic_name>', endpoint='publish', methods=['POST']),
 
@@ -189,35 +194,8 @@ class PubSubRESTServer:
     def publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Publish a message to a topic.
         """
-        logger.info('Processing publish request')
         cid = new_cid()
-
-        # Get request data
-        request = Request(environ)
-        data = self._parse_json(request)
-
-        # Validate request data
-        if not data:
-            logger.warning(f'[{cid}] Invalid request data')
-            response = BadRequestResponse(cid=cid)
-            return self._json_response(start_response, response)
-
-        # Use the 'data' field from the request as specified in the spec
-        msg_data = data.get('data')
-
-        if msg_data is None:
-            logger.warning(f'[{cid}] Missing required data field')
-            response = BadRequestResponse(cid=cid, details='Missing required data field')
-            return self._json_response(start_response, response)
-
-        msg = PubMessage(
-            data=msg_data,
-            priority=data.get('priority', 5),
-            expiration=data.get('expiration', 86400),
-            correl_id=data.get('correl_id', ''),
-            in_reply_to=data.get('in_reply_to', ''),
-            ext_client_id=data.get('ext_client_id', '')
-        )
+        logger.info('[{cid}] Processing publish request')
 
         # Authenticate request
         username = self.authenticate(environ)
@@ -226,8 +204,35 @@ class PubSubRESTServer:
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
             return self._json_response(start_response, response)
 
-        # Get client id if provided
-        ext_client_id = data.get('ext_client_id')
+        # Get request data
+        request = Request(environ)
+        data = self._parse_json(request)
+
+        # Validate request data
+        if not data:
+            logger.warning(f'[{cid}] Input data missing')
+            response = BadRequestResponse(cid=cid)
+            return self._json_response(start_response, response)
+
+        # Extract the message data
+        msg_data = data.get('data')
+
+        if msg_data is None:
+            logger.warning(f'[{cid}] Message data missing')
+            response = BadRequestResponse(cid=cid)
+            return self._json_response(start_response, response)
+
+        # Get external client ID if provided
+        ext_client_id = data.get('ext_client_id', '')
+
+        msg = PubMessage(
+            data=msg_data,
+            priority=data.get('priority', DEFAULT_PRIORITY),
+            expiration=data.get('expiration', DEFAULT_EXPIRATION),
+            correl_id=data.get('correl_id', ''),
+            in_reply_to=data.get('in_reply_to', ''),
+            ext_client_id=ext_client_id
+        )
 
         # Publish message
         result = self.publish_message(topic_name, msg, username, ext_client_id)
@@ -241,9 +246,7 @@ class PubSubRESTServer:
     def handle_subscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle subscription request.
         """
-        logger.info('Processing subscribe request')
         cid = new_cid()
-
         logger.info(f'[{cid}] Processing subscription request for topic {topic_name}')
 
         # Authenticate request
@@ -263,7 +266,6 @@ class PubSubRESTServer:
     def handle_unsubscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle unsubscribe request.
         """
-        logger.info('Processing unsubscribe request')
         cid = new_cid()
         logger.info(f'[{cid}] Processing unsubscription request for topic {topic_name}')
 
@@ -426,6 +428,7 @@ class PubSubRESTServer:
         # Store subscription
         if topic_name not in self.subscriptions:
             self.subscriptions[topic_name] = {}
+
         self.subscriptions[topic_name][endpoint_name] = subscription
 
         # Register subscription with broker client
@@ -512,6 +515,7 @@ class GunicornApplication(BaseApplication):
         super().__init__()
 
     def load_config(self):
+
         # Apply valid configuration options
         for key, value in self.options.items():
             if key in self.cfg.settings and value is not None: # type: ignore

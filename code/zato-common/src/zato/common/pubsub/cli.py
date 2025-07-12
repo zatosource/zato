@@ -53,12 +53,12 @@ class UserInfo:
     """
     username: 'str'
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> 'int':
         """ Make this class hashable for use in sets.
         """
         return hash(self.username)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other:'str') -> 'bool':
         """ Define equality based on username.
         """
         if not isinstance(other, UserInfo):
