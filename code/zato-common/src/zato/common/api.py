@@ -1102,24 +1102,6 @@ class RESTAdapterResponse:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSub:
-
-    class API_Client:
-        Publisher = 'publisher'
-        Subscriber = 'publisher'
-        Publisher_Subscriber = 'publisher-subscriber'
-
-    class Delivery_Type:
-        Pull = 'pull'
-        Push = 'push'
-
-    class Push_Type:
-        REST = 'rest'
-        Service = 'service'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 Default_Service_File_Data = """
 # -*- coding: utf-8 -*-
 
@@ -1145,6 +1127,38 @@ class MyService(Service):
         # Reply to our caller
         self.response.payload.salutation = message
 """.lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+
+class PubSub:
+
+    class API_Client:
+        Publisher = 'publisher'
+        Subscriber = 'publisher'
+        Publisher_Subscriber = 'publisher-subscriber'
+
+    class Delivery_Type:
+        Pull = 'pull'
+        Push = 'push'
+
+    class Push_Type:
+        REST = 'rest'
+        Service = 'service'
+
+    class Prefix:
+        Msg_ID = 'zpsm'
+        Sub_Key = 'zpsk.rest'
+
+    class REST_Server:
+        Default_Port = 44556
+        Default_Host = '0.0.0.0'
+        Default_Threads = 1
+
+    class Message:
+        Default_Priority = 5
+        Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
 
 # ################################################################################################################################
 # ################################################################################################################################

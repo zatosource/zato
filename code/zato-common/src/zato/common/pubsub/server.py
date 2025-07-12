@@ -11,19 +11,18 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
-import uuid
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from json import dumps, loads
 from logging import getLogger
+from uuid import uuid4
 
 # Zato
-from zato.common.pubsub.models import DEFAULT_EXPIRATION, DEFAULT_PRIORITY
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
+from zato.common.util.api import utcnow
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
-from gevent import lock
 from gevent.pywsgi import WSGIServer
 
 # gunicorn
@@ -37,6 +36,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Zato
 from zato.broker.client import BrokerClient
+from zato.common.api import PubSub
 from zato.common.util.api import new_cid
 from zato.common.pubsub.models import PubMessage, PubResponse, SimpleResponse
 from zato.common.pubsub.models import Subscription, Topic
@@ -58,14 +58,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Constants for message ID generation
-MSG_ID_PREFIX = 'zpsm'
-SUB_KEY_PREFIX = 'zpsk.rest'
+_prefix = PubSub.Prefix
+_rest_server = PubSub.REST_Server
 
-# Default configuration values
-DEFAULT_PORT = 44556
-DEFAULT_HOST = '0.0.0.0'
-DEFAULT_WORKERS = 1
+_default_priority = PubSub.Message.Default_Priority
+_default_expiration = PubSub.Message.Default_Expiration
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,14 +76,14 @@ class ModuleCtx:
 def generate_msg_id() -> 'str':
     """ Generate a unique message ID with prefix.
     """
-    return f'{MSG_ID_PREFIX}{uuid.uuid4().hex[:24]}'
+    return f'{_prefix.Msg_ID}{uuid4().hex}'
 
 # ################################################################################################################################
 
 def generate_sub_key() -> 'str':
     """ Generate a unique subscription key with prefix.
     """
-    return f'{SUB_KEY_PREFIX}.{uuid.uuid4().hex[:6]}'
+    return f'{_prefix.Sub_Key}.{uuid4().hex}'
 
 # ################################################################################################################################
 
@@ -94,6 +91,7 @@ def load_users(users_file:'str') -> 'strdict':
     """ Load users from a JSON file.
     """
     logger.info(f'Loading users from {users_file}')
+
     try:
         with open(users_file, 'r') as f:
             data = f.read()
@@ -107,6 +105,7 @@ def load_users(users_file:'str') -> 'strdict':
 
         logger.info(f'Loaded {len(users)} users')
         return users
+
     except Exception as e:
         logger.error(f'Error loading users: {e}')
         return {}
@@ -119,8 +118,8 @@ class PubSubRESTServer:
     """
     def __init__(
         self,
-        host:'str'=DEFAULT_HOST,
-        port:'int'=DEFAULT_PORT,
+        host:'str'=_rest_server.Default_Host,
+        port:'int'=_rest_server.Default_Port,
         users_file:'str'='',
         has_debug:'bool'=False
         ) -> 'None':
@@ -169,7 +168,7 @@ class PubSubRESTServer:
         path_info = environ.get('PATH_INFO', 'unknown-path')
 
         if not auth_header:
-            logger.warning(f'No Authorization header present; path_info:`{path_info}`')
+            logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
             return None
 
         # First, extract the username and password from the auth header
@@ -177,7 +176,7 @@ class PubSubRESTServer:
         username, _ = result
 
         if not username:
-            logger.warning(f'Invalid Authorization header format; path_info:`{path_info}`')
+            logger.warning(f'[{cid}] Invalid Authorization header format; path_info:`{path_info}`')
             return None
 
         if username in self.users:
@@ -185,9 +184,9 @@ class PubSubRESTServer:
             if check_basic_auth(cid, auth_header, username, password) is True:
                 return username
             else:
-                logger.warning(f'Invalid password for `{username}`; path_info:`{path_info}`')
+                logger.warning(f'[{cid}] Invalid password for `{username}`; path_info:`{path_info}`')
         else:
-            logger.warning(f'No such user `{username}`; path_info:`{path_info}`')
+            logger.warning(f'[{cid}] No such user `{username}`; path_info:`{path_info}`')
 
         return None
 
@@ -201,6 +200,7 @@ class PubSubRESTServer:
 
         # Authenticate request
         username = self.authenticate(environ)
+
         if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
@@ -208,7 +208,7 @@ class PubSubRESTServer:
 
         # Get request data
         request = Request(environ)
-        data = self._parse_json(request)
+        data = self._parse_json(cid, request)
 
         # Validate request data
         if not data:
@@ -229,8 +229,8 @@ class PubSubRESTServer:
 
         msg = PubMessage(
             data=msg_data,
-            priority=data.get('priority', DEFAULT_PRIORITY),
-            expiration=data.get('expiration', DEFAULT_EXPIRATION),
+            priority=data.get('priority', _default_priority),
+            expiration=data.get('expiration', _default_expiration),
             correl_id=data.get('correl_id', ''),
             in_reply_to=data.get('in_reply_to', ''),
             ext_client_id=ext_client_id
@@ -299,7 +299,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def _parse_json(self, request:'Request') -> 'dict_':
+    def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
         """ Parse JSON from request.
         """
         # Initialize raw_data to avoid unbound variable in exception handler
@@ -315,11 +315,11 @@ class PubSubRESTServer:
                 data = loads(text_data)
                 return data
             else:
-                logger.warning('No request data provided')
+                logger.warning('[{cid}] No request data provided')
                 return {}
 
         except Exception as e:
-            logger.error(f'Error parsing JSON: {e}, raw data: {raw_data}')
+            logger.error(f'[{cid}] Error parsing JSON: {e}, raw data: {raw_data}')
             raise
 
 # ################################################################################################################################
@@ -366,7 +366,7 @@ class PubSubRESTServer:
         size = len(data_str.encode('utf-8'))
 
         # Set timestamps
-        now = datetime.utcnow()
+        now = utcnow()
         pub_time_iso = now.isoformat()
         expiration_time = now + timedelta(seconds=msg.expiration)
         expiration_time_iso = expiration_time.isoformat()
@@ -392,7 +392,7 @@ class PubSubRESTServer:
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
         ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'Published message {cid} to topic {topic_name} ({username}{ext_client_part})')
+        logger.info(f'[{cid}] Published message to topic {topic_name} ({username}{ext_client_part})')
 
         # Return success response
         return PubResponse(
