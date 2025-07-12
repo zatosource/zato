@@ -302,6 +302,9 @@ curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my.topic
 
 # Unsubscribe from a topic:
 curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/my.topic
+
+# Get admin diagnostics (logs topics, users, subscriptions etc.):
+curl -u demo:demo -X GET http://localhost:44556/pubsub/admin/diagnostics; echo
 """
 
 # ################################################################################################################################
