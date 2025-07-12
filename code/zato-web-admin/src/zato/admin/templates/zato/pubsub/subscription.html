@@ -86,11 +86,13 @@
             width: 100% !important;
         }
 
-        #id_rest_push_endpoint_id_chosen.chosen-container {
+        #id_rest_push_endpoint_id_chosen.chosen-container,
+        #id_edit_rest_push_endpoint_id_chosen.chosen-container {
             min-width: 99% !important;
         }
 
-        #id_push_service_name_chosen.chosen-container {
+        #id_push_service_name_chosen.chosen-container,
+        #id_edit_push_service_name_chosen.chosen-container {
             min-width: 164.8% !important;
         }
 
@@ -353,14 +355,15 @@
                             <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
                             <td style="vertical-align:baseline; width:400px; height:40px;">
                                 {{ edit_form.delivery_type }}
+                                &nbsp;
                                 <span id="push-type-edit" style="display:none;">
                                     {{ edit_form.push_type }}
                                 </span>
-                                &nbsp;&nbsp;&nbsp;
+                                &nbsp;
                                 <span id="rest-endpoint-edit" style="width:50%; display:none;">
                                     {{ edit_form.rest_push_endpoint_id }}
                                 </span>
-                                &nbsp;&nbsp;&nbsp;
+                                &nbsp;
                                 <span id="push-service-edit" style="width:50%; display:none;">
                                     {{ edit_form.push_service_name }}
                                 </span>
