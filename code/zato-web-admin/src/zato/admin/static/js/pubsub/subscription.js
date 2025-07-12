@@ -76,14 +76,23 @@ $(document).ready(function() {
     $.fn.zato.data_table.on_submit = function(action) {
         // Validate push delivery type
         var deliveryTypeId = action === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
+        var pushTypeId = action === 'create' ? '#id_push_type' : '#id_edit-push_type';
         var restEndpointId = action === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
+        var serviceId = action === 'create' ? '#id_push_service_name' : '#id_edit-push_service_name';
 
         var deliveryType = $(deliveryTypeId).val();
+        var pushType = $(pushTypeId).val();
         var restEndpoint = $(restEndpointId).val();
+        var service = $(serviceId).val();
 
-        if (deliveryType === 'push' && (!restEndpoint || restEndpoint === '')) {
-            alert('Please select a REST endpoint when using Push delivery type.');
-            return false;
+        if (deliveryType === 'push') {
+            if (pushType === 'rest' && (!restEndpoint || restEndpoint === '')) {
+                alert('Please select a push REST endpoint.');
+                return false;
+            } else if (pushType === 'service' && (!service || service === '')) {
+                alert('Please select a push service.');
+                return false;
+            }
         }
 
         // Call original on_submit if validation passes
