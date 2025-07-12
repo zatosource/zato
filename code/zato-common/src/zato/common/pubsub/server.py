@@ -26,7 +26,7 @@ from gevent.pywsgi import WSGIServer
 from gunicorn.app.base import BaseApplication
 
 # werkzeug
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -131,11 +131,11 @@ class PubSubRESTServer:
         self.url_map = Map([
 
             # Topic operations - publish
-            Rule('/pubsub/topic/<topic_name>', endpoint='publish', methods=['POST']),
+            Rule('/pubsub/topic/<topic_name>', endpoint='on_publish', methods=['POST']),
 
             # Subscribe and unsubscribe operations - same URL, different HTTP methods
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST']),
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_unsubscribe', methods=['DELETE']),
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_subscribe', methods=['POST']),
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
 
             # Health check
             Rule('/pubsub/health', endpoint='health_check', methods=['GET']),
@@ -143,10 +143,9 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def authenticate(self, environ:'anydict') -> 'strnone':
+    def authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
-        cid = new_cid()
         path_info = environ['PATH_INFO']
         auth_header = environ.get('HTTP_AUTHORIZATION', '')
 
@@ -178,7 +177,7 @@ class PubSubRESTServer:
     def _ensure_authenticated(self, cid:'str', environ:'anydict') -> 'str':
 
         # Authenticate request
-        username = self.authenticate(environ)
+        username = self.authenticate(cid, environ)
 
         if not username:
             raise UnauthorizedException(cid)
@@ -195,11 +194,9 @@ class PubSubRESTServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def on_publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
+    def on_publish(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Publish a message to a topic.
         """
-        # We always need our own new Correlation ID ..
-        cid = new_cid()
 
         # .. log what we're doing ..
         logger.info('[{cid}] Processing publish request')
@@ -250,14 +247,14 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def on_subscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle subscription request.
         """
         cid = new_cid()
         logger.info(f'[{cid}] Processing subscription request for topic {topic_name}')
 
         # Authenticate request
-        username = self.authenticate(environ)
+        username = self.authenticate(cid, environ)
         if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
@@ -270,14 +267,14 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def on_unsubscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle unsubscribe request.
         """
         cid = new_cid()
         logger.info(f'[{cid}] Processing unsubscription request for topic {topic_name}')
 
         # Authenticate request
-        username = self.authenticate(environ)
+        username = self.authenticate(cid, environ)
         if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
@@ -346,7 +343,11 @@ class PubSubRESTServer:
     def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
-        logger.info('Handling incoming HTTP request, path: %s, method: %s', environ.get('PATH_INFO'), environ.get('REQUEST_METHOD'))
+        # We always need our own new Correlation ID ..
+        cid = new_cid()
+
+        # .. log what we're doing ..
+        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
 
         # Bind the URL map to the current request
         urls = self.url_map.bind_to_environ(environ)
@@ -360,26 +361,37 @@ class PubSubRESTServer:
 
                 # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
-                handler_response = handler(environ, start_response, **args)
+                handler_response = handler(cid, environ, start_response, **args)
                 response_bytes = self._json_response(start_response, handler_response)
                 return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
                 response = NotImplementedResponse()
+                response.cid = cid
                 return self._json_response(start_response, response)
 
         except UnauthorizedException:
             response = UnauthorizedResponse()
+            response.cid = cid
             return self._json_response(start_response, response)
 
         except BadRequestException as e:
-            logger.warning(f'[{e.cid}] {e.message}')
-            response = BadRequestResponse(cid=e.cid)
+            logger.warning(f'[{cid}] {e.message}')
+            response = BadRequestResponse()
+            response.cid = cid
+            return self._json_response(start_response, response)
+
+        except MethodNotAllowed as e:
+            logger.warning(f'[{cid}] Method not allowed')
+            response = BadRequestResponse()
+            response.cid = cid
+            response.details = 'Method not allowed'
             return self._json_response(start_response, response)
 
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
             response = BadRequestResponse()
+            response.cid = cid
             response.details = 'URL not found'
             return self._json_response(start_response, response)
 
