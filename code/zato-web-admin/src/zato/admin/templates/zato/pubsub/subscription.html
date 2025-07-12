@@ -185,23 +185,25 @@
             '_numbering',
             '_selection',
             'sec_name',
-            'sub_key',
 
+            'sub_key',
             '_is_active',
             '_delivery_type',
-            'topic_links',
 
+            'topic_links',
             '_edit',
             '_delete',
-            'id',
 
+            'id',
             'is_active',
             'delivery_type',
+
+            'sec_base_id',
+            'push_type',
             'rest_push_endpoint_id',
 
             'rest_push_endpoint_name',
-            'sec_base_id',
-            'push_type',
+            'push_service_name',
         ]
     }
     </script>
@@ -230,24 +232,27 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
-                        <th style="width:1%; white-space:nowrap;">Sub key</th>
 
+                        <th style="width:1%; white-space:nowrap;">Sub key</th>
                         <th><a href="#">Active</a></th>
                         <th>Delivery type</th>
-                        <th>Topics</th>
 
+                        <th>Topics</th>
                         <th>Edit</th>
                         <th>Delete</th>
-                        <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -257,26 +262,29 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
                         <td class='numbering'>&nbsp;</td>
                         <td class='impexp'><input type='checkbox' /></td>
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
-                        <td>{{ item.sub_key }}</td>
 
+                        <td>{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{% if item.delivery_type == 'pull' %}Pull{% else %}Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>{% endif %}</td>
-                        <td>{{ item.topic_links|safe }}</td>
 
+                        <td>{{ item.topic_links|safe }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
-                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.delivery_type }}</td>
+
+                        <td class='ignore'>{{ item.sec_base_id }}</td>
+                        <td class='ignore'>{{ item.push_type }}</td>
                         <td class='ignore'>{{ item.rest_push_endpoint_id }}</td>
 
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
-                        <td class='ignore'>{{ item.sec_base_id }}</td>
-                        <td class='ignore'>{{ item.push_type }}</td>
+                        <td class='ignore'>{{ item.push_service_name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

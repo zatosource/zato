@@ -242,6 +242,9 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
                     .text(service.service_name);
                 if (selectedId && service.service_name === selectedId) {
                     option.attr('selected', 'selected');
+                    console.log('DEBUG Service Selection: MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
+                } else if (selectedId) {
+                    console.log('DEBUG Service Selection: NO MATCH! service.service_name=', JSON.stringify(service.service_name), 'selectedId=', JSON.stringify(selectedId));
                 }
                 $serviceSelect.append(option);
             });
@@ -347,14 +350,18 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', topicLinksHtml);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
-    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id || '');
 
-    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name || '');
     row += String.format("<td class='ignore'>{0}</td>", item.sec_base_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.push_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_id);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
+
 
     if(include_tr) {
         row += '</tr>';
@@ -445,6 +452,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         var currentSecId = instance.sec_base_id;
         var currentRestEndpointId = instance.rest_push_endpoint_id || '';
         var currentServiceName = instance.push_service_name || '';
+        console.log('DEBUG Service Selection: instance.push_service_name=', JSON.stringify(instance.push_service_name));
 
         // Initialize SlimSelect after topics are populated via callback
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
@@ -530,6 +538,12 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Set the correct push_type value from instance data
         if(instance.push_type) {
             $('#id_edit-push_type').val(instance.push_type);
+
+            // If push type is service, set the service name in the dropdown
+            if(instance.push_type === 'service' && instance.push_service_name) {
+                $('#id_edit-push_service_name').val(instance.push_service_name);
+                $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
+            }
         }
 
         // Setup delivery type visibility first, then conditionally populate REST endpoints
