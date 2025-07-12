@@ -18,7 +18,7 @@ from zato.common.util.api import utcnow
 
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid, new_sub_key
-from zato.common.pubsub.models import PubMessage, PubResponse, SimpleResponse
+from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse
 from zato.common.pubsub.models import Subscription, Topic
 
 # ################################################################################################################################
@@ -26,7 +26,7 @@ from zato.common.pubsub.models import Subscription, Topic
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import strnone
+    from zato.common.typing_ import dict_, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +37,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _prefix = PubSub.Prefix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+subs_by_username = 'dict_[str, Subscription]' # username -> Subscription
+topic_subs = 'dict_[str, subs_by_username]'   # topic_name -> {username -> Subscription}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +64,9 @@ def generate_msg_id() -> 'str':
 class Backend:
     """ Backend implementation of pub/sub, irrespective of the actual REST server.
     """
+    topics: 'dict_[str, Topic]'
+    subs_by_topic: 'topic_subs'
+
     def __init__(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
         self.topics = {}
@@ -141,7 +150,7 @@ class Backend:
         self,
         topic_name:'str',
         username:'str'
-        ) -> 'SimpleResponse':
+        ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
         cid = new_cid()
@@ -154,56 +163,69 @@ class Backend:
         # Check if already subscribed
         if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
             logger.info(f'[{cid}] Endpoint {username} already subscribed to {topic_name}')
-            return SimpleResponse(is_ok=True)
+            response = StatusResponse()
+            response.is_ok = True
+            return response
 
         # Create subscription
         sub_key = new_sub_key()
-        subscription = Subscription(
-            topic_name=topic_name,
-            endpoint_name=username,
-            sub_key=sub_key
-        )
+        sub = Subscription()
+        sub.topic_name = topic_name
+        sub.username = username
+        sub.sub_key = sub_key
 
         # Store subscription
         if topic_name not in self.subs_by_topic:
             self.subs_by_topic[topic_name] = {}
 
-        self.subs_by_topic[topic_name][username] = subscription
+        subs_by_username = self.subs_by_topic[topic_name]
+        subs_by_username[username] = sub
 
         # Register subscription with broker client
         self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
 
-        return SimpleResponse(is_ok=True)
+        response = StatusResponse()
+        response.is_ok = True
+
+        return response
 
 # ################################################################################################################################
 
     def unsubscribe_impl(
         self,
         topic_name:'str',
-        endpoint_name:'str'
-        ) -> 'SimpleResponse':
+        username:'str'
+        ) -> 'StatusResponse':
         """ Unsubscribe from a topic.
         """
         cid = new_cid()
-        logger.info(f'[{cid}] Unsubscribing {endpoint_name} from topic {topic_name}')
+        logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
         # Check if subscription exists
-        if topic_name in self.subs_by_topic and endpoint_name in self.subs_by_topic[topic_name]:
+        if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
+
+            # Local aliases
+            subs_by_username = self.subs_by_topic[topic_name]
+            sub:'Subscription' = subs_by_username[username]
+
             # Get subscription key before removing it
-            sub_key = self.subs_by_topic[topic_name][endpoint_name].sub_key
+            sub_key = sub.sub_key
 
             # Remove the subscription from our metadata
-            _ = self.subs_by_topic[topic_name].pop(endpoint_name)
+            _ = subs_by_username.pop(username)
 
             # Unregister subscription with broker client
-            self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key) # type: ignore
+            self.broker_client.unsubscribe(topic_name, username, sub_key) # type: ignore
 
-            logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
+            logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
         else:
-            logger.info(f'[{cid}] No subscription found for {endpoint_name} to {topic_name}')
+            logger.info(f'[{cid}] No subscription found for {username} to {topic_name}')
 
-        return SimpleResponse(is_ok=True)
+        response = StatusResponse()
+        response.is_ok = True
+
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -84,9 +84,7 @@ class MessagesResponse:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class SimpleResponse:
-    """ Generic response model with just an is_ok field.
-    """
+class StatusResponse:
     is_ok: 'bool'
 
 # ################################################################################################################################
@@ -168,7 +166,7 @@ class Subscription:
     """ Model representing a subscription to a topic.
     """
     topic_name: 'str'
-    endpoint_name: 'str'
+    username: 'str'
     sub_key: 'str'
     creation_time: 'datetime' = field(default_factory=utcnow)
     is_active: 'bool' = True
@@ -193,9 +191,6 @@ user_list = 'list_[User]'
 subscription_list = 'list_[Subscription]'
 message_list = 'list_[Message]'
 topic_list = 'list_[Topic]'
-
-endpoint_subscriptions = 'dict_[str, Subscription]'  # endpoint_name -> Subscription
-topic_subscriptions = 'dict_[str, endpoint_subscriptions]'  # topic_name -> {endpoint_name -> Subscription}
 
 # Optional types
 message_optional = 'optional[Message]'
