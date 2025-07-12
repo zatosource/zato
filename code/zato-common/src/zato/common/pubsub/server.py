@@ -43,6 +43,7 @@ from zato.common.pubsub.models import Subscription, Topic
 from zato.common.pubsub.models import topic_subscriptions
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotFoundResponse, \
     NotImplementedResponse, UnauthorizedResponse
+from zato.common.pubsub.backend import Backend
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,10 +74,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def generate_msg_id() -> 'str':
-    """ Generate a unique message ID with prefix.
-    """
-    return f'{_prefix.Msg_ID}{uuid4().hex}'
+
 
 # ################################################################################################################################
 
@@ -109,8 +107,28 @@ def load_users(users_file:'str') -> 'strdict':
 class PubSubRESTServer:
     """ Main server class for the Pub/Sub REST API.
     """
+    def __init__(self, host='localhost', port=8000, users_file=None):
+        self.host = host
+        self.port = port
+        self.users = load_users(users_file) if users_file else {}
 
-# ################################################################################################################################
+        # Initialize the broker client
+        self.broker_client = BrokerClient()
+
+        # Initialize the backend
+        self.backend = Backend(self.broker_client)
+
+        # Share references for backward compatibility and simpler access
+        self.topics = self.backend.topics
+        self.subs_by_topic = self.backend.subs_by_topic
+
+        # URL routing configuration
+        self.url_map = Map([
+            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>', endpoint='on_publish', methods=['POST']),
+            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>/subscribe', endpoint='on_subscribe', methods=['POST']),
+            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>/unsubscribe', endpoint='on_unsubscribe', methods=['POST']),
+            Rule(f'/{_rest_server.Path_Health_Check}', endpoint='on_health_check', methods=['GET'])
+        ])
 
     def authenticate(self, environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
@@ -198,8 +216,8 @@ class PubSubRESTServer:
             ext_client_id=ext_client_id
         )
 
-        # Publish message
-        result = self._publish_impl(topic_name, msg, username, ext_client_id)
+        # Publish message using backend
+        result = self.backend.publish_impl(topic_name, msg, username, ext_client_id)
 
         # Create a simple response with only the necessary fields
         response = APIResponse(is_ok=result.is_ok, cid=cid)
@@ -220,8 +238,8 @@ class PubSubRESTServer:
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
             return self._json_response(start_response, response)
 
-        # Subscribe to topic
-        result = self._subscribe_impl(topic_name, username)
+        # Subscribe to topic using backend
+        result = self.backend.subscribe_impl(topic_name, username)
         response = APIResponse(is_ok=result.is_ok, cid=cid)
         return self._json_response(start_response, response)
 
@@ -240,8 +258,8 @@ class PubSubRESTServer:
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
             return self._json_response(start_response, response)
 
-        # Unsubscribe from topic
-        result = self._unsubscribe_impl(topic_name, endpoint_name)
+        # Unsubscribe from topic using backend
+        result = self.backend.unsubscribe_impl(topic_name, endpoint_name)
 
         if result.is_ok:
             response = APIResponse(is_ok=True, cid=cid)
@@ -297,142 +315,6 @@ class PubSubRESTServer:
         start_response(data.http_status, headers)
 
         return [json_data]
-
-# ################################################################################################################################
-
-    def _create_topic(self, cid:'str', source:'str', topic_name:'str') -> 'None':
-        self.topics[topic_name] = Topic(name=topic_name)
-        self.subs_by_topic[topic_name] = {}
-        logger.info(f'[{cid}] Created new topic: {topic_name} ({source}')
-
-# ################################################################################################################################
-
-    def _publish_impl(
-        self,
-        topic_name:'str',
-        msg:'PubMessage',
-        username:'str',
-        ext_client_id:'strnone'=None
-        ) -> 'PubResponse':
-        """ Publish a message to a topic using the broker client.
-        """
-        cid = new_cid()
-        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
-
-        # Create topic if it doesn't exist
-        if topic_name not in self.topics:
-            self._create_topic(cid, 'publish', topic_name)
-
-        # Generate message ID and calculate size
-        msg_id = generate_msg_id()
-        data_str = dumps(msg.data) if not isinstance(msg.data, str) else msg.data
-        size = len(data_str.encode('utf-8'))
-
-        # Set timestamps
-        now = utcnow()
-        pub_time_iso = now.isoformat()
-        expiration_time = now + timedelta(seconds=msg.expiration)
-        expiration_time_iso = expiration_time.isoformat()
-
-        # Create message object
-        message = {
-            'data': msg.data,
-            'topic_name': topic_name,
-            'msg_id': msg_id,
-            'correl_id': msg.correl_id,
-            'in_reply_to': msg.in_reply_to,
-            'priority': msg.priority,
-            'ext_client_id': msg.ext_client_id,
-            'pub_time_iso': pub_time_iso,
-            'recv_time_iso': pub_time_iso,  # Same as pub_time for direct API calls
-            'expiration': msg.expiration,
-            'expiration_time_iso': expiration_time_iso,
-            'size': size,
-            'delivery_count': 0,
-            'publisher': username,
-        }
-
-        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
-
-        ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'[{cid}] Published message to topic {topic_name} ({username}{ext_client_part})')
-
-        # Return success response
-        return PubResponse(
-            is_ok=True,
-            msg_id=msg_id,
-            cid=cid,
-        )
-
-# ################################################################################################################################
-
-    def _subscribe_impl(
-        self,
-        topic_name:'str',
-        username:'str'
-        ) -> 'SimpleResponse':
-        """ Subscribe to a topic.
-        """
-        cid = new_cid()
-        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name}')
-
-        # Create topic if it doesn't exist
-        if topic_name not in self.topics:
-            self._create_topic(cid, 'subscribe', topic_name)
-
-        # Check if already subscribed
-        if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
-            logger.info(f'[{cid}] Endpoint {username} already subscribed to {topic_name}')
-            return SimpleResponse(is_ok=True)
-
-        # Create subscription
-        sub_key = new_sub_key()
-        subscription = Subscription(
-            topic_name=topic_name,
-            endpoint_name=username,
-            sub_key=sub_key
-        )
-
-        # Store subscription
-        if topic_name not in self.subs_by_topic:
-            self.subs_by_topic[topic_name] = {}
-
-        self.subs_by_topic[topic_name][username] = subscription
-
-        # Register subscription with broker client
-        self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
-        logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
-
-        return SimpleResponse(is_ok=True)
-
-# ################################################################################################################################
-
-    def _unsubscribe_impl(
-        self,
-        topic_name:'str',
-        endpoint_name:'str'
-        ) -> 'SimpleResponse':
-        """ Unsubscribe from a topic.
-        """
-        cid = new_cid()
-        logger.info(f'[{cid}] Unsubscribing {endpoint_name} from topic {topic_name}')
-
-        # Check if subscription exists
-        if topic_name in self.subs_by_topic and endpoint_name in self.subs_by_topic[topic_name]:
-            # Get subscription key before removing it
-            sub_key = self.subs_by_topic[topic_name][endpoint_name].sub_key
-
-            # Remove the subscription from our metadata
-            _ = self.subs_by_topic[topic_name].pop(endpoint_name)
-
-            # Unregister subscription with broker client
-            self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key) # type: ignore
-
-            logger.info(f'[{cid}] Successfully unsubscribed {endpoint_name} from {topic_name}')
-        else:
-            logger.info(f'[{cid}] No subscription found for {endpoint_name} to {topic_name}')
-
-        return SimpleResponse(is_ok=True)
 
 # ################################################################################################################################
 
