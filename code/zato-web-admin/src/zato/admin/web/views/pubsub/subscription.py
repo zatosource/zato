@@ -140,7 +140,9 @@ class Edit(CreateEdit):
                 'edit-sec_base_id': 'sec_base_id',
                 'edit-delivery_type': 'delivery_type',
                 'edit-is_active': 'is_active',
-                'edit-rest_push_endpoint_id': 'rest_push_endpoint_id'
+                'edit-push_type': 'push_type',
+                'edit-rest_push_endpoint_id': 'rest_push_endpoint_id',
+                'edit-push_service_name': 'push_service_name',
             }
 
             for form_field, service_field in field_mapping.items():
