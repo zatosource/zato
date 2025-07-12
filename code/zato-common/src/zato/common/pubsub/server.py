@@ -12,14 +12,11 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
-from datetime import timedelta
 from json import dumps, loads
 from logging import getLogger
-from uuid import uuid4
 
 # Zato
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
-from zato.common.util.api import utcnow
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
@@ -37,10 +34,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid, new_sub_key
-from zato.common.pubsub.models import PubMessage, PubResponse, SimpleResponse
-from zato.common.pubsub.models import Subscription, Topic
-from zato.common.pubsub.models import topic_subscriptions
+from zato.common.util.api import new_cid
+from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotFoundResponse, \
     NotImplementedResponse, UnauthorizedResponse
 from zato.common.pubsub.backend import Backend
@@ -49,7 +44,7 @@ from zato.common.pubsub.backend import Backend
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strdict, dictnone
+    from zato.common.typing_ import any_, strdict, dictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,9 +53,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_prefix = PubSub.Prefix
-_rest_server = PubSub.REST_Server
 
 _default_priority = PubSub.Message.Default_Priority
 _default_expiration = PubSub.Message.Default_Expiration
@@ -72,10 +64,6 @@ class ModuleCtx:
     Exchange_Name = 'pubsubapi'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-
-
 # ################################################################################################################################
 
 def load_users(users_file:'str') -> 'strdict':
@@ -107,7 +95,7 @@ def load_users(users_file:'str') -> 'strdict':
 class PubSubRESTServer:
     """ Main server class for the Pub/Sub REST API.
     """
-    def __init__(self, host='localhost', port=8000, users_file=None):
+    def __init__(self, host:'str', port:'int', users_file:'any_'=None) -> 'None':
         self.host = host
         self.port = port
         self.users = load_users(users_file) if users_file else {}
@@ -124,11 +112,19 @@ class PubSubRESTServer:
 
         # URL routing configuration
         self.url_map = Map([
-            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>', endpoint='on_publish', methods=['POST']),
-            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>/subscribe', endpoint='on_subscribe', methods=['POST']),
-            Rule(f'/{_rest_server.Path_Prefix}/<topic_name>/unsubscribe', endpoint='on_unsubscribe', methods=['POST']),
-            Rule(f'/{_rest_server.Path_Health_Check}', endpoint='on_health_check', methods=['GET'])
+
+            # Topic operations - publish
+            Rule('/pubsub/topic/<topic_name>', endpoint='publish', methods=['POST']),
+
+            # Subscribe and unsubscribe operations - same URL, different HTTP methods
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST']),
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_unsubscribe', methods=['DELETE']),
+
+            # Health check
+            Rule('/pubsub/health', endpoint='health_check', methods=['GET']),
         ])
+
+# ################################################################################################################################
 
     def authenticate(self, environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
@@ -160,7 +156,6 @@ class PubSubRESTServer:
             logger.warning(f'[{cid}] No such user `{username}`; path_info:`{path_info}`')
 
         return None
-
 
 # ################################################################################################################################
 # ################################################################################################################################
