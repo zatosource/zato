@@ -437,7 +437,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
         // Get security ID from original form field before we remove it
         var currentSecId = instance.sec_base_id;
-        var currentRestEndpointId = instance ? (instance.rest_push_endpoint_id || '') : '';
+        var currentRestEndpointId = instance.rest_push_endpoint_id || '';
+        var currentServiceName = instance.push_service_name || '';
 
         // Initialize SlimSelect after topics are populated via callback
         $.fn.zato.pubsub.common.populateTopics('edit', currentTopicNames, '/zato/pubsub/subscription/get-topics/', '#id_edit-topic_id', function() {
@@ -526,7 +527,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Populate REST endpoints regardless of delivery type to avoid a flicker
         // when switching to push, but they'll remain hidden if not push type
         $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
-        $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceId, true);
+        $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
     }, 200);
 }
 
