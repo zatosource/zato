@@ -134,7 +134,7 @@ class Backend:
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
         ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'[{cid}] Published message to topic {topic_name} ({username}{ext_client_part})')
+        logger.info(f'[{cid}] Published message to topic {topic_name} (user={username}{ext_client_part})')
 
         # Return success response
         response = PubResponse()
@@ -162,7 +162,7 @@ class Backend:
 
         # Check if already subscribed
         if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
-            logger.info(f'[{cid}] Endpoint {username} already subscribed to {topic_name}')
+            logger.info(f'[{cid}] User {username} already subscribed to {topic_name}')
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -182,7 +182,7 @@ class Backend:
         subs_by_username[username] = sub
 
         # Register subscription with broker client
-        self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
+        # self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
 
         response = StatusResponse()
@@ -216,7 +216,7 @@ class Backend:
             _ = subs_by_username.pop(username)
 
             # Unregister subscription with broker client
-            self.broker_client.unsubscribe(topic_name, username, sub_key) # type: ignore
+            # self.broker_client.unsubscribe(topic_name, username, sub_key) # type: ignore
 
             logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
         else:
