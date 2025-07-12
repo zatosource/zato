@@ -36,8 +36,8 @@ from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid
 from zato.common.pubsub.models import PubMessage
-from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotFoundResponse, \
-    NotImplementedResponse, UnauthorizedResponse
+from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
+    UnauthorizedResponse
 from zato.common.pubsub.backend import Backend
 
 # ################################################################################################################################
@@ -62,6 +62,23 @@ _default_expiration = PubSub.Message.Default_Expiration
 
 class ModuleCtx:
     Exchange_Name = 'pubsubapi'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UnauthorizedException(Exception):
+    def __init__(self, cid:'str', *args:'any_', **kwargs:'any_') -> 'None':
+        self.cid = cid
+        super().__init__(*args, **kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BadRequestException(Exception):
+    def __init__(self, cid:'str', message:'str', *args:'any_', **kwargs:'any_') -> 'None':
+        self.cid = cid
+        self.message = message
+        super().__init__(*args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,9 +147,8 @@ class PubSubRESTServer:
         """ Authenticate a request using HTTP Basic Authentication.
         """
         cid = new_cid()
+        path_info = environ['PATH_INFO']
         auth_header = environ.get('HTTP_AUTHORIZATION', '')
-
-        path_info = environ.get('PATH_INFO', 'unknown-path')
 
         if not auth_header:
             logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
@@ -158,6 +174,18 @@ class PubSubRESTServer:
         return None
 
 # ################################################################################################################################
+
+    def _ensure_authenticated(self, cid:'str', environ:'anydict') -> 'str':
+
+        # Authenticate request
+        username = self.authenticate(environ)
+
+        if not username:
+            raise UnauthorizedException(cid)
+        else:
+            return username
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 #
@@ -167,56 +195,58 @@ class PubSubRESTServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def on_publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Publish a message to a topic.
         """
+        # We always need our own new Correlation ID ..
         cid = new_cid()
+
+        # .. log what we're doing ..
         logger.info('[{cid}] Processing publish request')
 
-        # Authenticate request
-        username = self.authenticate(environ)
+        # .. make sure the client is allowed to carry out this action ..
+        username = self._ensure_authenticated(cid, environ)
 
-        if not username:
-            logger.warning(f'[{cid}] Authentication failed')
-            response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response)
-
-        # Get request data
+        # .. build our representation of the request ..
         request = Request(environ)
         data = self._parse_json(cid, request)
 
-        # Validate request data
+        # .. make sure we actually did receive anything ..
         if not data:
-            logger.warning(f'[{cid}] Input data missing')
-            response = BadRequestResponse(cid=cid)
-            return self._json_response(start_response, response)
+            raise BadRequestException(cid, 'Input data missing')
 
-        # Extract the message data
+        # .. now also make sure we did receive the business data ..
         msg_data = data.get('data')
 
-        if msg_data is None:
-            logger.warning(f'[{cid}] Message data missing')
-            response = BadRequestResponse(cid=cid)
-            return self._json_response(start_response, response)
+        if not msg_data is None:
+            raise BadRequestException(cid, 'Message data missing')
 
-        # Get external client ID if provided
+        # .. get all the details from the message now that we know we have it ..
         ext_client_id = data.get('ext_client_id', '')
+        priority = data.get('priority', _default_priority)
+        expiration = data.get('expiration', _default_expiration)
+        correl_id = data.get('correl_id', '') or cid
+        in_reply_to=data.get('in_reply_to', '')
 
-        msg = PubMessage(
-            data=msg_data,
-            priority=data.get('priority', _default_priority),
-            expiration=data.get('expiration', _default_expiration),
-            correl_id=data.get('correl_id', ''),
-            in_reply_to=data.get('in_reply_to', ''),
-            ext_client_id=ext_client_id
-        )
+        # .. build a business message ..
+        msg = PubMessage()
+        msg.data = msg_data
+        msg.priority = priority
+        msg.expiration = expiration
+        msg.correl_id = correl_id
+        msg.ext_client_id = ext_client_id
+        msg.in_reply_to = in_reply_to
 
-        # Publish message using backend
+        # .. let the backend handle it ..
         result = self.backend.publish_impl(topic_name, msg, username, ext_client_id)
 
-        # Create a simple response with only the necessary fields
-        response = APIResponse(is_ok=result.is_ok, cid=cid)
-        return self._json_response(start_response, response)
+        # .. build our response ..
+        response = APIResponse()
+        response.is_ok = result.is_ok
+        response.cid = cid
+
+        # .. and return it to the caller.
+        return response
 
 # ################################################################################################################################
 
@@ -247,14 +277,14 @@ class PubSubRESTServer:
         logger.info(f'[{cid}] Processing unsubscription request for topic {topic_name}')
 
         # Authenticate request
-        endpoint_name = self.authenticate(environ)
-        if not endpoint_name:
+        username = self.authenticate(environ)
+        if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
             return self._json_response(start_response, response)
 
         # Unsubscribe from topic using backend
-        result = self.backend.unsubscribe_impl(topic_name, endpoint_name)
+        result = self.backend.unsubscribe_impl(topic_name, username)
 
         if result.is_ok:
             response = APIResponse(is_ok=True, cid=cid)
@@ -328,17 +358,29 @@ class PubSubRESTServer:
             # Dynamic dispatch - call the method named by the endpoint
             if hasattr(self, endpoint):
 
-                # This handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
+                # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
-                return handler(environ, start_response, **args)
+                handler_response = handler(environ, start_response, **args)
+                response_bytes = self._json_response(start_response, handler_response)
+                return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
                 response = NotImplementedResponse()
                 return self._json_response(start_response, response)
 
+        except UnauthorizedException:
+            response = UnauthorizedResponse()
+            return self._json_response(start_response, response)
+
+        except BadRequestException as e:
+            logger.warning(f'[{e.cid}] {e.message}')
+            response = BadRequestResponse(cid=e.cid)
+            return self._json_response(start_response, response)
+
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
-            response = NotFoundResponse()
+            response = BadRequestResponse()
+            response.details = 'URL not found'
             return self._json_response(start_response, response)
 
 # ################################################################################################################################
