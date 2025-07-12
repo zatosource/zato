@@ -23,6 +23,7 @@ from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
+from gevent import lock
 from gevent.pywsgi import WSGIServer
 
 # gunicorn
@@ -153,7 +154,7 @@ class PubSubRESTServer:
 
         # Storage for topics and subscriptions metadata only
         self.topics:'dict_[str, Topic]' = {}           # topic_name -> Topic
-        self.subscriptions:'topic_subscriptions' = {}  # topic_name -> {endpoint_name -> Subscription}
+        self.subs_by_topic:'topic_subscriptions' = {}  # topic_name -> {username -> Subscription}
 
         logger.info(f'PubSubRESTServer initialized on {host}:{port} with has_debug={has_debug}')
 
@@ -180,7 +181,8 @@ class PubSubRESTServer:
             return None
 
         if username in self.users:
-            if check_basic_auth(cid, auth_header, username, self.users[username]) is True:
+            password = self.users[username]
+            if check_basic_auth(cid, auth_header, username, password) is True:
                 return username
             else:
                 logger.warning(f'Invalid password for `{username}`; path_info:`{path_info}`')
@@ -250,14 +252,14 @@ class PubSubRESTServer:
         logger.info(f'[{cid}] Processing subscription request for topic {topic_name}')
 
         # Authenticate request
-        endpoint_name = self.authenticate(environ)
-        if not endpoint_name:
+        username = self.authenticate(environ)
+        if not username:
             logger.warning(f'[{cid}] Authentication failed')
             response = UnauthorizedResponse(cid=cid, details='Authentication failed')
             return self._json_response(start_response, response)
 
         # Subscribe to topic
-        result = self.subscribe(topic_name, endpoint_name)
+        result = self.subscribe(topic_name, username)
         response = APIResponse(is_ok=result.is_ok, cid=cid)
         return self._json_response(start_response, response)
 
@@ -335,6 +337,13 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
+    def _create_topic(self, cid:'str', source:'str', topic_name:'str') -> 'None':
+        self.topics[topic_name] = Topic(name=topic_name)
+        self.subs_by_topic[topic_name] = {}
+        logger.info(f'[{cid}] Created new topic: {topic_name} ({source}')
+
+# ################################################################################################################################
+
     def publish_message(
         self,
         topic_name:'str',
@@ -349,9 +358,7 @@ class PubSubRESTServer:
 
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
-            self.topics[topic_name] = Topic(name=topic_name)
-            self.subscriptions[topic_name] = {}
-            logger.info(f'[{cid}] Created new topic: {topic_name}')
+            self._create_topic(cid, 'publish', topic_name)
 
         # Generate message ID and calculate size
         msg_id = generate_msg_id()
@@ -399,41 +406,39 @@ class PubSubRESTServer:
     def subscribe(
         self,
         topic_name:'str',
-        endpoint_name:'str'
+        username:'str'
         ) -> 'SimpleResponse':
         """ Subscribe to a topic.
         """
         cid = new_cid()
-        logger.info(f'[{cid}] Subscribing {endpoint_name} to topic {topic_name}')
+        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name}')
 
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
-            self.topics[topic_name] = Topic(name=topic_name)
-            self.subscriptions[topic_name] = {}
-            logger.info(f'[{cid}] Created new topic: {topic_name}')
+            self._create_topic(cid, 'subscribe', topic_name)
 
         # Check if already subscribed
-        if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
-            logger.info(f'[{cid}] Endpoint {endpoint_name} already subscribed to {topic_name}')
+        if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
+            logger.info(f'[{cid}] Endpoint {username} already subscribed to {topic_name}')
             return SimpleResponse(is_ok=True)
 
         # Create subscription
         sub_key = generate_sub_key()
         subscription = Subscription(
             topic_name=topic_name,
-            endpoint_name=endpoint_name,
+            endpoint_name=username,
             sub_key=sub_key
         )
 
         # Store subscription
-        if topic_name not in self.subscriptions:
-            self.subscriptions[topic_name] = {}
+        if topic_name not in self.subs_by_topic:
+            self.subs_by_topic[topic_name] = {}
 
-        self.subscriptions[topic_name][endpoint_name] = subscription
+        self.subs_by_topic[topic_name][username] = subscription
 
         # Register subscription with broker client
-        self.broker_client.subscribe(topic_name, endpoint_name, sub_key) # type: ignore
-        logger.info(f'[{cid}] Successfully subscribed {endpoint_name} to {topic_name} with key {sub_key}')
+        self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
+        logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
 
         return SimpleResponse(is_ok=True)
 
@@ -450,12 +455,12 @@ class PubSubRESTServer:
         logger.info(f'[{cid}] Unsubscribing {endpoint_name} from topic {topic_name}')
 
         # Check if subscription exists
-        if topic_name in self.subscriptions and endpoint_name in self.subscriptions[topic_name]:
+        if topic_name in self.subs_by_topic and endpoint_name in self.subs_by_topic[topic_name]:
             # Get subscription key before removing it
-            sub_key = self.subscriptions[topic_name][endpoint_name].sub_key
+            sub_key = self.subs_by_topic[topic_name][endpoint_name].sub_key
 
             # Remove the subscription from our metadata
-            _ = self.subscriptions[topic_name].pop(endpoint_name)
+            _ = self.subs_by_topic[topic_name].pop(endpoint_name)
 
             # Unregister subscription with broker client
             self.broker_client.unsubscribe(topic_name, endpoint_name, sub_key) # type: ignore
