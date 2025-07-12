@@ -160,17 +160,33 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
                 }));
             });
 
+            // First, set the value on the select element
             if(selectedId) {
                 $select.val(selectedId);
-            }
-
-            // If Chosen plugin is being used
-            if ($select.next('.chosen-container').length > 0) {
-                // Trigger Chosen update to refresh the dropdown
-                $select.trigger('chosen:updated');
             } else {
-                // Initialize Chosen with the original width
-                $select.chosen({width: '98%'});
+                $select.val('');
+            }
+            
+            // Completely destroy and rebuild Chosen
+            if ($select.next('.chosen-container').length > 0) {
+                $select.chosen('destroy');
+            }
+            
+            // Reinitialize with proper options
+            $select.chosen({width: '98%'});
+            
+            // Force correct text in the chosen-single span
+            var chosenContainer = $select.next('.chosen-container');
+            var chosenSingle = chosenContainer.find('.chosen-single span');
+            
+            if (selectedId) {
+                // If an option is selected, use its text
+                var selectedText = $select.find('option:selected').text();
+                chosenSingle.text(selectedText);
+                chosenContainer.find('.chosen-single').removeClass('chosen-default');
+            } else {
+                // Otherwise use the placeholder text (first option)
+                chosenSingle.text('Select a REST endpoint');
             }
 
             // Only show the span if explicitly requested and the current push type is 'rest'
