@@ -143,27 +143,29 @@ class Create(AdminService):
                     topic_names.append(topic.name)
 
                 # Create the subscription
-                subscription = PubSubSubscription()
-                subscription.sub_key = sub_key # type: ignore
-                subscription.is_active = input.is_active
-                subscription.cluster = cluster
-                subscription.sec_base = security_def
-                subscription.delivery_type = input.delivery_type
+                sub = PubSubSubscription()
+                sub.sub_key = sub_key # type: ignore
+                sub.is_active = input.is_active
+                sub.cluster = cluster
+                sub.sec_base = security_def
+                sub.delivery_type = input.delivery_type
+                sub.push_type = input.push_type
+                sub.push_service_name = input.push_service_name
 
                 # For push subscriptions, set the endpoint
                 if input.delivery_type == 'push' and input.get('rest_push_endpoint_id'):
                     endpoint = session.query(HTTPSOAP).\
                         filter(HTTPSOAP.id==input.rest_push_endpoint_id).first()
-                    subscription.rest_push_endpoint = endpoint
+                    sub.rest_push_endpoint = endpoint
 
-                session.add(subscription)
+                session.add(sub)
                 session.flush()  # Get the ID of the new subscription
 
                 # Create subscription-topic associations
                 for topic in topics:
 
                     sub_topic = PubSubSubscriptionTopic()
-                    sub_topic.subscription = subscription
+                    sub_topic.subscription = sub
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
                     sub_topic.pattern_matched = topic.name
@@ -185,12 +187,12 @@ class Create(AdminService):
                 input.sub_key = sub_key
                 self.broker_client.publish(input)
 
-                self.response.payload.id = subscription.id
-                self.response.payload.sub_key = subscription.sub_key
-                self.response.payload.is_active = subscription.is_active
-                self.response.payload.created = subscription.created
+                self.response.payload.id = sub.id
+                self.response.payload.sub_key = sub.sub_key
+                self.response.payload.is_active = sub.is_active
+                self.response.payload.created = sub.created
                 self.response.payload.sec_name = security_def.name # type: ignore
-                self.response.payload.delivery_type = subscription.delivery_type
+                self.response.payload.delivery_type = sub.delivery_type
 
                 topic_name_list = sorted(topic_name_list)
                 self.response.payload.topic_links = ', '.join(topic_name_list)
@@ -217,22 +219,26 @@ class Edit(AdminService):
 
     def handle(self):
 
+        input = self.request.input
+
         with closing(self.odb.session()) as session:
             try:
 
                 # Check if the subscription exists before calling one()
                 subscription_query = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubSubscription.sub_key==self.request.input.sub_key)
+                    filter(PubSubSubscription.cluster_id==input.cluster_id).\
+                    filter(PubSubSubscription.sub_key==input.sub_key)
 
                 # Now get the actual subscription
                 sub = subscription_query.one()
 
-                sub.sec_base_id = self.request.input.sec_base_id
-                sub.delivery_type = self.request.input.delivery_type
+                sub.sec_base_id = input.sec_base_id
+                sub.delivery_type = input.delivery_type
+                sub.is_active = input.is_active
 
-                sub.is_active = self.request.input.is_active
-                sub.rest_push_endpoint_id = self.request.input.rest_push_endpoint_id
+                sub.push_type = input.push_type
+                sub.rest_push_endpoint_id = input.rest_push_endpoint_id
+                sub.push_service_name = input.push_service_name
 
                 # Get the security definition
                 sec_def = session.query(SecurityBase).\
@@ -245,7 +251,7 @@ class Edit(AdminService):
                     delete()
 
                 # Process topics if any are provided
-                topic_id_list = self.request.input.get('topic_id_list') or []
+                topic_id_list = input.get('topic_id_list') or []
                 topic_name_list = []
                 topics = []
 
@@ -254,7 +260,7 @@ class Edit(AdminService):
                     for topic_id in topic_id_list:
                         # Make sure the topic exists
                         topic = session.query(PubSubTopic).\
-                            filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
+                            filter(PubSubTopic.cluster_id==input.cluster_id).\
                             filter(PubSubTopic.id==topic_id).\
                             first()
 
@@ -263,7 +269,7 @@ class Edit(AdminService):
 
                             # Create subscription-topic association
                             sub_topic = PubSubSubscriptionTopic()
-                            sub_topic.cluster_id = self.request.input.cluster_id
+                            sub_topic.cluster_id = input.cluster_id
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
                             sub_topic.pattern_matched = 'zato.manual' # type: ignore
@@ -284,8 +290,8 @@ class Edit(AdminService):
                 raise
             else:
                 # Notify broker about the update
-                self.request.input.action = PUBSUB.SUBSCRIPTION_EDIT.value
-                self.broker_client.publish(self.request.input)
+                input.action = PUBSUB.SUBSCRIPTION_EDIT.value
+                self.broker_client.publish(input)
 
                 # Set response payload
                 self.response.payload.id = sub.id

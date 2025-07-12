@@ -59,7 +59,7 @@ class Create(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'rest_push_endpoint_id'
+        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_name', 'delivery_type'
 
     def _get_input_dict(self):
@@ -110,7 +110,7 @@ class Edit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'rest_push_endpoint_id'
+        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'topic_links', 'sec_name', 'delivery_type', 'is_active'
 
     def _get_input_dict(self):
