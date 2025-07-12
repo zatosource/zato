@@ -17,7 +17,7 @@ from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional, 
 
 # Default values
 DEFAULT_PRIORITY = 5
-DEFAULT_EXPIRATION = 86400  # 24 hours in seconds
+DEFAULT_EXPIRATION = 86400 * 365  # 24 hours * 365 days, in seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
