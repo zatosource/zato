@@ -6,18 +6,10 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from datetime import datetime
-
 # Zato
-from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional, str_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Default values
-DEFAULT_PRIORITY = 5
-DEFAULT_EXPIRATION = 86400 * 365  # 24 hours * 365 days, in seconds
+from zato.common.api import PubSub
+from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional, str
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,11 +19,11 @@ class PubMessage:
     """ Model representing a message to be published to a topic.
     """
     data: any_
-    priority: int = DEFAULT_PRIORITY
-    expiration: int = DEFAULT_EXPIRATION
-    correl_id: str_ = ''
-    in_reply_to: str_ = ''
-    ext_client_id: str_ = ''
+    priority: 'int' = PubSub.Message.Default_Priority
+    expiration: 'int' = PubSub.Message.Default_Expiration
+    correl_id: 'str' = ''
+    in_reply_to: 'str' = ''
+    ext_client_id: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +32,10 @@ class PubMessage:
 class PubResponse:
     """ Response model for publish operations.
     """
-    is_ok: bool
-    msg_id: str_ = ''
-    cid: str_ = ''
-    details: str_ = ''
+    is_ok: 'bool'
+    msg_id: 'str' = ''
+    cid: 'str' = ''
+    details: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,21 +45,21 @@ class Message:
     """ Model for a single message as returned by retrieve/read operations.
     """
     data: any_
-    topic_name: str_
-    msg_id: str_
-    correl_id: str_ = ''
-    in_reply_to: str_ = ''
-    priority: int = DEFAULT_PRIORITY
-    mime_type: str_ = 'application/json'
-    ext_client_id: str_ = ''
-    pub_time_iso: str_ = ''
-    ext_pub_time_iso: str_ = ''
-    recv_time_iso: str_ = ''
-    expiration: int = DEFAULT_EXPIRATION
-    expiration_time_iso: str_ = ''
-    size: int = 0
-    delivery_count: int = 0
-    sub_key: str_ = ''
+    topic_name: 'str'
+    msg_id: 'str'
+    correl_id: 'str' = ''
+    in_reply_to: 'str' = ''
+    priority: 'int' = PubSub.Message.Default_Priority
+    mime_type: 'str' = 'application/json'
+    ext_client_id: 'str' = ''
+    pub_time_iso: 'str' = ''
+    ext_pub_time_iso: 'str' = ''
+    recv_time_iso: 'str' = ''
+    expiration: 'int' = PubSub.Message.Default_Expiration
+    expiration_time_iso: 'str' = ''
+    size: 'int' = 0
+    delivery_count: 'int' = 0
+    sub_key: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +68,7 @@ class Message:
 class MessagesResponse:
     """ Response model containing a list of messages.
     """
-    is_ok: bool
+    is_ok: 'bool'
     messages: list_[Message] = field(default_factory=list)
 
 # ################################################################################################################################
@@ -86,7 +78,7 @@ class MessagesResponse:
 class SimpleResponse:
     """ Generic response model with just an is_ok field.
     """
-    is_ok: bool
+    is_ok: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,10 +87,10 @@ class SimpleResponse:
 class APIResponse:
     """ Base API response model with common fields.
     """
-    is_ok: bool
-    cid: str_ = ''
-    details: str_ = ''
-    http_status: str_ = '200 OK'
+    is_ok: 'bool'
+    cid: 'str' = ''
+    details: 'str' = ''
+    http_status: 'str' = '200 OK'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +99,7 @@ class APIResponse:
 class ErrorResponse(APIResponse):
     """ Error response with default is_ok=False.
     """
-    is_ok: bool = False
+    is_ok: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,8 +108,8 @@ class ErrorResponse(APIResponse):
 class NotFoundResponse(ErrorResponse):
     """ 404 Not Found response.
     """
-    details: str_ = 'Unknown request path'
-    http_status: str_ = '404 Not Found'
+    details: 'str' = 'Unknown request path'
+    http_status: 'str' = '404 Not Found'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,8 +118,8 @@ class NotFoundResponse(ErrorResponse):
 class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
-    details: str_ = 'Authentication failed'
-    http_status: str_ = '401 Unauthorized'
+    details: 'str' = 'Authentication failed'
+    http_status: 'str' = '401 Unauthorized'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,8 +128,8 @@ class UnauthorizedResponse(ErrorResponse):
 class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
-    details: str_ = 'Invalid request data'
-    http_status: str_ = '400 Bad Request'
+    details: 'str' = 'Invalid request data'
+    http_status: 'str' = '400 Bad Request'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,8 +138,8 @@ class BadRequestResponse(ErrorResponse):
 class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
-    details: str_ = 'Endpoint not implemented'
-    http_status: str_ = '501 Not Implemented'
+    details: 'str' = 'Endpoint not implemented'
+    http_status: 'str' = '501 Not Implemented'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,8 +148,8 @@ class NotImplementedResponse(ErrorResponse):
 class HealthCheckResponse:
     """ Health check response.
     """
-    status: str_ = 'ok'
-    http_status: str_ = '200 OK'
+    status: 'str' = 'ok'
+    http_status: 'str' = '200 OK'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,8 +158,8 @@ class HealthCheckResponse:
 class User:
     """ Model representing a user with username and password.
     """
-    username: str_
-    password: str_
+    username: 'str'
+    password: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,11 +168,11 @@ class User:
 class Subscription:
     """ Model representing a subscription to a topic.
     """
-    topic_name: str_
-    endpoint_name: str_
-    sub_key: str_
-    creation_time: datetime = field(default_factory=datetime.utcnow)
-    is_active: bool = True
+    topic_name: 'str'
+    endpoint_name: 'str'
+    sub_key: 'str'
+    creation_time: 'datetime' = field(default_factory=utcnow)
+    is_active: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,22 +181,22 @@ class Subscription:
 class Topic:
     """ Model representing a topic.
     """
-    name: str_
-    creation_time: datetime = field(default_factory=datetime.utcnow)
-    is_active: bool = True
+    name: 'str'
+    creation_time: 'datetime' = field(default_factory=sutcnow)
+    is_active: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Type aliases for collections
-users_dict = dict_[str_, str_]
+users_dict = dict_[str, str]
 user_list = list_[User]
 subscription_list = list_[Subscription]
 message_list = list_[Message]
 topic_list = list_[Topic]
 
-endpoint_subscriptions = dict_[str_, Subscription]  # endpoint_name -> Subscription
-topic_subscriptions = dict_[str_, endpoint_subscriptions]  # topic_name -> {endpoint_name -> Subscription}
+endpoint_subscriptions = dict_[str, Subscription]  # endpoint_name -> Subscription
+topic_subscriptions = dict_[str, endpoint_subscriptions]  # topic_name -> {endpoint_name -> Subscription}
 
 # Optional types
 message_optional = optional[Message]
