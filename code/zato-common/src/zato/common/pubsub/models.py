@@ -15,7 +15,7 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 @dataclass
-class PubMessage:
+class PubMessage(init=False):
     """ Model representing a message to be published to a topic.
     """
     data: any_
@@ -29,7 +29,7 @@ class PubMessage:
 # ################################################################################################################################
 
 @dataclass
-class PubResponse:
+class PubResponse(init=False):
     """ Response model for publish operations.
     """
     is_ok: 'bool'
@@ -41,7 +41,7 @@ class PubResponse:
 # ################################################################################################################################
 
 @dataclass
-class Message:
+class Message(init=False):
     """ Model for a single message as returned by retrieve/read operations.
     """
     data: any_
@@ -65,7 +65,7 @@ class Message:
 # ################################################################################################################################
 
 @dataclass
-class MessagesResponse:
+class MessagesResponse(init=False):
     """ Response model containing a list of messages.
     """
     is_ok: 'bool'
@@ -75,7 +75,7 @@ class MessagesResponse:
 # ################################################################################################################################
 
 @dataclass
-class SimpleResponse:
+class SimpleResponse(init=False):
     """ Generic response model with just an is_ok field.
     """
     is_ok: 'bool'
@@ -84,11 +84,11 @@ class SimpleResponse:
 # ################################################################################################################################
 
 @dataclass
-class APIResponse:
+class APIResponse(init=False):
     """ Base API response model with common fields.
     """
     is_ok: 'bool'
-    cid: 'str' = ''
+    cid: 'str'
     details: 'str' = ''
     http_status: 'str' = '200 OK'
 
@@ -100,16 +100,6 @@ class ErrorResponse(APIResponse):
     """ Error response with default is_ok=False.
     """
     is_ok: 'bool' = False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
-class NotFoundResponse(ErrorResponse):
-    """ 404 Not Found response.
-    """
-    details: 'str' = 'Unknown request path'
-    http_status: 'str' = '404 Not Found'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,7 +145,7 @@ class HealthCheckResponse:
 # ################################################################################################################################
 
 @dataclass
-class User:
+class User(init=False):
     """ Model representing a user with username and password.
     """
     username: 'str'
@@ -165,7 +155,7 @@ class User:
 # ################################################################################################################################
 
 @dataclass
-class Subscription:
+class Subscription(init=False):
     """ Model representing a subscription to a topic.
     """
     topic_name: 'str'
@@ -178,7 +168,7 @@ class Subscription:
 # ################################################################################################################################
 
 @dataclass
-class Topic:
+class Topic(init=False):
     """ Model representing a topic.
     """
     name: 'str'
