@@ -207,10 +207,10 @@ class Backend:
 
             # Local aliases
             subs_by_username = self.subs_by_topic[topic_name]
-            sub:'Subscription' = subs_by_username[username]
+            # sub:'Subscription' = subs_by_username[username]
 
             # Get subscription key before removing it
-            sub_key = sub.sub_key
+            # sub_key = sub.sub_key
 
             # Remove the subscription from our metadata
             _ = subs_by_username.pop(username)

@@ -14,6 +14,7 @@ _ = monkey.patch_all()
 from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
+from yaml import dump as yaml_dump
 
 # Zato
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
@@ -129,16 +130,11 @@ class PubSubRESTServer:
 
         # URL routing configuration
         self.url_map = Map([
-
-            # Topic operations - publish
+            Rule('/pubsub/health', endpoint='on_health_check', methods=['GET']),
             Rule('/pubsub/topic/<topic_name>', endpoint='on_publish', methods=['POST']),
-
-            # Subscribe and unsubscribe operations - same URL, different HTTP methods
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_subscribe', methods=['POST']),
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
-
-            # Health check
-            Rule('/pubsub/health', endpoint='health_check', methods=['GET']),
+            Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
 
 # ################################################################################################################################
@@ -289,11 +285,53 @@ class PubSubRESTServer:
     def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
         """ Health check endpoint.
         """
-        logger.info('Processing health check request')
         response = HealthCheckResponse()
+        response.is_ok = True
+        response.cid = new_cid()
+
         return response
 
 # ################################################################################################################################
+
+    def on_admin_diagnostics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
+        """ Admin diagnostics endpoint - dumps topics, users, subscriptions, etc. to logs in YAML format.
+        """
+        # Ensure the request is authenticated
+        _ = self._ensure_authenticated(cid, environ)
+
+        # Collect data for diagnostics
+        diagnostics = {
+            'topics': {},
+            'users': self.users,
+            'subscriptions': {}
+        }
+
+        # Extract topic information
+        for topic_name, topic in self.backend.topics.items():
+            diagnostics['topics'][topic_name] = {
+                'name': topic.name
+            }
+
+        # Extract subscription information
+        for topic_name, subs_by_username in self.backend.subs_by_topic.items():
+            diagnostics['subscriptions'][topic_name] = {}
+            for username, subscription in subs_by_username.items():
+                diagnostics['subscriptions'][topic_name][username] = {
+                    'sub_key': subscription.sub_key
+                }
+
+        # Dump to logs in YAML format
+        yaml_output = yaml_dump(diagnostics, default_flow_style=False)
+        logger.info(f'[{cid}] Admin diagnostics: \n{yaml_output}')
+
+        # Return a simple success response (not exposing the data)
+        response = APIResponse()
+        response.is_ok = True
+        response.cid = cid
+        response.details = 'Diagnostics logged successfully'
+
+        return response
+
 # ################################################################################################################################
 
     def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
@@ -321,7 +359,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'APIResponse') -> 'list_[bytes]':
+    def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
         """ Return a JSON response.
         """
         response_data = asdict(data)
