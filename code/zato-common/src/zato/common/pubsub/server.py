@@ -197,9 +197,8 @@ class PubSubRESTServer:
     def on_publish(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Publish a message to a topic.
         """
-
-        # .. log what we're doing ..
-        logger.info('[{cid}] Processing publish request')
+        # Log what we're doing ..
+        logger.info(f'[{cid}] Processing publish request')
 
         # .. make sure the client is allowed to carry out this action ..
         username = self._ensure_authenticated(cid, environ)
@@ -215,7 +214,7 @@ class PubSubRESTServer:
         # .. now also make sure we did receive the business data ..
         msg_data = data.get('data')
 
-        if not msg_data is None:
+        if msg_data is None:
             raise BadRequestException(cid, 'Message data missing')
 
         # .. get all the details from the message now that we know we have it ..
@@ -247,57 +246,52 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Handle subscription request.
         """
-        cid = new_cid()
-        logger.info(f'[{cid}] Processing subscription request for topic {topic_name}')
+        # Log what we're doing ..
+        logger.info(f'[{cid}] Processing subscribe request')
 
-        # Authenticate request
-        username = self.authenticate(cid, environ)
-        if not username:
-            logger.warning(f'[{cid}] Authentication failed')
-            response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response)
+        # .. make sure the client is allowed to carry out this action ..
+        username = self._ensure_authenticated(cid, environ)
 
         # Subscribe to topic using backend
         result = self.backend.subscribe_impl(topic_name, username)
-        response = APIResponse(is_ok=result.is_ok, cid=cid)
-        return self._json_response(start_response, response)
+
+        response = APIResponse()
+        response.is_ok = result.is_ok
+        response.cid = cid
+
+        return response
 
 # ################################################################################################################################
 
-    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Handle unsubscribe request.
         """
-        cid = new_cid()
-        logger.info(f'[{cid}] Processing unsubscription request for topic {topic_name}')
+        # Log what we're doing ..
+        logger.info(f'[{cid}] Processing unsubscribe request')
 
-        # Authenticate request
-        username = self.authenticate(cid, environ)
-        if not username:
-            logger.warning(f'[{cid}] Authentication failed')
-            response = UnauthorizedResponse(cid=cid, details='Authentication failed')
-            return self._json_response(start_response, response)
+        # .. make sure the client is allowed to carry out this action ..
+        username = self._ensure_authenticated(cid, environ)
 
         # Unsubscribe from topic using backend
         result = self.backend.unsubscribe_impl(topic_name, username)
 
-        if result.is_ok:
-            response = APIResponse(is_ok=True, cid=cid)
-            return self._json_response(start_response, response)
-        else:
-            response = BadRequestResponse(cid=cid, details='Failed to unsubscribe')
-            return self._json_response(start_response, response)
+        response = APIResponse()
+        response.is_ok = result.is_ok
+        response.cid = cid
+
+        return response
 
 # ################################################################################################################################
 
-    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
         """ Health check endpoint.
         """
         logger.info('Processing health check request')
         response = HealthCheckResponse()
-        return self._json_response(start_response, response)
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,14 +321,18 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'any_') -> 'list_[bytes]':
+    def _json_response(self, start_response:'any_', data:'APIResponse') -> 'list_[bytes]':
         """ Return a JSON response.
         """
         response_data = asdict(data)
+
+        if not response_data.get('details'):
+            del response_data['details']
+
         json_data = dumps(response_data).encode('utf-8')
 
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
-        start_response(data.http_status, headers)
+        start_response(data.status, headers)
 
         return [json_data]
 
