@@ -37,7 +37,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid, new_sub_key
 from zato.common.pubsub.models import PubMessage, PubResponse, SimpleResponse
 from zato.common.pubsub.models import Subscription, Topic
 from zato.common.pubsub.models import topic_subscriptions
@@ -80,13 +80,6 @@ def generate_msg_id() -> 'str':
 
 # ################################################################################################################################
 
-def generate_sub_key() -> 'str':
-    """ Generate a unique subscription key with prefix.
-    """
-    return f'{_prefix.Sub_Key}.{uuid4().hex}'
-
-# ################################################################################################################################
-
 def load_users(users_file:'str') -> 'strdict':
     """ Load users from a JSON file.
     """
@@ -116,46 +109,6 @@ def load_users(users_file:'str') -> 'strdict':
 class PubSubRESTServer:
     """ Main server class for the Pub/Sub REST API.
     """
-    def __init__(
-        self,
-        host:'str'=_rest_server.Default_Host,
-        port:'int'=_rest_server.Default_Port,
-        users_file:'str'='',
-        has_debug:'bool'=False
-        ) -> 'None':
-
-        # Basic server configuration
-        self.host = host
-        self.port = port
-        self.has_debug = has_debug
-
-        # Initialize broker client
-        self.broker_client = BrokerClient()
-
-        # Set up URL routing with direct mapping to handler methods
-        self.url_map = Map([
-
-            # Topic operations - publish
-            Rule('/pubsub/topic/<topic_name>', endpoint='publish', methods=['POST']),
-
-            # Subscribe and unsubscribe operations - same URL, different HTTP methods
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_subscribe', methods=['POST']),
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='handle_unsubscribe', methods=['DELETE']),
-
-            # Health check
-            Rule('/pubsub/health', endpoint='health_check', methods=['GET']),
-        ])
-
-        # Load users if a file is provided
-        self.users = {}
-        if users_file:
-            self.users = load_users(users_file)
-
-        # Storage for topics and subscriptions metadata only
-        self.topics:'dict_[str, Topic]' = {}           # topic_name -> Topic
-        self.subs_by_topic:'topic_subscriptions' = {}  # topic_name -> {username -> Subscription}
-
-        logger.info(f'PubSubRESTServer initialized on {host}:{port} with has_debug={has_debug}')
 
 # ################################################################################################################################
 
@@ -190,9 +143,18 @@ class PubSubRESTServer:
 
         return None
 
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+#
+# All the on_* methods are WSGI-level callbacks invoked by __call__
+#
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def on_publish(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Publish a message to a topic.
         """
         cid = new_cid()
@@ -237,7 +199,7 @@ class PubSubRESTServer:
         )
 
         # Publish message
-        result = self.publish_message(topic_name, msg, username, ext_client_id)
+        result = self._publish_impl(topic_name, msg, username, ext_client_id)
 
         # Create a simple response with only the necessary fields
         response = APIResponse(is_ok=result.is_ok, cid=cid)
@@ -245,7 +207,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def handle_subscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_subscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle subscription request.
         """
         cid = new_cid()
@@ -259,13 +221,13 @@ class PubSubRESTServer:
             return self._json_response(start_response, response)
 
         # Subscribe to topic
-        result = self.subscribe(topic_name, username)
+        result = self._subscribe_impl(topic_name, username)
         response = APIResponse(is_ok=result.is_ok, cid=cid)
         return self._json_response(start_response, response)
 
 # ################################################################################################################################
 
-    def handle_unsubscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
+    def on_unsubscribe(self, environ:'anydict', start_response:'any_', topic_name:'str') -> 'list_[bytes]':
         """ Handle unsubscribe request.
         """
         cid = new_cid()
@@ -279,7 +241,7 @@ class PubSubRESTServer:
             return self._json_response(start_response, response)
 
         # Unsubscribe from topic
-        result = self.unsubscribe(topic_name, endpoint_name)
+        result = self._unsubscribe_impl(topic_name, endpoint_name)
 
         if result.is_ok:
             response = APIResponse(is_ok=True, cid=cid)
@@ -290,13 +252,14 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def health_check(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ Health check endpoint.
         """
         logger.info('Processing health check request')
         response = HealthCheckResponse()
         return self._json_response(start_response, response)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
     def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
@@ -344,7 +307,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def publish_message(
+    def _publish_impl(
         self,
         topic_name:'str',
         msg:'PubMessage',
@@ -403,7 +366,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def subscribe(
+    def _subscribe_impl(
         self,
         topic_name:'str',
         username:'str'
@@ -423,7 +386,7 @@ class PubSubRESTServer:
             return SimpleResponse(is_ok=True)
 
         # Create subscription
-        sub_key = generate_sub_key()
+        sub_key = new_sub_key()
         subscription = Subscription(
             topic_name=topic_name,
             endpoint_name=username,
@@ -444,7 +407,7 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
-    def unsubscribe(
+    def _unsubscribe_impl(
         self,
         topic_name:'str',
         endpoint_name:'str'
@@ -487,6 +450,8 @@ class PubSubRESTServer:
 
             # Dynamic dispatch - call the method named by the endpoint
             if hasattr(self, endpoint):
+
+                # This handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
                 return handler(environ, start_response, **args)
             else:
