@@ -6,19 +6,27 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from dataclasses import dataclass, field
+
 # Zato
 from zato.common.api import PubSub
-from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional, str
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class PubMessage(init=False):
+if 0:
+    from zato.common.typing_ import any_, dataclass, dict_, field, list_, optional
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class PubMessage:
     """ Model representing a message to be published to a topic.
     """
-    data: any_
+    data: 'any_'
     priority: 'int' = PubSub.Message.Default_Priority
     expiration: 'int' = PubSub.Message.Default_Expiration
     correl_id: 'str' = ''
@@ -28,8 +36,8 @@ class PubMessage(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class PubResponse(init=False):
+@dataclass(init=False)
+class PubResponse:
     """ Response model for publish operations.
     """
     is_ok: 'bool'
@@ -40,11 +48,11 @@ class PubResponse(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class Message(init=False):
+@dataclass(init=False)
+class Message:
     """ Model for a single message as returned by retrieve/read operations.
     """
-    data: any_
+    data: 'any_'
     topic_name: 'str'
     msg_id: 'str'
     correl_id: 'str' = ''
@@ -64,18 +72,18 @@ class Message(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class MessagesResponse(init=False):
+@dataclass(init=False)
+class MessagesResponse:
     """ Response model containing a list of messages.
     """
     is_ok: 'bool'
-    messages: list_[Message] = field(default_factory=list)
+    messages: 'list_[Message]' = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class SimpleResponse(init=False):
+@dataclass(init=False)
+class SimpleResponse:
     """ Generic response model with just an is_ok field.
     """
     is_ok: 'bool'
@@ -83,8 +91,8 @@ class SimpleResponse(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class APIResponse(init=False):
+@dataclass(init=False)
+class APIResponse:
     """ Base API response model with common fields.
     """
     is_ok: 'bool'
@@ -95,7 +103,7 @@ class APIResponse(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class ErrorResponse(APIResponse):
     """ Error response with default is_ok=False.
     """
@@ -104,7 +112,7 @@ class ErrorResponse(APIResponse):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
@@ -114,7 +122,7 @@ class UnauthorizedResponse(ErrorResponse):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
@@ -124,7 +132,7 @@ class BadRequestResponse(ErrorResponse):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
@@ -134,7 +142,7 @@ class NotImplementedResponse(ErrorResponse):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class HealthCheckResponse:
     """ Health check response.
     """
@@ -144,8 +152,8 @@ class HealthCheckResponse:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class User(init=False):
+@dataclass(init=False)
+class User:
     """ Model representing a user with username and password.
     """
     username: 'str'
@@ -154,8 +162,8 @@ class User(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class Subscription(init=False):
+@dataclass(init=False)
+class Subscription:
     """ Model representing a subscription to a topic.
     """
     topic_name: 'str'
@@ -167,31 +175,31 @@ class Subscription(init=False):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
-class Topic(init=False):
+@dataclass(init=False)
+class Topic:
     """ Model representing a topic.
     """
     name: 'str'
-    creation_time: 'datetime' = field(default_factory=sutcnow)
+    creation_time: 'datetime' = field(default_factory=utcnow)
     is_active: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Type aliases for collections
-users_dict = dict_[str, str]
-user_list = list_[User]
-subscription_list = list_[Subscription]
-message_list = list_[Message]
-topic_list = list_[Topic]
+users_dict = 'dict_[str, str]'
+user_list = 'list_[User]'
+subscription_list = 'list_[Subscription]'
+message_list = 'list_[Message]'
+topic_list = 'list_[Topic]'
 
-endpoint_subscriptions = dict_[str, Subscription]  # endpoint_name -> Subscription
-topic_subscriptions = dict_[str, endpoint_subscriptions]  # topic_name -> {endpoint_name -> Subscription}
+endpoint_subscriptions = 'dict_[str, Subscription]'  # endpoint_name -> Subscription
+topic_subscriptions = 'dict_[str, endpoint_subscriptions]'  # topic_name -> {endpoint_name -> Subscription}
 
 # Optional types
-message_optional = optional[Message]
-subscription_optional = optional[Subscription]
-topic_optional = optional[Topic]
+message_optional = 'optional[Message]'
+subscription_optional = 'optional[Subscription]'
+topic_optional = 'optional[Topic]'
 
 # ################################################################################################################################
 # ################################################################################################################################
