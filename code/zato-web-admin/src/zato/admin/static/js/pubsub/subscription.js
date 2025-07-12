@@ -160,34 +160,24 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
                 }));
             });
 
-            // First, set the value on the select element
-            if(selectedId) {
-                $select.val(selectedId);
-            } else {
-                $select.val('');
-            }
-            
-            // Completely destroy and rebuild Chosen
+            // Completely destroy any existing Chosen instance
             if ($select.next('.chosen-container').length > 0) {
                 $select.chosen('destroy');
             }
             
-            // Reinitialize with proper options
-            $select.chosen({width: '98%'});
+            // Remove the selected attribute from all options
+            $select.find('option').prop('selected', false);
             
-            // Force correct text in the chosen-single span
-            var chosenContainer = $select.next('.chosen-container');
-            var chosenSingle = chosenContainer.find('.chosen-single span');
-            
+            // Set selected attribute directly on the HTML option element
             if (selectedId) {
-                // If an option is selected, use its text
-                var selectedText = $select.find('option:selected').text();
-                chosenSingle.text(selectedText);
-                chosenContainer.find('.chosen-single').removeClass('chosen-default');
+                $select.find('option[value="' + selectedId + '"]').prop('selected', true);
             } else {
-                // Otherwise use the placeholder text (first option)
-                chosenSingle.text('Select a REST endpoint');
+                // If no specific ID, select the first option (the default one)
+                $select.find('option:first').prop('selected', true);
             }
+            
+            // Initialize Chosen on the properly prepared select element
+            $select.chosen({width: '98%'});
 
             // Only show the span if explicitly requested and the current push type is 'rest'
             var deliveryType = form_type === 'create' ? $('#id_delivery_type').val() : $('#id_edit-delivery_type').val();
