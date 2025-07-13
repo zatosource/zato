@@ -152,9 +152,10 @@ class PubSubRESTServer:
 
         response = self.backend.invoke_service(service, request)
 
-        print()
-        print(333, response)
-        print()
+        for item in response:
+            print()
+            print(333, item)
+            print()
 
 # ################################################################################################################################
 

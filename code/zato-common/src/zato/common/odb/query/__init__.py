@@ -935,6 +935,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 def _pubsub_subscription(session, cluster_id):
 
+    # Use distinct on subscription ID to avoid duplicates from topic joins
     return session.query(
         PubSubSubscription,
         PubSubTopic.name.label('topic_name'),
@@ -942,13 +943,14 @@ def _pubsub_subscription(session, cluster_id):
         SecurityBase.password.label('password'),
         HTTPSOAP.name.label('rest_push_endpoint_name')
     ).\
+        distinct(PubSubSubscription.id).\
         join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
         join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
         join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
         filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
-        order_by(PubSubTopic.name, SecurityBase.name)
+        order_by(PubSubSubscription.id, PubSubTopic.name, SecurityBase.name)
 
 def pubsub_subscription(session, cluster_id, id):
     """ An individual Pub/Sub subscription.
