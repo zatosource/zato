@@ -11,6 +11,7 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+import os
 from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
@@ -202,6 +203,10 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def setup(self) -> 'None':
+
+        print()
+        print(222, os.getpid())
+        print()
 
         # Load up all the initial subscriptions
         self._load_subscriptions()
@@ -522,6 +527,10 @@ class GunicornApplication(BaseApplication):
         super().__init__()
 
     def load_config(self):
+
+        print()
+        print(111, os.getpid())
+        print()
 
         # Apply valid configuration options
         for key, value in self.options.items():
