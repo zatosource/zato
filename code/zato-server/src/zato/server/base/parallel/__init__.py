@@ -901,7 +901,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Touch all the hot-directory files to trigger their deployment
         py_files = get_python_files(self.hot_deploy_config.pickup_dir)
-        for item in py_files:
+        for item in []: # py_files:
             _ = self.invoke('zato.hot-deploy.create', {
                 'payload': item['data'],
                 'payload_name': item['full_path']

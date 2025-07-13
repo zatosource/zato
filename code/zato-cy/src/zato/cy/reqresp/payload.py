@@ -178,6 +178,10 @@ class SimpleIOPayload:
     def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
+        # Clear out anything we might have stored before in case .getvalue() get called more than once
+        self.user_attrs_dict.clear()
+        self.user_attrs_list.clear()
+
         value = self._preprocess_payload_attrs(value)
         is_dict:cy.bint = isinstance(value, dict)
 
@@ -216,14 +220,17 @@ class SimpleIOPayload:
             # If search is provided, we need to first get output,
             # append the search the metadata and then serialise ..
             search = self.zato_meta.get('search')
+
             if search:
                 output = self.sio.get_output(value, self.data_format, False)
                 output['_meta'] = search
-                return self.sio.serialise(output, self.data_format)
+                result = self.sio.serialise(output, self.data_format)
+                return result
 
             # .. otherwise, with no search metadata provided,
             # we can data, serialised or not, immediately.
-            return self.sio.get_output(value, self.data_format) if serialize else value
+            result = self.sio.get_output(value, self.data_format) if serialize else value
+            return result
 
         else:
             out = self.sio.get_output(value, self.data_format) if serialize else value
