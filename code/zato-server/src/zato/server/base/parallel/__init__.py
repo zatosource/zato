@@ -40,7 +40,7 @@ from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.internal import start_internal_consumer
+from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
