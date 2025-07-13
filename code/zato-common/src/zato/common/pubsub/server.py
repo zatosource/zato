@@ -157,51 +157,46 @@ class PubSubRESTServer:
         }
 
         response = self.backend.invoke_service(service, request)
-        
+
         logger.info(f'Loading {len(response)} subscriptions')
-        
+
         # Process each subscription
         for item in response:
             cid = new_cid()
-            
+
             try:
                 # Extract essential fields
                 username = item.get('sec_name')
                 password = item.get('password')
                 topic_names = item.get('topic_names', '')
                 sub_key = item.get('sub_key')
-                
-                # Skip if we don't have the minimum required information
-                if not (username and password and topic_names):
-                    logger.warning(f'[{cid}] Skipping incomplete subscription: {username=}, {topic_names=}')
-                    continue
-                
+
                 # Add user credentials if not already present
                 if username not in self.users:
                     logger.info(f'[{cid}] Adding user credentials for {username}')
                     self.users[username] = password
-                
+
                 # Handle multiple topics (comma-separated)
                 for topic_name in topic_names.split(','):
                     topic_name = topic_name.strip()
                     if not topic_name:
                         continue
-                        
+
                     logger.info(f'[{cid}] Setting up subscription: {username} -> {topic_name}')
-                    
+
                     # Create the topic if it doesn't exist yet
                     if topic_name not in self.backend.topics:
                         logger.info(f'[{cid}] Creating topic: {topic_name}')
                         self.backend.create_topic(cid, 'subscription_load', topic_name)
-                    
+
                     # Create the subscription
-                    self.backend.subscribe_impl(cid, topic_name, username)
-                    
+                    self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+
                 logger.info(f'[{cid}] Successfully set up subscription for {username}')
-                
+
             except Exception as e:
                 logger.error(f'[{cid}] Error processing subscription {item}: {e}')
-                
+
         logger.info('Finished loading subscriptions')
 
 # ################################################################################################################################
@@ -209,7 +204,8 @@ class PubSubRESTServer:
     def setup(self) -> 'None':
 
         # Load up all the initial subscriptions
-        self._load_subscriptions()
+        # self._load_subscriptions()
+        pass
 
 # ################################################################################################################################
 
