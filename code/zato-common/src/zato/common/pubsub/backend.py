@@ -218,14 +218,22 @@ class Backend:
         # .. create bindings for the topic ..
         self.broker_client.create_bindings(cid, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
-        # .. start a background consumer ..
-        result = spawn(start_public_consumer, cid, username, sub_key, self._on_message_callback)
+        # Check if we already have a consumer for this sub_key
+        if sub_key not in self.consumers:
 
-        # .. get the actual consumer object ..
-        consumer:'Consumer' = result.get()
+            logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
-        # .. store it for later use ..
-        self.consumers[sub_key] = consumer
+            # .. start a background consumer ..
+            result = spawn(start_public_consumer, cid, username, sub_key, self._on_message_callback)
+
+            # .. get the actual consumer object ..
+            consumer:'Consumer' = result.get()
+
+            # .. store it for later use ..
+            self.consumers[sub_key] = consumer
+
+        else:
+            logger.info(f'[{cid}] Consumer already exists for sub_key={sub_key}, skipping creation')
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
