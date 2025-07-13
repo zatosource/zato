@@ -14,7 +14,7 @@ from logging import getLogger
 from bunch import bunchify
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # Kombu
 from kombu.connection import Connection as KombuAMQPConnection
@@ -47,6 +47,7 @@ class ConsumerConfig:
     prefetch_count: 'int'
     consumer_tag_prefix: 'str'
     on_msg_callback: 'callable_'
+    wait_for_conection: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +80,23 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
     logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
     try:
+
+        # .. start a consumer in a new thread ..
         _ = spawn(consumer.start)
+
+        # .. optionally, wait until it's actually connected ..
+        if consumer_config.wait_for_conection:
+
+            # .. keep running ..
+            while not consumer.is_connected:
+
+                # .. but not if the consumer has been told to stop ..
+                if not consumer.keep_running:
+                    break
+
+                # .. sleep for a moment ..
+                sleep(0.2)
+
     except KeyboardInterrupt:
         consumer.stop()
         logger.info(f'{cid_prefix}Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
@@ -104,6 +121,7 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'Consumer':
     config.prefetch_count = prefetch_count
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
+    config.wait_for_conection = False
 
     consumer = start_consumer(config)
     return consumer
@@ -132,6 +150,7 @@ def start_public_consumer(
     config.prefetch_count = prefetch_count
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
+    config.wait_for_conection = True
 
     consumer = start_consumer(config)
     return consumer
