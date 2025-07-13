@@ -137,6 +137,32 @@ class PubSubRESTServer:
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
 
+        # Set up all the initial objects
+        self.setup()
+
+# ################################################################################################################################
+
+    def _load_subscriptions(self) -> 'None':
+
+        service = 'zato.pubsub.subscription.get-list'
+        request = {
+            'cluster_id': 1,
+            'needs_password': True
+        }
+
+        response = self.backend.invoke_service(service, request)
+
+        print()
+        print(333, response)
+        print()
+
+# ################################################################################################################################
+
+    def setup(self) -> 'None':
+
+        # Load up all the initial subscriptions
+        self._load_subscriptions()
+
 # ################################################################################################################################
 
     def authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
