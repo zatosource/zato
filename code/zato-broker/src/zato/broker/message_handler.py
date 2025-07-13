@@ -49,7 +49,6 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
     """
     result = BrokerMessageResult()
 
-
     try:
         # Extract action information
         action_code = msg.get('action')
@@ -76,8 +75,8 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
     except Exception:
         msg_action = msg.get('action') or 'undefined_msg_action'
         action = code_to_name.get(msg_action) or 'undefined_action'
-        logger.warning('Could not handle broker message: (%s:%s) `%r`, e:`%s`', action, msg_action, msg, format_exc())
-        return result
+        msg = f'Could not handle broker message: ({action}:{msg_action}) `repr({msg})`, e:`{format_exc()}`'
+        raise Exception(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
