@@ -6,17 +6,24 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Must come first
+from gevent import monkey;
+_ = monkey.patch_all()
+
 # stdlib
 import argparse
 import json
 import logging
 import os
 import sys
+import requests
 from dataclasses import dataclass
 from logging import basicConfig, DEBUG, getLogger, INFO
+from urllib.parse import quote
 
 # Zato
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
+from zato.common.pubsub.util import get_broker_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +108,11 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = create_user_parser.add_argument('--username', type=str, required=True, help='Username')
     _ = create_user_parser.add_argument('--password', type=str, required=True, help='Password')
     _ = create_user_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
+
+    # Cleanup command
+    cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
+    _ = cleanup_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
+    _ = cleanup_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
 
     return parser
 
@@ -251,6 +263,113 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
 # ################################################################################################################################
 
+def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
+    """ Clean up AMQP bindings and queues.
+    """
+    try:
+        # Set up logging level
+        level = DEBUG if args.has_debug else INFO
+        basicConfig(
+            level=level,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler()
+            ]
+        )
+
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # Extract host from address (remove port if present)
+        host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
+        management_port = args.management_port
+
+        # URL encode the vhost
+        encoded_vhost = quote(broker_config.vhost, safe='')
+
+        # Build HTTP API base URL
+        api_base_url = f'http://{host}:{management_port}/api'
+        auth = (broker_config.username, broker_config.password)
+
+        logger.info(f'Connecting to RabbitMQ API at: {api_base_url}')
+
+        # List all bindings from pubsubapi exchange
+        try:
+            logger.info('Listing bindings from pubsubapi exchange')
+            bindings_url = f'{api_base_url}/exchanges/{encoded_vhost}/pubsubapi/bindings/source'
+            response = requests.get(bindings_url, auth=auth)
+
+            if response.status_code == 200:
+                bindings = response.json()
+                logger.info(f'Found {len(bindings)} bindings for pubsubapi exchange')
+
+                # Remove all bindings from pubsubapi exchange
+                for binding in bindings:
+                    queue_name = binding.get('destination')
+
+                    # Only process if the destination is a queue
+                    if binding.get('destination_type') == 'queue':
+
+                        routing_key = binding.get('routing_key', '')
+                        logger.info(f'Removing binding: queue={queue_name}, routing_key={routing_key} from exchange=pubsubapi')
+
+                        # Delete the binding
+                        unbind_url = f'{api_base_url}/bindings/{encoded_vhost}/e/pubsubapi/q/{queue_name}/{quote(routing_key, safe="")}'
+                        delete_response = requests.delete(unbind_url, auth=auth)
+
+                        if delete_response.status_code in (200, 204):
+                            logger.info(f'Successfully removed binding for queue: {queue_name}')
+                        else:
+                            logger.error(f'Failed to remove binding: {delete_response.status_code}, {delete_response.text}')
+            else:
+                logger.error(f'Failed to list bindings: {response.status_code}, {response.text}')
+
+        except Exception as e:
+            logger.error(f'Error removing bindings: {e}')
+
+        # Find and remove all queues with prefix 'zpsk'
+        try:
+            logger.info('Listing queues with zpsk prefix')
+            queues_url = f'{api_base_url}/queues/{encoded_vhost}'
+            response = requests.get(queues_url, auth=auth)
+
+            if response.status_code == 200:
+                queues = response.json()
+                to_delete_queues = [queue for queue in queues if queue['name'].startswith('zpsk')]
+                logger.info(f'Found {len(to_delete_queues)} queues with zpsk prefix')
+
+                # Delete each zpsk queue
+                for queue in to_delete_queues:
+                    queue_name = queue['name']
+                    logger.info(f'Removing queue: {queue_name}')
+
+                    # Delete the queue - empty all arguments to force deletion
+                    queue_url = f'{api_base_url}/queues/{encoded_vhost}/{queue_name}'
+                    delete_response = requests.delete(
+                        queue_url,
+                        auth=auth,
+                        params={'if-unused': 'false', 'if-empty': 'false'}
+                    )
+
+                    if delete_response.status_code in (200, 204):
+                        logger.info(f'Successfully removed queue: {queue_name}')
+                    else:
+                        logger.error(f'Failed to remove queue: {delete_response.status_code}, {delete_response.text}')
+            else:
+                logger.error(f'Failed to list queues: {response.status_code}, {response.text}')
+
+        except Exception as e:
+            logger.error(f'Error removing queues: {e}')
+
+        return OperationResult(is_ok=True, message='Cleanup completed successfully')
+
+    except Exception as e:
+        message = f'Error during cleanup: {e}'
+        logger.error(message)
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
+
+# ################################################################################################################################
+
 def main() -> 'int':
     """ Main entry point for the CLI.
     Returns an integer exit code - 0 for success, non-zero for failure.
@@ -276,6 +395,10 @@ def main() -> 'int':
 
     elif args.command == 'create-user':
         result = create_user(args)
+        return 0 if result.is_ok else 1
+
+    elif args.command == 'cleanup':
+        result = cleanup_broker(args)
         return 0 if result.is_ok else 1
     else:
         parser.print_help()
