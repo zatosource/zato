@@ -77,6 +77,18 @@ class Backend:
 
 # ################################################################################################################################
 
+    def invoke_service(
+        self,
+        service:'str',
+        request:'anydictnone'=None,
+        timeout:'int'=2,
+        needs_root_elem:'bool'=False,
+    ) -> 'any_':
+        response = self.broker_client.invoke_sync(service, request, timeout)
+        return response
+
+# ################################################################################################################################
+
     def create_topic(self, cid:'str', source:'str', topic_name:'str') -> 'None':
 
         topic = Topic()

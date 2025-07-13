@@ -69,6 +69,7 @@ class GetList(AdminService):
 
                 # Include password in response only if requested
                 if needs_password:
+                    password = self.crypto.decrypt(password)
                     item_dict['password'] = password
 
                 subscriptions_by_id[sub_id] = item_dict
