@@ -17,9 +17,10 @@ from gevent import spawn
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.api import new_sub_key, utcnow
+from zato.common.broker_message import SERVICE
 from zato.common.pubsub.consumer import start_public_consumer
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
+from zato.common.util.api import new_sub_key, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +39,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _prefix = PubSub.Prefix
+_service_publish = SERVICE.PUBLISH.value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,15 +165,17 @@ class Backend:
 
     def _on_message_callback(self, body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
 
-        # Print what we received ..
-        print()
-        print(111, body)
-        print(222, msg)
-        print(333, name)
-        print(444, config)
-        print()
+        # Turn the message into a form that a service can be invoked with ..
+        service_msg = {}
+        service_msg['action'] = _service_publish
+        service_msg['payload'] = body
+        service_msg['cid'] = body.get('correl_id') or body.msg_id
+        service_msg['service'] = 'demo.input-logger'
 
-        # .. and acknowledge the message so we can read more of them.
+        # .. push that message to the server ..
+        self.broker_client.invoke_async(service_msg)
+
+        # .. and acknowledge it so we can read more of them.
         msg.ack()
 
 # ################################################################################################################################
