@@ -27,6 +27,7 @@ from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, S
 if 0:
     from zato.broker.client import BrokerClient
     from zato.common.typing_ import any_, dict_, strdict, strnone
+    from zato.server.connection.amqp_ import Consumer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,12 +65,14 @@ def generate_msg_id() -> 'str':
 class Backend:
     """ Backend implementation of pub/sub, irrespective of the actual REST server.
     """
-    topics: 'dict_[str, Topic]'
+    topics: 'dict_[str, Topic]' # Maps topic_name to a Topic object
+    consumers: 'dict_[str, Consumer]' # Maps sub_keys to Consumer objects
     subs_by_topic: 'topic_subs'
 
     def __init__(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
         self.topics = {}
+        self.consumers = {}
         self.subs_by_topic = {}
 
 # ################################################################################################################################
@@ -206,15 +209,10 @@ class Backend:
         result = spawn(start_public_consumer, cid, username, sub_key, self._on_message_callback)
 
         # .. get the actual consumer object ..
-        consumer = result.get()
+        consumer:'Consumer' = result.get()
 
-        consumer.stop()
-
-        print()
-        print(111, result)
-        print(222, result.get())
-        print(333, result.get())
-        print()
+        # .. store it for later use ..
+        self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
