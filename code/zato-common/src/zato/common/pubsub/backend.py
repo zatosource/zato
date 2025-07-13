@@ -203,7 +203,18 @@ class Backend:
         self.broker_client.create_bindings(cid, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
         # .. start a background consumer ..
-        start_public_consumer(cid, username, sub_key, self._on_message_callback)
+        result = spawn(start_public_consumer, cid, username, sub_key, self._on_message_callback)
+
+        # .. get the actual consumer object ..
+        consumer = result.get()
+
+        consumer.stop()
+
+        print()
+        print(111, result)
+        print(222, result.get())
+        print(333, result.get())
+        print()
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
