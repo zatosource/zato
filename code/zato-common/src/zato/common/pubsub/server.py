@@ -188,8 +188,6 @@ class PubSubRESTServer:
                     # Create the subscription
                     self.backend.subscribe_impl(cid, topic_name, username, sub_key)
 
-                logger.info(f'[{cid}] Successfully set up subscription for {username}')
-
             except Exception as e:
                 logger.error(f'[{cid}] Error processing subscription {item}: {e}')
 
