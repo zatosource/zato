@@ -330,7 +330,7 @@ def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=rand
 
 def new_sub_key() -> 'str':
     sub_key = 'zpsk.rest.' + uuid4().hex[:14]
-    return sub_key
+    return 'abc123'
 
 # ################################################################################################################################
 
