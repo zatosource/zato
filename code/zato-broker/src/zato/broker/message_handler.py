@@ -39,7 +39,7 @@ class BrokerMessageResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger('zato')
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +48,7 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
     """ Shared message handler. Extracts action from message, finds the corresponding method on context, and invokes it if found.
     """
     result = BrokerMessageResult()
+
 
     try:
         # Extract action information

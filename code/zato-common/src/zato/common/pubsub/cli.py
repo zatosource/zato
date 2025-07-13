@@ -429,6 +429,9 @@ if __name__ == '__main__':
 # Health check endpoint:
 curl http://localhost:44556/pubsub/health; echo
 
+echo '{"data":"Hello World"}' > post_data.json
+ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:44556/pubsub/topic/my.topic
+
 # Publish a message to a topic:
 curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic -d '{"data":"Hello World"}'; echo
 
