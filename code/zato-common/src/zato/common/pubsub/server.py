@@ -142,9 +142,6 @@ class PubSubRESTServer:
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
 
-        # Set up all the initial objects
-        self.setup()
-
 # ################################################################################################################################
 
     def _load_subscriptions(self) -> 'None':
@@ -523,15 +520,11 @@ class GunicornApplication(BaseApplication):
     """
     def __init__(self, app:'PubSubRESTServer', options:'dictnone'=None):
         self.options = options or {}
+        self.options.setdefault('post_fork', self.on_post_fork)
         self.application = app
         super().__init__()
 
     def load_config(self):
-
-        print()
-        print(111, os.getpid())
-        print()
-
         # Apply valid configuration options
         for key, value in self.options.items():
             if key in self.cfg.settings and value is not None: # type: ignore
@@ -539,6 +532,9 @@ class GunicornApplication(BaseApplication):
 
     def load(self):
         return self.application
+
+    def on_post_fork(self, server, worker):
+        self.application.setup()
 
 # ################################################################################################################################
 # ################################################################################################################################
