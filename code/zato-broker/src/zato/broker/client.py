@@ -137,6 +137,8 @@ class BrokerClient:
                 delivery_mode=PERSISTENT_DELIVERY_MODE
             )
 
+    invoke_async = publish
+
 # ################################################################################################################################
 
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
@@ -164,8 +166,6 @@ class BrokerClient:
         with self.producer.acquire() as client:
             logger.debug(f'Producer connection acquired: {client}')
             _ = client.publish(msg, **publish_kwargs)
-
-    invoke_async = publish
 
 # ################################################################################################################################
 
