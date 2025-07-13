@@ -180,7 +180,7 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        username: 'str'
+        username: 'str',
         sub_key: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.

@@ -204,7 +204,7 @@ class PubSubRESTServer:
     def setup(self) -> 'None':
 
         # Load up all the initial subscriptions
-        # self._load_subscriptions()
+        self._load_subscriptions()
         pass
 
 # ################################################################################################################################
