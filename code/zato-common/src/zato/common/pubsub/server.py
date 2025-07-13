@@ -156,7 +156,10 @@ class PubSubRESTServer:
 
         response = self.backend.invoke_service(service, request)
 
-        logger.info(f'Loading {len(response)} subscriptions')
+        if len_response := len(response) == 1:
+            logger.info('Loading 1 subscription')
+        else:
+            logger.info(f'Loading {len_response} subscriptions')
 
         # Process each subscription
         for item in response:
@@ -182,11 +185,6 @@ class PubSubRESTServer:
 
                     logger.info(f'[{cid}] Setting up subscription: {username} -> {topic_name}')
 
-                    # Create the topic if it doesn't exist yet
-                    if topic_name not in self.backend.topics:
-                        logger.info(f'[{cid}] Creating topic: {topic_name}')
-                        self.backend.create_topic(cid, 'subscription_load', topic_name)
-
                     # Create the subscription
                     self.backend.subscribe_impl(cid, topic_name, username, sub_key)
 
@@ -200,14 +198,8 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def setup(self) -> 'None':
-
-        print()
-        print(222, os.getpid())
-        print()
-
         # Load up all the initial subscriptions
         self._load_subscriptions()
-        pass
 
 # ################################################################################################################################
 
