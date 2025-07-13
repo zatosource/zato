@@ -257,6 +257,7 @@ class Consumer:
             if connection:
                 logger.debug('Closing connection for `%s`', consumer)
                 connection.close()
+
             self.is_stopped = True # Set to True if we break out of the main loop.
 
         except Exception:
