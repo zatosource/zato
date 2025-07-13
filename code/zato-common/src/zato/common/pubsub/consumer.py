@@ -13,6 +13,9 @@ from logging import getLogger
 # Bunch
 from bunch import bunchify
 
+# gevent
+from gevent import spawn
+
 # Kombu
 from kombu.connection import Connection as KombuAMQPConnection
 
@@ -48,7 +51,7 @@ class ConsumerConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_consumer(consumer_config:'ConsumerConfig') -> 'None':
+def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
 
     # For later use
     visibility = 'internal' if consumer_config.is_internal else 'public'
@@ -76,15 +79,17 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'None':
     logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
     try:
-        consumer.start()
+        _ = spawn(consumer.start)
     except KeyboardInterrupt:
         consumer.stop()
         logger.info(f'{cid_prefix}Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+    finally:
+        return consumer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
+def start_internal_consumer(on_msg_callback:'callable_') -> 'Consumer':
 
     name = 'zato.server'
     is_internal = True
@@ -100,7 +105,8 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
 
-    start_consumer(config)
+    consumer = start_consumer(config)
+    return consumer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,13 +116,13 @@ def start_public_consumer(
     username: 'str',
     sub_key: 'str',
     on_msg_callback: 'callable_'
-) -> 'None':
+) -> 'Consumer':
 
     name = username
     is_internal = False
     queue_name = sub_key
     prefetch_count = 1
-    consumer_tag_prefix = username
+    consumer_tag_prefix = f'{username}.{cid}'
 
     config = ConsumerConfig()
     config.cid = cid
@@ -127,7 +133,8 @@ def start_public_consumer(
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
 
-    start_consumer(config)
+    consumer = start_consumer(config)
+    return consumer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,7 +155,7 @@ if __name__ == '__main__':
         # .. and acknowledge the message so we can read more of them.
         msg.ack()
 
-    start_internal_consumer(process_message)
+    _ = start_internal_consumer(process_message)
 
 # ################################################################################################################################
 # ################################################################################################################################

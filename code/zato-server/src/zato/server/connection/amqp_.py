@@ -288,8 +288,7 @@ class Consumer:
                 return
 
             # If we get here it means that we did not stop in the time expected, raise an exception in that case.
-            raise Exception('Consumer for channel `{}` did not stop in the expected time of {}s.'.format(
-                self.name, delta))
+            raise Exception('Consumer for channel `{}` did not stop in the expected time of {}s.'.format(self.name, delta))
 
 # ################################################################################################################################
 
