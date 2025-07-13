@@ -46,6 +46,10 @@ class GetList(AdminService):
 
     def get_data(self, session):
 
+        # Check if password should be included in the response
+        needs_password = self.request.input.needs_password
+
+        # Query always returns password now, but we only need to use it if requested
         result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
 
         # Group by subscription ID
@@ -53,7 +57,8 @@ class GetList(AdminService):
         topic_names_by_id = {}
 
         for item in result:
-            subscription, topic_name, sec_name, rest_push_endpoint_name = item
+            # Unpack all fields - password is always present in the query result now
+            subscription, topic_name, sec_name, password, rest_push_endpoint_name = item
             sub_id = subscription.id
 
             if sub_id not in subscriptions_by_id:
@@ -61,6 +66,11 @@ class GetList(AdminService):
                 item_dict = subscription.asdict()
                 item_dict['sec_name'] = sec_name
                 item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
+
+                # Include password in response only if requested
+                if needs_password:
+                    item_dict['password'] = password
+
                 subscriptions_by_id[sub_id] = item_dict
 
                 # Initialize topic names list for this subscription
