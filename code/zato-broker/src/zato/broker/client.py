@@ -505,7 +505,7 @@ class BrokerClient:
         queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True)
 
         # Bind the queue to the exchange with the topic name as the routing key
-        logger.info(f'[{cid}] Creating binding between exchange={exchange} and queue={queue_name} with routing_key={routing_key}')
+        logger.info(f'[{cid}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
