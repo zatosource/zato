@@ -301,7 +301,11 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
 
             if response.status_code == 200:
                 bindings = response.json()
-                logger.info(f'Found {len(bindings)} bindings for pubsubapi exchange')
+                binding_count = len(bindings)
+                if binding_count == 1:
+                    logger.info('Found 1 binding for pubsubapi exchange')
+                else:
+                    logger.info(f'Found {binding_count} bindings for pubsubapi exchange')
 
                 # Remove all bindings from pubsubapi exchange
                 for binding in bindings:
@@ -343,7 +347,11 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
                 # Process each prefix
                 for prefix in prefixes:
                     matching_queues = [queue for queue in all_queues if queue['name'].startswith(prefix)]
-                    logger.info(f'Found {len(matching_queues)} queues with prefix {prefix}')
+                    queue_count = len(matching_queues)
+                    if queue_count == 1:
+                        logger.info(f'Found 1 queue with prefix {prefix}')
+                    else:
+                        logger.info(f'Found {queue_count} queues with prefix {prefix}')
                     
                     # Delete each matching queue
                     for queue in matching_queues:
