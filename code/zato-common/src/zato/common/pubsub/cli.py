@@ -36,7 +36,7 @@ if 0:
 
 # Setup basic logging
 basicConfig(
-    level=INFO,
+    level=DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
@@ -335,15 +335,15 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
         try:
             # Define the prefixes to clean up
             prefixes = ['zpsk', 'zato-reply-']
-            
+
             # Get all queues
             logger.info(f'Listing queues with prefixes: {prefixes}')
             queues_url = f'{api_base_url}/queues/{encoded_vhost}'
             response = requests.get(queues_url, auth=auth)
-            
+
             if response.status_code == 200:
                 all_queues = response.json()
-                
+
                 # Process each prefix
                 for prefix in prefixes:
                     matching_queues = [queue for queue in all_queues if queue['name'].startswith(prefix)]
@@ -352,20 +352,20 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
                         logger.info(f'Found 1 queue with prefix {prefix}')
                     else:
                         logger.info(f'Found {queue_count} queues with prefix {prefix}')
-                    
+
                     # Delete each matching queue
                     for queue in matching_queues:
                         queue_name = queue['name']
                         logger.info(f'Removing queue: {queue_name}')
-                        
+
                         # Delete the queue - empty all arguments to force deletion
                         queue_url = f'{api_base_url}/queues/{encoded_vhost}/{queue_name}'
                         delete_response = requests.delete(
-                            queue_url, 
+                            queue_url,
                             auth=auth,
                             params={'if-unused': 'false', 'if-empty': 'false'}
                         )
-                        
+
                         if delete_response.status_code in (200, 204):
                             logger.info(f'Successfully removed queue: {queue_name}')
                         else:

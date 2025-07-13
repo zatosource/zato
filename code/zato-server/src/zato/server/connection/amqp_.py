@@ -138,7 +138,7 @@ class Consumer:
         self.keep_running = True
         self.is_stopped = False
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 0.35
+        self.timeout = 10.35
 
     def _on_amqp_message(self, body, msg):
         try:
