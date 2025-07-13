@@ -12,12 +12,12 @@ from json import dumps
 from logging import getLogger
 from uuid import uuid4
 
-# Zato
-from zato.common.typing_ import strnone
-from zato.common.util.api import utcnow
+# gevent
+from gevent import spawn
 
+# Zato
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid, new_sub_key
+from zato.common.util.api import new_cid, new_sub_key, utcnow
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse
 from zato.common.pubsub.models import Subscription, Topic
 
@@ -26,7 +26,7 @@ from zato.common.pubsub.models import Subscription, Topic
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import dict_, strnone
+    from zato.common.typing_ import any_, dict_, strdict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +146,11 @@ class Backend:
 
 # ################################################################################################################################
 
+    def _on_message_callback(body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
+        pass
+
+# ################################################################################################################################
+
     def subscribe_impl(
         self,
         topic_name:'str',
@@ -156,30 +161,33 @@ class Backend:
         cid = new_cid()
         logger.info(f'[{cid}] Subscribing {username} to topic {topic_name}')
 
-        # Create topic if it doesn't exist
+        # Create topic if it doesn't exist ..
         if topic_name not in self.topics:
             self.create_topic(cid, 'subscribe', topic_name)
 
-        # Check if already subscribed
+        # .. check if already subscribed ..
         if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
             logger.info(f'[{cid}] User {username} already subscribed to {topic_name}')
             response = StatusResponse()
             response.is_ok = True
             return response
 
-        # Create subscription
+        # .. if we are here, it means that such a subscription doesn't exist yet ..
+
+        # .. create a new subscription ..
         sub_key = new_sub_key()
         sub = Subscription()
         sub.topic_name = topic_name
         sub.username = username
         sub.sub_key = sub_key
 
-        # Store subscription
-        if topic_name not in self.subs_by_topic:
-            self.subs_by_topic[topic_name] = {}
+        # .. get or create a dict with subscriptions for users ..
+        subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
 
-        subs_by_username = self.subs_by_topic[topic_name]
+        # .. now add it for that user ..
         subs_by_username[username] = sub
+
+        # .. and start a background consumer ..
 
         # Register subscription with broker client
         # self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore

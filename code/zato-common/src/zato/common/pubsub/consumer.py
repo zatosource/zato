@@ -25,7 +25,7 @@ from zato.server.connection.amqp_ import Consumer
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_
+    from zato.common.typing_ import any_, callable_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +103,31 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def start_public_consumer(
+    username: 'str',
+    sub_key: 'str',
+    on_msg_callback: 'callable_'
+) -> 'None':
+
+    name = username
+    is_internal = False
+    queue_name = sub_key
+    prefetch_count = 1
+    consumer_tag_prefix = username
+
+    config = ConsumerConfig()
+    config.name = name
+    config.is_internal = is_internal
+    config.queue_name = queue_name
+    config.prefetch_count = prefetch_count
+    config.consumer_tag_prefix = consumer_tag_prefix
+    config.on_msg_callback = on_msg_callback
+
+    start_consumer(config)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
@@ -111,7 +136,7 @@ if __name__ == '__main__':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_format)
 
-    def process_message(body:'any_', msg:'any_', name:'str', config:'dict') -> 'None':
+    def process_message(body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
 
         # Print what we received ..
         print(msg)
