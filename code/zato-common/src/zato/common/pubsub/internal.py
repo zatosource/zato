@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import dataclass
 from logging import getLogger
 
 # Bunch
@@ -34,36 +35,70 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
+@dataclass(init=False)
+class ConsumerConfig:
+    name: 'str'
+    is_internal: 'bool'
+    queue_name: 'str'
+    prefetch_count: 'int'
+    consumer_tag_prefix: 'str'
+    on_msg_callback: 'callable_'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def start_consumer(consumer_config:'ConsumerConfig') -> 'None':
+
+    # For later use
+    visibility = 'internal' if consumer_config.is_internal else 'public'
 
     # Get broker configuration from the utility function
-    config = get_broker_config()
+    broker_config = get_broker_config()
 
-    queue_name = 'server'
+    conn_url = f'{broker_config.protocol}://{broker_config.username}:{broker_config.password}@{broker_config.address}/{broker_config.vhost}'
+    conn_url_no_password = f'{broker_config.protocol}://{broker_config.username}:********@{broker_config.address}/{broker_config.vhost}'
 
-    conn_url = f'{config.protocol}://{config.username}:{config.password}@{config.address}/{config.vhost}'
-    conn_url_no_password = f'{config.protocol}://{config.username}:********@{config.address}/{config.vhost}'
-
-    config = bunchify({
-        'name': 'zato.server',
-        'queue': queue_name,
-        'consumer_tag_prefix': 'zato-server',
+    broker_config = bunchify({
+        'name': consumer_config.name,
+        'queue': consumer_config.queue_name,
+        'consumer_tag_prefix': consumer_config.consumer_tag_prefix,
         'ack_mode': AMQP.ACK_MODE.ACK.id,
-        'prefetch_count': 1,
+        'prefetch_count': consumer_config.prefetch_count,
         'conn_url': conn_url,
         'conn_class': KombuAMQPConnection,
         'is_active': True
     })
 
-    consumer = Consumer(config, on_msg_callback)
+    consumer = Consumer(broker_config, consumer_config.on_msg_callback)
 
-    logger.info(f'Starting internal pub/sub server consumer for {conn_url_no_password} (queue={queue_name})')
+    logger.info(f'Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
     try:
         consumer.start()
     except KeyboardInterrupt:
         consumer.stop()
-        logger.info(f'Stopped internal pub/sub server consumer for {conn_url_no_password} (queue={queue_name})')
+        logger.info(f'Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
+
+    name = 'zato.server'
+    is_internal = True
+    queue_name = 'server'
+    prefetch_count = 1
+    consumer_tag_prefix = 'zato-server'
+
+    config = ConsumerConfig()
+    config.name = name
+    config.is_internal = is_internal
+    config.queue_name = queue_name
+    config.prefetch_count = prefetch_count
+    config.consumer_tag_prefix = consumer_tag_prefix
+    config.on_msg_callback = on_msg_callback
+
+    start_consumer(config)
 
 # ################################################################################################################################
 # ################################################################################################################################
