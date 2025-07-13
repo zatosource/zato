@@ -20,10 +20,11 @@ from zato.broker.message_handler import handle_broker_msg
 # ################################################################################################################################
 
 if 0:
+    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
     from zato.server.base.worker import WorkerStore
-
     BrokerClient = BrokerClient
+    KombuMessage = KombuMessage
     WorkerStore = WorkerStore
 
 # ################################################################################################################################
@@ -53,7 +54,7 @@ class BrokerMessageReceiver:
 
 # ################################################################################################################################
 
-    def on_broker_msg(self, msg):
+    def on_broker_msg(self, msg:'strdict') -> 'None':
         """ Receives a configuration message, parses its JSON contents and invokes an appropriate handler, the one indicated
         by the msg's 'action' key so if the action is '1000' then self.on_config_SCHEDULER_CREATE will be invoked
         (because in this case '1000' is the code for creating a new scheduler's job, see zato.common.broker_message for the list

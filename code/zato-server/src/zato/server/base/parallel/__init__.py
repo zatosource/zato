@@ -16,6 +16,7 @@ from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
 from random import seed as random_seed
+from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
@@ -69,6 +70,7 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 if 0:
 
     from bunch import Bunch as bunch_
+    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -82,7 +84,9 @@ if 0:
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
+    KombuMessage = KombuMessage
     ODBManager = ODBManager
+    random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SIOServerConfig = SIOServerConfig # type: ignore
@@ -1103,16 +1107,27 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def on_pubsub_message(self, body:'any_', msg:'any_', name:'str', config:'dict') -> 'None':
+    def on_pubsub_message(self, body:'any_', amqp_msg:'KombuMessage', name:'str', config:'dict') -> 'None':
 
+        # Make sure we work with a dict ..
         if not isinstance(body, dict):
             body = loads(body)
+
+        # .. which we can now turn into a Bunch ..
         body = bunchify(body)
 
-        self.on_broker_msg(body)
+        # .. and now we can call the actual handler now ..
+        try:
+            self.on_broker_msg(body)
 
-        # .. and acknowledge the message so we can read more of them.
-        msg.ack()
+        # .. indicate the message has not been processed
+        except Exception:
+            logger.warn('Broker message could not be processed: %s', format_exc())
+            amqp_msg.reject(requeue=True)
+
+        # .. otherwise, confirm it's been consumed.
+        else:
+            amqp_msg.ack()
 
 # ################################################################################################################################
 
