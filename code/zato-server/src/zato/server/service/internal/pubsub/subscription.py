@@ -39,9 +39,10 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_subscription_get_list_request'
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
+        input_optional = 'needs_password'
         output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_base_id', 'sec_name', \
             'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_optional = 'rest_push_endpoint_name', AsIs('topic_names')
+        output_optional = 'rest_push_endpoint_name', AsIs('topic_names'), 'password'
 
     def get_data(self, session):
 
