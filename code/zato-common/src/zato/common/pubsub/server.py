@@ -230,7 +230,7 @@ class PubSubRESTServer:
         msg.in_reply_to = in_reply_to
 
         # .. let the backend handle it ..
-        result = self.backend.publish_impl(topic_name, msg, username, ext_client_id)
+        result = self.backend.publish_impl(cid, topic_name, msg, username, ext_client_id)
 
         # .. build our response ..
         response = APIResponse()
@@ -252,7 +252,7 @@ class PubSubRESTServer:
         username = self._ensure_authenticated(cid, environ)
 
         # Subscribe to topic using backend
-        result = self.backend.subscribe_impl(topic_name, username)
+        result = self.backend.subscribe_impl(cid, topic_name, username)
 
         response = APIResponse()
         response.is_ok = result.is_ok
@@ -272,7 +272,7 @@ class PubSubRESTServer:
         username = self._ensure_authenticated(cid, environ)
 
         # Unsubscribe from topic using backend
-        result = self.backend.unsubscribe_impl(topic_name, username)
+        result = self.backend.unsubscribe_impl(cid, topic_name, username)
 
         response = APIResponse()
         response.is_ok = result.is_ok
