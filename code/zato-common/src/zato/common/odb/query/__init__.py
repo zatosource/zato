@@ -939,6 +939,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription,
         PubSubTopic.name.label('topic_name'),
         SecurityBase.name.label('sec_name'),
+        SecurityBase.password.label('password'),
         HTTPSOAP.name.label('rest_push_endpoint_name')
     ).\
         join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
