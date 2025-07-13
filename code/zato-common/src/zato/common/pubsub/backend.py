@@ -84,7 +84,7 @@ class Backend:
         timeout:'int'=2,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
-        response = self.broker_client.invoke_sync(service, request, timeout)
+        response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
         return response
 
 # ################################################################################################################################

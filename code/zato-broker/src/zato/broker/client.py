@@ -380,7 +380,6 @@ class BrokerClient:
                 routing_key='server',
                 content_type='text/plain',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
-                # Don't use AMQP properties for correlation_id
                 reply_to=reply_queue
             )
 
@@ -461,8 +460,10 @@ class BrokerClient:
 
                 # Also clean up the callback registration
                 with self.lock:
+
                     if correlation_id in self._callbacks:
                         _ = self._callbacks.pop(correlation_id, None) # type: ignore
+
                     if correlation_id in self.correlation_to_queue_map:
                         _ = self.correlation_to_queue_map.pop(correlation_id, None)
 
