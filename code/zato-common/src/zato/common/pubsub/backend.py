@@ -179,13 +179,14 @@ class Backend:
     def subscribe_impl(
         self,
         cid: 'str',
-        topic_name:'str',
-        username:'str'
+        topic_name: 'str',
+        username: 'str'
+        sub_key: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
         # Local aliases
-        sub_key = new_sub_key(username)
+        sub_key = sub_key or new_sub_key(username)
 
         logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
 
