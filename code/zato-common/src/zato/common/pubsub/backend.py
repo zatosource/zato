@@ -170,7 +170,7 @@ class Backend:
         """ Subscribe to a topic.
         """
         # Local aliases
-        sub_key = new_sub_key()
+        sub_key = new_sub_key(username)
 
         logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
 

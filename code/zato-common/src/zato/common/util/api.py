@@ -328,8 +328,9 @@ def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=rand
 
 # ################################################################################################################################
 
-def new_sub_key() -> 'str':
-    sub_key = 'zpsk.' + uuid4().hex[:14]
+def new_sub_key(username:'str') -> 'str':
+    cid = new_cid()
+    sub_key = f'zpsk.{cid}.{username}'
     return sub_key
 
 # ################################################################################################################################
