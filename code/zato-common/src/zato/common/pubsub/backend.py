@@ -17,7 +17,7 @@ from gevent import spawn
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid, new_sub_key, utcnow
+from zato.common.util.api import new_sub_key, utcnow
 from zato.common.pubsub.consumer import start_public_consumer
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
 
@@ -198,6 +198,9 @@ class Backend:
 
         # .. now add it for that user ..
         subs_by_username[username] = sub
+
+        # .. create bindings for the topic ..
+        self.broker_client.create_bindings(cid, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
         # .. start a background consumer ..
         start_public_consumer(cid, username, sub_key, self._on_message_callback)

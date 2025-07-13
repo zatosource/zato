@@ -20,7 +20,7 @@ from gevent import sleep, spawn
 
 # Kombu
 from kombu.connection import Connection as KombuAMQPConnection
-from kombu.entity import PERSISTENT_DELIVERY_MODE
+from kombu.entity import PERSISTENT_DELIVERY_MODE, Exchange, Queue
 
 # Zato
 from zato.common.api import AMQP
@@ -461,6 +461,55 @@ class BrokerClient:
 
         # Return the data - response already logged in set_response with CID
         return response.data
+
+# ################################################################################################################################
+
+    def get_connection(self) -> 'KombuAMQPConnection':
+        """ Returns a new AMQP connection object using broker configuration parameters.
+        """
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # Split host and port from address
+        host, port = broker_config.address.split(':')
+        port = int(port)
+
+        # Create and return a new connection
+        conn = KombuAMQPConnection(
+            hostname=host,
+            port=port,
+            userid=broker_config.username,
+            password=broker_config.password,
+            virtual_host=broker_config.vhost,
+            transport=broker_config.protocol,
+        )
+
+        return conn
+
+# ################################################################################################################################
+
+    def create_bindings(
+        self,
+        cid: 'str',
+        exchange_name: 'str',
+        queue_name: 'str',
+        routing_key: 'str',
+    ) -> 'None':
+
+        # Create binding between exchange and queue with the topic as routing key
+        # Get broker connection string from the client
+        conn = self.get_connection()
+
+        # Create exchange and queue objects
+        exchange = Exchange(exchange_name, type='topic', durable=True)
+        queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True)
+
+        # Bind the queue to the exchange with the topic name as the routing key
+        logger.info(f'[{cid}] Creating binding between exchange={exchange} and queue={queue_name} with routing_key={routing_key}')
+
+        _ = queue.maybe_bind(conn)
+        _ = queue.declare()
+        _ = queue.bind_to(exchange=exchange, routing_key=routing_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
