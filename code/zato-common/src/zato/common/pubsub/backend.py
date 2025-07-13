@@ -18,8 +18,8 @@ from gevent import spawn
 # Zato
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid, new_sub_key, utcnow
-from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse
-from zato.common.pubsub.models import Subscription, Topic
+from zato.common.pubsub.consumer import start_public_consumer
+from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,12 +82,13 @@ class Backend:
         self.topics[topic_name] = topic
         self.subs_by_topic[topic_name] = {}
 
-        logger.info(f'[{cid}] Created new topic: {topic_name} ({source}')
+        logger.info(f'[{cid}] Created new topic: {topic_name} ({source})')
 
 # ################################################################################################################################
 
     def publish_impl(
         self,
+        cid: 'str',
         topic_name:'str',
         msg:'PubMessage',
         username:'str',
@@ -95,7 +96,6 @@ class Backend:
         ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
-        cid = new_cid()
         logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
 
         # Create topic if it doesn't exist
@@ -146,20 +146,33 @@ class Backend:
 
 # ################################################################################################################################
 
-    def _on_message_callback(body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
-        pass
+    def _on_message_callback(self, body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
+
+        # Print what we received ..
+        print()
+        print(111, body)
+        print(222, msg)
+        print(333, name)
+        print(444, config)
+        print()
+
+        # .. and acknowledge the message so we can read more of them.
+        msg.ack()
 
 # ################################################################################################################################
 
     def subscribe_impl(
         self,
+        cid: 'str',
         topic_name:'str',
         username:'str'
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
-        cid = new_cid()
-        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name}')
+        # Local aliases
+        sub_key = new_sub_key()
+
+        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
         if topic_name not in self.topics:
@@ -175,7 +188,6 @@ class Backend:
         # .. if we are here, it means that such a subscription doesn't exist yet ..
 
         # .. create a new subscription ..
-        sub_key = new_sub_key()
         sub = Subscription()
         sub.topic_name = topic_name
         sub.username = username
@@ -187,27 +199,29 @@ class Backend:
         # .. now add it for that user ..
         subs_by_username[username] = sub
 
-        # .. and start a background consumer ..
+        # .. start a background consumer ..
+        start_public_consumer(cid, username, sub_key, self._on_message_callback)
 
-        # Register subscription with broker client
-        # self.broker_client.subscribe(topic_name, username, sub_key) # type: ignore
+        # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
 
+        # .. build our response ..
         response = StatusResponse()
         response.is_ok = True
 
+        # .. and return it to our caller.
         return response
 
 # ################################################################################################################################
 
     def unsubscribe_impl(
         self,
+        cid: 'str',
         topic_name:'str',
         username:'str'
         ) -> 'StatusResponse':
         """ Unsubscribe from a topic.
         """
-        cid = new_cid()
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
         # Check if subscription exists

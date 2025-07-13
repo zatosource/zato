@@ -37,6 +37,7 @@ logger = getLogger(__name__)
 
 @dataclass(init=False)
 class ConsumerConfig:
+    cid: 'str' = ''
     name: 'str'
     is_internal: 'bool'
     queue_name: 'str'
@@ -51,6 +52,7 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'None':
 
     # For later use
     visibility = 'internal' if consumer_config.is_internal else 'public'
+    cid_prefix = f'[{consumer_config.cid}] ' if consumer_config.cid else ''
 
     # Get broker configuration from the utility function
     broker_config = get_broker_config()
@@ -71,13 +73,13 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'None':
 
     consumer = Consumer(broker_config, consumer_config.on_msg_callback)
 
-    logger.info(f'Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+    logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
     try:
         consumer.start()
     except KeyboardInterrupt:
         consumer.stop()
-        logger.info(f'Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+        logger.info(f'{cid_prefix}Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,6 +106,7 @@ def start_internal_consumer(on_msg_callback:'callable_') -> 'None':
 # ################################################################################################################################
 
 def start_public_consumer(
+    cid: 'str',
     username: 'str',
     sub_key: 'str',
     on_msg_callback: 'callable_'
@@ -116,6 +119,7 @@ def start_public_consumer(
     consumer_tag_prefix = username
 
     config = ConsumerConfig()
+    config.cid = cid
     config.name = name
     config.is_internal = is_internal
     config.queue_name = queue_name
