@@ -124,7 +124,7 @@ class Create(AdminService):
                 security_def = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
                 # Generate a new subscription key
-                sub_key = new_sub_key()
+                sub_key = new_sub_key(security_def.username)
 
                 # Get topics
                 topic_id_list = input.topic_id_list
