@@ -388,9 +388,16 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def invoke_sync(self, service:'str', request:'anydictnone'=None, timeout:'int'=2) -> 'any_':
+    def invoke_sync(
+        self,
+        service:'str',
+        request:'anydictnone'=None,
+        timeout:'int'=2,
+        needs_root_elem:'bool'=False,
+    ) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
         """
+
         # Create response holder class without nonlocal keyword
         class ResponseHolder:
             def __init__(self):
@@ -445,8 +452,10 @@ class BrokerClient:
 
         # Handle timeout
         if not response.ready:
+
             # If timed out and we know the queue name, clean it up
             if response.reply_queue_name:
+
                 logger.warning(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
                 self._cleanup_reply_consumer(response.reply_queue_name)
 
@@ -459,8 +468,15 @@ class BrokerClient:
 
             raise Exception(f'Timeout waiting for response from service `{service}` after {timeout} seconds')
 
-        # Return the data - response already logged in set_response with CID
-        return response.data
+        if not needs_root_elem:
+            data = response.data
+            data_keys = list(data.keys())
+            root = data_keys[0]
+            data = data[root]
+        else:
+            data = response.data
+
+        return data
 
 # ################################################################################################################################
 
