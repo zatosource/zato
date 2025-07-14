@@ -276,7 +276,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
             locally_deployed.extend(internal)
 
-            logger.info('Deploying user-defined services (%s)', self.name)
+            logger.info('Deploying user-defined services (%s) (%s)', self.name, self.service_sources)
 
             user_defined_deployed:'anylist' = self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir).to_process
@@ -905,7 +905,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Touch all the hot-directory files to trigger their deployment
         py_files = get_python_files(self.hot_deploy_config.pickup_dir)
-        for item in []: # py_files:
+        for item in py_files:
             _ = self.invoke('zato.hot-deploy.create', {
                 'payload': item['data'],
                 'payload_name': item['full_path']
