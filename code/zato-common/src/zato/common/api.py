@@ -1166,6 +1166,9 @@ class PubSub:
 '''
 # -*- coding: utf-8 -*-
 
+# stdlib
+from dataclasses import dataclass
+
 # Zato
 from zato.common.api import PubSub
 from zato.server.service import Service
@@ -1173,7 +1176,42 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _push_type = PubSub.Push_Type
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class PubSubMessage:
+
+    msg_id: 'str'
+    correl_id: 'str'
+
+    data: 'any_'
+    size: 'int'
+
+    publisher: 'str'
+
+    pub_time_iso: 'str'
+    recv_time_iso: 'str'
+
+    priority: 'int'
+    delivery_count: 'int'=0
+
+    expiration: 'int'
+    expiration_time_iso: 'str'
+
+    ext_client_id: 'str'
+    in_reply_to: 'str'
+
+    sub_key: 'str'
+    topic_name: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1191,11 +1229,45 @@ class MyService(Service):
         # .. we go here if we're to invoke a specific service
         if config.push_type == _push_type.Service:
 
+            # .. the service we need to invoke ..
+            service_name = config['push_service_name']
+
+            # .. turn the incoming message into a business one ..
+            msg = PubSubMessage()
+
+            msg.msg_id = input.msg_id
+            msg.correl_id = input.correl_id
+
+            msg.data = input.data
+            msg.size = input.size
+
+            msg.publisher = input.publisher
+
+            msg.pub_time_iso = input.pub_time_iso
+            msg.recv_time_iso = input.recv_time_iso
+
+            msg.priority = input.priority
+            msg.delivery_count = input.delivery_count
+
+            msg.expiration = input.expiration
+            msg.expiration_time_iso = input.expiration_time_iso
+
+            msg.ext_client_id = input.ext_client_id
+            msg.in_reply_to = input.in_reply_to
+
+            msg.sub_key = input.sub_key
+            msg.topic_name = input.topic_name
+
             print()
             print('QQQ-1-1', input)
             print()
             print('QQQ-1-2', config)
             print()
+            print('QQQ-1-3', msg)
+            print()
+
+            # .. now, we can invoke our push service
+            _ = self.invoke(service_name, msg)
 
         # .. and we go here if we're invoking a REST endpoint.
         elif config.push_type == _push_type.REST:
