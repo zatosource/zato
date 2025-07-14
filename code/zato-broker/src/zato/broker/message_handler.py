@@ -68,7 +68,7 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
             result.response = response
             result.was_handled = True
         else:
-            logger.warning('No such handler: %s in context: %s', handler_name, context)
+            logger.warning('No such handler: %s in context: %s -> %s', handler_name, context, msg)
 
         return result
 
