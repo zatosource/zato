@@ -11,6 +11,9 @@ from contextlib import closing
 from traceback import format_exc
 from urllib.parse import quote
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.broker_message import PUBSUB
 from zato.common.api import PubSub
@@ -316,9 +319,20 @@ class Edit(AdminService):
                 raise
             else:
 
+                # Plain topic names (without HTML)
+                plain_topic_names = []
+
+                for topic in topics:
+                    plain_topic_names.append(topic.name)
+
                 # Notify broker about the update
-                input.action = PUBSUB.SUBSCRIPTION_EDIT.value
-                self.broker_client.publish(input, routing_key='pubsub')
+                broker_msg = Bunch()
+                broker_msg.sub_key = input.sub_key
+                broker_msg.is_active = input.is_active
+                broker_msg.topic_name_list = plain_topic_names
+                broker_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
+
+                self.broker_client.publish(broker_msg, routing_key='pubsub')
 
                 # Set response payload
                 self.response.payload.id = sub.id
@@ -334,14 +348,8 @@ class Edit(AdminService):
                 else:
                     self.response.payload.topic_links = []
 
-                # Add plain topic names (without HTML)
-                if topics:
-                    plain_topic_names = []
-                    for topic in topics:
-                        plain_topic_names.append(topic.name)
-                    self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
-                else:
-                    self.response.payload.topic_names = []
+                # Add topic names too
+                self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
 
 # ################################################################################################################################
 # ################################################################################################################################
