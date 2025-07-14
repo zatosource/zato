@@ -658,7 +658,8 @@ class CreateEdit(BaseView):
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
                         if value:
-                            value = str(value)
+                            if not isinstance(value, list):
+                                value = str(value)
                         return_data[name] = value
 
                 self.post_process_return_data(return_data)
