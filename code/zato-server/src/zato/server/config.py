@@ -206,8 +206,14 @@ class ConfigDict:
 
             for item in query:
 
+                print()
+                print(111, item)
+                print()
+
                 if hasattr(item, 'name'):
                     item_name = item.name
+                elif hasattr(item, 'sub_key'):
+                    item_name = item.sub_key
                 else:
                     item_name = item.get_name()
 

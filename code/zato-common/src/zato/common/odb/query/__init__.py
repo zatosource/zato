@@ -937,11 +937,20 @@ def _pubsub_subscription(session, cluster_id):
 
     # Use distinct on subscription ID to avoid duplicates from topic joins
     return session.query(
-        PubSubSubscription,
+        PubSubSubscription.id,
+        PubSubSubscription.sub_key,
+        PubSubSubscription.is_active,
+        PubSubSubscription.sec_base_id,
+        PubSubSubscription.created,
+        PubSubSubscription.last_updated,
+        PubSubSubscription.delivery_type,
+        PubSubSubscription.push_type,
+        PubSubSubscription.rest_push_endpoint_id,
+        PubSubSubscription.push_service_name,
         PubSubTopic.name.label('topic_name'),
         SecurityBase.name.label('sec_name'),
         SecurityBase.password.label('password'),
-        HTTPSOAP.name.label('rest_push_endpoint_name')
+        HTTPSOAP.name.label('rest_push_endpoint_name') # type: ignore
     ).\
         distinct(PubSubSubscription.id).\
         join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
