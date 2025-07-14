@@ -96,8 +96,21 @@ class Backend:
             # .. get a queue for that consumer ..
             queue_name = consumer.config.queue
 
-            # .. and now update all the bindings pointing to it = update all the topics pointing to it ..
+            # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
             self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
+
+            # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
+
+            if is_active:
+                print(111)
+                if consumer.is_stopped:
+                    print(222)
+                    consumer.start()
+            else:
+                print(333)
+                if not consumer.is_stopped:
+                    print(444)
+                    consumer.stop()
 
         # .. no consumer = we cannot continue.
         else:
