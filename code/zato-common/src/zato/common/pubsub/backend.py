@@ -94,20 +94,14 @@ class Backend:
         if consumer := self.consumers.get(sub_key):
 
             # .. get a queue for that consumer ..
-            queue = consumer.config.queue
+            queue_name = consumer.config.queue
 
             # .. and now update all the bindings pointing to it = update all the topics pointing to it ..
-            # self.broker_client.create_bindings
-
-            # logger.info('CONSUMER %s', consumer.config)
-
-            logger.info('BIND %s', self.broker_client.get_bindings(cid, 'pubsubapi'))
+            self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
 
         # .. no consumer = we cannot continue.
         else:
             logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
-
-        print('In PUBSUB_SUBSCRIPTION_EDIT', msg)
 
 # ################################################################################################################################
 
@@ -281,7 +275,7 @@ class Backend:
         subs_by_username[username] = sub
 
         # .. create bindings for the topic ..
-        self.broker_client.create_bindings(cid, ModuleCtx.Exchange_Name, sub_key, topic_name)
+        self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
         # Check if we already have a consumer for this sub_key
         if sub_key not in self.consumers:
