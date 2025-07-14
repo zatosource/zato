@@ -301,31 +301,38 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
 
-    // For Push delivery type, add a link to the REST endpoint if available
+    // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
         row += String.format('<td>{0}</td>', 'Pull');
     } else {
-        // Push delivery type with endpoint
-        if(item.rest_push_endpoint_id) {
-            var endpointName = '';
-            var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
+        // Push delivery type - check push_type to determine what to show
+        if(item.push_type === 'rest' && item.rest_push_endpoint_id) {
+            var endpointName = item.rest_push_endpoint_name || '';
+            if(!endpointName) {
+                var selectIds = ['#id_edit-rest_push_endpoint_id', '#id_rest_push_endpoint_id'];
 
-            // Check both selects for the endpoint name
-            for(var i=0; i<selectIds.length; i++) {
-                $(selectIds[i] + ' option').each(function() {
-                    if($(this).val() == item.rest_push_endpoint_id) {
-                        endpointName = $(this).text();
-                        return false;
-                    }
-                });
+                // Check both selects for the endpoint name
+                for(var i=0; i<selectIds.length; i++) {
+                    $(selectIds[i] + ' option').each(function() {
+                        if($(this).val() == item.rest_push_endpoint_id) {
+                            endpointName = $(this).text();
+                            return false;
+                        }
+                    });
 
-                if(endpointName) break;
+                    if(endpointName) break;
+                }
             }
 
             // Add the endpoint link to the row
             row += String.format('<td>Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
                 encodeURIComponent(endpointName), endpointName);
+        } else if(item.push_type === 'service' && item.push_service_name) {
+            // For service push type, show the service name
+            row += String.format('<td>Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
+                encodeURIComponent(item.push_service_name), item.push_service_name);
         } else {
+            // Generic push with no details
             row += String.format('<td>Push</td>');
         }
     }
