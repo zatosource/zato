@@ -102,14 +102,11 @@ class Backend:
             # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
 
             if is_active:
-                print(111)
                 if consumer.is_stopped:
-                    print(222)
+                    consumer.keep_running = True
                     consumer.start()
             else:
-                print(333)
                 if not consumer.is_stopped:
-                    print(444)
                     consumer.stop()
 
         # .. no consumer = we cannot continue.
