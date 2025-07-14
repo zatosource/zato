@@ -178,7 +178,7 @@ class Backend:
         service_msg['action'] = _service_publish
         service_msg['payload'] = body
         service_msg['cid'] = body.get('correl_id') or body.msg_id
-        service_msg['service'] = 'demo.my-service'
+        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
 
         # .. push that message to the server ..
         self.broker_client.invoke_async(service_msg)
