@@ -140,6 +140,14 @@ class ConfigLoader:
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
+        # Pub/sub
+        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
+        self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt)
+
+        print()
+        print(111, self.config.pubsub_subs)
+        print()
+
         #
         # Outgoing connections - end
         #
