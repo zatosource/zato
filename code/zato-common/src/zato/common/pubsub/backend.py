@@ -27,7 +27,7 @@ from zato.common.util.api import new_sub_key, utcnow
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, dict_, strdict, strnone
+    from zato.common.typing_ import any_, anydictnone, dict_, strdict, strnone
     from zato.server.connection.amqp_ import Consumer
 
 # ################################################################################################################################
@@ -165,8 +165,16 @@ class Backend:
 
     def _on_message_callback(self, body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
 
-        # Turn the message into a form that a service can be invoked with ..
+        # Local objects
         service_msg = {}
+
+        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
+        sub_key = config.queue
+
+        # .. enrich the message for the service ..
+        body['sub_key'] = sub_key
+
+        # .. turn that message into a form that a service can be invoked with ..
         service_msg['action'] = _service_publish
         service_msg['payload'] = body
         service_msg['cid'] = body.get('correl_id') or body.msg_id
