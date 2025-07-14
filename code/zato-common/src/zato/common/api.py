@@ -1258,25 +1258,51 @@ class MyService(Service):
             msg.sub_key = input.sub_key
             msg.topic_name = input.topic_name
 
-            print()
-            print('QQQ-1-1', input)
-            print()
-            print('QQQ-1-2', config)
-            print()
-            print('QQQ-1-3', msg)
-            print()
-
             # .. now, we can invoke our push service
             _ = self.invoke(service_name, msg)
 
         # .. and we go here if we're invoking a REST endpoint.
         elif config.push_type == _push_type.REST:
 
-            print()
-            print('QQQ-2-1', input)
-            print()
-            print('QQQ-2-2', config)
-            print()
+            # .. our message to produce ..
+            out_msg = {}
+
+            # .. the REST connection we'll be invoking ..
+            conn_name = config['rest_push_endpoint_name']
+
+            # .. get the actual connection ..
+            conn = self.out.rest[conn_name].conn
+
+            # .. now, go through everything we received ..
+            for input_key, input_value in input.items():
+
+                # .. special case the publisher because we don't want to reveal the username as is ..
+                if input_key == 'publisher':
+
+                    # .. go through all the Basic Auth definitions ..
+                    for sec_config in self.server.worker_store.worker_config.basic_auth.values():
+
+                        # .. dive deeper ..
+                        sec_config = sec_config['config']
+
+                        # .. OK, we have our match ..
+                        if sec_config['username'] == input_value:
+                            publisher = sec_config['name']
+                            break
+
+                    # .. no match, e.g. it was deleted before we could handle the message ..
+                    else:
+                        publisher = 'notset'
+
+                    # .. assign the publisher we found ..
+                    out_msg['publisher'] = publisher
+
+                # .. assign all the other parameters ..
+                else:
+                    out_msg[input_key] = input_value
+
+            # .. OK, we can now invoke the connection
+            _ = conn.post(self.cid, out_msg)
 
         # .. otherwise, we cannot handle this message.
         else:
