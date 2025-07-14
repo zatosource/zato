@@ -228,7 +228,7 @@ class Create(AdminService):
                 plain_topic_names = []
                 for topic in topics:
                     plain_topic_names.append(topic.name)
-                self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
+                self.response.payload.topic_names = plain_topic_names
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -353,7 +353,7 @@ class Edit(AdminService):
                     self.response.payload.topic_links = []
 
                 # Add topic names too
-                self.response.payload.topic_names = ', '.join(sorted(plain_topic_names))
+                self.response.payload.topic_names = plain_topic_names
 
 # ################################################################################################################################
 # ################################################################################################################################
