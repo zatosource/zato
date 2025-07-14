@@ -744,6 +744,17 @@ class WorkerStore(_WorkerStoreBase):
                 raise Exception('No impl_func found for action `%s` -> %s', msg_action, conn_type)
 
 # ################################################################################################################################
+
+    def get_pubsub_sub_config(self, sub_key:'str') -> 'strdict':
+        if config := self.worker_config.pubsub_subs.get(sub_key):
+            config = config['config']
+            return config
+        else:
+            sub_keys = sorted(self.worker_config.pubsub_subs.keys())
+            msg = f'No such sub_key {sub_key} among {sub_keys}'
+            raise Exception(msg)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
     def wait_for_basic_auth(self, name:'str', timeout:'int'=999999) -> 'bool':
