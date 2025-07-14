@@ -1162,3 +1162,55 @@ class PubSub:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+# Zato
+from zato.common.api import PubSub
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_push_type = PubSub.Push_Type
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(Service):
+
+    def handle(self):
+
+        # Local aliases
+        input = self.request.raw_request
+
+        # Get the detailed configuration of the subscriber ..
+        config = self.server.worker_store.get_pubsub_sub_config(input.sub_key)
+
+        # .. we go here if we're to invoke a specific service
+        if config.push_type == _push_type.Service:
+
+            print()
+            print('QQQ-1-1', input)
+            print()
+            print('QQQ-1-2', config)
+            print()
+
+        # .. and we go here if we're invoking a REST endpoint.
+        elif config.push_type == _push_type.REST:
+
+            print()
+            print('QQQ-2-1', input)
+            print()
+            print('QQQ-2-2', config)
+            print()
+
+        # .. otherwise, we cannot handle this message.
+        else:
+            msg = f'Unrecognized push_type: {repr(input.push_type)} ({input.msg_id} - {input.correl_id})'
+            raise Exception(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
