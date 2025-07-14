@@ -630,10 +630,39 @@ class BrokerClient:
         cid: 'str',
         exchange_name: 'str',
         queue_name: 'str',
-        routing_key_list: 'strlist',
+        new_routing_key_list: 'strlist',
+        conn: 'Connection | None',
     ) -> 'None':
 
-        pass
+        # Get broker connection from input or build a new one
+        conn = conn or self.get_connection()
+
+        # Get current bindings for this exchange
+        current_bindings = self.get_bindings(cid, exchange_name)
+
+        # Extract current routing keys for this queue
+        current_routing_keys = []
+        for binding in current_bindings:
+            if binding['queue'] == queue_name and binding['exchange'] == exchange_name:
+                current_routing_keys.append(binding['routing_key'])
+
+        logger.info(f'[{cid}] Current routing keys: {current_routing_keys}')
+        logger.info(f'[{cid}] New routing keys: {new_routing_key_list}')
+
+        # Find routing keys to add (in new list but not in current list)
+        for routing_key in new_routing_key_list:
+            if routing_key not in current_routing_keys:
+                logger.info(f'[{cid}] Adding binding: {routing_key}')
+                self.create_bindings(cid, exchange_name, queue_name, routing_key, conn)
+
+        # Find routing keys to remove (in current list but not in new list)
+        for routing_key in current_routing_keys:
+            if routing_key not in new_routing_key_list:
+                logger.info(f'[{cid}] Removing binding: {routing_key}')
+                self.delete_bindings(cid, exchange_name, queue_name, routing_key, conn)
+
+        logger.info(f'[{cid}] Updated bindings for exchange={exchange_name} -> queue={queue_name}')
+
 
 # ################################################################################################################################
 # ################################################################################################################################
