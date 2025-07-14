@@ -82,7 +82,13 @@ class Backend:
 
 # ################################################################################################################################
 
-    def _on_internal_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
+
+        print('In PUBSUB_SUBSCRIPTION_EDIT', msg)
+
+# ################################################################################################################################
+
+    def _on_internal_message_callback(self, body:'strdict', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
         # Invoke the callback for this message ..
         _ = handle_broker_msg(body, self)
