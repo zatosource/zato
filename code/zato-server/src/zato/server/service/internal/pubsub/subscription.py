@@ -280,8 +280,10 @@ class Edit(AdminService):
                 topics = []
 
                 if topic_id_list:
+
                     # Create new topic associations
                     for topic_id in topic_id_list:
+
                         # Make sure the topic exists
                         topic = session.query(PubSubTopic).\
                             filter(PubSubTopic.cluster_id==input.cluster_id).\
@@ -313,9 +315,10 @@ class Edit(AdminService):
                 session.rollback()
                 raise
             else:
+
                 # Notify broker about the update
                 input.action = PUBSUB.SUBSCRIPTION_EDIT.value
-                self.broker_client.publish(input)
+                self.broker_client.publish(input, routing_key='pubsub')
 
                 # Set response payload
                 self.response.payload.id = sub.id
