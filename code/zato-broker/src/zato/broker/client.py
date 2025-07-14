@@ -35,7 +35,7 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
-    from zato.common.typing_ import any_, anydict, anydictnone, callable_, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -511,11 +511,11 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
+        conn: 'Connection | None' = None,
     ) -> 'None':
 
-        # Create binding between exchange and queue with the topic as routing key
-        # Get broker connection string from the client
-        conn = self.get_connection()
+        # Get broker connection from input or build a new one
+        conn = conn or self.get_connection()
 
         # Create exchange and queue objects
         exchange = Exchange(exchange_name, type='topic', durable=True)
@@ -527,6 +527,31 @@ class BrokerClient:
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
         _ = queue.bind_to(exchange=exchange, routing_key=routing_key)
+
+# ################################################################################################################################
+
+    def delete_bindings(
+        self,
+        cid: 'str',
+        exchange_name: 'str',
+        queue_name: 'str',
+        routing_key: 'str',
+        conn: 'Connection | None',
+    ) -> 'None':
+
+        pass
+
+# ################################################################################################################################
+
+    def update_bindings(
+        self,
+        cid: 'str',
+        exchange_name: 'str',
+        queue_name: 'str',
+        routing_key_list: 'strlist',
+    ) -> 'None':
+
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################

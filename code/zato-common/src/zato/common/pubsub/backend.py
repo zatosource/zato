@@ -29,7 +29,7 @@ from zato.common.util.api import new_sub_key, spawn_greenlet, utcnow
 if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anydictnone, dict_, strdict, strnone
+    from zato.common.typing_ import any_, anydictnone, dict_, strdict, strlist, strnone
     from zato.server.connection.amqp_ import Consumer
 
 # ################################################################################################################################
@@ -83,6 +83,27 @@ class Backend:
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        sub_key:'str' = msg['sub_key']
+        is_active:'bool' = msg['is_active']
+        topic_name_list:'strlist' = msg['topic_name_list']
+
+        # Do we have such a consumer ..
+        if consumer := self.consumers.get(sub_key):
+
+            # .. get a queue for that consumer ..
+            queue = consumer.config.queue
+
+            # .. and now update all the bindings pointing to it = update all the topics pointing to it ..
+            self.broker_client.create_bindings
+
+            logger.info('CONSUMER %s', consumer.config)
+
+        # .. no consumer = we cannot continue.
+        else:
+            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
 
         print('In PUBSUB_SUBSCRIPTION_EDIT', msg)
 

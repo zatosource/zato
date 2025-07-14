@@ -327,6 +327,7 @@ class Edit(AdminService):
 
                 # Notify broker about the update
                 broker_msg = Bunch()
+                broker_msg.cid = self.cid
                 broker_msg.sub_key = input.sub_key
                 broker_msg.is_active = input.is_active
                 broker_msg.topic_name_list = plain_topic_names
