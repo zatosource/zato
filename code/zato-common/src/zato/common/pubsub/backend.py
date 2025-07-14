@@ -97,9 +97,11 @@ class Backend:
             queue = consumer.config.queue
 
             # .. and now update all the bindings pointing to it = update all the topics pointing to it ..
-            self.broker_client.create_bindings
+            # self.broker_client.create_bindings
 
-            logger.info('CONSUMER %s', consumer.config)
+            # logger.info('CONSUMER %s', consumer.config)
+
+            logger.info('BIND %s', self.broker_client.get_bindings(cid, 'pubsubapi'))
 
         # .. no consumer = we cannot continue.
         else:

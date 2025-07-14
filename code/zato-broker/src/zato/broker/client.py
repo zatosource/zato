@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import OK
 from json import dumps, loads
 from logging import getLogger
 from threading import RLock
@@ -22,6 +23,10 @@ from gevent import sleep, spawn
 from kombu.connection import Connection as KombuAMQPConnection
 from kombu.entity import PERSISTENT_DELIVERY_MODE, Exchange, Queue
 
+# requests
+import requests
+from requests.auth import HTTPBasicAuth
+
 # Zato
 from zato.common.api import AMQP
 from zato.common.broker_message import SERVICE
@@ -35,7 +40,7 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
-    from zato.common.typing_ import any_, anydict, anydictnone, callable_, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -509,10 +514,59 @@ class BrokerClient:
         self,
         cid: 'str',
         exchange_name: 'str',
-        conn: 'Connection | None',
-    ) -> 'None':
+    ) -> 'dictlist':
 
-        pass
+        # Get binding information
+        logger.info(f'[{cid}] Getting bindings for exchange={exchange_name}')
+
+        # We'll store binding information here
+        binding_info = []
+
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # Extract host and port information
+        host, _ = broker_config.address.split(':')
+
+        # Default management API port
+        rabbitmq_api_port = 15672
+
+        # The management API URL includes the vhost encoded as %2F for default vhost
+        vhost_encoded = broker_config.vhost.replace('/', '%2F')
+
+        # Construct the API URL for this exchange's bindings
+        api_url = f'http://{host}:{rabbitmq_api_port}/api/exchanges/{vhost_encoded}/{exchange_name}/bindings/source'
+
+        # Make the request to the RabbitMQ API
+        response = requests.get(
+            api_url,
+            auth=HTTPBasicAuth(broker_config.username, broker_config.password),
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+
+        if not response.status_code == OK:
+            logger.warning(f'[{cid}] Failed to get bindings: API returned: {response.text}')
+
+        else:
+
+            # Parse bindings from response
+            bindings_data = response.json()
+
+            # Process each binding
+            for binding in bindings_data:
+
+                # Only include bindings to queues (not to other exchanges)
+                if binding['destination_type'] == 'queue':
+                    binding_info.append({
+                        'queue': binding['destination'],
+                        'routing_key': binding['routing_key'],
+                        'exchange': binding['source'],
+                        'arguments': binding.get('arguments') or {},
+                        'vhost': binding['vhost'],
+                    })
+
+        return binding_info
 
 # ################################################################################################################################
 
