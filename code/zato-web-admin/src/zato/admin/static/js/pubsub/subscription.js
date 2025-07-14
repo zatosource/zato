@@ -444,16 +444,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Set the sub_key in the hidden field
         $('#id_edit-sub_key').val(instance.sub_key);
 
-        // Get the current topic names from the data table row data
-        var currentTopicNames = null;
-
-        if (instance && instance.topic_links) {
-            // Extract topic names from HTML links
-            currentTopicNames = instance.topic_links.split(',').map(function(name) {
-                return name.trim();
-            });
-        } else {
-        }
+        // Use topic_names field from the server response
+        currentTopicNames = JSON.parse(instance.topic_names.replace(/'/g, '"'));
 
         // Get security ID from original form field before we remove it
         var currentSecId = instance.sec_base_id;
