@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
@@ -1553,6 +1554,35 @@ class BusinessCentralAdapter(Service):
         base_url = self._replace_placeholders(self.base_url)
 
         self.response.payload = self._invoke_business_central(endpoint, base_url)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class PubSubMessage:
+
+    msg_id: 'str'
+    correl_id: 'str'
+
+    data: 'any_'
+    size: 'int'
+
+    publisher: 'str'
+
+    pub_time_iso: 'str'
+    recv_time_iso: 'str'
+
+    priority: 'int'
+    delivery_count: 'int'=0
+
+    expiration: 'int'
+    expiration_time_iso: 'str'
+
+    ext_client_id: 'str'
+    in_reply_to: 'str'
+
+    sub_key: 'str'
+    topic_name: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################

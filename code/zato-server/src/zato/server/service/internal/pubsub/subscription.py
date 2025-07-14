@@ -13,12 +13,24 @@ from urllib.parse import quote
 
 # Zato
 from zato.common.broker_message import PUBSUB
+from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
-from zato.server.service import AsIs
+from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.common.typing_ import strdict
+# ################################################################################################################################
+# ################################################################################################################################
+
+_push_type = PubSub.Push_Type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -366,6 +378,120 @@ class Delete(AdminService):
                 self.request.input.action = PUBSUB.SUBSCRIPTION_DELETE.value
                 self.request.input.sub_key = subscription.sub_key
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HandleDelivery(Service):
+
+    def build_business_message(self, input:'Bunch') -> 'PubSubMessage':
+
+        msg = PubSubMessage()
+
+        msg.msg_id = input.msg_id
+        msg.correl_id = input.correl_id
+
+        msg.data = input.data
+        msg.size = input.size
+
+        msg.publisher = input.publisher
+
+        msg.pub_time_iso = input.pub_time_iso
+        msg.recv_time_iso = input.recv_time_iso
+
+        msg.priority = input.priority
+        msg.delivery_count = input.delivery_count
+
+        msg.expiration = input.expiration
+        msg.expiration_time_iso = input.expiration_time_iso
+
+        msg.ext_client_id = input.ext_client_id
+        msg.in_reply_to = input.in_reply_to
+
+        msg.sub_key = input.sub_key
+        msg.topic_name = input.topic_name
+
+        return msg
+
+# ################################################################################################################################
+
+    def build_rest_message(self, input:'Bunch', outconn_config:'strdict') -> 'strdict':
+
+        # .. our message to produce ..
+        out_msg = {}
+
+        # .. now, go through everything we received ..
+        for input_key, input_value in input.items():
+
+            # .. special case the publisher because we don't want to reveal the username as is ..
+            if input_key == 'publisher':
+
+                # .. go through all the Basic Auth definitions ..
+                for sec_config in self.server.worker_store.worker_config.basic_auth.values():
+
+                    # .. dive deeper ..
+                    sec_config = sec_config['config']
+
+                    # .. OK, we have our match ..
+                    if sec_config['username'] == input_value:
+                        publisher = sec_config['name']
+                        break
+
+                # .. no match, e.g. it was deleted before we could handle the message ..
+                else:
+                    publisher = 'notset'
+
+                # .. assign the publisher we found ..
+                out_msg['publisher'] = publisher
+
+            # .. assign all the other parameters ..
+            else:
+                out_msg[input_key] = input_value
+
+        # .. and finally return the message to our caller.
+        return out_msg
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Local aliases
+        input = self.request.raw_request
+
+        # Get the detailed configuration of the subscriber ..
+        config = self.server.worker_store.get_pubsub_sub_config(input.sub_key)
+
+        # .. we go here if we're to invoke a specific service
+        if config.push_type == _push_type.Service:
+
+            # .. the service we need to invoke ..
+            service_name = config['push_service_name']
+
+            # .. turn the incoming message into a business one ..
+            msg = self.build_business_message(input)
+
+            # .. now, we can invoke our push service
+            _ = self.invoke(service_name, msg)
+
+        # .. and we go here if we're invoking a REST endpoint.
+        elif config.push_type == _push_type.REST:
+
+            # .. the REST connection we'll be invoking ..
+            conn_name = config['rest_push_endpoint_name']
+
+            # .. get the actual connection ..
+            conn = self.out.rest[conn_name].conn
+
+            # .. build the message to send ..
+            out_msg = self.build_rest_message(input, config)
+
+            # .. and OK, we can now invoke the connection
+            _ = conn.post(self.cid, out_msg)
+
+        # .. if we're here, it's an unrecognized push type and we cannot handle this message.
+        else:
+            msg = f'Unrecognized push_type: {repr(input.push_type)} ({input.msg_id} - {input.correl_id})'
+            raise Exception(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
