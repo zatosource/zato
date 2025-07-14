@@ -36,7 +36,7 @@ if 0:
 
 # Setup basic logging
 basicConfig(
-    level=DEBUG,
+    level=INFO,
     format='%(asctime)s - %(name)s - %(process)s:%(threadName)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
