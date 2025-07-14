@@ -58,15 +58,14 @@ class GetList(AdminService):
         topic_names_by_id = {}
 
         for item in result:
-            # Unpack all fields - password is always present in the query result now
-            subscription, topic_name, sec_name, password, rest_push_endpoint_name = item
-            sub_id = subscription.id
+
+            sub_id = item.id
+            topic_name = item.topic_name
+            password = item.password
 
             if sub_id not in subscriptions_by_id:
 
-                item_dict = subscription.asdict()
-                item_dict['sec_name'] = sec_name
-                item_dict['rest_push_endpoint_name'] = rest_push_endpoint_name
+                item_dict = item._asdict()
 
                 # Include password in response only if requested
                 if needs_password:

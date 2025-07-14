@@ -1184,6 +1184,13 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_pubsub_subscription_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub subscriptions.
+        """
+        return query.pubsub_subscription_list(self._session, cluster_id, needs_columns=needs_columns)
+
+# ################################################################################################################################
+
     def encrypt_sec_base(self, session, id, attr_name, encrypted_value):
         """ Sets an encrypted value of a named attribute in a security definition.
         """
