@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from dataclasses import dataclass
-from datetime import datetime
 from io import StringIO
 from logging import DEBUG, getLogger
 from tempfile import gettempdir
@@ -18,6 +17,7 @@ from unittest import TestCase
 # Zato
 from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
+from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
 from zato.server.service import Model, Service
@@ -360,7 +360,7 @@ class CommandsService(Service):
                 command = prefix + ' && ' + command
 
             # To check that results contain correct timestamps
-            now_before_test = datetime.utcnow()
+            now_before_test = utcnow()
 
             func = self.service.commands.invoke_async if is_async else self.service.commands.invoke
 
@@ -379,7 +379,7 @@ class CommandsService(Service):
             logger.info('Result received -> %s', result)
 
             # To check that results contain correct timestamps
-            now_after_test = datetime.utcnow()
+            now_after_test = utcnow()
 
             # .. and run the actual tests now ..
 
