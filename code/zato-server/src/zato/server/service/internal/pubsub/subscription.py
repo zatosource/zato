@@ -210,9 +210,25 @@ class Create(AdminService):
                 session.rollback()
                 raise
             else:
-                input.action = PUBSUB.SUBSCRIPTION_CREATE.value
-                input.sub_key = sub_key
-                self.broker_client.publish(input)
+
+                # Plain topic names (without HTML)
+                plain_topic_names = []
+
+                for topic in topics:
+                    plain_topic_names.append(topic.name)
+
+                # Make sure they're always sorted
+                plain_topic_names.sort()
+
+                # Notify broker about the creation of a new subscription
+                broker_msg = Bunch()
+                broker_msg.cid = self.cid
+                broker_msg.sub_key = sub.sub_key
+                broker_msg.is_active = input.is_active
+                broker_msg.topic_name_list = plain_topic_names
+                broker_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
+
+                self.broker_client.publish(broker_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -228,6 +244,7 @@ class Create(AdminService):
                 plain_topic_names = []
                 for topic in topics:
                     plain_topic_names.append(topic.name)
+
                 self.response.payload.topic_names = plain_topic_names
 
 # ################################################################################################################################
@@ -369,14 +386,14 @@ class Delete(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                subscription = session.query(PubSubSubscription).\
+                sub = session.query(PubSubSubscription).\
                     filter(PubSubSubscription.id==self.request.input.id).\
                     one()
 
                 # Find all subscriptions with the same sub_key and sec_base_id (multi-topic subscription group)
                 related_subscriptions = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.sub_key==subscription.sub_key).\
-                    filter(PubSubSubscription.sec_base_id==subscription.sec_base_id).\
+                    filter(PubSubSubscription.sub_key==sub.sub_key).\
+                    filter(PubSubSubscription.sec_base_id==sub.sec_base_id).\
                     all()
 
                 # Delete all related subscriptions
@@ -390,9 +407,12 @@ class Delete(AdminService):
                 session.rollback()
                 raise
             else:
-                self.request.input.action = PUBSUB.SUBSCRIPTION_DELETE.value
-                self.request.input.sub_key = subscription.sub_key
-                self.broker_client.publish(self.request.input)
+
+                broker_msg = Bunch()
+                broker_msg.sub_key = sub.sub_key
+                broker_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
+
+                self.broker_client.publish(broker_msg, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
