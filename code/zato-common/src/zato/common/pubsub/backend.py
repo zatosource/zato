@@ -16,16 +16,18 @@ from uuid import uuid4
 from gevent import spawn
 
 # Zato
+from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.broker_message import SERVICE
-from zato.common.pubsub.consumer import start_public_consumer
+from zato.common.pubsub.consumer import start_internal_consumer, start_public_consumer
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
-from zato.common.util.api import new_sub_key, utcnow
+from zato.common.util.api import new_sub_key, spawn_greenlet, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
     from zato.common.typing_ import any_, anydictnone, dict_, strdict, strnone
     from zato.server.connection.amqp_ import Consumer
@@ -72,10 +74,32 @@ class Backend:
     subs_by_topic: 'topic_subs'
 
     def __init__(self, broker_client:'BrokerClient') -> 'None':
+
         self.broker_client = broker_client
         self.topics = {}
         self.consumers = {}
         self.subs_by_topic = {}
+
+# ################################################################################################################################
+
+    def _on_internal_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+
+        # Invoke the callback for this message ..
+        _ = handle_broker_msg(body, self)
+
+        # .. and acknowledge it once it's been processed.
+        msg.ack()
+
+# ################################################################################################################################
+
+    def start_internal_subscriber(self) -> 'None':
+        _ = spawn_greenlet(
+            start_internal_consumer,
+            'zato.pubsub',
+            'pubsub',
+            'zato-pubsub',
+            self._on_internal_message_callback
+        )
 
 # ################################################################################################################################
 
@@ -163,7 +187,7 @@ class Backend:
 
 # ################################################################################################################################
 
-    def _on_message_callback(self, body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
+    def _on_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
         # Local objects
         service_msg = {}
@@ -236,7 +260,7 @@ class Backend:
             logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
             # .. start a background consumer ..
-            result = spawn(start_public_consumer, cid, username, sub_key, self._on_message_callback)
+            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback)
 
             # .. get the actual consumer object ..
             consumer:'Consumer' = result.get()

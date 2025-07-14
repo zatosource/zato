@@ -23,7 +23,7 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep
 from gevent.lock import RLock
 
 # Zato
@@ -873,7 +873,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         # Configure internal pub/sub
-        _ = spawn(start_internal_consumer, self.on_pubsub_message)
+        _ = spawn_greenlet(
+            start_internal_consumer,
+            'zato.server',
+            'server',
+            'zato-server',
+            self.on_pubsub_message
+        )
 
         self.broker_client = BrokerClient(server=self)
         self.worker_store.set_broker_client(self.broker_client)
