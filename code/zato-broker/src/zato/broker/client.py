@@ -649,6 +649,15 @@ class BrokerClient:
             if binding['queue'] == queue_name and binding['exchange'] == exchange_name:
                 current_routing_keys.append(binding['routing_key'])
 
+        # Convert lists to sets for comparison
+        current_keys_set = set(current_routing_keys)
+        new_keys_set = set(new_routing_key_list)
+
+        # If sets are identical, do nothing
+        if current_keys_set == new_keys_set:
+            logger.info(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
+            return
+
         logger.info(f'[{cid}] [{sub_key}] Current routing keys: {current_routing_keys}')
         logger.info(f'[{cid}] [{sub_key}] New routing keys: {new_routing_key_list}')
 
