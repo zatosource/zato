@@ -325,6 +325,9 @@ class Edit(AdminService):
                 for topic in topics:
                     plain_topic_names.append(topic.name)
 
+                # Make sure they're always sorted
+                plain_topic_names.sort()
+
                 # Notify broker about the update
                 broker_msg = Bunch()
                 broker_msg.cid = self.cid

@@ -573,10 +573,11 @@ class BrokerClient:
     def create_bindings(
         self,
         cid: 'str',
+        sub_key: 'str',
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'Connection | None' = None,
+        conn: 'Connection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -587,7 +588,7 @@ class BrokerClient:
         queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True)
 
         # Bind the queue to the exchange with the topic name as the routing key
-        logger.info(f'[{cid}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
+        logger.info(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
@@ -598,10 +599,11 @@ class BrokerClient:
     def delete_bindings(
         self,
         cid: 'str',
+        sub_key: 'str',
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'Connection | None',
+        conn: 'Connection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -611,7 +613,7 @@ class BrokerClient:
         exchange = Exchange(exchange_name, type='topic', durable=True)
 
         # Unbind the queue from the exchange with the topic name as the routing key
-        logger.info(f'[{cid}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
+        logger.info(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         # Get a channel from the connection
         channel = conn.channel()
@@ -628,10 +630,11 @@ class BrokerClient:
     def update_bindings(
         self,
         cid: 'str',
+        sub_key: 'str',
         exchange_name: 'str',
         queue_name: 'str',
         new_routing_key_list: 'strlist',
-        conn: 'Connection | None',
+        conn: 'Connection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -646,23 +649,22 @@ class BrokerClient:
             if binding['queue'] == queue_name and binding['exchange'] == exchange_name:
                 current_routing_keys.append(binding['routing_key'])
 
-        logger.info(f'[{cid}] Current routing keys: {current_routing_keys}')
-        logger.info(f'[{cid}] New routing keys: {new_routing_key_list}')
+        logger.info(f'[{cid}] [{sub_key}] Current routing keys: {current_routing_keys}')
+        logger.info(f'[{cid}] [{sub_key}] New routing keys: {new_routing_key_list}')
 
         # Find routing keys to add (in new list but not in current list)
         for routing_key in new_routing_key_list:
             if routing_key not in current_routing_keys:
-                logger.info(f'[{cid}] Adding binding: {routing_key}')
-                self.create_bindings(cid, exchange_name, queue_name, routing_key, conn)
+                logger.info(f'[{cid}] [{sub_key}] Adding binding: {routing_key}')
+                self.create_bindings(cid, sub_key, exchange_name, queue_name, routing_key, conn)
 
         # Find routing keys to remove (in current list but not in new list)
         for routing_key in current_routing_keys:
             if routing_key not in new_routing_key_list:
-                logger.info(f'[{cid}] Removing binding: {routing_key}')
-                self.delete_bindings(cid, exchange_name, queue_name, routing_key, conn)
+                logger.info(f'[{cid}] [{sub_key}] Removing binding: {routing_key}')
+                self.delete_bindings(cid, sub_key, exchange_name, queue_name, routing_key, conn)
 
-        logger.info(f'[{cid}] Updated bindings for exchange={exchange_name} -> queue={queue_name}')
-
+        logger.info(f'[{cid}] [{sub_key}] Updated bindings for exchange={exchange_name} -> queue={queue_name} -> {new_routing_key_list}')
 
 # ################################################################################################################################
 # ################################################################################################################################
