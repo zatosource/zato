@@ -274,7 +274,17 @@
 
                         <td>{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
-                        <td>{% if item.delivery_type == 'pull' %}Pull{% elif item.delivery_type == 'push' and item.push_type == 'rest' %}Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>{% elif item.delivery_type == 'push' and item.push_type == 'service' %}Push <a href="/zato/service/?cluster={{ cluster_id }}&amp;query={{ item.push_service_name }}">{{ item.push_service_name }}</a>{% else %}Push{% endif %}</td>
+                        <td>
+                            {% if item.delivery_type == 'pull' %}
+                                Pull
+                            {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
+                                Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>
+                            {% elif item.delivery_type == 'push' and item.push_type == 'service' %}
+                                Push <a href="/zato/service/?cluster={{ cluster_id }}&amp;query={{ item.push_service_name }}">{{ item.push_service_name }}</a>
+                            {% else %}
+                                Push
+                            {% endif %}
+                        </td>
 
                         <td>{{ item.topic_links|safe }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
