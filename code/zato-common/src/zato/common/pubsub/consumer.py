@@ -106,13 +106,15 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_internal_consumer(on_msg_callback:'callable_') -> 'Consumer':
+def start_internal_consumer(
+    name: 'str',
+    queue_name: 'str',
+    consumer_tag_prefix: 'str',
+    on_msg_callback:'callable_'
+) -> 'Consumer':
 
-    name = 'zato.server'
     is_internal = True
-    queue_name = 'server'
     prefetch_count = 1
-    consumer_tag_prefix = 'zato-server'
 
     config = ConsumerConfig()
     config.name = name

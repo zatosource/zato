@@ -195,6 +195,10 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def setup(self) -> 'None':
+
+        # Start the subscriber for internal commands
+        self.backend.start_internal_subscriber()
+
         # Load up all the initial subscriptions
         self._load_subscriptions()
 
