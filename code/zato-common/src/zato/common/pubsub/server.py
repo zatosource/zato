@@ -11,7 +11,6 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
-import os
 from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
@@ -186,7 +185,7 @@ class PubSubRESTServer:
                     logger.info(f'[{cid}] Setting up subscription: {username} -> {topic_name}')
 
                     # Create the subscription
-                    self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+                    _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
 
             except Exception as e:
                 logger.error(f'[{cid}] Error processing subscription {item}: {e}')
