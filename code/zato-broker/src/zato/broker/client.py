@@ -745,4 +745,65 @@ class BrokerClient:
         return bool(bindings)
 
 # ################################################################################################################################
+
+    def rename_topic(
+        self,
+        cid: 'str',
+        old_topic_name: 'str',
+        new_topic_name: 'str',
+        exchange_name: 'str',
+        conn: 'Connection | None' = None,
+    ) -> 'None':
+        """ Renames a topic by removing all old bindings and creating new ones with the new name.
+        """
+
+        # Get broker connection from input or build a new one
+        conn = conn or self.get_connection()
+
+        # Get all bindings for this exchange
+        bindings = self.get_bindings(cid, exchange_name)
+
+        # Find all bindings with routing key matching the old topic
+        topic_bindings = []
+        for binding in bindings:
+            if binding['routing_key'] == old_topic_name:
+                topic_bindings.append(binding)
+
+        # If no bindings found, just return silently
+        if not topic_bindings:
+            return
+
+        count = len(topic_bindings)
+        binding_text = 'binding' if count == 1 else 'bindings'
+        logger.info(f'[{cid}] Renaming topic {old_topic_name} to {new_topic_name}, found {count} {binding_text}')
+
+        # Store binding information before deleting
+        queue_names = [binding['queue'] for binding in topic_bindings]
+
+        # Delete all old bindings first
+        for binding in topic_bindings:
+            queue_name = binding['queue']
+            self.delete_bindings(
+                cid,
+                queue_name,  # sub_key is the same as queue_name
+                exchange_name,
+                queue_name,
+                old_topic_name,
+                conn
+            )
+
+        # Create new bindings
+        for queue_name in queue_names:
+            self.create_bindings(
+                cid,
+                queue_name,  # sub_key is the same as queue_name
+                exchange_name,
+                queue_name,
+                new_topic_name,
+                conn
+            )
+
+        logger.info(f'[{cid}] Successfully renamed topic {old_topic_name} to {new_topic_name}')
+
+# ################################################################################################################################
 # ################################################################################################################################
