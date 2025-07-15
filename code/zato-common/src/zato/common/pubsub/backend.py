@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import timedelta
 from json import dumps
 from logging import getLogger
+from traceback import format_exc
 from uuid import uuid4
 
 # gevent
@@ -175,9 +176,10 @@ class Backend:
         # Extract data from the message
         cid = msg['cid']
         sub_key = msg['sub_key']
+        sec_name = msg['sec_name']
         username = msg['username']
 
-        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username}')
+        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username} ({sec_name})')
 
         # Find all topics this user is subscribed to with this sub_key
         topics_to_unsubscribe = []
@@ -201,10 +203,13 @@ class Backend:
     def _on_internal_message_callback(self, body:'strdict', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
         # Invoke the callback for this message ..
-        _ = handle_broker_msg(body, self)
-
-        # .. and acknowledge it once it's been processed.
-        msg.ack()
+        try:
+            _ = handle_broker_msg(body, self)
+        except Exception:
+            logger.warning('Exception when calling handle_broker_msg: %s', format_exc())
+        finally:
+            # .. these are configuration messages so we always need to acknowledge them.
+            msg.ack()
 
 # ################################################################################################################################
 
@@ -407,15 +412,27 @@ class Backend:
         sub_key:'strnone'=None
         ) -> 'StatusResponse':
 
-        logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
+        # Log what we're doing
+        logger.info(f'[{cid}] Unsubscribing {sub_key} from topic {topic_name} ({username})')
 
         # Local aliases
         subs_by_username = self.subs_by_topic[topic_name]
 
-        # Remove the subscription from our metadata
+        # Remove the subscription from our metadata ..
         _ = subs_by_username.pop(username)
 
-        logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
+        # .. remove the bindings on the broker ..
+        self.broker_client.delete_bindings(
+            cid,
+            sub_key,
+            ModuleCtx.Exchange_Name,
+            sub_key,
+            topic_name,
+        )
+
+        # .. finally, stop the consumer if it's not subscribed to any other topic ..
+
+        logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
 
         response = StatusResponse()
         response.is_ok = True

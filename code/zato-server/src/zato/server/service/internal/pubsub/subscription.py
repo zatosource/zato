@@ -404,6 +404,7 @@ class Delete(AdminService):
             else:
 
                 broker_msg = Bunch()
+                broker_msg.cid = self.cid
                 broker_msg.sub_key = sub.sub_key
                 broker_msg.username = security_def.username
                 broker_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
