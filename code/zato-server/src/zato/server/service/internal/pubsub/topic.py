@@ -169,13 +169,13 @@ class Edit(AdminService):
                 # Don't notify the broker only if the names are different, otherwise, there's no need to.
                 if input.name != old_name:
 
-                    broker_msg = Bunch()
-                    broker_msg.cid = self.cid
-                    broker_msg.action = PUBSUB.TOPIC_EDIT.value
-                    broker_msg.new_topic_name = input.name
-                    broker_msg.old_topic_name = old_name
+                    pubsub_msg = Bunch()
+                    pubsub_msg.cid = self.cid
+                    pubsub_msg.action = PUBSUB.TOPIC_EDIT.value
+                    pubsub_msg.new_topic_name = input.name
+                    pubsub_msg.old_topic_name = old_name
 
-                    self.broker_client.publish(broker_msg, routing_key='pubsub')
+                    self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -207,12 +207,12 @@ class Delete(AdminService):
                 raise
             else:
 
-                broker_msg = Bunch()
-                broker_msg.cid = self.cid
-                broker_msg.action = PUBSUB.TOPIC_DELETE.value
-                broker_msg.topic_name = topic.name
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.action = PUBSUB.TOPIC_DELETE.value
+                pubsub_msg.topic_name = topic.name
 
-                self.broker_client.publish(broker_msg, routing_key='pubsub')
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
