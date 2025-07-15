@@ -196,7 +196,7 @@ class Delete(AdminService):
                     one()
 
                 session.delete(topic)
-                # session.commit()
+                session.commit()
             except Exception:
                 self.logger.error('Could not delete pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
