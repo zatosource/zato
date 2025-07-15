@@ -256,8 +256,27 @@ class Backend:
         old_username = msg['old_username']
         new_username = msg['new_username']
 
-        # Rename the username now
+        # Log what we're doing
+        logger.info(f'[{cid}] Updating username from {old_username} to {new_username}')
+
+        # First update the user credentials in the server
         self.server.change_username(cid, old_username, new_username)
+
+        # Now update the subscription maps in all topics
+        for topic_name, subs_by_username in self.subs_by_topic.items():
+
+            if old_username in subs_by_username:
+
+                # Get the subscription object
+                subscription = subs_by_username.pop(old_username)
+
+                # Update the username within the subscription object
+                subscription.username = new_username
+
+                # Store under the new username
+                subs_by_username[new_username] = subscription
+
+                logger.info(f'[{cid}] Updated subscription for topic {topic_name} from {old_username} to {new_username}')
 
 # ################################################################################################################################
 

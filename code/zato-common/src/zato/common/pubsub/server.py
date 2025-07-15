@@ -202,7 +202,25 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def change_username(self, cid:'str', old_username:'str', new_username:'str') -> 'None':
-        pass
+
+        if old_username not in self.users:
+            logger.info(f'[{cid}] User not found: `{old_username}`')
+            return
+
+        if new_username in self.users:
+            logger.info(f'[{cid}] Cannot change username, target already exists: `{new_username}`')
+            return
+
+        # Store the password
+        password = self.users[old_username]
+
+        # Create the new user entry
+        self.users[new_username] = password
+
+        # Remove the old username
+        del self.users[old_username]
+
+        logger.info(f'[{cid}] Changed username from `{old_username}` to `{new_username}`')
 
 # ################################################################################################################################
 
