@@ -144,6 +144,14 @@ class Backend:
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        topic_name:'str' = msg['topic_name']
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
         """ Handle a subscription deletion message from the broker.
         Expected format: { 'action': 'action-id', 'sub_key': 'subscription-key' }
         """
