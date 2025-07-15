@@ -12,6 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
+from datetime import datetime
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -284,20 +285,26 @@ class PubSubRESTServer:
         cid = new_cid()
         logger.info(f'[{cid}] Setting up PubSub REST server at {self.host}:{self.port}')
 
-        # Load test data
+        # For later use ..
+        start = datetime.now()
+
+        # .. load test data ..
         self._setup_from_yaml_config(cid)
 
-        # Load all the initial subscriptions
+        # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
+
+        # .. we're going to need it in a moment ..
+        end = datetime.now()
 
         user_count = len(self.users)
         topic_count = len(self.backend.topics)
         subscription_count = sum(len(subs) for subs in self.backend.subs_by_topic.values())
 
-        logger.info(f'[{cid}] Setup complete:')
-        logger.info(f'[{cid}] {user_count} {"user" if user_count == 1 else "users"}')
-        logger.info(f'[{cid}] {topic_count} {"topic" if topic_count == 1 else "topics"}')
-        logger.info(f'[{cid}] {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
+        logger.info(f'[{cid}] ✅ Setup complete in {end - start}')
+        logger.info(f'[{cid}] 🠊 {user_count} {"user" if user_count == 1 else "users"}')
+        logger.info(f'[{cid}] 🠊 {topic_count} {"topic" if topic_count == 1 else "topics"}')
+        logger.info(f'[{cid}] 🠊 {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
 
 # ################################################################################################################################
 
