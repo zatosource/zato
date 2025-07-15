@@ -704,14 +704,13 @@ class BrokerClient:
             if binding['routing_key'] == topic_name:
                 topic_bindings.append(binding)
 
-        # If no bindings found, log and return
+        # If no bindings found, just return silently
         if not topic_bindings:
-            logger.info(f'[{cid}] No bindings found for topic {topic_name} in exchange {exchange_name}')
             return
+        else:
+            topic_bindings.sort()
 
-        count = len(topic_bindings)
-        binding_text = 'binding' if count == 1 else 'bindings'
-        logger.info(f'[{cid}] Found {count} {binding_text} for topic {topic_name} in exchange {exchange_name}')
+        logger.info(f'[{cid}] Removing topic bindings -> {topic_name} -> {topic_bindings}')
 
         # Delete each binding
         for binding in topic_bindings:

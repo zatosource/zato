@@ -434,17 +434,6 @@ class Backend:
             # .. now, delete the queue ..
             self.broker_client.delete_queue(sub_key)
 
-        else:
-            count = len(remaining_bindings)
-            if count == 1:
-                binding_text = 'binding'
-                verb = 'exists'
-            else:
-                binding_text = 'bindings'
-                verb = 'exist'
-
-            logger.info(f'[{cid}] {count} {binding_text} still {verb} for {sub_key}, keeping consumer')
-
         logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
 
         response = StatusResponse()
