@@ -395,7 +395,8 @@ class Delete(AdminService):
                     filter(SecurityBase.id==sub.sec_base_id).\
                     one()
 
-                # session.commit()
+                session.delete(sub)
+                session.commit()
 
             except Exception:
                 self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
