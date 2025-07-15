@@ -13,12 +13,17 @@ _ = monkey.patch_all()
 # stdlib
 from dataclasses import asdict
 from datetime import datetime
+from http.client import OK
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
 
 # PyYAML
 from yaml import dump as yaml_dump, safe_load as yaml_load
+
+# requests
+import requests
+from requests.auth import HTTPBasicAuth
 
 # Zato
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
@@ -45,6 +50,7 @@ from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
     UnauthorizedResponse
 from zato.common.pubsub.backend import Backend
+from zato.common.pubsub.util import get_broker_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -601,6 +607,90 @@ class PubSubRESTServer:
             return self._json_response(start_response, response)
 
 # ################################################################################################################################
+
+    def list_connections(self, cid:'str', management_port:'int'=15672) -> 'dict_':
+        """ Lists and analyzes RabbitMQ connections to help troubleshoot connection issues.
+        """
+        logger.info(f'[{cid}] Listing RabbitMQ connections via management API')
+
+        # Get broker configuration to access the management API
+        broker_config = get_broker_config()
+        host = broker_config.address.split(':')[0]
+        auth = HTTPBasicAuth(broker_config.username, broker_config.password)
+
+        # Base URL for the management API
+        api_base_url = f'http://{host}:{management_port}/api'
+
+        # Get all connections
+        connections_url = f'{api_base_url}/connections'
+        response = requests.get(connections_url, auth=auth)
+
+        if response.status_code != OK:
+            logger.error(f'Failed to list connections: {response.status_code}, {response.text}')
+            return {'status': 'error', 'error': response.text, 'status_code': response.status_code}
+
+        connections = response.json()
+        total_count = len(connections)
+        logger.info(f'[{cid}] Found {total_count} RabbitMQ connections')
+
+        # Analyze connections
+        connection_types = {}
+        user_connections = {}
+        client_properties = {}
+
+        for conn in connections:
+            # Group by connection type
+            conn_type = conn.get('client_properties', {}).get('connection_name', 'Unknown')
+            connection_types[conn_type] = connection_types.get(conn_type, 0) + 1
+
+            # Group by user
+            user = conn.get('user', 'Unknown')
+            if user not in user_connections:
+                user_connections[user] = []
+            user_connections[user].append({
+                'client_properties': conn.get('client_properties', {}),
+                'connected_at': conn.get('connected_at'),
+                'channels': conn.get('channels', 0)
+            })
+
+            # Track unique client properties
+            for key, value in conn.get('client_properties', {}).items():
+                if key not in client_properties:
+                    client_properties[key] = set()
+                if isinstance(value, (str, int, bool, float)):
+                    client_properties[key].add(value)
+
+        # Convert sets to lists for JSON serialization
+        for key in client_properties:
+            client_properties[key] = list(client_properties[key])
+
+        # Check consumers
+        channels_url = f'{api_base_url}/channels'
+        response = requests.get(channels_url, auth=auth)
+
+        consumers_per_queue = {}
+        if response.status_code == OK:
+            channels = response.json()
+            for channel in channels:
+                consumer_details = channel.get('consumer_details', [])
+                for consumer in consumer_details:
+                    queue = consumer.get('queue', {}).get('name', 'Unknown')
+                    if queue not in consumers_per_queue:
+                        consumers_per_queue[queue] = 0
+                    consumers_per_queue[queue] += 1
+
+        # Check subscription keys in backend
+        sub_keys = list(self.backend.consumers.keys()) if hasattr(self.backend, 'consumers') else []
+
+        return {
+            'status': 'success',
+            'total_connections': total_count,
+            'connection_types': connection_types,
+            'user_connections': user_connections,
+            'client_properties_unique_values': client_properties,
+            'consumers_per_queue': consumers_per_queue,
+            'backend_sub_keys': sub_keys
+        }
 
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.

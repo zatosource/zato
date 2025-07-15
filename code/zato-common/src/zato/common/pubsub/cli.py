@@ -17,12 +17,16 @@ import os
 import sys
 import requests
 from dataclasses import dataclass
+from json import dumps
 from logging import basicConfig, DEBUG, getLogger, INFO
+from traceback import format_exc
 from urllib.parse import quote
 
 # Zato
+from zato.common.pubsub.backend import Backend
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config
+from zato.common.util.api import new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,6 +91,14 @@ def get_parser() -> 'argparse.ArgumentParser':
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
     _ = cleanup_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
     _ = cleanup_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
+
+    # List connections command
+    connections_parser = subparsers.add_parser('list-connections', help='List and analyze RabbitMQ connections')
+    _ = connections_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
+    _ = connections_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
+    _ = connections_parser.add_argument('--output', type=str, default='json', choices=['json', 'pretty'], help='Output format')
+    _ = connections_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
+                                    help='Path to YAML configuration file with users, topics, and subscriptions')
 
     return parser
 
@@ -263,6 +275,61 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
 
 # ################################################################################################################################
 
+def list_connections(args:'argparse.Namespace') -> 'OperationResult':
+    """ List and analyze RabbitMQ connections.
+    """
+    try:
+        # Set up logging level
+        level = DEBUG if args.has_debug else INFO
+        basicConfig(
+            level=level,
+            format='%(asctime)s - %(name)s - %(process)s:%(threadName)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler()
+            ]
+        )
+
+        cid = new_cid()
+        logger.info(f'[{cid}] Listing RabbitMQ connections')
+
+        # Create a temporary server instance to use its list_connections method
+        server = PubSubRESTServer(host='0.0.0.0', port=44556, yaml_config_file=args.yaml_config)
+
+        # We need to initialize the backend but don't need to run the full setup
+        # server.backend = Backend() # type: ignore
+
+        # Get connection information
+        result = server.list_connections(cid, args.management_port)
+
+        # Format and print the output
+        if args.output == 'pretty':
+            print('\nRabbitMQ Connection Analysis:')
+            print(f"Total connections: {result['total_connections']}")
+
+            print('\nConnection Types:')
+            for conn_type, count in result['connection_types'].items():
+                print(f"  - {conn_type}: {count}")
+
+            print('\nConsumers per Queue:')
+            for queue, count in result['consumers_per_queue'].items():
+                print(f"  - {queue}: {count}")
+
+            print('\nBackend Subscription Keys:')
+            for key in result['backend_sub_keys']:
+                print(f"  - {key}")
+        else:
+            print(dumps(result, indent=2))
+
+        return OperationResult(is_ok=True, message='Connection analysis completed successfully')
+
+    except Exception as e:
+        message = f'Error analyzing connections: {e}'
+        logger.error(message)
+        logger.error(format_exc())
+        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
+
+# ################################################################################################################################
+
 def main() -> 'int':
     """ Main entry point for the CLI.
     Returns an integer exit code - 0 for success, non-zero for failure.
@@ -278,6 +345,11 @@ def main() -> 'int':
     elif args.command == 'cleanup':
         result = cleanup_broker(args)
         return 0 if result.is_ok else 1
+
+    elif args.command == 'list-connections':
+        result = list_connections(args)
+        return 0 if result.is_ok else 1
+
     else:
         parser.print_help()
         return 1
