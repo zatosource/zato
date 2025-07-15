@@ -452,7 +452,11 @@ class Backend:
 
         # Get or create a per-sub_key lock
         with self._main_lock:
-            _sub_key_lock = self._sub_key_lock.setdefault(sub_key, RLock())
+            if sub_key not in self._sub_key_lock:
+                _lock = RLock()
+                self._sub_key_lock[sub_key] = _lock
+            else:
+                _lock = self._sub_key_lock[sub_key]
 
         # .. create a new consumer if one doesn't exist yet ..
         with _sub_key_lock:
