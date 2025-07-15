@@ -171,44 +171,6 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
 
         logger.info(f'Connecting to RabbitMQ API at: {api_base_url}')
 
-        # List all bindings from pubsubapi exchange
-        try:
-            logger.info('Listing bindings from pubsubapi exchange')
-            bindings_url = f'{api_base_url}/exchanges/{encoded_vhost}/pubsubapi/bindings/source'
-            response = requests.get(bindings_url, auth=auth)
-
-            if response.status_code == 200:
-                bindings = response.json()
-                binding_count = len(bindings)
-                if binding_count == 1:
-                    logger.info('Found 1 binding for pubsubapi exchange')
-                else:
-                    logger.info(f'Found {binding_count} bindings for pubsubapi exchange')
-
-                # Remove all bindings from pubsubapi exchange
-                for binding in bindings:
-                    queue_name = binding.get('destination')
-
-                    # Only process if the destination is a queue
-                    if binding.get('destination_type') == 'queue':
-
-                        routing_key = binding.get('routing_key', '')
-                        logger.info(f'Removing binding: queue={queue_name}, routing_key={routing_key} from exchange=pubsubapi')
-
-                        # Delete the binding
-                        unbind_url = f'{api_base_url}/bindings/{encoded_vhost}/e/pubsubapi/q/{queue_name}/{quote(routing_key, safe="")}'
-                        delete_response = requests.delete(unbind_url, auth=auth)
-
-                        if delete_response.status_code in (200, 204):
-                            logger.info(f'Successfully removed binding for queue: {queue_name}')
-                        else:
-                            logger.error(f'Failed to remove binding: {delete_response.status_code}, {delete_response.text}')
-            else:
-                logger.error(f'Failed to list bindings: {response.status_code}, {response.text}')
-
-        except Exception as e:
-            logger.error(f'Error removing bindings: {e}')
-
         # Find and remove all queues with specified prefixes
         try:
             # Define the prefixes to clean up
@@ -253,6 +215,44 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
 
         except Exception as e:
             logger.error(f'Error removing queues: {e}')
+
+        # List all bindings from pubsubapi exchange
+        try:
+            logger.info('Listing bindings from pubsubapi exchange')
+            bindings_url = f'{api_base_url}/exchanges/{encoded_vhost}/pubsubapi/bindings/source'
+            response = requests.get(bindings_url, auth=auth)
+
+            if response.status_code == 200:
+                bindings = response.json()
+                binding_count = len(bindings)
+                if binding_count == 1:
+                    logger.info('Found 1 binding for pubsubapi exchange')
+                else:
+                    logger.info(f'Found {binding_count} bindings for pubsubapi exchange')
+
+                # Remove all bindings from pubsubapi exchange
+                for binding in bindings:
+                    queue_name = binding.get('destination')
+
+                    # Only process if the destination is a queue
+                    if binding.get('destination_type') == 'queue':
+
+                        routing_key = binding.get('routing_key', '')
+                        logger.info(f'Removing binding: queue={queue_name}, routing_key={routing_key} from exchange=pubsubapi')
+
+                        # Delete the binding
+                        unbind_url = f'{api_base_url}/bindings/{encoded_vhost}/e/pubsubapi/q/{queue_name}/{quote(routing_key, safe="")}'
+                        delete_response = requests.delete(unbind_url, auth=auth)
+
+                        if delete_response.status_code in (200, 204):
+                            logger.info(f'Successfully removed binding for queue: {queue_name}')
+                        else:
+                            logger.error(f'Failed to remove binding: {delete_response.status_code}, {delete_response.text}')
+            else:
+                logger.error(f'Failed to list bindings: {response.status_code}, {response.text}')
+
+        except Exception as e:
+            logger.error(f'Error removing bindings: {e}')
 
         return OperationResult(is_ok=True, message='Cleanup completed successfully')
 
