@@ -94,38 +94,11 @@ class Backend:
 
         # Process each topic in the list
         for topic_name in topic_name_list:
+            _ = self.subscribe_impl(cid, topic_name, username, sub_key, is_active)
 
-            logger.info(f'[{cid}] Creating subscription to {topic_name} for {username} (sk={sub_key})')
-
-            # Create topic if it doesn't exist
-            if topic_name not in self.topics:
-                self.create_topic(cid, 'broker_msg', topic_name)
-
-            # Create subscription object
-            sub = Subscription()
-            sub.topic_name = topic_name
-            sub.username = username
-            sub.sub_key = sub_key
-            sub.creation_time = utcnow()
-
-            # Store in subscription registry
-            subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
-            subs_by_username[username] = sub
-
-            # Create broker bindings
-            self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
-
-        logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
-
-        # Start a background consumer
-        result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
-
-        # Get and store the consumer
-        consumer:'Consumer' = result.get()
-        self.consumers[sub_key] = consumer
-
+        # Log all subscribed topics
         topic_name_list_human = ', '.join(topic_name_list)
-        log_msg = f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} ({topic_name_list_human})'
+        log_msg = f'[{cid}] Successfully subscribed {username} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
 
 # ################################################################################################################################
@@ -196,7 +169,7 @@ class Backend:
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            _ = self.unsubscribe_impl(cid, topic_name, username, sub_key)
+            _ = self.unsubscribe_impl(cid, topic_name, username, clean_up_queue=True, sub_key=sub_key)
 
 # ################################################################################################################################
 
@@ -308,41 +281,17 @@ class Backend:
 
 # ################################################################################################################################
 
-    def _on_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
-
-        # Local objects
-        service_msg = {}
-
-        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
-        sub_key = config.queue
-
-        # .. enrich the message for the service ..
-        body['sub_key'] = sub_key
-
-        # .. turn that message into a form that a service can be invoked with ..
-        service_msg['action'] = _service_publish
-        service_msg['payload'] = body
-        service_msg['cid'] = body.get('correl_id') or body.msg_id
-        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
-
-        # .. push that message to the server ..
-        self.broker_client.invoke_async(service_msg)
-
-        # .. and acknowledge it so we can read more of them.
-        msg.ack()
-
-# ################################################################################################################################
-
     def subscribe_impl(
         self,
         cid: 'str',
         topic_name: 'str',
         username: 'str',
         sub_key: 'str'='',
+        is_active: 'bool'=True,
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
-        # Local aliases
+        # This is optional and will be empty if it's an external subscription (e.g. via REST)
         sub_key = sub_key or new_sub_key(username)
 
         logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
@@ -350,15 +299,6 @@ class Backend:
         # Create topic if it doesn't exist ..
         if topic_name not in self.topics:
             self.create_topic(cid, 'subscribe', topic_name)
-
-        # .. check if already subscribed ..
-        if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
-            logger.info(f'[{cid}] User {username} already subscribed to {topic_name}')
-            response = StatusResponse()
-            response.is_ok = True
-            return response
-
-        # .. if we are here, it means that such a subscription doesn't exist yet ..
 
         # .. create a new subscription ..
         sub = Subscription()
@@ -376,22 +316,19 @@ class Backend:
         # .. create bindings for the topic ..
         self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
-        # Check if we already have a consumer for this sub_key
+        # .. create a new consumer if one doesn't exist yet ..
         if sub_key not in self.consumers:
 
             logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
             # .. start a background consumer ..
-            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback)
+            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
 
             # .. get the actual consumer object ..
             consumer:'Consumer' = result.get()
 
             # .. store it for later use ..
             self.consumers[sub_key] = consumer
-
-        else:
-            logger.debug(f'[{cid}] Consumer already exists for sub_key={sub_key}, skipping creation')
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
@@ -410,7 +347,9 @@ class Backend:
         cid: 'str',
         topic_name:'str',
         username:'str',
-        sub_key:'strnone'=None
+        *,
+        clean_up_queue:'bool'=False,
+        sub_key:'strnone'=None,
         ) -> 'StatusResponse':
 
         # Log what we're doing
@@ -453,8 +392,14 @@ class Backend:
             _ = self.consumers.pop(sub_key)
         else:
             count = len(remaining_bindings)
-            binding_text = 'binding' if count == 1 else 'bindings'
-            logger.info(f'[{cid}] {count} {binding_text} still exist for {sub_key}, keeping consumer')
+            if count == 1:
+                binding_text = 'binding'
+                verb = 'exists'
+            else:
+                binding_text = 'bindings'
+                verb = 'exist'
+
+            logger.info(f'[{cid}] {count} {binding_text} still {verb} for {sub_key}, keeping consumer')
 
         logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
 
@@ -462,6 +407,31 @@ class Backend:
         response.is_ok = True
 
         return response
+
+# ################################################################################################################################
+
+    def _on_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+
+        # Local objects
+        service_msg = {}
+
+        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
+        sub_key = config.queue
+
+        # .. enrich the message for the service ..
+        body['sub_key'] = sub_key
+
+        # .. turn that message into a form that a service can be invoked with ..
+        service_msg['action'] = _service_publish
+        service_msg['payload'] = body
+        service_msg['cid'] = body.get('correl_id') or body.msg_id
+        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
+
+        # .. push that message to the server ..
+        self.broker_client.invoke_async(service_msg)
+
+        # .. and acknowledge it so we can read more of them.
+        msg.ack()
 
 # ################################################################################################################################
 # ################################################################################################################################
