@@ -168,6 +168,14 @@ class Backend:
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
+
+        print()
+        print('DELETE', msg)
+        print()
+
+# ################################################################################################################################
+
     def _on_internal_message_callback(self, body:'strdict', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
         # Invoke the callback for this message ..

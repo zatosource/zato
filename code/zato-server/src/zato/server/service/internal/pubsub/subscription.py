@@ -401,7 +401,7 @@ class Delete(AdminService):
                 for related_sub in related_subscriptions:
                     session.delete(related_sub)
 
-                session.commit()
+                # session.commit()
 
             except Exception:
                 self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
