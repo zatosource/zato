@@ -414,13 +414,7 @@ class Backend:
         consumer = self.consumers[sub_key]
 
         # .. check if there are any other bindings for this queue ..
-        bindings = self.broker_client.get_bindings(cid, ModuleCtx.Exchange_Name)
-
-        # .. filter bindings to find any that still point to this queue ..
-        remaining_bindings = []
-        for item in bindings:
-            if item['queue'] == sub_key:
-                remaining_bindings.append(item)
+        remaining_bindings = self.broker_client.get_bindings_by_queue(cid, sub_key, ModuleCtx.Exchange_Name)
 
         # .. if there are no more bindings for this queue, stop the consumer and remove it ..
         if not remaining_bindings:

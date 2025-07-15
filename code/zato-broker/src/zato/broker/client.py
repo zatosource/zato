@@ -646,14 +646,12 @@ class BrokerClient:
         # Get broker connection from input or build a new one
         conn = conn or self.get_connection()
 
-        # Get current bindings for this exchange
-        current_bindings = self.get_bindings(cid, exchange_name)
-
         # Extract current routing keys for this queue
         current_routing_keys = []
-        for binding in current_bindings:
-            if binding['queue'] == queue_name and binding['exchange'] == exchange_name:
-                current_routing_keys.append(binding['routing_key'])
+        queue_bindings = self.get_bindings_by_queue(cid, queue_name, exchange_name)
+
+        for binding in queue_bindings:
+            current_routing_keys.append(binding['routing_key'])
 
         # Convert lists to sets for comparison
         current_keys_set = set(current_routing_keys)
