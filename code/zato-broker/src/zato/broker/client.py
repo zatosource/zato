@@ -693,20 +693,12 @@ class BrokerClient:
         # Get broker connection from input or build a new one
         conn = conn or self.get_connection()
 
-        # Get all bindings for this exchange
-        bindings = self.get_bindings(cid, exchange_name)
-
         # Find all bindings with routing key matching this topic
-        topic_bindings = []
-        for binding in bindings:
-            if binding['routing_key'] == topic_name:
-                topic_bindings.append(binding)
+        topic_bindings = self.get_bindings_by_routing_key(cid, exchange_name, topic_name)
 
         # If no bindings found, just return silently
         if not topic_bindings:
             return
-        else:
-            topic_bindings.sort()
 
         logger.info(f'[{cid}] Removing topic bindings -> {topic_name} -> {topic_bindings}')
 
@@ -746,6 +738,25 @@ class BrokerClient:
 
 # ################################################################################################################################
 
+    def get_bindings_by_routing_key(self, cid:'str', exchange_name:'str', routing_key:'str') -> 'strlist':
+        """ Returns all bindings that match the specified routing key.
+        """
+        # Get all bindings for this exchange
+        bindings = self.get_bindings(cid, exchange_name)
+
+        # Filter bindings by routing key
+        out = []
+
+        for binding in bindings:
+            if binding['routing_key'] == routing_key:
+                out.append(binding)
+
+        out.sort()
+
+        return out
+
+# ################################################################################################################################
+
     def rename_topic(
         self,
         cid: 'str',
@@ -760,14 +771,8 @@ class BrokerClient:
         # Get broker connection from input or build a new one
         conn = conn or self.get_connection()
 
-        # Get all bindings for this exchange
-        bindings = self.get_bindings(cid, exchange_name)
-
         # Find all bindings with routing key matching the old topic
-        topic_bindings = []
-        for binding in bindings:
-            if binding['routing_key'] == old_topic_name:
-                topic_bindings.append(binding)
+        topic_bindings = self.get_bindings_by_routing_key(cid, exchange_name, old_topic_name)
 
         # If no bindings found, just return silently
         if not topic_bindings:
@@ -778,7 +783,9 @@ class BrokerClient:
         logger.info(f'[{cid}] Renaming topic {old_topic_name} to {new_topic_name}, found {count} {binding_text}')
 
         # Store binding information before deleting
-        queue_names = [binding['queue'] for binding in topic_bindings]
+        queue_names = []
+        for binding in topic_bindings:
+            queue_names.append(binding['queue'])
 
         # Delete all old bindings first
         for binding in topic_bindings:
