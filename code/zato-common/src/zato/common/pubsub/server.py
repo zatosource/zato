@@ -11,15 +11,10 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
-import logging
-import sys
-import uuid
 from dataclasses import asdict
-from datetime import datetime, timezone
+from json import dumps, loads
 from logging import getLogger
-from multiprocessing import Process
 from traceback import format_exc
-from typing import cast
 
 # PyYAML
 from yaml import dump as yaml_dump, safe_load as yaml_load
@@ -53,7 +48,7 @@ from zato.common.pubsub.backend import Backend
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict, dictnone
+    from zato.common.typing_ import any_, dictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
