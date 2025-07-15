@@ -46,11 +46,6 @@ basicConfig(
 logger = getLogger(__name__)
 
 # Default paths
-DEFAULT_USERS_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'users.json'
-)
-
 DEFAULT_YAML_CONFIG = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     'users.yaml'
@@ -100,8 +95,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
-    _ = start_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
-    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
+    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG, 
                                 help='Path to YAML configuration file with users, topics, and subscriptions')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
@@ -239,7 +233,6 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         app = PubSubRESTServer(
             host=args.host,
             port=args.port,
-            users_file=args.users_file,
             yaml_config_file=args.yaml_config,
         )
 
