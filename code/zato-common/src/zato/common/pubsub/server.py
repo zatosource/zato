@@ -197,8 +197,8 @@ class PubSubRESTServer:
                     logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
-                    # _ = spawn(self.backend.subscribe_impl, cid, topic_name, sec_name, sub_key)
+                    # _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
+                    _ = spawn(self.backend.subscribe_impl, cid, topic_name, sec_name, sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
