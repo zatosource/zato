@@ -48,8 +48,8 @@ _service_publish = SERVICE.PUBLISH.value
 # ################################################################################################################################
 # ################################################################################################################################
 
-subs_by_username = 'dict_[str, Subscription]' # username -> Subscription
-topic_subs = 'dict_[str, subs_by_username]'   # topic_name -> {username -> Subscription}
+subs_by_sec_name = 'dict_[str, Subscription]' # sec_name -> Subscription
+topic_subs = 'dict_[str, subs_by_sec_name]'   # topic_name -> {sec_name -> Subscription}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,16 +91,16 @@ class Backend:
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
         is_active:'bool' = msg['is_active']
-        username:'str' = msg['username']
+        sec_name:'str' = msg['sec_name']
         topic_name_list:'strlist' = msg['topic_name_list']
 
         # Process each topic in the list
         for topic_name in topic_name_list:
-            _ = self.subscribe_impl(cid, topic_name, username, sub_key, is_active)
+            _ = self.subscribe_impl(cid, topic_name, sec_name, sub_key, is_active)
 
         # Log all subscribed topics
         topic_name_list_human = ', '.join(topic_name_list)
-        log_msg = f'[{cid}] Successfully subscribed {username} to topics: {topic_name_list_human} with key {sub_key}'
+        log_msg = f'[{cid}] Successfully subscribed {sec_name} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
 
 # ################################################################################################################################
@@ -185,18 +185,18 @@ class Backend:
             return
 
         # Get all subscriptions to this topic
-        subs_by_username = self.subs_by_topic.get(topic_name, {})
+        subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
 
         # If there are any subscriptions, we need to unsubscribe them
-        if subs_by_username:
-            logger.info(f'[{cid}] Unsubscribing {len(subs_by_username)} users from topic {topic_name}')
+        if subs_by_sec_name:
+            logger.info(f'[{cid}] Unsubscribing {len(subs_by_sec_name)} users from topic {topic_name}')
 
             # Create a copy to avoid modification during iteration
-            usernames = list(subs_by_username.keys())
+            sec_names = list(subs_by_sec_name.keys())
 
             # Unsubscribe each user
-            for username in usernames:
-                _ = self.unsubscribe_impl(cid, topic_name, username)
+            for sec_name in sec_names:
+                _ = self.unsubscribe_impl(cid, topic_name, sec_name)
 
         # Remove the topic from our mappings
         _ = self.topics.pop(topic_name)
@@ -214,26 +214,26 @@ class Backend:
         # Local aliases
         cid = msg['cid']
         sub_key = msg['sub_key']
-        username = msg['username']
+        sec_name = msg['sec_name']
 
-        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username}')
+        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, sec_name={sec_name}')
 
         # Find all topics this user is subscribed to with this sub_key
         topics_to_unsubscribe = []
-        for topic_name, subscriptions_by_username in self.subs_by_topic.items():
-            if username in subscriptions_by_username:
-                subscription = subscriptions_by_username[username]
+        for topic_name, subscriptions_by_sec_name in self.subs_by_topic.items():
+            if sec_name in subscriptions_by_sec_name:
+                subscription = subscriptions_by_sec_name[sec_name]
                 if subscription.sub_key == sub_key:
                     topics_to_unsubscribe.append(topic_name)
 
         # If we didn't find any matching subscriptions
         if not topics_to_unsubscribe:
-            logger.info(f'[{cid}] No subscriptions found for {username} with key {sub_key}')
+            logger.info(f'[{cid}] No subscriptions found for {sec_name} with key {sub_key}')
             return
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            _ = self.unsubscribe_impl(cid, topic_name, username, sub_key=sub_key)
+            _ = self.unsubscribe_impl(cid, topic_name, sec_name, sub_key=sub_key)
 
 # ################################################################################################################################
 
@@ -241,11 +241,11 @@ class Backend:
 
         # Local aliases
         cid = msg['cid']
-        username = msg['username']
+        sec_name = msg['sec_name']
         password = msg['password']
 
         # Create the user now
-        self.server.create_user(cid, username, password)
+        self.server.create_user(cid, sec_name, password)
 
 # ################################################################################################################################
 
@@ -253,30 +253,30 @@ class Backend:
 
         # Local aliases
         cid = msg['cid']
-        old_username = msg['old_username']
-        new_username = msg['new_username']
+        old_sec_name = msg['old_sec_name']
+        new_sec_name = msg['new_sec_name']
 
         # Log what we're doing
-        logger.info(f'[{cid}] Updating username from {old_username} to {new_username}')
+        logger.info(f'[{cid}] Updating sec_name from {old_sec_name} to {new_sec_name}')
 
         # First update the user credentials in the server
-        self.server.change_username(cid, old_username, new_username)
+        self.server.change_sec_name(cid, old_sec_name, new_sec_name)
 
         # Now update the subscription maps in all topics
-        for topic_name, subs_by_username in self.subs_by_topic.items():
+        for topic_name, subs_by_sec_name in self.subs_by_topic.items():
 
-            if old_username in subs_by_username:
+            if old_sec_name in subs_by_sec_name:
 
                 # Get the subscription object
-                subscription = subs_by_username.pop(old_username)
+                subscription = subs_by_sec_name.pop(old_sec_name)
 
-                # Update the username within the subscription object
-                subscription.username = new_username
+                # Update the sec_name within the subscription object
+                subscription.sec_name = new_sec_name
 
-                # Store under the new username
-                subs_by_username[new_username] = subscription
+                # Store under the new sec_name
+                subs_by_sec_name[new_sec_name] = subscription
 
-                logger.info(f'[{cid}] Updated subscription for topic {topic_name} from {old_username} to {new_username}')
+                logger.info(f'[{cid}] Updated subscription for topic {topic_name} from {old_sec_name} to {new_sec_name}')
 
 # ################################################################################################################################
 
@@ -333,12 +333,12 @@ class Backend:
         cid: 'str',
         topic_name:'str',
         msg:'PubMessage',
-        username:'str',
+        sec_name:'str',
         ext_client_id:'strnone'=None
         ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
-        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
+        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {sec_name}')
 
         # Create topic if it doesn't exist
         if topic_name not in self.topics:
@@ -370,13 +370,13 @@ class Backend:
             'expiration_time_iso': expiration_time_iso,
             'size': size,
             'delivery_count': 0,
-            'publisher': username,
+            'publisher': sec_name,
         }
 
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
         ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'[{cid}] Published message to topic {topic_name} (user={username}{ext_client_part})')
+        logger.info(f'[{cid}] Published message to topic {topic_name} (sec_name={sec_name} -> {ext_client_part})')
 
         # Return success response
         response = PubResponse()
@@ -392,16 +392,16 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        username: 'str',
+        sec_name: 'str',
         sub_key: 'str'='',
         is_active: 'bool'=True,
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
-        sub_key = sub_key or new_sub_key(username)
+        sub_key = sub_key or new_sub_key(sec_name)
 
-        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
+        logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
         if topic_name not in self.topics:
@@ -410,15 +410,15 @@ class Backend:
         # .. create a new subscription ..
         sub = Subscription()
         sub.topic_name = topic_name
-        sub.username = username
+        sub.sec_name = sec_name
         sub.sub_key = sub_key
         sub.creation_time = utcnow()
 
         # .. get or create a dict with subscriptions for users ..
-        subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
+        subs_by_sec_name = self.subs_by_topic.setdefault(topic_name, {})
 
         # .. now add it for that user ..
-        subs_by_username[username] = sub
+        subs_by_sec_name[sec_name] = sub
 
         # .. create bindings for the topic ..
         self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
@@ -429,7 +429,7 @@ class Backend:
             logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
             # .. start a background consumer ..
-            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
+            result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
 
             # .. get the actual consumer object ..
             consumer:'Consumer' = result.get()
@@ -438,7 +438,7 @@ class Backend:
             self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')
+        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
 
         # .. build our response ..
         response = StatusResponse()
@@ -453,19 +453,19 @@ class Backend:
         self,
         cid: 'str',
         topic_name:'str',
-        username:'str',
+        sec_name:'str',
         *,
         sub_key:'strnone'=None,
         ) -> 'StatusResponse':
 
         # Log what we're doing
-        logger.info(f'[{cid}] Unsubscribing {sub_key} from topic {topic_name} ({username})')
+        logger.info(f'[{cid}] Unsubscribing {sub_key} from topic {topic_name} ({sec_name})')
 
         # Local aliases
-        subs_by_username = self.subs_by_topic[topic_name]
+        subs_by_sec_name = self.subs_by_topic[topic_name]
 
         # Remove the subscription from our metadata ..
-        sub:'Subscription' = subs_by_username.pop(username)
+        sub:'Subscription' = subs_by_sec_name.pop(sec_name)
 
         # .. but use its sub_key in case we don't have it on input ..
         sub_key = sub.sub_key
@@ -497,7 +497,7 @@ class Backend:
             # .. now, delete the queue ..
             self.broker_client.delete_queue(sub_key)
 
-        logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
+        logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({sec_name})')
 
         response = StatusResponse()
         response.is_ok = True

@@ -949,6 +949,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.push_service_name,
         PubSubTopic.name.label('topic_name'),
         SecurityBase.name.label('sec_name'),
+        SecurityBase.username,
         SecurityBase.password.label('password'),
         HTTPSOAP.name.label('rest_push_endpoint_name') # type: ignore
     ).\

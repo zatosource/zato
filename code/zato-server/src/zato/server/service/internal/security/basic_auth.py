@@ -40,10 +40,20 @@ class GetList(AdminService):
         request_elem = 'zato_security_basic_auth_get_list_request'
         response_elem = 'zato_security_basic_auth_get_list_response'
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'realm'
+        input_optional = 'needs_password',
+        output_required = 'id', 'name', 'is_active', 'username', 'realm',
+        output_optional = 'password',
 
     def get_data(self, session): # type: ignore
+
         data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
+
+        if self.request.input.needs_password:
+            for item in data:
+                password = item['password']
+                password = self.crypto.decrypt(password)
+                item['password'] = password
+
         return data
 
     def handle(self):
