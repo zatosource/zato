@@ -300,6 +300,9 @@ class PubSubRESTServer:
         # .. we're going to need it in a moment ..
         end = datetime.now()
 
+        # import time
+        # time.sleep(3)
+
         user_count = len(self.users)
         topic_count = len(self.backend.topics)
         subscription_count = sum(len(subs) for subs in self.backend.subs_by_topic.values())
