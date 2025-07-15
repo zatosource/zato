@@ -143,7 +143,7 @@ class Backend:
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
+    def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'strdict') -> 'None':
 
         # Local aliases
         cid:'str' = msg['cid']
