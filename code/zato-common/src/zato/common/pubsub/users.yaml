@@ -1,0 +1,329 @@
+# User definitions
+users:
+  user001: user001
+  user002: user002
+  user003: user003
+  user004: user004
+  user005: user005
+  user006: user006
+  user007: user007
+  user008: user008
+  user009: user009
+  user010: user010
+  user011: user011
+  user012: user012
+  user013: user013
+  user014: user014
+  user015: user015
+  user016: user016
+  user017: user017
+  user018: user018
+  user019: user019
+  user020: user020
+  user021: user021
+  user022: user022
+  user023: user023
+  user024: user024
+  user025: user025
+  user026: user026
+  user027: user027
+  user028: user028
+  user029: user029
+  user030: user030
+  user031: user031
+  user032: user032
+  user033: user033
+  user034: user034
+  user035: user035
+  user036: user036
+  user037: user037
+  user038: user038
+  user039: user039
+  user040: user040
+  user041: user041
+  user042: user042
+  user043: user043
+  user044: user044
+  user045: user045
+  user046: user046
+  user047: user047
+  user048: user048
+  user049: user049
+  user050: user050
+  user051: user051
+  user052: user052
+  user053: user053
+  user054: user054
+  user055: user055
+  user056: user056
+  user057: user057
+  user058: user058
+  user059: user059
+  user060: user060
+  user061: user061
+  user062: user062
+  user063: user063
+  user064: user064
+  user065: user065
+  user066: user066
+  user067: user067
+  user068: user068
+  user069: user069
+  user070: user070
+  user071: user071
+  user072: user072
+  user073: user073
+  user074: user074
+  user075: user075
+  user076: user076
+  user077: user077
+  user078: user078
+  user079: user079
+  user080: user080
+  user081: user081
+  user082: user082
+  user083: user083
+  user084: user084
+  user085: user085
+  user086: user086
+  user087: user087
+  user088: user088
+  user089: user089
+  user090: user090
+  user091: user091
+  user092: user092
+  user093: user093
+  user094: user094
+  user095: user095
+  user096: user096
+  user097: user097
+  user098: user098
+  user099: user099
+  user100: user100
+
+# Topic definitions
+topics:
+  topic001:
+    name: topic001
+  topic002:
+    name: topic002
+  topic003:
+    name: topic003
+  topic004:
+    name: topic004
+  topic005:
+    name: topic005
+  topic006:
+    name: topic006
+  topic007:
+    name: topic007
+  topic008:
+    name: topic008
+  topic009:
+    name: topic009
+  topic010:
+    name: topic010
+  topic011:
+    name: topic011
+  topic012:
+    name: topic012
+  topic013:
+    name: topic013
+  topic014:
+    name: topic014
+  topic015:
+    name: topic015
+  topic016:
+    name: topic016
+  topic017:
+    name: topic017
+  topic018:
+    name: topic018
+  topic019:
+    name: topic019
+  topic020:
+    name: topic020
+  topic021:
+    name: topic021
+  topic022:
+    name: topic022
+  topic023:
+    name: topic023
+  topic024:
+    name: topic024
+  topic025:
+    name: topic025
+  topic026:
+    name: topic026
+  topic027:
+    name: topic027
+  topic028:
+    name: topic028
+  topic029:
+    name: topic029
+  topic030:
+    name: topic030
+  topic031:
+    name: topic031
+  topic032:
+    name: topic032
+  topic033:
+    name: topic033
+  topic034:
+    name: topic034
+  topic035:
+    name: topic035
+  topic036:
+    name: topic036
+  topic037:
+    name: topic037
+  topic038:
+    name: topic038
+  topic039:
+    name: topic039
+  topic040:
+    name: topic040
+  topic041:
+    name: topic041
+  topic042:
+    name: topic042
+  topic043:
+    name: topic043
+  topic044:
+    name: topic044
+  topic045:
+    name: topic045
+  topic046:
+    name: topic046
+  topic047:
+    name: topic047
+  topic048:
+    name: topic048
+  topic049:
+    name: topic049
+  topic050:
+    name: topic050
+  topic051:
+    name: topic051
+  topic052:
+    name: topic052
+  topic053:
+    name: topic053
+  topic054:
+    name: topic054
+  topic055:
+    name: topic055
+  topic056:
+    name: topic056
+  topic057:
+    name: topic057
+  topic058:
+    name: topic058
+  topic059:
+    name: topic059
+  topic060:
+    name: topic060
+  topic061:
+    name: topic061
+  topic062:
+    name: topic062
+  topic063:
+    name: topic063
+  topic064:
+    name: topic064
+  topic065:
+    name: topic065
+  topic066:
+    name: topic066
+  topic067:
+    name: topic067
+  topic068:
+    name: topic068
+  topic069:
+    name: topic069
+  topic070:
+    name: topic070
+  topic071:
+    name: topic071
+  topic072:
+    name: topic072
+  topic073:
+    name: topic073
+  topic074:
+    name: topic074
+  topic075:
+    name: topic075
+  topic076:
+    name: topic076
+  topic077:
+    name: topic077
+  topic078:
+    name: topic078
+  topic079:
+    name: topic079
+  topic080:
+    name: topic080
+  topic081:
+    name: topic081
+  topic082:
+    name: topic082
+  topic083:
+    name: topic083
+  topic084:
+    name: topic084
+  topic085:
+    name: topic085
+  topic086:
+    name: topic086
+  topic087:
+    name: topic087
+  topic088:
+    name: topic088
+  topic089:
+    name: topic089
+  topic090:
+    name: topic090
+  topic091:
+    name: topic091
+  topic092:
+    name: topic092
+  topic093:
+    name: topic093
+  topic094:
+    name: topic094
+  topic095:
+    name: topic095
+  topic096:
+    name: topic096
+  topic097:
+    name: topic097
+  topic098:
+    name: topic098
+  topic099:
+    name: topic099
+  topic100:
+    name: topic100
+
+# Subscriptions
+subscriptions:
+  topic001:
+    user001:
+      sub_key: zpsk.001
+    user002:
+      sub_key: zpsk.002
+    user003:
+      sub_key: zpsk.003
+  topic002:
+    user001:
+      sub_key: zpsk.001
+    user002:
+      sub_key: zpsk.002
+    user003:
+      sub_key: zpsk.003
+  topic003:
+    user001:
+      sub_key: zpsk.001
+    user002:
+      sub_key: zpsk.002
+    user003:
+      sub_key: zpsk.003
