@@ -51,6 +51,11 @@ DEFAULT_USERS_FILE = os.path.join(
     'users.json'
 )
 
+DEFAULT_YAML_CONFIG = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'users.yaml'
+)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -96,6 +101,8 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
     _ = start_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
+    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
+                                help='Path to YAML configuration file with users, topics, and subscriptions')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
 
@@ -210,13 +217,13 @@ def create_user(args:'argparse.Namespace') -> 'OperationResult':
 
 # ################################################################################################################################
 
+
+
+# ################################################################################################################################
+
 def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
-    validation_result = validate_users_file(args.users_file)
-    if not validation_result.is_ok:
-        return validation_result
-
     try:
         # Set up logging level
         level = DEBUG if args.has_debug else INFO
@@ -233,6 +240,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             host=args.host,
             port=args.port,
             users_file=args.users_file,
+            yaml_config_file=args.yaml_config,
         )
 
         # Configure gunicorn options
