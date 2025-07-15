@@ -37,7 +37,8 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'change_password_form': ChangePasswordForm()
+            'change_password_form': ChangePasswordForm(),
+            'show_search_form': True,
         }
 
 class _CreateEdit(CreateEdit):
