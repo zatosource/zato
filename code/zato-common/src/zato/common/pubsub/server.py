@@ -11,10 +11,17 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+import logging
+import sys
+import uuid
 from dataclasses import asdict
-from json import dumps, loads
+from datetime import datetime, timezone
 from logging import getLogger
+from multiprocessing import Process
 from traceback import format_exc
+from typing import cast
+
+# PyYAML
 from yaml import dump as yaml_dump, safe_load as yaml_load
 
 # Zato
@@ -85,36 +92,6 @@ class BadRequestException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def load_users_json(users_file:'str') -> 'strdict':
-    """ Load users from a JSON file.
-    """
-    logger.info(f'Loading users from JSON file {users_file}')
-
-    try:
-        with open(users_file, 'r') as f:
-            data = f.read()
-            users_list = loads(data)
-
-        # Convert the list of single-pair dicts to a single dict
-        users = {}
-        for user_dict in users_list:
-            for username, password in user_dict.items():
-                users[username] = password
-
-        count = len(users)
-        if count == 1:
-            logger.info('Loaded 1 user')
-        else:
-            logger.info(f'Loaded {count} users')
-        return users
-
-    except Exception as e:
-        logger.error(f'Error loading users from JSON: {e}')
-        return {}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def load_yaml_config(yaml_file:'str') -> 'dict_':
     """ Load configuration from a YAML file including users, topics, and subscriptions.
     """
@@ -134,28 +111,25 @@ def load_yaml_config(yaml_file:'str') -> 'dict_':
 # ################################################################################################################################
 
 class PubSubRESTServer:
-    """ Main server class for the Pub/Sub REST API.
+    """ A REST server for pub/sub operations.
     """
-    def __init__(self, host:'str', port:'int', users_file:'any_'=None, yaml_config_file:'any_'=None) -> 'None':
+
+    def __init__(self, host:'str', port:'int', yaml_config_file:'any_'=None) -> 'None':
+        """ Initialize the server with host, port, and YAML config.
+        """
         self.host = host
         self.port = port
-
-        # Initialize configuration variables
-        self.users = {}
+        self.users = {}  # username -> password
         self.yaml_config = None
 
-        # Load users from JSON if provided
-        if users_file and users_file.endswith('.json'):
-            self.users = load_users_json(users_file)
-
-        # Load configuration from YAML if provided
+        # Load config from YAML file if provided
         if yaml_config_file and yaml_config_file.endswith('.yaml'):
             self.yaml_config = load_yaml_config(yaml_config_file)
 
-            # Extract users from YAML config if present
+            # Extract users from YAML config
             if self.yaml_config:
-                self.users.update(self.yaml_config['users'])
-                logger.info(f'Updated users from YAML config, total users: {len(self.users)}')
+                self.users = self.yaml_config['users']
+                logger.info(f'Loaded {len(self.users)} users from YAML config')
 
         # Initialize the broker client
         self.broker_client = BrokerClient()
@@ -175,90 +149,6 @@ class PubSubRESTServer:
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
-
-# ################################################################################################################################
-
-    def _load_users(self, cid:'str') -> 'None':
-        """ Load initial users from server.
-        """
-
-        # Prepare our input ..
-        service = 'zato.security.basic-auth.get-list'
-        request = {
-            'cluster_id': 1,
-            'needs_password': True
-        }
-
-        # .. invoke the service ..
-        response = self.backend.invoke_service(service, request)
-
-        # .. log what we've received ..
-        if len_response := len(response):
-            logger.info('Loading 1 user')
-        else:
-            logger.info(f'Loading {len_response} users')
-
-        # .. process each subscription ..
-        for item in response:
-
-            # .. extract what we need ..
-            username = item['username']
-            password = item['password']
-
-            # .. and create a user ..
-            self.create_user(cid, username, password)
-
-# ################################################################################################################################
-
-    def _load_subscriptions(self, cid:'str') -> 'None':
-        """ Load subscriptions from server and set up the pub/sub structure.
-        """
-
-        # Prepare our input ..
-        service = 'zato.pubsub.subscription.get-list'
-        request = {
-            'cluster_id': 1,
-            'needs_password': True
-        }
-
-        # .. invoke the service ..
-        response = self.backend.invoke_service(service, request)
-
-        # .. log what we've received ..
-        if len_response := len(response):
-            logger.info('Loading 1 subscription')
-        else:
-            logger.info(f'Loading {len_response} subscriptions')
-
-        # .. process each subscription ..
-        for item in response:
-
-            try:
-                # .. extract what we need ..
-                sec_name = item['sec_name']
-                username = item['username']
-                password = item['password']
-                topic_names = item.get('topic_names') or ''
-                sub_key = item['sub_key']
-
-                # Add user credentials
-                self.create_user(cid, username, password)
-
-                # Handle multiple topics (comma-separated)
-                for topic_name in topic_names.split(','):
-                    topic_name = topic_name.strip()
-                    if not topic_name:
-                        continue
-
-                    logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
-
-                    # Create the subscription
-                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
-
-            except Exception:
-                logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
-
-        logger.info('Finished loading subscriptions')
 
 # ################################################################################################################################
 
@@ -339,21 +229,16 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def setup(self) -> 'None':
-
-        # Reusable
+        """ Set up the server, loading users, topics, and subscriptions from YAML config.
+        """
         cid = new_cid()
-
-        # Start the subscriber for internal commands
-        self.backend.start_internal_subscriber()
+        logger.info(f'[{cid}] Setting up PubSub REST server at {self.host}:{self.port}')
 
         # Load test data
         self._setup_from_yaml_config(cid)
 
-        # Load all the initial users
-        self._load_users(cid)
-
-        # Load all the initial subscriptions
-        self._load_subscriptions(cid)
+-        # Load all the initial subscriptions
+-        self._load_subscriptions(cid)
 
 # ################################################################################################################################
 
