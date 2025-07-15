@@ -78,7 +78,7 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
 
     consumer = Consumer(broker_config, consumer_config.on_msg_callback)
 
-    logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+    # logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
     try:
 

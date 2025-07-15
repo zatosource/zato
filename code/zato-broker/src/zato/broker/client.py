@@ -487,11 +487,6 @@ class BrokerClient:
     def get_connection(self) -> 'KombuAMQPConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
         """
-
-        print()
-        print(111, self)
-        print()
-
         # Get broker configuration
         broker_config = get_broker_config()
 
