@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
+
+# Bunch
+from bunch import Bunch
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE
@@ -93,10 +96,23 @@ class Create(AdminService):
 
                 raise
             else:
+
+                # Enrich the message for the server ..
                 input.id = auth.id
                 input.action = SECURITY.BASIC_AUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
+
+                # .. build a message for pub/sub too ..
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.action = SECURITY.BASIC_AUTH_CREATE.value
+                pubsub_msg.name = input.name
+                pubsub_msg.username = input.username
+                pubsub_msg.password = input.password
+
+                # .. and publish both ..
                 self.broker_client.publish(input)
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
@@ -146,6 +162,7 @@ class Edit(AdminService):
                 definition = definition.one()
 
                 old_name = definition.name
+                old_username = definition.username
 
                 set_instance_opaque_attrs(definition, input)
 
@@ -163,10 +180,36 @@ class Edit(AdminService):
 
                 raise
             else:
+
+                # Enrich the message for the server ..
                 input.action = SECURITY.BASIC_AUTH_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
+
+                # .. publish it ..
                 self.broker_client.publish(input)
+
+                # .. build a message for pub/sub only if something has changed ..
+                has_name_changed = input.name != old_name
+                has_username_changed = input.username != old_username
+
+                if has_name_changed or has_username_changed:
+
+                    pubsub_msg = Bunch()
+
+                    pubsub_msg.cid = self.cid
+                    pubsub_msg.action = SECURITY.BASIC_AUTH_EDIT.value
+
+                    pubsub_msg.has_name_changed = has_name_changed
+                    pubsub_msg.has_username_changed = has_username_changed
+
+                    pubsub_msg.old_name = old_name
+                    pubsub_msg.new_name = input.name
+
+                    pubsub_msg.old_username = old_username
+                    pubsub_msg.new_username = input.username
+
+                    self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
