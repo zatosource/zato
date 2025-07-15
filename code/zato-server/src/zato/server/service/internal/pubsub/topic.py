@@ -166,13 +166,16 @@ class Edit(AdminService):
                 raise
             else:
 
-                broker_msg = Bunch()
-                broker_msg.cid = self.cid
-                broker_msg.action = PUBSUB.TOPIC_EDIT.value
-                broker_msg.topic_name = input.name
-                broker_msg.old_topic_name = old_name
+                # Don't notify the broker only if the names are different, otherwise, there's no need to.
+                if input.name != old_name:
 
-                self.broker_client.publish(broker_msg, routing_key='pubsub')
+                    broker_msg = Bunch()
+                    broker_msg.cid = self.cid
+                    broker_msg.action = PUBSUB.TOPIC_EDIT.value
+                    broker_msg.new_topic_name = input.name
+                    broker_msg.old_topic_name = old_name
+
+                    self.broker_client.publish(broker_msg, routing_key='pubsub')
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -196,7 +199,7 @@ class Delete(AdminService):
                     one()
 
                 session.delete(topic)
-                # session.commit()
+                session.commit()
             except Exception:
                 self.logger.error('Could not delete pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
