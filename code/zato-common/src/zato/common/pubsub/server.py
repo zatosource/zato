@@ -24,6 +24,7 @@ from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
+from gevent import spawn
 from gevent.pywsgi import WSGIServer
 
 # gunicorn
@@ -241,7 +242,7 @@ class PubSubRESTServer:
 
                 # Create the subscription
                 logger.info(f'[{cid}] Setting up subscription from YAML: {username} -> {topic_name} (key={sub_key})')
-                _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+                _ = spawn(self.backend.subscribe_impl, cid, topic_name, username, sub_key)
 
         logger.info(f'[{cid}] Finished setting up from YAML configuration')
 
