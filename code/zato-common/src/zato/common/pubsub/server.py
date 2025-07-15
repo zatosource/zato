@@ -244,8 +244,6 @@ class PubSubRESTServer:
                 logger.info(f'[{cid}] Setting up subscription from YAML: {username} -> {topic_name} (key={sub_key})')
                 _ = spawn(self.backend.subscribe_impl, cid, topic_name, username, sub_key)
 
-        logger.info(f'[{cid}] Finished setting up from YAML configuration')
-
 # ################################################################################################################################
 
     def create_user(self, cid:'str', username:'str', password:'str') -> 'None':
@@ -291,6 +289,15 @@ class PubSubRESTServer:
 
         # Load all the initial subscriptions
         self._load_subscriptions(cid)
+
+        user_count = len(self.users)
+        topic_count = len(self.backend.topics)
+        subscription_count = sum(len(subs) for subs in self.backend.subs_by_topic.values())
+
+        logger.info(f'[{cid}] Setup complete:')
+        logger.info(f'[{cid}] {user_count} {"user" if user_count == 1 else "users"}')
+        logger.info(f'[{cid}] {topic_count} {"topic" if topic_count == 1 else "topics"}')
+        logger.info(f'[{cid}] {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
 
 # ################################################################################################################################
 
