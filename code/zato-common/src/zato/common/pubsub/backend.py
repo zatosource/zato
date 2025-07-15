@@ -452,31 +452,26 @@ class Backend:
 
         # Get or create a per-sub_key lock
         with self._main_lock:
+            _sub_key_lock = self._sub_key_lock.setdefault(sub_key, RLock())
+
+        # .. create a new consumer if one doesn't exist yet ..
+        with _sub_key_lock:
+
             if sub_key not in self.consumers:
-                _sub_key_lock = RLock()
-                self._sub_key_lock[sub_key] = _sub_key_lock
-            else:
-                _sub_key_lock = self._sub_key_lock[sub_key]
 
-            # .. create a new consumer if one doesn't exist yet ..
-            with _sub_key_lock:
-                if sub_key not in self.consumers:
+                logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
-                    logger.info(f'**************** {sub_key}')
+                # .. start a background consumer ..
+                result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
 
-                    # logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+                # .. get the actual consumer object ..
+                consumer:'Consumer' = result.get()
 
-                    # .. start a background consumer ..
-                    result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
-
-                    # .. get the actual consumer object ..
-                    consumer:'Consumer' = result.get()
-
-                    # .. store it for later use ..
-                    self.consumers[sub_key] = consumer
+                # .. store it for later use ..
+                self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
-        # logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
+        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
 
         # .. build our response ..
         response = StatusResponse()
