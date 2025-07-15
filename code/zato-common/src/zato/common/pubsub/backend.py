@@ -30,6 +30,7 @@ from zato.common.util.api import new_sub_key, spawn_greenlet, utcnow
 if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
+    from zato.common.pubsub.server import PubSubRESTServer
     from zato.common.typing_ import any_, anydictnone, dict_, strdict, strlist, strnone
     from zato.server.connection.amqp_ import Consumer
 
@@ -74,8 +75,9 @@ class Backend:
     consumers: 'dict_[str, Consumer]' # Maps sub_keys to Consumer objects
     subs_by_topic: 'topic_subs'
 
-    def __init__(self, broker_client:'BrokerClient') -> 'None':
+    def __init__(self, server:'PubSubRESTServer', broker_client:'BrokerClient') -> 'None':
 
+        self.server = server
         self.broker_client = broker_client
         self.topics = {}
         self.consumers = {}
@@ -208,10 +210,8 @@ class Backend:
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
-        """ Handle a subscription deletion message from the broker.
-        Expected format: { 'action': 'action-id', 'sub_key': 'subscription-key' }
-        """
-        # Extract data from the message
+
+        # Local aliases
         cid = msg['cid']
         sub_key = msg['sub_key']
         username = msg['username']
@@ -234,6 +234,30 @@ class Backend:
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
             _ = self.unsubscribe_impl(cid, topic_name, username, sub_key=sub_key)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        username = msg['username']
+        password = msg['password']
+
+        # Create the user now
+        self.server.create_user(cid, username, password)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        old_username = msg['old_username']
+        new_username = msg['new_username']
+
+        # Rename the username now
+        self.server.change_username(cid, old_username, new_username)
 
 # ################################################################################################################################
 
