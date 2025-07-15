@@ -717,7 +717,7 @@ class BrokerClient:
 
             # Queue name and sub_key are the same thing
             sub_key = binding['queue']
-            self.delete_bindings(cid, sub_key, exchange_name, queue_name, topic_name, conn)
+            self.delete_bindings(cid, sub_key, exchange_name, sub_key, topic_name, conn)
 
         logger.info(f'[{cid}] Topic {topic_name} successfully removed from exchange {exchange_name}')
 
