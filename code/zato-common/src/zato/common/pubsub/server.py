@@ -14,6 +14,7 @@ _ = monkey.patch_all()
 from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
+from traceback import format_exc
 from yaml import dump as yaml_dump
 
 # Zato
@@ -140,36 +141,70 @@ class PubSubRESTServer:
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
+# ################################################################################################################################
+
+    def _load_users(self, cid:'str') -> 'None':
+        """ Load initial users from server.
+        """
+
+        # Prepare our input ..
+        service = 'zato.security.basic-auth.get-list'
+        request = {
+            'cluster_id': 1,
+            'needs_password': True
+        }
+
+        # .. invoke the service ..
+        response = self.backend.invoke_service(service, request)
+
+        # .. log what we've received ..
+        if len_response := len(response) == 1:
+            logger.info('Loading 1 user')
+        else:
+            logger.info(f'Loading {len_response} users')
+
+        # .. process each subscription ..
+        for item in response:
+
+            # .. extract what we need ..
+            username = item['username']
+            password = item['password']
+
+            # .. and create a user ..
+            self.create_user(cid, username, password)
 
 # ################################################################################################################################
 
-    def _load_subscriptions(self) -> 'None':
-        """ Load subscriptions from the backend service and set up the pub/sub structure.
+    def _load_subscriptions(self, cid:'str') -> 'None':
+        """ Load subscriptions from server and set up the pub/sub structure.
         """
-        # Fetch all subscriptions with their passwords
+
+        # Prepare our input ..
         service = 'zato.pubsub.subscription.get-list'
         request = {
             'cluster_id': 1,
             'needs_password': True
         }
 
+        # .. invoke the service ..
         response = self.backend.invoke_service(service, request)
 
+        # .. log what we've received ..
         if len_response := len(response) == 1:
             logger.info('Loading 1 subscription')
         else:
             logger.info(f'Loading {len_response} subscriptions')
 
-        # Process each subscription
+        # .. process each subscription ..
         for item in response:
-            cid = new_cid()
 
             try:
-                # Extract essential fields
-                username = item.get('sec_name')
-                password = item.get('password')
-                topic_names = item.get('topic_names', '')
-                sub_key = item.get('sub_key')
+                # .. extract what we need ..
+                sec_name = item['sec_name']
+                username = item['username']
+                password = item['password']
+                topic_names = item.get('topic_names') or ''
+                sub_key = item['sub_key']
 
                 # Add user credentials
                 self.create_user(cid, username, password)
@@ -183,10 +218,10 @@ class PubSubRESTServer:
                     logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
 
-            except Exception as e:
-                logger.error(f'[{cid}] Error processing subscription {item}: {e}')
+            except Exception:
+                logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
 
         logger.info('Finished loading subscriptions')
 
@@ -226,11 +261,17 @@ class PubSubRESTServer:
 
     def setup(self) -> 'None':
 
+        # Reusable
+        cid = new_cid()
+
         # Start the subscriber for internal commands
         self.backend.start_internal_subscriber()
 
-        # Load up all the initial subscriptions
-        self._load_subscriptions()
+        # Load all the initial users
+        self._load_users(cid)
+
+        # Load all the initial subscriptions
+        self._load_subscriptions(cid)
 
 # ################################################################################################################################
 
