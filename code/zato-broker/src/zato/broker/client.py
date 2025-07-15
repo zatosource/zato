@@ -722,4 +722,29 @@ class BrokerClient:
         logger.info(f'[{cid}] Topic {topic_name} successfully removed from exchange {exchange_name}')
 
 # ################################################################################################################################
+
+    def get_bindings_by_queue(self, cid:'str', queue_name:'str', exchange_name:'str') -> 'strlist':
+        """ Returns all bindings that point to the specified queue.
+        """
+        # Get all bindings for this exchange
+        bindings = self.get_bindings(cid, exchange_name)
+
+        # Filter bindings by queue name
+        out = []
+
+        for binding in bindings:
+            if binding['queue'] == queue_name:
+                out.append(binding)
+
+        return out
+
+# ################################################################################################################################
+
+    def queue_has_bindings(self, cid:'str', queue_name:'str', exchange_name:'str') -> 'bool':
+        """ Returns True if the queue has any bindings, False otherwise.
+        """
+        bindings = self.get_bindings_by_queue(cid, queue_name, exchange_name)
+        return bool(bindings)
+
+# ################################################################################################################################
 # ################################################################################################################################
