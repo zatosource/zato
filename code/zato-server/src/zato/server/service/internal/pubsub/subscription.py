@@ -225,6 +225,7 @@ class Create(AdminService):
                 broker_msg.cid = self.cid
                 broker_msg.sub_key = sub.sub_key
                 broker_msg.is_active = input.is_active
+                broker_msg.username = security_def.username
                 broker_msg.topic_name_list = plain_topic_names
                 broker_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
