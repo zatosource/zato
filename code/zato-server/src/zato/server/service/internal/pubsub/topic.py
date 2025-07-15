@@ -11,6 +11,9 @@ from contextlib import closing
 from traceback import format_exc
 import re
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
@@ -22,7 +25,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of Pub/Sub topics available.
+    """ Returns a list of pub/sub topics available.
     """
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
@@ -55,7 +58,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new Pub/Sub topic.
+    """ Creates a new pub/sub topic.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topic_create_request'
@@ -79,7 +82,7 @@ class Create(AdminService):
                     filter(PubSubTopic.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('Pub/Sub topic `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Pub/sub topic `{}` already exists in this cluster'.format(input.name))
 
                 topic = PubSubTopic()
                 topic.name = input.name
@@ -93,14 +96,15 @@ class Create(AdminService):
                 session.commit()
 
             except Exception:
-                self.logger.error('Could not create a Pub/Sub topic, e:`%s`', format_exc())
+                self.logger.error('Could not create a pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
             else:
-                input.id = topic.id
-                input.action = PUBSUB.TOPIC_CREATE.value
-                self.broker_client.publish(input)
+
+                # Note that we don't need to notify the broker about the creation of a new topic.
+                # This is because the broker only cares about topics that have subscribers
+                # and at this point this topic has none.
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -109,7 +113,7 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates a Pub/Sub topic.
+    """ Updates a pub/sub topic.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topic_edit_request'
@@ -134,7 +138,7 @@ class Edit(AdminService):
                     existing_one = existing_one.first()
 
                 if existing_one:
-                    raise Exception('Pub/Sub topic `{}` already exists on this cluster'.format(input.name))
+                    raise Exception('Pub/sub topic `{}` already exists on this cluster'.format(input.name))
 
                 topic = session.query(PubSubTopic)
 
@@ -156,14 +160,19 @@ class Edit(AdminService):
                 session.commit()
 
             except Exception:
-                self.logger.error('Could not update Pub/Sub topic, e:`%s`', format_exc())
+                self.logger.error('Could not update pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
             else:
-                input.action = PUBSUB.TOPIC_EDIT.value
-                input.old_name = old_name
-                self.broker_client.publish(input)
+
+                broker_msg = Bunch()
+                broker_msg.cid = self.cid
+                broker_msg.action = PUBSUB.TOPIC_EDIT.value
+                broker_msg.topic_name = input.name
+                broker_msg.old_topic_name = old_name
+
+                self.broker_client.publish(broker_msg, routing_key='pubsub')
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -172,7 +181,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a Pub/Sub topic.
+    """ Deletes a pub/sub topic.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topic_delete_request'
@@ -187,22 +196,26 @@ class Delete(AdminService):
                     one()
 
                 session.delete(topic)
-                session.commit()
+                # session.commit()
             except Exception:
-                self.logger.error('Could not delete Pub/Sub topic, e:`%s`', format_exc())
+                self.logger.error('Could not delete pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
             else:
-                self.request.input.action = PUBSUB.TOPIC_DELETE.value
-                self.request.input.name = topic.name
-                self.broker_client.publish(self.request.input)
+
+                broker_msg = Bunch()
+                broker_msg.cid = self.cid
+                broker_msg.action = PUBSUB.TOPIC_DELETE.value
+                broker_msg.topic_name = topic.name
+
+                self.broker_client.publish(broker_msg, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class GetMatches(AdminService):
-    """ Returns a list of Pub/Sub topics matching a given pattern.
+    """ Returns a list of pub/sub topics matching a given pattern.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topic_get_matches_request'
