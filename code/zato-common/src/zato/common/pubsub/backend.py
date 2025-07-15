@@ -387,9 +387,16 @@ class Backend:
 
         # .. if there are no more bindings for this queue, stop the consumer and remove it ..
         if not remaining_bindings:
-            logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer')
+
+            logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer and deleting queue')
+
+            # First stop it ..
             consumer.stop()
             _ = self.consumers.pop(sub_key)
+
+            # .. now, delete the queue
+            self.broker_client.delete_queue(sub_key)
+
         else:
             count = len(remaining_bindings)
             if count == 1:
