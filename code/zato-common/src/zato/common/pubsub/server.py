@@ -152,6 +152,62 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
+    def _load_subscriptions(self, cid:'str') -> 'None':
+        """ Load subscriptions from server and set up the pub/sub structure.
+        """
+
+        # Prepare our input ..
+        service = 'zato.pubsub.subscription.get-list'
+        request = {
+            'cluster_id': 1,
+            'needs_password': True
+        }
+
+        # .. invoke the service ..
+        response = self.backend.invoke_service(service, request)
+
+        # .. log what we've received ..
+        len_response = len(response)
+        if len_response == 1:
+            logger.info('Loading 1 subscription')
+        elif len_response > 0:
+            logger.info(f'Loading {len_response} subscriptions')
+        else:
+            logger.info('No subscriptions to load')
+
+        # .. process each subscription ..
+        for item in response:
+
+            try:
+                # .. extract what we need ..
+                sec_name = item['sec_name']
+                username = item['username']
+                password = item['password']
+                topic_names = item.get('topic_names') or ''
+                sub_key = item['sub_key']
+
+                # Add user credentials
+                self.create_user(cid, username, password)
+
+                # Handle multiple topics (comma-separated)
+                for topic_name in topic_names.split(','):
+
+                    topic_name = topic_name.strip()
+                    if not topic_name:
+                        continue
+
+                    logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
+
+                    # Create the subscription
+                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
+
+            except Exception:
+                logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
+
+        logger.info('Finished loading subscriptions')
+
+# ################################################################################################################################
+
     def _setup_from_yaml_config(self, cid:'str') -> 'None':
         """ Set up users, topics, and subscriptions based on YAML configuration.
         """
@@ -237,8 +293,8 @@ class PubSubRESTServer:
         # Load test data
         self._setup_from_yaml_config(cid)
 
--        # Load all the initial subscriptions
--        self._load_subscriptions(cid)
+        # Load all the initial subscriptions
+        self._load_subscriptions(cid)
 
 # ################################################################################################################################
 
