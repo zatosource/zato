@@ -126,7 +126,7 @@ class PubSubRESTServer:
         self.broker_client = BrokerClient()
 
         # Initialize the backend
-        self.backend = Backend(self.broker_client)
+        self.backend = Backend(self, self.broker_client)
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
@@ -171,10 +171,8 @@ class PubSubRESTServer:
                 topic_names = item.get('topic_names', '')
                 sub_key = item.get('sub_key')
 
-                # Add user credentials if not already present
-                if username not in self.users:
-                    logger.info(f'[{cid}] Adding user credentials for {username}')
-                    self.users[username] = password
+                # Add user credentials
+                self.create_user(cid, username, password)
 
                 # Handle multiple topics (comma-separated)
                 for topic_name in topic_names.split(','):
@@ -182,7 +180,7 @@ class PubSubRESTServer:
                     if not topic_name:
                         continue
 
-                    logger.info(f'[{cid}] Setting up subscription: {username} -> {topic_name}')
+                    logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
                     _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
@@ -191,6 +189,20 @@ class PubSubRESTServer:
                 logger.error(f'[{cid}] Error processing subscription {item}: {e}')
 
         logger.info('Finished loading subscriptions')
+
+# ################################################################################################################################
+
+    def create_user(self, cid:'str', username:'str', password:'str') -> 'None':
+        if username not in self.users:
+            logger.info(f'[{cid}] Adding user credentials for `{username}`')
+            self.users[username] = password
+        else:
+            logger.info(f'[{cid}] User already exists: `{username}`')
+
+# ################################################################################################################################
+
+    def change_username(self, cid:'str', old_username:'str', new_username:'str') -> 'None':
+        pass
 
 # ################################################################################################################################
 
