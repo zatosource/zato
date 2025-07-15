@@ -267,16 +267,8 @@ class BrokerClient:
                 with self.lock:
                     _ = self.reply_consumers.pop(queue_name, None)
 
-            # Finally, explicitly delete the queue using a fresh connection
-            # This avoids using potentially cancelled channels
-            try:
-                with self.producer.acquire() as conn:
-                    channel = conn.channel
-                    if channel and channel.is_open:
-                        channel.queue_delete(queue=queue_name)
-                        logger.debug(f'Deleted queue: {queue_name}')
-            except Exception as e:
-                logger.warning(f'Error deleting queue {queue_name}: {str(e)}')
+            # Delete the queue
+            self.delete_queue(queue_name)
 
             logger.debug(f'Completed cleanup for queue: {queue_name}')
         except Exception as e:
@@ -624,6 +616,20 @@ class BrokerClient:
             exchange=exchange_name,
             routing_key=routing_key
         )
+
+# ################################################################################################################################
+
+    def delete_queue(self, queue_name:'str') -> 'None':
+        """ Explicitly deletes a queue from the broker.
+        """
+        try:
+            with self.producer.acquire() as conn:
+                channel = conn.channel
+                if channel and channel.is_open:
+                    channel.queue_delete(queue=queue_name)
+                    logger.debug(f'Deleted queue: {queue_name}')
+        except Exception as e:
+            logger.warning(f'Error deleting queue {queue_name}: {str(e)}')
 
 # ################################################################################################################################
 
