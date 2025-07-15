@@ -430,8 +430,27 @@ class Backend:
             topic_name,
         )
 
-        # .. finally, stop the consumer if it's not subscribed to any other topic ..
+        # .. get the consumer for this subscription ..
         consumer = self.consumers[sub_key]
+
+        # .. check if there are any other bindings for this queue ..
+        bindings = self.broker_client.get_bindings(cid, ModuleCtx.Exchange_Name)
+
+        # .. filter bindings to find any that still point to this queue ..
+        remaining_bindings = []
+        for item in bindings:
+            if item['queue'] == sub_key:
+                remaining_bindings.append(item)
+
+        # .. if there are no more bindings for this queue, stop the consumer and remove it ..
+        if not remaining_bindings:
+            logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer')
+            consumer.stop()
+            self.consumers.pop(sub_key)
+        else:
+            count = len(remaining_bindings)
+            binding_text = 'binding' if count == 1 else 'bindings'
+            logger.info(f'[{cid}] {count} {binding_text} still exist for {sub_key}, keeping consumer')
 
         logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
 
