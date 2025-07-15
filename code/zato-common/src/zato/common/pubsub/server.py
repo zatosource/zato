@@ -129,11 +129,6 @@ class PubSubRESTServer:
         if yaml_config_file and yaml_config_file.endswith('.yaml'):
             self.yaml_config = load_yaml_config(yaml_config_file)
 
-            # Extract users from YAML config
-            if self.yaml_config:
-                self.users = self.yaml_config['users']
-                logger.info(f'Loaded {len(self.users)} users from YAML config')
-
         # Initialize the broker client
         self.broker_client = BrokerClient()
 
@@ -295,7 +290,7 @@ class PubSubRESTServer:
         start = datetime.now()
 
         # .. load test data ..
-        self._setup_from_yaml_config(cid)
+        # self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
         # self._load_subscriptions(cid)
