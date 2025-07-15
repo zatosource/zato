@@ -12,7 +12,6 @@ _ = monkey.patch_all()
 
 # stdlib
 import argparse
-import json
 import logging
 import os
 import sys
@@ -29,7 +28,7 @@ from zato.common.pubsub.util import get_broker_config
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydictnone, str_
+    from zato.common.typing_ import anydictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,23 +53,7 @@ DEFAULT_YAML_CONFIG = os.path.join(
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(frozen=True)
-class UserInfo:
-    """ Information about a user.
-    """
-    username: 'str'
 
-    def __hash__(self) -> 'int':
-        """ Make this class hashable for use in sets.
-        """
-        return hash(self.username)
-
-    def __eq__(self, other:'str') -> 'bool':
-        """ Define equality based on username.
-        """
-        if not isinstance(other, UserInfo):
-            return False
-        return self.username == other.username
 
 # ################################################################################################################################
 
@@ -95,20 +78,10 @@ def get_parser() -> 'argparse.ArgumentParser':
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
-    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG, 
+    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
                                 help='Path to YAML configuration file with users, topics, and subscriptions')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
-
-    # List users command
-    list_users_parser = subparsers.add_parser('list-users', help='List users from users JSON file')
-    _ = list_users_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
-
-    # Create user command
-    create_user_parser = subparsers.add_parser('create-user', help='Create a new user')
-    _ = create_user_parser.add_argument('--username', type=str, required=True, help='Username')
-    _ = create_user_parser.add_argument('--password', type=str, required=True, help='Password')
-    _ = create_user_parser.add_argument('--users-file', type=str, default=DEFAULT_USERS_FILE, help='Path to users JSON file')
 
     # Cleanup command
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
@@ -116,102 +89,6 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = cleanup_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
 
     return parser
-
-# ################################################################################################################################
-
-def validate_users_file(users_file:'str_') -> 'OperationResult':
-    """ Validate that the users file exists and is readable.
-    """
-    if not os.path.exists(users_file):
-        message = f'Users file {users_file} does not exist'
-        logger.error(message)
-        return OperationResult(is_ok=False, message=message)
-
-    if not os.path.isfile(users_file):
-        message = f'Users file {users_file} is not a file'
-        logger.error(message)
-        return OperationResult(is_ok=False, message=message)
-
-    try:
-        with open(users_file, 'r') as f:
-            json.load(f)
-        return OperationResult(is_ok=True, message='Users file is valid')
-    except Exception as e:
-        message = f'Error reading users file {users_file}: {e}'
-        logger.error(message)
-        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
-
-# ################################################################################################################################
-
-def list_users(args:'argparse.Namespace') -> 'any_':
-    """ List users from the specified users file.
-    """
-    validation_result = validate_users_file(args.users_file)
-    if not validation_result.is_ok:
-        return validation_result
-
-    try:
-        with open(args.users_file, 'r') as f:
-            users_list = json.load(f)
-
-        logger.info(f'Users in {args.users_file}:')
-        users = []
-        for user_dict in users_list:
-            for username in user_dict:
-                logger.info(f'  - {username}')
-                users.append(UserInfo(username=username))
-
-        return users
-    except Exception as e:
-        message = f'Error listing users: {e}'
-        logger.error(message)
-        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
-
-# ################################################################################################################################
-
-def create_user(args:'argparse.Namespace') -> 'OperationResult':
-    """ Create a new user in the specified users file.
-    """
-    users_file = args.users_file
-    username = args.username
-    password = args.password
-
-    # Create parent directories if they don't exist
-    os.makedirs(os.path.dirname(users_file), exist_ok=True)
-
-    # Read existing users or create empty list
-    try:
-        if os.path.exists(users_file):
-            with open(users_file, 'r') as f:
-                users_list = json.load(f)
-        else:
-            users_list = []
-
-        # Check if user already exists
-        for user_dict in users_list:
-            if username in user_dict:
-                message = f'User {username} already exists'
-                logger.error(message)
-                return OperationResult(is_ok=False, message=message)
-
-        # Add new user
-        _ = users_list.append({username: password})
-
-        # Write updated users file
-        with open(users_file, 'w') as f:
-            json.dump(users_list, f, indent=2)
-
-        message = f'User {username} created successfully'
-        logger.info(message)
-        return OperationResult(is_ok=True, message=message)
-    except Exception as e:
-        message = f'Error creating user: {e}'
-        logger.error(message)
-        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
-
-# ################################################################################################################################
-
-
 
 # ################################################################################################################################
 
@@ -396,21 +273,6 @@ def main() -> 'int':
     # Handle commands
     if args.command == 'start':
         result = start_server(args)
-        return 0 if result.is_ok else 1
-
-    elif args.command == 'list-users':
-
-        result = list_users(args)
-
-        # If we got a list of users, it was successful
-        if isinstance(result, list):
-            return 0
-
-        # Otherwise it's an OperationResult indicating failure
-        return 0 if result.is_ok else 1
-
-    elif args.command == 'create-user':
-        result = create_user(args)
         return 0 if result.is_ok else 1
 
     elif args.command == 'cleanup':
