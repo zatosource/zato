@@ -15,7 +15,7 @@ from dataclasses import asdict
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
-from yaml import dump as yaml_dump
+from yaml import dump as yaml_dump, safe_load as yaml_load
 
 # Zato
 from zato.common.typing_ import any_, anydict, dict_, list_, strnone
@@ -85,10 +85,10 @@ class BadRequestException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def load_users(users_file:'str') -> 'strdict':
+def load_users_json(users_file:'str') -> 'strdict':
     """ Load users from a JSON file.
     """
-    logger.info(f'Loading users from {users_file}')
+    logger.info(f'Loading users from JSON file {users_file}')
 
     try:
         with open(users_file, 'r') as f:
@@ -109,7 +109,25 @@ def load_users(users_file:'str') -> 'strdict':
         return users
 
     except Exception as e:
-        logger.error(f'Error loading users: {e}')
+        logger.error(f'Error loading users from JSON: {e}')
+        return {}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def load_yaml_config(yaml_file:'str') -> 'dict_':
+    """ Load configuration from a YAML file including users, topics, and subscriptions.
+    """
+    logger.info(f'Loading configuration from YAML file {yaml_file}')
+
+    try:
+        with open(yaml_file, 'r') as f:
+            config = yaml_load(f)
+
+        return config
+
+    except Exception as e:
+        logger.error(f'Error loading YAML configuration: {e}')
         return {}
 
 # ################################################################################################################################
@@ -118,10 +136,26 @@ def load_users(users_file:'str') -> 'strdict':
 class PubSubRESTServer:
     """ Main server class for the Pub/Sub REST API.
     """
-    def __init__(self, host:'str', port:'int', users_file:'any_'=None) -> 'None':
+    def __init__(self, host:'str', port:'int', users_file:'any_'=None, yaml_config_file:'any_'=None) -> 'None':
         self.host = host
         self.port = port
-        self.users = load_users(users_file) if users_file else {}
+
+        # Initialize configuration variables
+        self.users = {}
+        self.yaml_config = None
+
+        # Load users from JSON if provided
+        if users_file and users_file.endswith('.json'):
+            self.users = load_users_json(users_file)
+
+        # Load configuration from YAML if provided
+        if yaml_config_file and yaml_config_file.endswith('.yaml'):
+            self.yaml_config = load_yaml_config(yaml_config_file)
+
+            # Extract users from YAML config if present
+            if self.yaml_config:
+                self.users.update(self.yaml_config['users'])
+                logger.info(f'Updated users from YAML config, total users: {len(self.users)}')
 
         # Initialize the broker client
         self.broker_client = BrokerClient()
@@ -141,6 +175,7 @@ class PubSubRESTServer:
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
+
 # ################################################################################################################################
 
     def _load_users(self, cid:'str') -> 'None':
@@ -227,6 +262,50 @@ class PubSubRESTServer:
 
 # ################################################################################################################################
 
+    def _setup_from_yaml_config(self, cid:'str') -> 'None':
+        """ Set up users, topics, and subscriptions based on YAML configuration.
+        """
+        if not self.yaml_config:
+            return
+
+        logger.info(f'[{cid}] Setting up from YAML configuration')
+
+        # Process users section
+        users_config = self.yaml_config['users']
+        for username, password in users_config.items():
+            self.create_user(cid, username, password)
+
+        # Process topics section
+        topics_config = self.yaml_config['topics']
+        for topic_data in topics_config.values():
+            topic_name = topic_data['name']
+            if topic_name not in self.backend.topics:
+                self.backend.create_topic(cid, 'yaml-config', topic_name)
+                logger.info(f'[{cid}] Created topic: {topic_name}')
+
+        # Process subscriptions section
+        subs_config = self.yaml_config['subscriptions']
+        for topic_name, users_data in subs_config.items():
+
+            # Make sure the topic exists
+            if topic_name not in self.backend.topics:
+                self.backend.create_topic(cid, 'yaml-config-subscription', topic_name)
+                logger.info(f'[{cid}] Created topic for subscription: {topic_name}')
+
+            # Process each user subscription for this topic
+            for username, sub_data in users_data.items():
+
+                # Get the subscription key
+                sub_key = sub_data['sub_key']
+
+                # Create the subscription
+                logger.info(f'[{cid}] Setting up subscription from YAML: {username} -> {topic_name} (key={sub_key})')
+                _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+
+        logger.info(f'[{cid}] Finished setting up from YAML configuration')
+
+# ################################################################################################################################
+
     def create_user(self, cid:'str', username:'str', password:'str') -> 'None':
         if username not in self.users:
             logger.info(f'[{cid}] Adding user credentials for `{username}`')
@@ -266,6 +345,9 @@ class PubSubRESTServer:
 
         # Start the subscriber for internal commands
         self.backend.start_internal_subscriber()
+
+        # Load test data
+        self._setup_from_yaml_config(cid)
 
         # Load all the initial users
         self._load_users(cid)
