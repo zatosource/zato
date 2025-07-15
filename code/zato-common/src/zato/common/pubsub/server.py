@@ -232,7 +232,7 @@ class PubSubRESTServer:
             logger.info(f'[{cid}] Adding user credentials for `{username}`')
             self.users[username] = password
         else:
-            logger.info(f'[{cid}] User already exists: `{username}`')
+            logger.debug(f'[{cid}] User already exists: `{username}`')
 
 # ################################################################################################################################
 
