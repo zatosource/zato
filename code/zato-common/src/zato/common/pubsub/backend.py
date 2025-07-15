@@ -253,30 +253,48 @@ class Backend:
 
         # Local aliases
         cid = msg['cid']
+
+        has_sec_name_changed = msg['has_sec_name_changed']
+        has_username_changed = msg['has_username_changed']
+
         old_sec_name = msg['old_sec_name']
         new_sec_name = msg['new_sec_name']
 
-        # Log what we're doing
-        logger.info(f'[{cid}] Updating sec_name from {old_sec_name} to {new_sec_name}')
+        old_username = msg['old_username']
+        new_username = msg['new_username']
 
-        # First update the user credentials in the server
-        self.server.change_sec_name(cid, old_sec_name, new_sec_name)
+        # We go here if the username is different ..
+        if has_username_changed:
 
-        # Now update the subscription maps in all topics
-        for topic_name, subs_by_sec_name in self.subs_by_topic.items():
+            # .. log what we're doing ..
+            logger.info(f'[{cid}] Updating username from `{old_username}` to `{new_username}`')
 
-            if old_sec_name in subs_by_sec_name:
+            # .. and actually do it ..
+            self.server.change_username(cid, old_username, new_username)
 
-                # Get the subscription object
-                subscription = subs_by_sec_name.pop(old_sec_name)
+        # .. we go here if the name of the security definition is different ..
+        if has_sec_name_changed:
 
-                # Update the sec_name within the subscription object
-                subscription.sec_name = new_sec_name
+            # .. log what we're doing ..
+            logger.info(f'[{cid}] Updating sec_name from {old_sec_name} to {new_sec_name}')
 
-                # Store under the new sec_name
-                subs_by_sec_name[new_sec_name] = subscription
+            # .. and actually do it ..
+            for topic_name, subs_by_sec_name in self.subs_by_topic.items():
 
-                logger.info(f'[{cid}] Updated subscription for topic {topic_name} from {old_sec_name} to {new_sec_name}')
+                if old_sec_name in subs_by_sec_name:
+
+                    # .. get the subscription object ..
+                    subscription = subs_by_sec_name.pop(old_sec_name)
+
+                    # .. update the sec_name within the subscription object ..
+                    subscription.sec_name = new_sec_name
+
+                    # .. store under the new sec_name ..
+                    subs_by_sec_name[new_sec_name] = subscription
+
+                    # .. and confirm we're done.
+                    log_msg = f'[{cid}] Updated subscription for topic `{topic_name}` from `{old_sec_name}` to `{new_sec_name}`'
+                    logger.info(log_msg)
 
 # ################################################################################################################################
 

@@ -199,17 +199,17 @@ class Edit(AdminService):
                 self.broker_client.publish(input)
 
                 # .. build a message for pub/sub only if something has actually changed ..
-                has_name_changed = input.name != old_name
+                has_sec_name_changed = input.name != old_name
                 has_username_changed = input.username != old_username
 
-                if has_name_changed or has_username_changed:
+                if has_sec_name_changed or has_username_changed:
 
                     pubsub_msg = Bunch()
 
                     pubsub_msg.cid = self.cid
                     pubsub_msg.action = SECURITY.BASIC_AUTH_EDIT.value
 
-                    pubsub_msg.has_name_changed = has_name_changed
+                    pubsub_msg.has_sec_name_changed = has_sec_name_changed
                     pubsub_msg.has_username_changed = has_username_changed
 
                     pubsub_msg.old_sec_name = old_name
