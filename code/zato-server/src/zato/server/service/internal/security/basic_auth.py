@@ -188,8 +188,7 @@ class Edit(AdminService):
                 # .. publish it ..
                 self.broker_client.publish(input)
 
-                # .. build a message for pub/sub only if something has changed
-                # .. and if that user is a pub/sub one ..
+                # .. build a message for pub/sub only if something has actually changed ..
                 has_username_changed = input.username != old_username
 
                 if has_username_changed:
