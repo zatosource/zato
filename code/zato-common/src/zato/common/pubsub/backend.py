@@ -169,7 +169,7 @@ class Backend:
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            _ = self.unsubscribe_impl(cid, topic_name, username, clean_up_queue=True, sub_key=sub_key)
+            _ = self.unsubscribe_impl(cid, topic_name, username, sub_key=sub_key)
 
 # ################################################################################################################################
 
@@ -348,7 +348,6 @@ class Backend:
         topic_name:'str',
         username:'str',
         *,
-        clean_up_queue:'bool'=False,
         sub_key:'strnone'=None,
         ) -> 'StatusResponse':
 
@@ -394,7 +393,7 @@ class Backend:
             consumer.stop()
             _ = self.consumers.pop(sub_key)
 
-            # .. now, delete the queue
+            # .. now, delete the queue ..
             self.broker_client.delete_queue(sub_key)
 
         else:
