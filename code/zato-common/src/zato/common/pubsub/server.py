@@ -158,7 +158,7 @@ class PubSubRESTServer:
         response = self.backend.invoke_service(service, request)
 
         # .. log what we've received ..
-        if len_response := len(response) == 1:
+        if len_response := len(response):
             logger.info('Loading 1 user')
         else:
             logger.info(f'Loading {len_response} users')
@@ -190,7 +190,7 @@ class PubSubRESTServer:
         response = self.backend.invoke_service(service, request)
 
         # .. log what we've received ..
-        if len_response := len(response) == 1:
+        if len_response := len(response):
             logger.info('Loading 1 subscription')
         else:
             logger.info(f'Loading {len_response} subscriptions')
