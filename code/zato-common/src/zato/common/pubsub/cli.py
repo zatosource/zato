@@ -23,7 +23,6 @@ from traceback import format_exc
 from urllib.parse import quote
 
 # Zato
-from zato.common.pubsub.backend import Backend
 from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
@@ -295,28 +294,25 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         # Create a temporary server instance to use its list_connections method
         server = PubSubRESTServer(host='0.0.0.0', port=44556, yaml_config_file=args.yaml_config)
 
-        # We need to initialize the backend but don't need to run the full setup
-        # server.backend = Backend() # type: ignore
-
         # Get connection information
         result = server.list_connections(cid, args.management_port)
 
         # Format and print the output
         if args.output == 'pretty':
             print('\nRabbitMQ Connection Analysis:')
-            print(f"Total connections: {result['total_connections']}")
+            print(f'Total connections: {result['total_connections']}')
 
             print('\nConnection Types:')
             for conn_type, count in result['connection_types'].items():
-                print(f"  - {conn_type}: {count}")
+                print(f'  - {conn_type}: {count}')
 
             print('\nConsumers per Queue:')
             for queue, count in result['consumers_per_queue'].items():
-                print(f"  - {queue}: {count}")
+                print(f'  - {queue}: {count}')
 
             print('\nBackend Subscription Keys:')
             for key in result['backend_sub_keys']:
-                print(f"  - {key}")
+                print(f'  - {key}')
         else:
             print(dumps(result, indent=2))
 
