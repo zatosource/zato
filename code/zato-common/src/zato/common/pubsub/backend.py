@@ -143,6 +143,15 @@ class Backend:
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        topic_name:'str' = msg['topic_name']
+        old_topic_name:'str' = msg['old_topic_name']
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'strdict') -> 'None':
 
         # Local aliases
