@@ -138,7 +138,10 @@ class Consumer:
         self.keep_running = True
         self.is_stopped = False
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 10.35
+        self.timeout = 5
+
+        # This is set to True the first time self.start is called.
+        self.start_called = False
 
     def _on_amqp_message(self, body, msg):
         try:
@@ -192,6 +195,10 @@ class Consumer:
     def start(self, conn_errors=(socket_error, IOError, OSError), _gevent_sleep=sleep):
         """ Runs the AMQP consumer's mainloop.
         """
+
+        # Indicate that we have been called
+        self.start_called = True
+
         try:
 
             connection = cast_('KombuAMQPConnection', None)

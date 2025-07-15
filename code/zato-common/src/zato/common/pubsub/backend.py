@@ -83,7 +83,46 @@ class Backend:
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'strdict') -> 'None':
-        pass
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        sub_key:'str' = msg['sub_key']
+        is_active:'bool' = msg['is_active']
+        username:'str' = msg['username']
+        topic_name_list:'strlist' = msg['topic_name_list']
+
+        # Process each topic in the list
+        for topic_name in topic_name_list:
+
+            logger.info(f'[{cid}] Creating subscription to {topic_name} for {username} (sk={sub_key})')
+
+            # Create topic if it doesn't exist
+            if topic_name not in self.topics:
+                self.create_topic(cid, 'broker_msg', topic_name)
+
+            # Create subscription object
+            sub = Subscription()
+            sub.topic_name = topic_name
+            sub.username = username
+            sub.sub_key = sub_key
+
+            # Store in subscription registry
+            subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
+            subs_by_username[username] = sub
+
+            # Create broker bindings
+            self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
+
+            logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+
+            # Start a background consumer
+            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
+
+            # Get and store the consumer
+            consumer:'Consumer' = result.get()
+            self.consumers[sub_key] = consumer
+
+            logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} (topic_name_list)')
 
 # ################################################################################################################################
 
@@ -109,7 +148,14 @@ class Backend:
             if is_active:
                 if consumer.is_stopped:
                     consumer.keep_running = True
-                    consumer.start()
+
+                    # .. if its start method has been called it means it's already running in a new thread ..
+                    if consumer.start_called:
+                        consumer.start()
+
+                    # .. otherwise, we start it in a new thread now ..
+                    else:
+                        spawn_greenlet(consumer.start)
             else:
                 if not consumer.is_stopped:
                     consumer.stop()
@@ -307,7 +353,7 @@ class Backend:
             self.consumers[sub_key] = consumer
 
         else:
-            logger.info(f'[{cid}] Consumer already exists for sub_key={sub_key}, skipping creation')
+            logger.debug(f'[{cid}] Consumer already exists for sub_key={sub_key}, skipping creation')
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key}')

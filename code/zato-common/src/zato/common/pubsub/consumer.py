@@ -48,6 +48,7 @@ class ConsumerConfig:
     consumer_tag_prefix: 'str'
     on_msg_callback: 'callable_'
     wait_for_conection: 'bool'
+    should_start: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +82,7 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
 
     try:
 
-        # .. start a consumer in a new thread ..
+        # .. optionally, start a consumer in a new thread ..
         _ = spawn(consumer.start)
 
         # .. optionally, wait until it's actually connected ..
@@ -124,6 +125,7 @@ def start_internal_consumer(
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
     config.wait_for_conection = False
+    config.should_start = True
 
     consumer = start_consumer(config)
     return consumer
@@ -135,7 +137,8 @@ def start_public_consumer(
     cid: 'str',
     username: 'str',
     sub_key: 'str',
-    on_msg_callback: 'callable_'
+    on_msg_callback: 'callable_',
+    should_start:'bool'=True,
 ) -> 'Consumer':
 
     name = username
@@ -152,7 +155,8 @@ def start_public_consumer(
     config.prefetch_count = prefetch_count
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
-    config.wait_for_conection = True
+    config.wait_for_conection = should_start
+    config.should_start = should_start
 
     consumer = start_consumer(config)
     return consumer
