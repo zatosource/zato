@@ -75,7 +75,7 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
     except Exception:
         msg_action = msg.get('action') or 'undefined_msg_action'
         action = code_to_name.get(msg_action) or 'undefined_action'
-        msg = f'Could not handle broker message: ({action}:{msg_action}) `repr({msg})`, e:`{format_exc()}`'
+        msg = f'Could not handle broker message: ({action}:{msg_action}) `repr({msg})`, e:`{format_exc()}`' # type: ignore
         raise Exception(msg)
 
 # ################################################################################################################################
