@@ -168,7 +168,7 @@ class Subscription:
     topic_name: 'str'
     username: 'str'
     sub_key: 'str'
-    creation_time: 'datetime' = field(default_factory=utcnow)
+    creation_time: 'datetime'
     is_active: 'bool' = True
 
 # ################################################################################################################################
@@ -179,7 +179,7 @@ class Topic:
     """ Model representing a topic.
     """
     name: 'str'
-    creation_time: 'datetime' = field(default_factory=utcnow)
+    creation_time: 'datetime'
     is_active: 'bool' = True
 
 # ################################################################################################################################

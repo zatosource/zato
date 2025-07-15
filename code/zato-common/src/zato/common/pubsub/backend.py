@@ -106,6 +106,7 @@ class Backend:
             sub.topic_name = topic_name
             sub.username = username
             sub.sub_key = sub_key
+            sub.creation_time = utcnow()
 
             # Store in subscription registry
             subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
@@ -124,8 +125,8 @@ class Backend:
         self.consumers[sub_key] = consumer
 
         topic_name_list_human = ', '.join(topic_name_list)
-        msg = f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} ({topic_name_list_human})'
-        logger.info(msg)
+        log_msg = f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} ({topic_name_list_human})'
+        logger.info(log_msg)
 
 # ################################################################################################################################
 
@@ -158,7 +159,7 @@ class Backend:
 
                     # .. otherwise, we start it in a new thread now ..
                     else:
-                        spawn_greenlet(consumer.start)
+                        _ = spawn_greenlet(consumer.start)
             else:
                 if not consumer.is_stopped:
                     consumer.stop()
@@ -176,10 +177,9 @@ class Backend:
         # Extract data from the message
         cid = msg['cid']
         sub_key = msg['sub_key']
-        sec_name = msg['sec_name']
         username = msg['username']
 
-        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username} ({sec_name})')
+        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username}')
 
         # Find all topics this user is subscribed to with this sub_key
         topics_to_unsubscribe = []
@@ -196,7 +196,7 @@ class Backend:
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            self.unsubscribe_impl(cid, topic_name, username, sub_key)
+            _ = self.unsubscribe_impl(cid, topic_name, username, sub_key)
 
 # ################################################################################################################################
 
@@ -365,6 +365,7 @@ class Backend:
         sub.topic_name = topic_name
         sub.username = username
         sub.sub_key = sub_key
+        sub.creation_time = utcnow()
 
         # .. get or create a dict with subscriptions for users ..
         subs_by_username = self.subs_by_topic.setdefault(topic_name, {})
@@ -419,7 +420,10 @@ class Backend:
         subs_by_username = self.subs_by_topic[topic_name]
 
         # Remove the subscription from our metadata ..
-        _ = subs_by_username.pop(username)
+        sub:'Subscription' = subs_by_username.pop(username)
+
+        # .. but use its sub_key in case we don't have it on input ..
+        sub_key = sub.sub_key
 
         # .. remove the bindings on the broker ..
         self.broker_client.delete_bindings(
@@ -446,7 +450,7 @@ class Backend:
         if not remaining_bindings:
             logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer')
             consumer.stop()
-            self.consumers.pop(sub_key)
+            _ = self.consumers.pop(sub_key)
         else:
             count = len(remaining_bindings)
             binding_text = 'binding' if count == 1 else 'bindings'
