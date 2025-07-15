@@ -15,6 +15,7 @@ from uuid import uuid4
 
 # gevent
 from gevent import spawn
+from gevent.lock import RLock
 
 # Zato
 from zato.broker.message_handler import handle_broker_msg
@@ -82,6 +83,12 @@ class Backend:
         self.topics = {}
         self.consumers = {}
         self.subs_by_topic = {}
+
+        # This lock is used to update other locks
+        self._main_lock = RLock()
+
+        # This is a dictionary per-sub_key locks used to manipulate a specific consumer
+        self._sub_key_lock:'dict_[str, RLock]' = {}
 
 # ################################################################################################################################
 
@@ -416,14 +423,16 @@ class Backend:
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
+
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         sub_key = sub_key or new_sub_key(sec_name)
 
         logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
-        if topic_name not in self.topics:
-            self.create_topic(cid, 'subscribe', topic_name)
+        with self._main_lock:
+            if topic_name not in self.topics:
+                self.create_topic(cid, 'subscribe', topic_name)
 
         # .. create a new subscription ..
         sub = Subscription()
@@ -441,22 +450,33 @@ class Backend:
         # .. create bindings for the topic ..
         self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
-        # .. create a new consumer if one doesn't exist yet ..
-        if sub_key not in self.consumers:
+        # Get or create a per-sub_key lock
+        with self._main_lock:
+            if sub_key not in self.consumers:
+                _sub_key_lock = RLock()
+                self._sub_key_lock[sub_key] = _sub_key_lock
+            else:
+                _sub_key_lock = self._sub_key_lock[sub_key]
 
-            logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+            # .. create a new consumer if one doesn't exist yet ..
+            with _sub_key_lock:
+                if sub_key not in self.consumers:
 
-            # .. start a background consumer ..
-            result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
+                    logger.info(f'**************** {sub_key}')
 
-            # .. get the actual consumer object ..
-            consumer:'Consumer' = result.get()
+                    # logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
-            # .. store it for later use ..
-            self.consumers[sub_key] = consumer
+                    # .. start a background consumer ..
+                    result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
+
+                    # .. get the actual consumer object ..
+                    consumer:'Consumer' = result.get()
+
+                    # .. store it for later use ..
+                    self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
+        # logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
 
         # .. build our response ..
         response = StatusResponse()
