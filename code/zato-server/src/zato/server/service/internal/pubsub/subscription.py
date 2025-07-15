@@ -221,15 +221,15 @@ class Create(AdminService):
                 plain_topic_names.sort()
 
                 # Notify broker about the creation of a new subscription
-                broker_msg = Bunch()
-                broker_msg.cid = self.cid
-                broker_msg.sub_key = sub.sub_key
-                broker_msg.is_active = input.is_active
-                broker_msg.username = security_def.username
-                broker_msg.topic_name_list = plain_topic_names
-                broker_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.sub_key = sub.sub_key
+                pubsub_msg.is_active = input.is_active
+                pubsub_msg.username = security_def.username
+                pubsub_msg.topic_name_list = plain_topic_names
+                pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
-                self.broker_client.publish(broker_msg, routing_key='pubsub')
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -347,14 +347,14 @@ class Edit(AdminService):
                 plain_topic_names.sort()
 
                 # Notify broker about the update
-                broker_msg = Bunch()
-                broker_msg.cid = self.cid
-                broker_msg.sub_key = input.sub_key
-                broker_msg.is_active = input.is_active
-                broker_msg.topic_name_list = plain_topic_names
-                broker_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.sub_key = input.sub_key
+                pubsub_msg.is_active = input.is_active
+                pubsub_msg.topic_name_list = plain_topic_names
+                pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
-                self.broker_client.publish(broker_msg, routing_key='pubsub')
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 # Set response payload
                 self.response.payload.id = sub.id
@@ -404,13 +404,13 @@ class Delete(AdminService):
                 raise
             else:
 
-                broker_msg = Bunch()
-                broker_msg.cid = self.cid
-                broker_msg.sub_key = sub.sub_key
-                broker_msg.username = security_def.username
-                broker_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.sub_key = sub.sub_key
+                pubsub_msg.username = security_def.username
+                pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
-                self.broker_client.publish(broker_msg, routing_key='pubsub')
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
