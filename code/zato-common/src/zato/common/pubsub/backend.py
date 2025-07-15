@@ -82,6 +82,11 @@ class Backend:
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'strdict') -> 'None':
+        pass
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
 
         # Local aliases
