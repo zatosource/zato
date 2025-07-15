@@ -682,4 +682,45 @@ class BrokerClient:
         logger.info(f'[{cid}] [{sub_key}] Updated bindings for exchange={exchange_name} -> queue={queue_name} -> {new_routing_key_list}')
 
 # ################################################################################################################################
+
+    def delete_topic(
+        self,
+        cid: 'str',
+        topic_name: 'str',
+        exchange_name: 'str' = 'pubsubapi',
+        conn: 'Connection | None' = None,
+    ) -> 'None':
+        """ Deletes a topic by removing all bindings with the matching routing key.
+        """
+        # Get broker connection from input or build a new one
+        conn = conn or self.get_connection()
+
+        # Get all bindings for this exchange
+        bindings = self.get_bindings(cid, exchange_name)
+
+        # Find all bindings with routing key matching this topic
+        topic_bindings = []
+        for binding in bindings:
+            if binding['routing_key'] == topic_name:
+                topic_bindings.append(binding)
+
+        # If no bindings found, log and return
+        if not topic_bindings:
+            logger.info(f'[{cid}] No bindings found for topic {topic_name} in exchange {exchange_name}')
+            return
+
+        count = len(topic_bindings)
+        binding_text = 'binding' if count == 1 else 'bindings'
+        logger.info(f'[{cid}] Found {count} {binding_text} for topic {topic_name} in exchange {exchange_name}')
+
+        # Delete each binding
+        for binding in topic_bindings:
+
+            # Queue name and sub_key are the same thing
+            sub_key = binding['queue']
+            self.delete_bindings(cid, sub_key, exchange_name, queue_name, topic_name, conn)
+
+        logger.info(f'[{cid}] Topic {topic_name} successfully removed from exchange {exchange_name}')
+
+# ################################################################################################################################
 # ################################################################################################################################

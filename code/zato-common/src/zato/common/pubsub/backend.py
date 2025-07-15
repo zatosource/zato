@@ -149,6 +149,36 @@ class Backend:
         cid:'str' = msg['cid']
         topic_name:'str' = msg['topic_name']
 
+        logger.info(f'[{cid}] Deleting topic {topic_name}')
+
+        # Check if topic exists
+        if topic_name not in self.topics:
+            logger.warning(f'[{cid}] Topic {topic_name} not found, cannot delete')
+            return
+
+        # Get all subscriptions to this topic
+        subs_by_username = self.subs_by_topic.get(topic_name, {})
+
+        # If there are any subscriptions, we need to unsubscribe them
+        if subs_by_username:
+            logger.info(f'[{cid}] Unsubscribing {len(subs_by_username)} users from topic {topic_name}')
+
+            # Create a copy to avoid modification during iteration
+            usernames = list(subs_by_username.keys())
+
+            # Unsubscribe each user
+            for username in usernames:
+                _ = self.unsubscribe_impl(cid, topic_name, username)
+
+        # Remove the topic from our mappings
+        _ = self.topics.pop(topic_name)
+        _ = self.subs_by_topic.pop(topic_name, None)
+
+        # Delete all bindings for this topic from the exchange
+        self.broker_client.delete_topic(cid, topic_name, ModuleCtx.Exchange_Name)
+
+        logger.info(f'[{cid}] Successfully deleted topic {topic_name}')
+
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
