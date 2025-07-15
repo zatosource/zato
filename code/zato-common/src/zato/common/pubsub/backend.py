@@ -169,10 +169,32 @@ class Backend:
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
+        """ Handle a subscription deletion message from the broker.
+        Expected format: { 'action': 'action-id', 'sub_key': 'subscription-key' }
+        """
+        # Extract data from the message
+        cid = msg['cid']
+        sub_key = msg['sub_key']
+        username = msg['username']
 
-        print()
-        print('DELETE', msg)
-        print()
+        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, username={username}')
+
+        # Find all topics this user is subscribed to with this sub_key
+        topics_to_unsubscribe = []
+        for topic_name, subscriptions_by_username in self.subs_by_topic.items():
+            if username in subscriptions_by_username:
+                subscription = subscriptions_by_username[username]
+                if subscription.sub_key == sub_key:
+                    topics_to_unsubscribe.append(topic_name)
+
+        # If we didn't find any matching subscriptions
+        if not topics_to_unsubscribe:
+            logger.info(f'[{cid}] No subscriptions found for {username} with key {sub_key}')
+            return
+
+        # Unsubscribe from each topic
+        for topic_name in topics_to_unsubscribe:
+            self.unsubscribe_impl(cid, topic_name, username, sub_key)
 
 # ################################################################################################################################
 
@@ -381,31 +403,19 @@ class Backend:
         self,
         cid: 'str',
         topic_name:'str',
-        username:'str'
+        username:'str',
+        sub_key:'strnone'=None
         ) -> 'StatusResponse':
-        """ Unsubscribe from a topic.
-        """
+
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
-        # Check if subscription exists
-        if topic_name in self.subs_by_topic and username in self.subs_by_topic[topic_name]:
+        # Local aliases
+        subs_by_username = self.subs_by_topic[topic_name]
 
-            # Local aliases
-            subs_by_username = self.subs_by_topic[topic_name]
-            # sub:'Subscription' = subs_by_username[username]
+        # Remove the subscription from our metadata
+        _ = subs_by_username.pop(username)
 
-            # Get subscription key before removing it
-            # sub_key = sub.sub_key
-
-            # Remove the subscription from our metadata
-            _ = subs_by_username.pop(username)
-
-            # Unregister subscription with broker client
-            # self.broker_client.unsubscribe(topic_name, username, sub_key) # type: ignore
-
-            logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
-        else:
-            logger.info(f'[{cid}] No subscription found for {username} to {topic_name}')
+        logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
 
         response = StatusResponse()
         response.is_ok = True

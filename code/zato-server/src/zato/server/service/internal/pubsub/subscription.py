@@ -391,15 +391,9 @@ class Delete(AdminService):
                     filter(PubSubSubscription.id==self.request.input.id).\
                     one()
 
-                # Find all subscriptions with the same sub_key and sec_base_id (multi-topic subscription group)
-                related_subscriptions = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.sub_key==sub.sub_key).\
-                    filter(PubSubSubscription.sec_base_id==sub.sec_base_id).\
-                    all()
-
-                # Delete all related subscriptions
-                for related_sub in related_subscriptions:
-                    session.delete(related_sub)
+                security_def = session.query(SecurityBase).\
+                    filter(SecurityBase.id==sub.sec_base_id).\
+                    one()
 
                 # session.commit()
 
@@ -411,6 +405,7 @@ class Delete(AdminService):
 
                 broker_msg = Bunch()
                 broker_msg.sub_key = sub.sub_key
+                broker_msg.username = security_def.username
                 broker_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
                 self.broker_client.publish(broker_msg, routing_key='pubsub')
