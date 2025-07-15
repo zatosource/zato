@@ -380,6 +380,11 @@ class BrokerClient:
                 reply_to=reply_queue
             )
 
+            print()
+            print(222, client)
+            print(333, dir(client))
+            print()
+
         return correlation_id
 
 # ################################################################################################################################
@@ -442,9 +447,10 @@ class BrokerClient:
 
         # Wait for the response
         wait_count = 0
+        sleep_time = 0.01
         while not response.ready and wait_count < timeout:
-            wait_count += 1
-            sleep(1)
+            wait_count += sleep_time
+            sleep(sleep_time)
 
         # Handle timeout
         if not response.ready:
@@ -481,6 +487,11 @@ class BrokerClient:
     def get_connection(self) -> 'KombuAMQPConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
         """
+
+        print()
+        print(111, self)
+        print()
+
         # Get broker configuration
         broker_config = get_broker_config()
 
@@ -573,7 +584,11 @@ class BrokerClient:
     ) -> 'None':
 
         # Get broker connection from input or build a new one
-        conn = conn or self.get_connection()
+        if conn:
+            should_close = False
+        else:
+            conn = self.get_connection()
+            should_close = True
 
         # Create exchange and queue objects
         exchange = Exchange(exchange_name, type='topic', durable=True)
@@ -585,6 +600,10 @@ class BrokerClient:
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
         _ = queue.bind_to(exchange=exchange, routing_key=routing_key)
+
+        # Close the connection if it was opened by us
+        if should_close:
+            conn.close()
 
 # ################################################################################################################################
 

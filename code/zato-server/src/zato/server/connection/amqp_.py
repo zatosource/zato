@@ -119,7 +119,14 @@ class Producer:
         self.pool = _Producers(limit=self.config.pool_size)
 
     def acquire(self, *args, **kwargs):
-        return self.pool[self.conn].acquire(*args, **kwargs)
+        producers = self.pool[self.conn]
+
+        print()
+        print('AAA-1', args, kwargs)
+        print('AAA-2', producers)
+        print()
+
+        return producers.acquire(*args, **kwargs)
 
     def stop(self):
         for pool in self.pool.values():

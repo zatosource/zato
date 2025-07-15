@@ -173,6 +173,9 @@ class PubSubRESTServer:
         else:
             logger.info('No subscriptions to load')
 
+        import time
+        # time.sleep(900)
+
         # .. process each subscription ..
         for item in response:
 
@@ -290,7 +293,7 @@ class PubSubRESTServer:
         start = datetime.now()
 
         # .. load test data ..
-        # self._setup_from_yaml_config(cid)
+        self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
         # self._load_subscriptions(cid)
