@@ -431,6 +431,7 @@ class Backend:
         )
 
         # .. finally, stop the consumer if it's not subscribed to any other topic ..
+        consumer = self.consumers[sub_key]
 
         logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({username})')
 
