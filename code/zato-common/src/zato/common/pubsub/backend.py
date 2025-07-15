@@ -113,16 +113,18 @@ class Backend:
             # Create broker bindings
             self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
 
-            logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+        logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
 
-            # Start a background consumer
-            result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
+        # Start a background consumer
+        result = spawn(start_public_consumer, cid, username, sub_key, self._on_public_message_callback, is_active)
 
-            # Get and store the consumer
-            consumer:'Consumer' = result.get()
-            self.consumers[sub_key] = consumer
+        # Get and store the consumer
+        consumer:'Consumer' = result.get()
+        self.consumers[sub_key] = consumer
 
-            logger.info(f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} (topic_name_list)')
+        topic_name_list_human = ', '.join(topic_name_list)
+        msg = f'[{cid}] Successfully subscribed {username} to {topic_name} with key {sub_key} ({topic_name_list_human})'
+        logger.info(msg)
 
 # ################################################################################################################################
 
