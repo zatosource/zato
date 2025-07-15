@@ -116,6 +116,7 @@ class Create(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.action = SECURITY.BASIC_AUTH_CREATE.value
+                pubsub_msg.sec_name = input.name
                 pubsub_msg.username = input.username
                 pubsub_msg.password = input.password
 

@@ -240,6 +240,9 @@ class CryptoManager:
         if encrypted.startswith(_prefix):
             encrypted = encrypted.replace(_prefix, b'')
 
+        if not encrypted.startswith(b'gAAA'):
+            return encrypted
+
         result = self.secret_key.decrypt(encrypted).decode('utf8')
         return result
 

@@ -225,6 +225,7 @@ class Create(AdminService):
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
                 pubsub_msg.is_active = input.is_active
+                pubsub_msg.sec_name = security_def.name # type: ignore
                 pubsub_msg.username = security_def.username
                 pubsub_msg.topic_name_list = plain_topic_names
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
