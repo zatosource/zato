@@ -298,7 +298,7 @@ class PubSubRESTServer:
         self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
-        self._load_subscriptions(cid)
+        # self._load_subscriptions(cid)
 
         # .. we're going to need it in a moment ..
         end = datetime.now()
