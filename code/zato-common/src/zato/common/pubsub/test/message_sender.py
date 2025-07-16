@@ -1,0 +1,417 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from datetime import datetime
+from dataclasses import dataclass, field
+from json import dumps, loads
+from logging import getLogger
+from time import sleep
+from typing import Any, Dict, List, Optional, Set, Union
+import random
+import uuid
+import os
+from urllib.parse import urljoin
+
+# gevent
+import gevent
+from gevent import monkey; monkey.patch_all()
+from gevent.lock import RLock
+from gevent.pool import Pool
+
+# PyYAML
+from yaml import safe_load as yaml_load
+
+# requests
+import requests
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class ClientConfig:
+    """ Client configuration parameters.
+    """
+    server_url: str = 'http://127.0.0.1:10055/pubsub/topic/'
+    request_timeout: int = 30
+    retry_count: int = 3
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class MessagingConfig:
+    """ Configuration for message sending.
+    """
+    users_yaml_path: str = ''
+    messages_per_topic_per_user: int = 10
+    max_concurrent_publishers: int = 50
+    max_send_rate: int = 1000
+    send_interval: float = 0.01
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class ContentConfig:
+    """ Configuration for message content.
+    """
+    template_path: str = ''
+    min_size: int = 1024
+    max_size: int = 4096
+    complexity: str = 'medium'  # simple, medium, complex
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class SenderConfig:
+    """ Overall sender configuration.
+    """
+    client: ClientConfig = None
+    messaging: MessagingConfig = None
+    content: ContentConfig = None
+
+    def __post_init__(self) -> None:
+        """ Initialize default configurations if none provided.
+        """
+        if not self.client:
+            self.client = ClientConfig()
+        if not self.messaging:
+            self.messaging = MessagingConfig()
+        if not self.content:
+            self.content = ContentConfig()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def load_config(config_file: str) -> SenderConfig:
+    """ Load configuration from YAML file.
+    """
+    try:
+        with open(config_file, 'r') as f:
+            config_dict = yaml_load(f) or {}
+
+        # Extract configuration sections
+        client_dict = config_dict.get('client', {})
+        messaging_dict = config_dict.get('messaging', {})
+        content_dict = config_dict.get('content', {})
+
+        # Create configuration objects
+        client_config = ClientConfig(**client_dict)
+        messaging_config = MessagingConfig(**messaging_dict)
+        content_config = ContentConfig(**content_dict)
+
+        # Create and return the sender config
+        return SenderConfig(
+            client=client_config,
+            messaging=messaging_config,
+            content=content_config
+        )
+
+    except Exception as e:
+        logger.error(f'Error loading configuration from {config_file}: {e}')
+        # Return default configuration
+        return SenderConfig()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UsersYAMLParser:
+    """ Parser for users.yaml PubSub configuration.
+    """
+    def __init__(self, users_yaml_path):
+        self.users_yaml_path = users_yaml_path
+        self.data = None
+        self._load_yaml()
+
+    def _load_yaml(self) -> None:
+        """ Load the YAML file from disk.
+        """
+        with open(self.users_yaml_path, 'r') as f:
+            self.data = yaml_load(f)
+
+    def get_users(self) -> list:
+        """ Get list of all users.
+        """
+        return list(self.data.get('users', {}))
+
+    def get_topics(self) -> list:
+        """ Get list of all topics.
+        """
+        return list(self.data.get('topics', {}))
+
+    def get_user_credentials(self, username: str) -> str:
+        """ Get password for a user.
+        """
+        return self.data.get('users', {}).get(username, '')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MessageSender:
+    """ Sends messages to the REST PubSub server.
+    """
+    def __init__(self, config_path: str):
+        """ Initialize the sender with configuration.
+        """
+        self.config = load_config(config_path)
+        self.lock = RLock()
+        self.sent_messages = 0
+        self.failed_messages = 0
+        self.start_time = None
+        self.end_time = None
+        self.publisher_stats = {}
+        self.topic_stats = {}
+        self.error_list = []
+        self.users_parser = None
+        self.session = requests.Session()
+
+        if self.config.messaging.users_yaml_path:
+            self.users_parser = UsersYAMLParser(self.config.messaging.users_yaml_path)
+
+    def _generate_message_content(self, publisher: str, topic: str, message_index: int) -> Dict:
+        """ Generate message content based on configuration.
+        """
+        complexity = self.config.content.complexity
+        min_size = self.config.content.min_size
+        max_size = self.config.content.max_size
+        
+        # Base message structure
+        message = {
+            "timestamp": datetime.now().isoformat(),
+            "publisher_id": publisher,
+            "message_index": message_index,
+            "topic_name": topic,
+            "message_id": f"msg-{publisher}-{topic}-{uuid.uuid4()}",
+            "metadata": {
+                "source": "pubsub_test_client",
+                "version": "1.0"
+            }
+        }
+        
+        # Add payload based on complexity
+        if complexity == 'simple':
+            # Simple string payload
+            payload_size = random.randint(min_size, max_size)
+            message["data"] = "X" * payload_size
+            
+        elif complexity == 'complex':
+            # Complex nested structure
+            message["data"] = {
+                "array_data": [random.randint(1, 1000) for _ in range(100)],
+                "nested": {
+                    "level1": {
+                        "level2": {
+                            "level3": {
+                                "value": f"Complex nested value {message_index}",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        }
+                    }
+                },
+                "attributes": {}
+            }
+            
+            # Add attributes to reach minimum size
+            current_size = len(dumps(message))
+            attrs_needed = max(0, min_size - current_size) // 20
+            
+            for i in range(attrs_needed):
+                message["data"]["attributes"][f"attr{i}"] = f"Value {i} for message {message_index}"
+                
+        else:  # medium complexity
+            # Medium complexity with some structure
+            message["data"] = {
+                "value": random.randint(1, 1000),
+                "text": f"Sample message text for {publisher} on topic {topic} - {message_index}",
+                "details": {
+                    "description": f"Test message {message_index} generated by PubSub Test Framework",
+                    "random_values": [random.random() for _ in range(10)]
+                }
+            }
+            
+            # Add padding to reach minimum size if needed
+            current_size = len(dumps(message))
+            if current_size < min_size:
+                padding_size = min_size - current_size
+                message["data"]["padding"] = "X" * padding_size
+        
+        return message
+
+    def send_message(self, publisher: str, topic: str, content: Any) -> bool:
+        """ Send a single message to the PubSub server.
+        """
+        if self.users_parser is None:
+            logger.error("Users YAML parser not initialized")
+            return False
+
+        # Get credentials for publisher
+        password = self.users_parser.get_user_credentials(publisher)
+        if not password:
+            logger.error(f"No credentials found for publisher {publisher}")
+            return False
+
+        # Prepare the URL
+        url = urljoin(self.config.client.server_url, topic)
+        
+        # Prepare the message payload
+        payload = {
+            "data": content,
+            "ext_client_id": f"test-client-{publisher}",
+            "priority": random.randint(1, 9),
+            "expiration": random.randint(3600, 7200),
+            "correl_id": f"corr-{uuid.uuid4()}"
+        }
+
+        # Try to send with retries
+        for attempt in range(self.config.client.retry_count + 1):
+            try:
+                response = self.session.post(
+                    url,
+                    json=payload,
+                    auth=(publisher, password),
+                    timeout=self.config.client.request_timeout
+                )
+                
+                if response.status_code == 200:
+                    with self.lock:
+                        self.sent_messages += 1
+                        
+                        # Update publisher stats
+                        if publisher not in self.publisher_stats:
+                            self.publisher_stats[publisher] = {"sent": 0, "failed": 0, "topics": {}}
+                        self.publisher_stats[publisher]["sent"] += 1
+                        
+                        if topic not in self.publisher_stats[publisher]["topics"]:
+                            self.publisher_stats[publisher]["topics"][topic] = 0
+                        self.publisher_stats[publisher]["topics"][topic] += 1
+                        
+                        # Update topic stats
+                        if topic not in self.topic_stats:
+                            self.topic_stats[topic] = {"sent": 0, "failed": 0}
+                        self.topic_stats[topic]["sent"] += 1
+                    
+                    return True
+                else:
+                    logger.warning(f"Failed to send message, status code: {response.status_code}, response: {response.text}")
+                    
+                    # If this was the last attempt, record it as a failure
+                    if attempt == self.config.client.retry_count:
+                        self._record_failure(publisher, topic, f"HTTP error {response.status_code}: {response.text}")
+                    else:
+                        sleep(0.5 * (attempt + 1))  # Exponential backoff
+            
+            except Exception as e:
+                logger.warning(f"Error sending message: {str(e)}")
+                
+                # If this was the last attempt, record it as a failure
+                if attempt == self.config.client.retry_count:
+                    self._record_failure(publisher, topic, f"Exception: {str(e)}")
+                else:
+                    sleep(0.5 * (attempt + 1))  # Exponential backoff
+        
+        return False
+
+    def _record_failure(self, publisher: str, topic: str, error: str) -> None:
+        """ Record a message sending failure.
+        """
+        with self.lock:
+            self.failed_messages += 1
+            
+            # Update publisher stats
+            if publisher not in self.publisher_stats:
+                self.publisher_stats[publisher] = {"sent": 0, "failed": 0, "topics": {}}
+            self.publisher_stats[publisher]["failed"] += 1
+            
+            # Update topic stats
+            if topic not in self.topic_stats:
+                self.topic_stats[topic] = {"sent": 0, "failed": 0}
+            self.topic_stats[topic]["failed"] += 1
+            
+            # Add to error list
+            self.error_list.append({
+                "publisher": publisher,
+                "topic": topic,
+                "error": error,
+                "time": datetime.now().isoformat()
+            })
+
+    def _publisher_worker(self, publisher: str, topic: str, message_count: int) -> None:
+        """ Worker function to be run in a greenlet for each publisher-topic pair.
+        """
+        logger.info(f"Starting publisher worker for {publisher} -> {topic}, sending {message_count} messages")
+        
+        for i in range(message_count):
+            # Generate message content
+            content = self._generate_message_content(publisher, topic, i)
+            
+            # Send the message
+            self.send_message(publisher, topic, content)
+            
+            # Rate limiting
+            gevent.sleep(self.config.messaging.send_interval)
+
+    def start(self) -> Dict:
+        """ Start sending messages based on the users.yaml configuration.
+        """
+        if self.users_parser is None:
+            logger.error("Users YAML parser not initialized")
+            return {"status": "error", "message": "Users YAML parser not initialized"}
+
+        self.start_time = datetime.now()
+        logger.info(f"Starting message sender at {self.start_time.isoformat()}")
+        
+        # Get users and topics
+        users = self.users_parser.get_users()
+        topics = self.users_parser.get_topics()
+        
+        messages_per_user_topic = self.config.messaging.messages_per_topic_per_user
+        
+        # Create a pool for greenlets
+        pool = Pool(self.config.messaging.max_concurrent_publishers)
+        
+        # Spawn greenlets for each publisher-topic pair
+        for publisher in users:
+            for topic in topics:
+                pool.spawn(self._publisher_worker, publisher, topic, messages_per_user_topic)
+        
+        # Wait for all greenlets to complete
+        pool.join()
+        
+        # Record end time
+        self.end_time = datetime.now()
+        duration = (self.end_time - self.start_time).total_seconds()
+        
+        # Calculate rate
+        rate = self.sent_messages / duration if duration > 0 else 0
+        
+        logger.info(f"Message sending complete. Sent {self.sent_messages} messages in {duration:.2f} seconds ({rate:.2f} msgs/sec)")
+        
+        # Return statistics
+        return {
+            "summary": {
+                "total_sent": self.sent_messages,
+                "failed": self.failed_messages,
+                "duration_seconds": duration,
+                "rate_per_second": rate,
+                "start_time": self.start_time.isoformat(),
+                "end_time": self.end_time.isoformat()
+            },
+            "publishers": self.publisher_stats,
+            "topics": self.topic_stats,
+            "errors": self.error_list[:100]  # Limit to first 100 errors
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
