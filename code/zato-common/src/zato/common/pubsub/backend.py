@@ -459,7 +459,7 @@ class Backend:
                 _lock = self._sub_key_lock[sub_key]
 
         # .. create a new consumer if one doesn't exist yet ..
-        with _sub_key_lock:
+        with _lock:
 
             if sub_key not in self.consumers:
 
