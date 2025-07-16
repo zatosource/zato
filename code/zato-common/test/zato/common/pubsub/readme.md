@@ -4,12 +4,33 @@
 Test server for PubSub message collection and reporting. Runs as standalone service, receives messages
 via REST API, generates HTML report when expected message count is reached.
 
+## Implementation
+
+The server is implemented using:
+- gevent for asynchronous processing
+- werkzeug for HTTP request handling
+- gunicorn for production deployment (optional)
+
+### File Structure
+- `models.py` - Data structures for messages and statistics
+- `config.py` - Configuration loading and management
+- `server.py` - Main server implementation with request handling
+- `report.py` - HTML report generation
+- `pubsub_test_server.py` - Entry point and runner
+
 ## Server Configuration
 
 ### Command Line Execution
 ```
 python pubsub_test_server.py --config /path/to/config.yaml
 ```
+
+### Command Line Options
+- `--config` - Path to YAML configuration file (required)
+- `--log-level` - Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `--workers` - Number of Gunicorn worker processes (default: 1)
+- `--timeout` - Gunicorn worker timeout in seconds (default: 30)
+- `--use-gunicorn` - Use Gunicorn server instead of gevent WSGI server
 
 ### YAML Configuration File
 ```yaml
@@ -51,6 +72,11 @@ report:
 - **URL**: `/report`
 - **Method**: `GET`
 - **Response**: HTML report of collected messages
+
+### Status Endpoint
+- **URL**: `/status`
+- **Method**: `GET`
+- **Response**: JSON with current test status
 
 ## Data Model
 
