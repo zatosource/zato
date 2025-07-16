@@ -66,13 +66,13 @@ def parse_args() -> 'argparse.Namespace':
     """
     parser = argparse.ArgumentParser(description='Zato PubSub Test Server')
     parser.add_argument('--config', type=str, required=True, help='Path to YAML config file')
-    parser.add_argument('--log-level', type=str, default='INFO', 
+    parser.add_argument('--log-level', type=str, default='INFO',
                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                       help='Log level')
     parser.add_argument('--workers', type=int, default=1, help='Number of Gunicorn worker processes')
     parser.add_argument('--timeout', type=int, default=30, help='Gunicorn worker timeout in seconds')
     parser.add_argument('--use-gunicorn', action='store_true', help='Use Gunicorn server')
-    
+
     return parser.parse_args()
 
 # ################################################################################################################################
@@ -104,7 +104,7 @@ def run_with_gunicorn(app:'PubSubTestServer', workers:'int'=1, timeout:'int'=30)
         'timeout': timeout,
         'worker_class': 'gevent',
     }
-    
+
     logger.info(f"Starting Gunicorn with {workers} workers on {options['bind']}")
     GunicornApp(app, options).run()
 
@@ -116,17 +116,17 @@ def main() -> 'None':
     """
     # Parse command line arguments
     args = parse_args()
-    
+
     # Setup logging
     setup_logging(args.log_level)
-    
+
     # Load configuration
     logger.info(f"Loading configuration from {args.config}")
     config = load_config(args.config)
-    
+
     # Create server instance
     app = PubSubTestServer(config)
-    
+
     # Run the server
     if args.use_gunicorn:
         run_with_gunicorn(app, args.workers, args.timeout)
