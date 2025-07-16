@@ -1134,6 +1134,8 @@ class MyService(Service):
 
 class PubSub:
 
+    Max_Repeats = 500
+
     class API_Client:
         Publisher = 'publisher'
         Subscriber = 'publisher'
@@ -1159,6 +1161,9 @@ class PubSub:
     class Message:
         Default_Priority = 5
         Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
+
+    class Repeats:
+        Max = 500
 
 # ################################################################################################################################
 # ################################################################################################################################
