@@ -22,6 +22,9 @@ from uuid import uuid4
 # Bunch
 from bunch import bunchify
 
+# gevent
+from gevent import spawn
+
 # orjson
 from orjson import dumps
 
@@ -745,7 +748,7 @@ class WorkerStore(_WorkerStoreBase):
 
         print()
         # for item in self.worker_config.pubsub_subs.values():
-        for idx in range(1, 6):
+        for idx in range(1, 6001):
 
             idx = str(idx)
             sub_key = 'zpsk.00' + idx
@@ -762,7 +765,7 @@ class WorkerStore(_WorkerStoreBase):
             #print(111, config)
             print()
 
-            self.pubsub_backend.start_public_queue_consumer(cid, topic_name, sec_name, sub_key, is_active)
+            _ = spawn(self.pubsub_backend.start_public_queue_consumer, cid, topic_name, sec_name, sub_key, is_active)
 
         print()
 
