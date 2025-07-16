@@ -34,12 +34,18 @@ import requests
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import strdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class ClientConfig:
     """ Client configuration parameters.
     """
@@ -50,7 +56,7 @@ class ClientConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class MessagingConfig:
     """ Configuration for message sending.
     """
@@ -63,7 +69,7 @@ class MessagingConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class ContentConfig:
     """ Configuration for message content.
     """
@@ -75,23 +81,20 @@ class ContentConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class SenderConfig:
     """ Overall sender configuration.
     """
-    client: 'ClientConfig' = None
-    messaging: 'MessagingConfig' = None
-    content: 'ContentConfig' = None
+    client: 'ClientConfig'
+    messaging: 'MessagingConfig'
+    content: 'ContentConfig'
 
     def __post_init__(self) -> 'None':
         """ Initialize default configurations if none provided.
         """
-        if not self.client:
-            self.client = ClientConfig()
-        if not self.messaging:
-            self.messaging = MessagingConfig()
-        if not self.content:
-            self.content = ContentConfig()
+        self.client = ClientConfig()
+        self.messaging = MessagingConfig()
+        self.content = ContentConfig()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,9 +134,10 @@ def load_config(config_file: 'str') -> 'SenderConfig':
 class UsersYAMLParser:
     """ Parser for users.yaml PubSub configuration.
     """
+    data:'strdict'
+
     def __init__(self, users_yaml_path: str) -> None:
         self.users_yaml_path = users_yaml_path
-        self.data = None
         self._load_yaml()
 
     def _load_yaml(self) -> 'None':
@@ -145,17 +149,17 @@ class UsersYAMLParser:
     def get_users(self) -> 'list[str]':
         """ Get list of all users.
         """
-        return list(self.data.get('users', {}))
+        return list(self.data['users'])
 
     def get_topics(self) -> 'list[str]':
         """ Get list of all topics.
         """
-        return list(self.data.get('topics', {}))
+        return list(self.data['topics'])
 
     def get_user_credentials(self, username: 'str') -> 'str':
         """ Get password for a user.
         """
-        return self.data.get('users', {}).get(username, '')
+        return self.data['users'][username]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,12 +323,12 @@ class MessageSender:
         """
         logger.info(f'Starting publisher worker for {publisher} -> {topic}, sending {message_count} messages')
 
-        for i in range(message_count):
+        for idx in range(message_count):
             # Generate message content
-            content = self._generate_message_content(publisher, topic, i)
+            content = self._generate_message_content(publisher, topic, idx)
 
             # Send the message
-            self.send_message(publisher, topic, content)
+            _ = self.send_message(publisher, topic, content)
 
             # Rate limiting
             gevent.sleep(self.config.messaging.send_interval)
@@ -351,10 +355,10 @@ class MessageSender:
         # Spawn greenlets for each publisher-topic pair
         for publisher in users:
             for topic in topics:
-                pool.spawn(self._publisher_worker, publisher, topic, messages_per_user_topic)
+                _ = pool.spawn(self._publisher_worker, publisher, topic, messages_per_user_topic)
 
         # Wait for all greenlets to complete
-        pool.join()
+        _ = pool.join()
 
         # Record end time
         self.end_time = datetime.now()
