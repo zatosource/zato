@@ -1,24 +1,30 @@
 # PubSub Test Framework Specification
 
 ## Overview
-Test server for PubSub message collection and reporting. Runs as standalone service, receives messages
-via REST API, generates HTML report when expected message count is reached. Message counts are dynamically
-calculated based on the users.yaml configuration.
+Test framework for PubSub message generation and collection. Consists of two main components:
+
+1. **Message Sender** - Generates and publishes messages via REST API
+2. **Collection Server** - Receives messages, tracks statistics, and generates reports
+
+Both components utilize the users.yaml configuration to dynamically calculate message counts and distribution.
 
 ## Implementation
 
-The server is implemented using:
-- gevent for asynchronous processing
-- werkzeug for HTTP request handling
-- gunicorn for production deployment (optional)
+The framework is implemented using:
+- gevent for asynchronous processing and concurrency
+- werkzeug for HTTP request handling in the server component
+- requests library for sending messages in the client component
+- gunicorn for production deployment of the server (optional)
 
 ### File Structure
 - `models.py` - Data structures for messages and statistics
 - `config.py` - Configuration loading and management
 - `server.py` - Main server implementation with request handling
 - `report.py` - HTML report generation
-- `pubsub_test_server.py` - Entry point and runner
+- `pubsub_test_server.py` - Server entry point and runner
 - `users_yaml.py` - Parser and calculator for dynamic message count
+- `message_sender.py` - Client for generating and sending messages
+- `pubsub_test_client.py` - Client entry point and runner
 
 ## Server Configuration
 
@@ -176,8 +182,8 @@ The expected message count is calculated dynamically based on the users.yaml con
 3. The calculation formula is:
    ```
    expected_count = sum(
-       messages_per_topic_per_user * 
-       number_of_publishers_for_topic * 
+       messages_per_topic_per_user *
+       number_of_publishers_for_topic *
        number_of_subscriptions_for_topic
    )
    ```
@@ -185,3 +191,142 @@ The expected message count is calculated dynamically based on the users.yaml con
 5. The `users_yaml.py` module provides two main functions:
    - `calculate_expected_messages()`: Computes the total expected message count
    - `calculate_message_distribution()`: Provides detailed statistics on message distribution
+
+## Client Configuration
+
+### Command Line Execution
+```
+python pubsub_test_client.py --config /path/to/client_config.yaml
+```
+
+### Command Line Options
+- `--config` - Path to YAML configuration file (required)
+- `--log-level` - Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `--concurrency` - Maximum number of concurrent greenlets (default: 100)
+- `--dry-run` - Validate configuration without sending messages
+
+### YAML Configuration File
+```yaml
+client:
+  server_url: "http://127.0.0.1:10055/messages"  # URL of test server
+  request_timeout: 30  # HTTP request timeout in seconds
+  retry_count: 3  # Number of retries for failed requests
+
+messaging:
+  users_yaml_path: "/path/to/zato/common/pubsub/users.yaml"  # Path to users.yaml
+  messages_per_topic_per_user: 10  # Each publisher sends this many messages to each topic
+  max_concurrent_publishers: 50  # Maximum number of concurrent publisher greenlets
+  max_send_rate: 1000  # Maximum messages per second overall
+  send_interval: 0.01  # Interval between sends (seconds) per publisher
+
+content:
+  template_path: "/path/to/templates/"  # Path to message templates (optional)
+  min_size: 1024  # Minimum message size in bytes
+  max_size: 4096  # Maximum message size in bytes
+  complexity: "medium"  # simple, medium, complex (affects structure of generated messages)
+```
+
+## Message Sender API
+
+### MessageSender Class
+```python
+class MessageSender:
+    def __init__(self, config_path: str)
+    def start(self) -> dict  # Returns statistics about the run
+    def send_message(self, publisher: str, topic: str, content: Any) -> bool  # Send single message
+```
+
+### Message Generation
+- Template-based message content with variable substitution
+- Configurable message size and complexity
+- Deterministic message ID generation for verification
+- Example message template:
+  ```json
+  {
+    "timestamp": "{{timestamp}}",
+    "publisher_id": "{{publisher_id}}",
+    "data": {
+      "value": "{{random_value}}",
+      "nested": {
+        "field": "{{field_value}}"
+      }
+    },
+    "metadata": {
+      "source": "pubsub_test_client",
+      "version": "1.0"
+    }
+  }
+  ```
+
+## Concurrency Model
+
+### Publisher Greenlets
+- One greenlet per publisher-topic pair from users.yaml
+- Each greenlet responsible for sending its quota of messages
+- Configurable sending rate and intervals
+- Example:
+  ```python
+  def publisher_greenlet(publisher_id, topic_name, message_count):
+      sender = MessageSender(config)
+      for i in range(message_count):
+          content = generate_message_content(publisher_id, topic_name, i)
+          sender.send_message(publisher_id, topic_name, content)
+          gevent.sleep(config.send_interval)  # Rate limiting
+  ```
+
+### Rate Limiting
+- Global rate limiting across all publishers
+- Per-publisher rate limiting based on configuration
+- Adaptive rate control based on server response times
+
+## Client Statistics and Reporting
+
+### Metrics Tracked
+- Messages sent successfully vs. failed
+- Average sending rate (msgs/sec)
+- Response time statistics (min/max/avg)
+- Error counts by type
+- Message size statistics
+
+### Output Formats
+- Console output for real-time monitoring
+- JSON statistics file for further analysis
+- Option to upload statistics to collection server
+
+### Example Statistics Output
+```json
+{
+  "summary": {
+    "total_sent": 1000,
+    "successful": 998,
+    "failed": 2,
+    "duration_seconds": 45.3,
+    "rate_per_second": 22.1
+  },
+  "publishers": {
+    "service_x": {
+      "sent": 500,
+      "failed": 1,
+      "topics": {
+        "example_topic": 250,
+        "other_topic": 250
+      }
+    },
+    "service_y": {
+      "sent": 500,
+      "failed": 1,
+      "topics": {
+        "example_topic": 250,
+        "other_topic": 250
+      }
+    }
+  },
+  "errors": [
+    {
+      "message_id": "pub-123456789",
+      "error": "Connection timeout",
+      "time": "2025-07-16T09:41:23+02:00"
+    }
+  ]
+}
+```
