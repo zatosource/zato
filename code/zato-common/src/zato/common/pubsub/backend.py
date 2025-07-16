@@ -32,7 +32,7 @@ if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
     from zato.common.pubsub.server import PubSubRESTServer
-    from zato.common.typing_ import any_, anydictnone, dict_, strdict, strlist, strnone
+    from zato.common.typing_ import any_, anydictnone, callable_, dict_, strdict, strlist, strnone
     from zato.server.connection.amqp_ import Consumer
 
 # ################################################################################################################################
@@ -418,8 +418,9 @@ class Backend:
         cid: 'str',
         topic_name: 'str',
         sec_name: 'str',
-        sub_key: 'str'='',
-        is_active: 'bool'=True,
+        sub_key: 'str',
+        is_active: 'bool',
+        on_msg_callback:'callable_',
     ) -> 'None':
 
         # Get or create a per-sub_key lock
@@ -435,10 +436,17 @@ class Backend:
 
             if sub_key not in self.consumers:
 
-                logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+                logger.info(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
 
                 # .. start a background consumer ..
-                result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
+                result = spawn(
+                    start_public_consumer,
+                    cid,
+                    sec_name,
+                    sub_key,
+                    on_msg_callback,
+                    is_active
+                )
 
                 # .. get the actual consumer object ..
                 consumer:'Consumer' = result.get()
@@ -447,7 +455,7 @@ class Backend:
                 self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
+        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}`')
 
 # ################################################################################################################################
 
@@ -550,33 +558,6 @@ class Backend:
         response.is_ok = True
 
         return response
-
-# ################################################################################################################################
-
-    def _on_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
-
-        # Local objects
-        service_msg = {}
-
-        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
-        sub_key = config.queue
-
-        # .. enrich the message for the service ..
-        body['sub_key'] = sub_key
-
-        # .. turn that message into a form that a service can be invoked with ..
-        service_msg['action'] = _service_publish
-        service_msg['payload'] = body
-        service_msg['cid'] = body.get('correl_id') or body.msg_id
-        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
-
-        # .. push that message to the server ..
-        # self.broker_client.invoke_async(service_msg)
-
-        logger.info('😀 ******** MSG MSG MSG %s', msg)
-
-        # .. and acknowledge it so we can read more of them.
-        msg.ack()
 
 # ################################################################################################################################
 # ################################################################################################################################

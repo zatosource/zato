@@ -73,6 +73,7 @@ logger = logging.getLogger(__name__)
 
 if 0:
     from bunch import Bunch as bunch_
+    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, stranydict, tupnone
     from zato.server.base.parallel import ParallelServer
@@ -741,37 +742,59 @@ class WorkerStore(_WorkerStoreBase):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
+
+# ################################################################################################################################
+
+    def _on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+
+        # Local objects
+        service_msg = {}
+
+        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
+        sub_key = config.queue
+
+        # .. enrich the message for the service ..
+        body['sub_key'] = sub_key
+
+        # .. turn that message into a form that a service can be invoked with ..
+        service_msg['action'] = _service_publish
+        service_msg['payload'] = body
+        service_msg['cid'] = body.get('correl_id') or body.msg_id
+        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
+
+        # .. push that message to the server ..
+        # self.broker_client.invoke_async(service_msg)
+
+        logger.info('😀 ******** MSG MSG MSG %s', msg)
+
+        # .. and acknowledge it so we can read more of them.
+        msg.ack()
+
+# ################################################################################################################################
+
     def init_pubsub(self):
 
         # One cid for all the actions
         cid = new_cid()
 
-        print()
-        # for item in self.worker_config.pubsub_subs.values():
-        for idx in range(1, 5):
+        for item in self.worker_config.pubsub_subs.values():
 
-            idx = str(idx)
-            sub_key = 'zpsk.00' + idx
-            topic_name = 'topic00' + idx
+            config = item['config']
 
-            # config = item['config']
+            topic_name = config['topic_name']
+            sec_name = config['sec_name']
+            sub_key = config['sub_key']
+            is_active = config['is_active']
 
-            # topic_name = config['topic_name']
-            sec_name = 'abc'#config['sec_name']
-            # sub_key = config['sub_key']
-            is_active = True #config['is_active']
-
-            print()
-            #print(111, config)
-            print()
-
-            _ = spawn(self.pubsub_backend.start_public_queue_consumer, cid, topic_name, sec_name, sub_key, is_active)
-
-        print()
-
-        print(222, self.broker_client)
-
-        print()
+            _ = spawn(
+                self.pubsub_backend.start_public_queue_consumer,
+                cid,
+                topic_name,
+                sec_name,
+                sub_key,
+                is_active,
+                self._on_pubsub_public_message_callback,
+            )
 
 # ################################################################################################################################
 
