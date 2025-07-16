@@ -15,10 +15,12 @@ from datetime import datetime
 from dataclasses import dataclass
 from logging import getLogger
 from time import sleep
-from typing import Any, Dict
 import random
 import uuid
 from urllib.parse import urljoin
+
+# Bunch
+from bunch import bunchify
 
 # gevent
 import gevent
@@ -35,7 +37,7 @@ import requests
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import any_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,9 +51,9 @@ logger = getLogger(__name__)
 class ClientConfig:
     """ Client configuration parameters.
     """
-    server_url: 'str' = 'http://127.0.0.1:10055/pubsub/topic/'
-    request_timeout: 'int' = 30
-    retry_count: 'int' = 3
+    server_url:'str' = 'http://127.0.0.1:10055/pubsub/topic/'
+    request_timeout:'int' = 30
+    retry_count:'int' = 3
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,11 +62,11 @@ class ClientConfig:
 class MessagingConfig:
     """ Configuration for message sending.
     """
-    users_yaml_path: 'str' = ''
-    messages_per_topic_per_user: 'int' = 10
-    max_concurrent_publishers: 'int' = 50
-    max_send_rate: 'int' = 1000
-    send_interval: 'float' = 0.01
+    users_yaml_path:'str' = ''
+    messages_per_topic_per_user:'int' = 10
+    max_concurrent_publishers:'int' = 50
+    max_send_rate:'int' = 1000
+    send_interval:'float' = 0.01
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,10 +75,10 @@ class MessagingConfig:
 class ContentConfig:
     """ Configuration for message content.
     """
-    template_path: 'str' = ''
-    min_size: 'int' = 1024
-    max_size: 'int' = 4096
-    complexity: 'str' = 'medium'  # simple, medium, complex
+    template_path:'str' = ''
+    min_size:'int' = 1024
+    max_size:'int' = 4096
+    complexity:'str' = 'medium'  # simple, medium, complex
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,48 +87,60 @@ class ContentConfig:
 class SenderConfig:
     """ Overall sender configuration.
     """
-    client: 'ClientConfig'
-    messaging: 'MessagingConfig'
-    content: 'ContentConfig'
-
-    def __post_init__(self) -> 'None':
-        """ Initialize default configurations if none provided.
-        """
-        self.client = ClientConfig()
-        self.messaging = MessagingConfig()
-        self.content = ContentConfig()
+    client:'ClientConfig'
+    messaging:'MessagingConfig'
+    content:'ContentConfig'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def load_config(config_file: 'str') -> 'SenderConfig':
+def load_config(config_file:'str') -> 'SenderConfig':
     """ Load configuration from YAML file.
     """
     try:
         with open(config_file, 'r') as f:
-            config_dict = yaml_load(f) or {}
+            config_dict = yaml_load(f)
+
+        config_dict = bunchify(config_dict)
 
         # Extract configuration sections
-        client_dict = config_dict.get('client', {})
-        messaging_dict = config_dict.get('messaging', {})
-        content_dict = config_dict.get('content', {})
+        client_dict = config_dict.client
+        messaging_dict = config_dict.messaging
+        content_dict = config_dict.content
 
-        # Create configuration objects
-        client_config = ClientConfig(**client_dict)
-        messaging_config = MessagingConfig(**messaging_dict)
-        content_config = ContentConfig(**content_dict)
+        client_config = ClientConfig()
+        client_config.server_url = client_dict.server_url
+        client_config.request_timeout = client_dict.request_timeout
+        client_config.retry_count = client_dict.retry_count
 
-        # Create and return the sender config
-        return SenderConfig(
-            client=client_config,
-            messaging=messaging_config,
-            content=content_config
-        )
+        messaging_config = MessagingConfig()
+        messaging_config.users_yaml_path = messaging_dict.users_yaml_path
+        messaging_config.messages_per_topic_per_user = messaging_dict.messages_per_topic_per_user
+        messaging_config.max_concurrent_publishers = messaging_dict.max_concurrent_publishers
+        messaging_config.max_send_rate = messaging_dict.max_send_rate
+        messaging_config.send_interval = messaging_dict.send_interval
+
+        content_config = ContentConfig()
+        content_config.template_path = content_dict.template_path
+        content_config.min_size = content_dict.min_size
+        content_config.max_size = content_dict.max_size
+        content_config.complexity = content_dict.complexity
+
+        sender_config = SenderConfig()
+        sender_config.client = client_config
+        sender_config.messaging = messaging_config
+        sender_config.content = content_config
+
+        return sender_config
 
     except Exception as e:
         logger.error(f'Error loading configuration from {config_file}: {e}')
-        # Return default configuration
-        return SenderConfig()
+        # Create default configuration with init=False
+        sender_config = SenderConfig()
+        sender_config.client = ClientConfig()
+        sender_config.messaging = MessagingConfig()
+        sender_config.content = ContentConfig()
+        return sender_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,17 +163,17 @@ class UsersYAMLParser:
     def get_users(self) -> 'list[str]':
         """ Get list of all users.
         """
-        return list(self.data['users'])
+        return list(self.data.users)
 
     def get_topics(self) -> 'list[str]':
         """ Get list of all topics.
         """
-        return list(self.data['topics'])
+        return list(self.data.topics)
 
-    def get_user_credentials(self, username: 'str') -> 'str':
+    def get_user_credentials(self, username:'str') -> 'str':
         """ Get password for a user.
         """
-        return self.data['users'][username]
+        return self.data.users[username]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +181,7 @@ class UsersYAMLParser:
 class MessageSender:
     """ Sends messages to the REST PubSub server.
     """
-    def __init__(self, config_path: 'str') -> 'None':
+    def __init__(self, config_path:'str') -> 'None':
         """ Initialize the sender with configuration.
         """
         self.config = load_config(config_path)
@@ -185,7 +199,7 @@ class MessageSender:
         if self.config.messaging.users_yaml_path:
             self.users_parser = UsersYAMLParser(self.config.messaging.users_yaml_path)
 
-    def _generate_message_content(self, publisher: 'str', topic: 'str', message_index: 'int') -> 'Dict':
+    def _generate_message_content(self, publisher:'str', topic:'str', message_index:'int') -> 'strdict':
         """ Generate message content based on configuration.
         """
         min_size = self.config.content.min_size
@@ -199,8 +213,8 @@ class MessageSender:
             'topic_name': topic,
             'message_id': f'msg-{publisher}-{topic}-{uuid.uuid4()}',
             'metadata': {
-                'source': 'pubsub_test_client',
-                'version': '1.0'
+                'source':'pubsub_test_client',
+                'version':'1.0'
             }
         }
 
@@ -216,11 +230,11 @@ class MessageSender:
         repetitions = (desired_size // len(lorem_base)) + 1
 
         # Generate the text by repeating lorem ipsum
-        message['data'] = (lorem_base * repetitions)[:desired_size]
+        message.data = (lorem_base * repetitions)[:desired_size]
 
         return message
 
-    def send_message(self, publisher: 'str', topic: 'str', content: 'Any') -> 'bool':
+    def send_message(self, publisher:'str', topic:'str', content:'any_') -> 'bool':
         """ Send a single message to the PubSub server.
         """
         if self.users_parser is None:
@@ -262,16 +276,16 @@ class MessageSender:
                         # Update publisher stats
                         if publisher not in self.publisher_stats:
                             self.publisher_stats[publisher] = {'sent': 0, 'failed': 0, 'topics': {}}
-                        self.publisher_stats[publisher]['sent'] += 1
+                        self.publisher_stats[publisher].sent += 1
 
-                        if topic not in self.publisher_stats[publisher]['topics']:
-                            self.publisher_stats[publisher]['topics'][topic] = 0
-                        self.publisher_stats[publisher]['topics'][topic] += 1
+                        if topic not in self.publisher_stats[publisher].topics:
+                            self.publisher_stats[publisher].topics[topic] = 0
+                        self.publisher_stats[publisher].topics[topic] += 1
 
                         # Update topic stats
                         if topic not in self.topic_stats:
                             self.topic_stats[topic] = {'sent': 0, 'failed': 0}
-                        self.topic_stats[topic]['sent'] += 1
+                        self.topic_stats[topic].sent += 1
 
                     return True
                 else:
@@ -294,7 +308,7 @@ class MessageSender:
 
         return False
 
-    def _record_failure(self, publisher: 'str', topic: 'str', error: 'str') -> 'None':
+    def _record_failure(self, publisher:'str', topic:'str', error:'str') -> 'None':
         """ Record a message sending failure.
         """
         with self.lock:
@@ -303,12 +317,12 @@ class MessageSender:
             # Update publisher stats
             if publisher not in self.publisher_stats:
                 self.publisher_stats[publisher] = {'sent': 0, 'failed': 0, 'topics': {}}
-            self.publisher_stats[publisher]['failed'] += 1
+            self.publisher_stats[publisher].failed += 1
 
             # Update topic stats
             if topic not in self.topic_stats:
                 self.topic_stats[topic] = {'sent': 0, 'failed': 0}
-            self.topic_stats[topic]['failed'] += 1
+            self.topic_stats[topic].failed += 1
 
             # Add to error list
             self.error_list.append({
@@ -318,7 +332,7 @@ class MessageSender:
                 'time': datetime.now().isoformat()
             })
 
-    def _publisher_worker(self, publisher: 'str', topic: 'str', message_count: 'int') -> 'None':
+    def _publisher_worker(self, publisher:'str', topic:'str', message_count:'int') -> 'None':
         """ Worker function to be run in a greenlet for each publisher-topic pair.
         """
         logger.info(f'Starting publisher worker for {publisher} -> {topic}, sending {message_count} messages')
@@ -333,12 +347,12 @@ class MessageSender:
             # Rate limiting
             gevent.sleep(self.config.messaging.send_interval)
 
-    def start(self) -> 'Dict':
+    def start(self) -> 'strdict':
         """ Start sending messages based on the users.yaml configuration.
         """
         if self.users_parser is None:
             logger.error('Users YAML parser not initialized')
-            return {'status': 'error', 'message': 'Users YAML parser not initialized'}
+            return {'status':'error', 'message':'Users YAML parser not initialized'}
 
         self.start_time = datetime.now()
         logger.info(f'Starting message sender at {self.start_time.isoformat()}')
