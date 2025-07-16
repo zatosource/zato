@@ -18,15 +18,15 @@ from gevent import monkey; monkey.patch_all()
 from gunicorn.app.base import BaseApplication
 
 # Zato
-from zato.common.test.zato.common.pubsub.config import load_config
-from zato.common.test.zato.common.pubsub.server import PubSubTestServer
+from zato.common.pubsub.test.config import load_config
+from zato.common.pubsub.test.server import PubSubTestServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from typing import Dict, Optional
-    from zato.common.test.zato.common.pubsub.config import AppConfig
+    from zato.common.pubsub.test.config import AppConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
