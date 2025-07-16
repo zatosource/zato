@@ -226,6 +226,132 @@ content:
   complexity: "medium"  # simple, medium, complex (affects structure of generated messages)
 ```
 
+## PubSub REST Client Implementation
+
+### Overview
+
+The client component is implemented in `message_sender.py` and provides functionality to send messages to a PubSub REST server. The client is designed to work with the same users.yaml configuration as the server, maintaining consistency in user credentials and topic structure.
+
+### Client Architecture
+
+#### Main Components
+
+1. **SenderConfig** - Configuration dataclass hierarchy for client settings
+2. **UsersYAMLParser** - Parses users.yaml to extract credentials and topics
+3. **MessageSender** - Core class responsible for generating and sending messages
+
+#### Configuration Structure
+
+The client uses a hierarchical configuration structure:
+
+```
+SenderConfig
+├── ClientConfig - Server URL, timeout settings, retry policy
+├── MessagingConfig - Message counts, concurrency settings, rate limits
+└── ContentConfig - Message size and complexity settings
+```
+
+### Message Generation
+
+Messages are generated dynamically based on configuration parameters:
+
+1. **Complexity Levels**:
+   - Simple: Basic string payload with configurable size
+   - Medium: Structured JSON with metadata and variable values
+   - Complex: Deeply nested structures with arrays and multiple attributes
+
+2. **Content Parameters**:
+   - Size control (min_size, max_size)
+   - Publisher and topic identification
+   - Unique message identifiers
+   - Timestamps for tracking
+
+### Authentication and Security
+
+The client uses HTTP Basic Authentication to connect to the PubSub REST server:
+
+1. Credentials are extracted from users.yaml
+2. Each publisher uses its own username/password
+3. Connections are made over configurable endpoints
+
+### Concurrency Implementation
+
+#### Publisher Workers
+
+The client uses gevent for concurrency:
+
+1. A pool of greenlets is created with configurable maximum size
+2. Each publisher-topic pair gets its own greenlet
+3. The `_publisher_worker` method runs in each greenlet, sending messages at controlled intervals
+
+#### Rate Control
+
+1. Global rate limiting via the pool size
+2. Per-publisher rate control via configurable send intervals
+3. Configurable message batch size per publisher-topic pair
+
+### Error Handling
+
+1. **Retry Logic**:
+   - Configurable retry count for failed requests
+   - Exponential backoff between retry attempts
+   - Detailed error tracking per publisher and topic
+
+2. **Failure Tracking**:
+   - Failed messages are tracked separately
+   - Error details are captured with timestamps
+   - Publishers with consistent failures are identified
+
+### Statistics Collection
+
+#### Performance Metrics
+
+1. **Overall metrics**:
+   - Total messages sent and failed
+   - Overall sending rate (msgs/sec)
+   - Test duration
+
+2. **Detailed breakdowns**:
+   - Per-publisher success and failure counts
+   - Per-topic distribution statistics
+   - Detailed error logs with categorization
+
+### Usage Example
+
+```python
+# Initialize the message sender with configuration
+sender = MessageSender('/path/to/client_config.yaml')
+
+# Start sending messages and collect statistics
+results = sender.start()
+
+# Process the results
+print(f"Sent {results['summary']['total_sent']} messages")
+print(f"Rate: {results['summary']['rate_per_second']:.2f} msgs/sec")
+```
+
+### Integration with PubSub REST Server
+
+The client is designed to work with a PubSub REST server that provides the following endpoints:
+
+- `/pubsub/topic/<topic_name>` - For publishing messages
+- `/pubsub/subscribe/topic/<topic_name>` - For managing subscriptions
+- `/pubsub/health` - For health checks
+
+Messages are sent to the server with the following structure:
+
+```json
+{
+  "data": { /* message content */ },
+  "ext_client_id": "test-client-username",
+  "priority": 5,
+  "expiration": 3600,
+  "correl_id": "corr-uuid"
+}
+```
+
+The client expects HTTP 200 responses for successful publications, and handles error responses appropriately.
+
 ## Message Sender Capabilities
 
 ### Core Features
