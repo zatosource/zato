@@ -126,7 +126,7 @@ class PubSubRESTServer:
         self.yaml_config = None
 
         # Load config from YAML file if provided
-        if yaml_config_file and yaml_config_file.endswith('.yaml'):
+        if yaml_config_file:
             self.yaml_config = load_yaml_config(yaml_config_file)
 
         # Initialize the broker client
@@ -299,9 +299,6 @@ class PubSubRESTServer:
 
         # .. we're going to need it in a moment ..
         end = datetime.now()
-
-        # import time
-        # time.sleep(3)
 
         user_count = len(self.users)
         topic_count = len(self.backend.topics)

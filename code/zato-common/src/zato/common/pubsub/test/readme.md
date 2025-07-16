@@ -44,7 +44,7 @@ python pubsub_test_server.py --config /path/to/config.yaml
 ```yaml
 server:
   host: 127.0.0.1
-  port: 10055
+  port: 44556
 
 collection:
   users_yaml_path: "/path/to/zato/common/pubsub/users.yaml"  # Path to users.yaml
@@ -208,7 +208,7 @@ python pubsub_test_client.py --config /path/to/client_config.yaml
 ### YAML Configuration File
 ```yaml
 client:
-  server_url: "http://127.0.0.1:10055/messages"  # URL of test server
+  server_url: "http://127.0.0.1:44556/messages"  # URL of test server
   request_timeout: 30  # HTTP request timeout in seconds
   retry_count: 3  # Number of retries for failed requests
 

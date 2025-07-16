@@ -1,5 +1,5 @@
 client:
-  server_url: http://127.0.0.1:10055/pubsub/topic/
+  server_url: http://127.0.0.1:44556/pubsub/topic/
   request_timeout: 30
   retry_count: 3
 

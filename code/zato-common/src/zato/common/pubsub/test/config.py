@@ -19,15 +19,6 @@ from zato.common.pubsub.test.users_yaml import calculate_expected_messages
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from typing import Dict, Optional
-
-    # Define type aliases
-    Optional = Optional
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -38,7 +29,7 @@ class ServerConfig:
     """ Server configuration parameters.
     """
     host: str = '127.0.0.1'
-    port: int = 10055
+    port: int = 44556
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,19 +60,16 @@ class ReportConfig:
 class AppConfig:
     """ Overall application configuration.
     """
-    server: ServerConfig = None
-    collection: CollectionConfig = None
-    report: ReportConfig = None
+    server: ServerConfig
+    collection: CollectionConfig
+    report: ReportConfig
 
     def __post_init__(self) -> 'None':
         """ Initialize default configurations if none provided.
         """
-        if not self.server:
-            self.server = ServerConfig()
-        if not self.collection:
-            self.collection = CollectionConfig()
-        if not self.report:
-            self.report = ReportConfig()
+        self.server = ServerConfig()
+        self.collection = CollectionConfig()
+        self.report = ReportConfig()
 
 # ################################################################################################################################
 # ################################################################################################################################

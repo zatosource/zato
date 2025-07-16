@@ -17,6 +17,7 @@ from logging import getLogger
 from time import sleep
 import random
 import uuid
+from traceback import format_exc
 from urllib.parse import urljoin
 
 # Bunch
@@ -54,7 +55,7 @@ logger = getLogger(__name__)
 class ClientConfig:
     """ Client configuration parameters.
     """
-    server_url:'str' = 'http://127.0.0.1:10055/pubsub/topic/'
+    server_url:'str' = 'http://127.0.0.1:44556/pubsub/topic/'
     request_timeout:'int' = 30
     retry_count:'int' = 3
 
@@ -161,7 +162,9 @@ class UsersYAMLParser:
         """ Load the YAML file from disk.
         """
         with open(self.users_yaml_path, 'r') as f:
-            self.data = yaml_load(f)
+            data = yaml_load(f)
+
+        self.data = bunchify(data)
 
     def get_users(self) -> 'list[str]':
         """ Get list of all users.
@@ -211,7 +214,7 @@ class MessageSender:
         max_size = self.config.content.max_size
 
         # Base message structure
-        message = {
+        message = bunchify({
             'timestamp': datetime.now().isoformat(),
             'publisher_id': publisher,
             'message_index': message_index,
@@ -221,7 +224,7 @@ class MessageSender:
                 'source':'pubsub_test_client',
                 'version':'1.0'
             }
-        }
+        })
 
         # Generate payload with lorem ipsum
         lorem_base = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. ' + \
@@ -280,7 +283,12 @@ class MessageSender:
 
                         # Update publisher stats
                         if publisher not in self.publisher_stats:
-                            self.publisher_stats[publisher] = {'sent': 0, 'failed': 0, 'topics': {}}
+                            self.publisher_stats[publisher] = bunchify({
+                                'sent': 0,
+                                'failed': 0,
+                                'topics': {}
+                            })
+
                         self.publisher_stats[publisher].sent += 1
 
                         if topic not in self.publisher_stats[publisher].topics:
@@ -289,7 +297,11 @@ class MessageSender:
 
                         # Update topic stats
                         if topic not in self.topic_stats:
-                            self.topic_stats[topic] = {'sent': 0, 'failed': 0}
+                            self.topic_stats[topic] = bunchify({
+                                'sent': 0,
+                                'failed': 0
+                            })
+
                         self.topic_stats[topic].sent += 1
 
                     return True
@@ -303,7 +315,7 @@ class MessageSender:
                         sleep(0.5 * (attempt + 1))  # Exponential backoff
 
             except Exception as e:
-                logger.warning(f'Error sending message: {str(e)}')
+                logger.warning(f'Error sending message: {format_exc()}')
 
                 # If this was the last attempt, record it as a failure
                 if attempt == self.config.client.retry_count:
