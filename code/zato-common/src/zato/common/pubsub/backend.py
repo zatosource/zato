@@ -457,7 +457,6 @@ class Backend:
         topic_name: 'str',
         sec_name: 'str',
         sub_key: 'str'='',
-        is_active: 'bool'=True,
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
