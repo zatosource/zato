@@ -226,37 +226,19 @@ content:
   complexity: "medium"  # simple, medium, complex (affects structure of generated messages)
 ```
 
-## Message Sender API
+## Message Sender Capabilities
 
-### MessageSender Class
-```python
-class MessageSender:
-    def __init__(self, config_path: str)
-    def start(self) -> dict  # Returns statistics about the run
-    def send_message(self, publisher: str, topic: str, content: Any) -> bool  # Send single message
-```
+### Core Features
+- Sends messages to the test server via REST API
+- Tracks metrics about sent messages
+- Handles retry logic for failed requests
+- Maintains publisher-specific sending statistics
 
 ### Message Generation
 - Template-based message content with variable substitution
 - Configurable message size and complexity
 - Deterministic message ID generation for verification
-- Example message template:
-  ```json
-  {
-    "timestamp": "{{timestamp}}",
-    "publisher_id": "{{publisher_id}}",
-    "data": {
-      "value": "{{random_value}}",
-      "nested": {
-        "field": "{{field_value}}"
-      }
-    },
-    "metadata": {
-      "source": "pubsub_test_client",
-      "version": "1.0"
-    }
-  }
-  ```
+- Support for custom message templates
 
 ## Concurrency Model
 
@@ -264,15 +246,6 @@ class MessageSender:
 - One greenlet per publisher-topic pair from users.yaml
 - Each greenlet responsible for sending its quota of messages
 - Configurable sending rate and intervals
-- Example:
-  ```python
-  def publisher_greenlet(publisher_id, topic_name, message_count):
-      sender = MessageSender(config)
-      for i in range(message_count):
-          content = generate_message_content(publisher_id, topic_name, i)
-          sender.send_message(publisher_id, topic_name, content)
-          gevent.sleep(config.send_interval)  # Rate limiting
-  ```
 
 ### Rate Limiting
 - Global rate limiting across all publishers
@@ -293,40 +266,9 @@ class MessageSender:
 - JSON statistics file for further analysis
 - Option to upload statistics to collection server
 
-### Example Statistics Output
-```json
-{
-  "summary": {
-    "total_sent": 1000,
-    "successful": 998,
-    "failed": 2,
-    "duration_seconds": 45.3,
-    "rate_per_second": 22.1
-  },
-  "publishers": {
-    "service_x": {
-      "sent": 500,
-      "failed": 1,
-      "topics": {
-        "example_topic": 250,
-        "other_topic": 250
-      }
-    },
-    "service_y": {
-      "sent": 500,
-      "failed": 1,
-      "topics": {
-        "example_topic": 250,
-        "other_topic": 250
-      }
-    }
-  },
-  "errors": [
-    {
-      "message_id": "pub-123456789",
-      "error": "Connection timeout",
-      "time": "2025-07-16T09:41:23+02:00"
-    }
-  ]
-}
-```
+### Statistics Captured
+- Summary metrics (total sent, success rate, throughput)
+- Publisher-specific statistics
+- Topic distribution metrics
+- Detailed error logs with timestamps
+- Performance metrics over time
