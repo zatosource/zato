@@ -1,0 +1,17 @@
+client:
+  server_url: http://127.0.0.1:10055/pubsub/topic/
+  request_timeout: 30
+  retry_count: 3
+
+messaging:
+  users_yaml_path: ./users.yaml
+  messages_per_topic_per_user: 10
+  max_concurrent_publishers: 50
+  max_send_rate: 1000
+  send_interval: 0.01
+
+content:
+  template_path: ''
+  min_size: 1024
+  max_size: 4096
+  complexity: medium
