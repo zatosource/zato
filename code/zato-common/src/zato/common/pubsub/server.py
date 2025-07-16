@@ -292,7 +292,7 @@ class PubSubRESTServer:
         start = datetime.now()
 
         # .. load test data ..
-        self._setup_from_yaml_config(cid)
+        # self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
         # self._load_subscriptions(cid)
