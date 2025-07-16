@@ -571,7 +571,9 @@ class Backend:
         service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
 
         # .. push that message to the server ..
-        self.broker_client.invoke_async(service_msg)
+        # self.broker_client.invoke_async(service_msg)
+
+        logger.info('😀 ******** MSG MSG MSG %s', msg)
 
         # .. and acknowledge it so we can read more of them.
         msg.ack()
