@@ -32,13 +32,7 @@ from zato.common.pubsub.test.report import generate_html_report
 
 if 0:
     from datetime import datetime
-    from typing import Any, Dict, List, Optional
     from werkzeug.wrappers import Request, Response
-
-    # Define type aliases
-    Any = Any
-    Dict = Dict
-    Optional = Optional
 
 # ################################################################################################################################
 # ################################################################################################################################
