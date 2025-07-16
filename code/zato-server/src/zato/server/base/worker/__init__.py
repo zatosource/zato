@@ -744,16 +744,22 @@ class WorkerStore(_WorkerStoreBase):
         cid = new_cid()
 
         print()
-        for item in self.worker_config.pubsub_subs.values():
-            config = item['config']
+        # for item in self.worker_config.pubsub_subs.values():
+        for idx in range(1, 6):
 
-            topic_name = config['topic_name']
-            sec_name = config['sec_name']
-            sub_key = config['sub_key']
-            is_active = config['is_active']
+            idx = str(idx)
+            sub_key = 'zpsk.00' + idx
+            topic_name = 'topic00' + idx
+
+            # config = item['config']
+
+            # topic_name = config['topic_name']
+            sec_name = 'abc'#config['sec_name']
+            # sub_key = config['sub_key']
+            is_active = True #config['is_active']
 
             print()
-            print(111, config)
+            #print(111, config)
             print()
 
             self.pubsub_backend.start_public_queue_consumer(cid, topic_name, sec_name, sub_key, is_active)
