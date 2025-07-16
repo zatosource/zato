@@ -61,16 +61,25 @@ def get_sleep_time(
     if attempt_number <= 1 or time_remaining_seconds <= 0:
         return 0.0
 
-    # Find the appropriate checkpoint
+    # Find the appropriate checkpoint and previous minimum
     base_sleep = _max_sleep_time  # Default to max if not found
-    for threshold, sleep_time in _checkpoints:
+    min_sleep = 0.1  # Minimum from previous bracket
+
+    for idx, (threshold, sleep_time) in enumerate(_checkpoints):
         if attempt_number <= threshold:
             base_sleep = sleep_time
-            break
 
-    # Add jitter
+            # Set minimum based on previous checkpoint
+            if idx > 0:
+                _, min_sleep = _checkpoints[idx-1]
+            break
+    else:
+        # Beyond all checkpoints - use last checkpoint as minimum
+        _, min_sleep = _checkpoints[-1]
+
+    # Add jitter but ensure we don't go below previous bracket
     jitter      = random.uniform(-jitter_range, jitter_range)
-    final_sleep = max(0.1, base_sleep + jitter)  # Minimum 0.1s
+    final_sleep = max(min_sleep, base_sleep + jitter)
 
     # Check if we have time for this sleep
     if final_sleep > time_remaining_seconds:
