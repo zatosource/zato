@@ -132,9 +132,18 @@ class Consumer:
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
     def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
+
+        # Public pub/sub queues require special configuration
+        if config.queue.startswith('zpsk'):
+            queue_arguments={'x-queue-type': config.queue_type, 'x-delivery-limit': config.max_repeats}
+        else:
+            queue_arguments = None
+
+        queue = Queue(config.queue, queue_arguments=queue_arguments)
+
         self.config = config
         self.name = self.config.name
-        self.queue = [Queue(self.config.queue)]
+        self.queue = [queue]
         self.on_amqp_message = on_amqp_message
         self.keep_running = True
         self.is_stopped = False

@@ -754,6 +754,7 @@ class WorkerStore(_WorkerStoreBase):
         print(444, repr(config))
         print(555, msg.headers)
         print(666, msg.properties)
+        print(777, msg.delivery_info)
         print()
 
         # Local objects
@@ -763,13 +764,14 @@ class WorkerStore(_WorkerStoreBase):
         sub_key = config.queue
 
         # .. enrich the message for the service ..
-        body['sub_key'] = sub_key
+        if '2' in body:
+            body['sub_key'] = sub_key
 
-        # .. turn that message into a form that a service can be invoked with ..
-        service_msg['action'] = _service_publish
-        service_msg['payload'] = body
-        service_msg['cid'] = body.get('correl_id') or body.msg_id
-        service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
+            # .. turn that message into a form that a service can be invoked with ..
+            service_msg['action'] = _service_publish
+            service_msg['payload'] = body
+            service_msg['cid'] = body.get('correl_id') or body.msg_id
+            service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
 
         # .. push that message to the server ..
         # self.broker_client.invoke_async(service_msg)
@@ -783,6 +785,9 @@ class WorkerStore(_WorkerStoreBase):
         try:
             self._handle_pubsub_public_message(body, msg, name, config)
         except Exception as e:
+            logger.warn('Caught an exception, sleeping ...')
+            import time
+            time.sleep(100)
             msg.reject(requeue=True)
         else:
             msg.ack()
