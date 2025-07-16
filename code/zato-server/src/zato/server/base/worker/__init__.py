@@ -36,6 +36,7 @@ from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
+from zato.common.pubsub.backend import Backend as PubSubBackend
 from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, utcnow, \
     visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
@@ -142,6 +143,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
+    pubsub_backend:'PubSubBackend'
     broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
@@ -316,6 +318,18 @@ class WorkerStore(_WorkerStoreBase):
 
     def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
+
+# ################################################################################################################################
+
+    def after_broker_client_set(self) -> 'None':
+
+        self.pubsub_backend = PubSubBackend(
+            None, # type: ignore
+            self.broker_client,
+        )
+
+        # Pub/sub
+        self.init_pubsub()
 
 # ################################################################################################################################
 
@@ -723,6 +737,32 @@ class WorkerStore(_WorkerStoreBase):
 
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
+
+    def init_pubsub(self):
+
+        # One cid for all the actions
+        cid = new_cid()
+
+        print()
+        for item in self.worker_config.pubsub_subs.values():
+            config = item['config']
+
+            topic_name = config['topic_name']
+            sec_name = config['sec_name']
+            sub_key = config['sub_key']
+            is_active = config['is_active']
+
+            print()
+            print(111, config)
+            print()
+
+            self.pubsub_backend.start_public_queue_consumer(cid, topic_name, sec_name, sub_key, is_active)
+
+        print()
+
+        print(222, self.broker_client)
+
+        print()
 
 # ################################################################################################################################
 
