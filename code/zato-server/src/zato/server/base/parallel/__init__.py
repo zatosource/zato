@@ -883,6 +883,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         self.broker_client = BrokerClient(server=self)
         self.worker_store.set_broker_client(self.broker_client)
+        self.worker_store.after_broker_client_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
