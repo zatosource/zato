@@ -162,7 +162,7 @@ class PubSubRESTServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.invoke_service(service, request)
+        response = self.backend.publish_to_service(service, request)
 
         # .. log what we've received ..
         len_response = len(response)
@@ -197,8 +197,8 @@ class PubSubRESTServer:
                     logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    # _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
-                    _ = spawn(self.backend.subscribe_impl, cid, topic_name, sec_name, sub_key)
+                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
+                    # _ = spawn(self.backend.subscribe_impl, cid, topic_name, sec_name, sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
@@ -292,7 +292,7 @@ class PubSubRESTServer:
         start = datetime.now()
 
         # .. load test data ..
-        # self._setup_from_yaml_config(cid)
+        self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
         # self._load_subscriptions(cid)

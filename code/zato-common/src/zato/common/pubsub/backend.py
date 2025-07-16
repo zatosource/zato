@@ -76,9 +76,9 @@ class Backend:
     consumers: 'dict_[str, Consumer]' # Maps sub_keys to Consumer objects
     subs_by_topic: 'topic_subs'
 
-    def __init__(self, server:'PubSubRESTServer', broker_client:'BrokerClient') -> 'None':
+    def __init__(self, rest_server:'PubSubRESTServer', broker_client:'BrokerClient') -> 'None':
 
-        self.server = server
+        self.rest_server = rest_server
         self.broker_client = broker_client
         self.topics = {}
         self.consumers = {}
@@ -252,7 +252,7 @@ class Backend:
         password = msg['password']
 
         # Create the user now
-        self.server.create_user(cid, sec_name, password)
+        self.rest_server.create_user(cid, sec_name, password)
 
 # ################################################################################################################################
 
@@ -277,7 +277,7 @@ class Backend:
             logger.info(f'[{cid}] Updating username from `{old_username}` to `{new_username}`')
 
             # .. and actually do it ..
-            self.server.change_username(cid, old_username, new_username)
+            self.rest_server.change_username(cid, old_username, new_username)
 
         # .. we go here if the name of the security definition is different ..
         if has_sec_name_changed:
@@ -329,7 +329,7 @@ class Backend:
 
 # ################################################################################################################################
 
-    def invoke_service(
+    def publish_to_service(
         self,
         service:'str',
         request:'anydictnone'=None,
@@ -413,6 +413,44 @@ class Backend:
 
 # ################################################################################################################################
 
+    def start_public_queue_consumer(
+        self,
+        cid: 'str',
+        topic_name: 'str',
+        sec_name: 'str',
+        sub_key: 'str'='',
+        is_active: 'bool'=True,
+    ) -> 'None':
+
+        # Get or create a per-sub_key lock
+        with self._main_lock:
+            if sub_key not in self._sub_key_lock:
+                _lock = RLock()
+                self._sub_key_lock[sub_key] = _lock
+            else:
+                _lock = self._sub_key_lock[sub_key]
+
+        # .. create a new consumer if one doesn't exist yet ..
+        with _lock:
+
+            if sub_key not in self.consumers:
+
+                logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
+
+                # .. start a background consumer ..
+                result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
+
+                # .. get the actual consumer object ..
+                consumer:'Consumer' = result.get()
+
+                # .. store it for later use ..
+                self.consumers[sub_key] = consumer
+
+        # .. confirm it's started ..
+        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
+
+# ################################################################################################################################
+
     def subscribe_impl(
         self,
         cid: 'str',
@@ -449,33 +487,6 @@ class Backend:
 
         # .. create bindings for the topic ..
         self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
-
-        # Get or create a per-sub_key lock
-        with self._main_lock:
-            if sub_key not in self._sub_key_lock:
-                _lock = RLock()
-                self._sub_key_lock[sub_key] = _lock
-            else:
-                _lock = self._sub_key_lock[sub_key]
-
-        # .. create a new consumer if one doesn't exist yet ..
-        with _lock:
-
-            if sub_key not in self.consumers:
-
-                logger.info(f'[{cid}] Creating new consumer for sub_key={sub_key}')
-
-                # .. start a background consumer ..
-                result = spawn(start_public_consumer, cid, sec_name, sub_key, self._on_public_message_callback, is_active)
-
-                # .. get the actual consumer object ..
-                consumer:'Consumer' = result.get()
-
-                # .. store it for later use ..
-                self.consumers[sub_key] = consumer
-
-        # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed {sec_name} to {topic_name} with key {sub_key}')
 
         # .. build our response ..
         response = StatusResponse()
