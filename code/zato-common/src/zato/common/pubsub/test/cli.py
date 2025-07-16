@@ -8,29 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import argparse
-import os
 import sys
 from json import dumps
 from logging import basicConfig, getLogger
-from pathlib import Path
 
 # Zato
 from zato.common.pubsub.test.message_sender import MessageSender
+from zato.common.util.api import get_absolute_path
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_absolute_path(relative_path):
-    """ Return an absolute path based on this program's location.
-    """
-    # Get directory where the program is located
-    program_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.abspath(os.path.join(program_dir, relative_path))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,12 +61,7 @@ def main():
     # Configure logging
     log_level = getattr(sys.modules['logging'], args.log_level)
     basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # Determine configuration file path
-    if os.path.isabs(args.config):
-        config_path = args.config
-    else:
-        config_path = get_absolute_path(args.config)
+    config_path = get_absolute_path(__file__, args.config)
 
     logger.info(f'Using configuration from: {config_path}')
 

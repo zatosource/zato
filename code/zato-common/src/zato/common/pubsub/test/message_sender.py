@@ -33,6 +33,9 @@ from yaml import safe_load as yaml_load
 # requests
 import requests
 
+# Zato
+from zato.common.util.api import get_absolute_path
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -196,8 +199,10 @@ class MessageSender:
         self.users_parser = None
         self.session = requests.Session()
 
-        if self.config.messaging.users_yaml_path:
-            self.users_parser = UsersYAMLParser(self.config.messaging.users_yaml_path)
+        # We need to make it absolute
+        self.config.messaging.users_yaml_path = get_absolute_path(__file__, self.config.messaging.users_yaml_path)
+
+        self.users_parser = UsersYAMLParser(self.config.messaging.users_yaml_path)
 
     def _generate_message_content(self, publisher:'str', topic:'str', message_index:'int') -> 'strdict':
         """ Generate message content based on configuration.

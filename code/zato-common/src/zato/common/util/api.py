@@ -1974,3 +1974,9 @@ def publish_file(broker_client, cid:'str', file_path:'str') -> 'dict':
     return msg
 
 # ################################################################################################################################
+
+def get_absolute_path(base_dir:'str', relative_path:'str') -> 'str':
+    program_dir = Path(os.path.dirname(os.path.abspath(base_dir)))
+    return os.path.abspath(os.path.join(program_dir, relative_path))
+
+# ################################################################################################################################
