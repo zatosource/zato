@@ -1,0 +1,20 @@
+server:
+  host: 127.0.0.1
+  port: 10055
+
+collection:
+
+  # Path to users.yaml
+  users_yaml_path: "./users.yaml"
+
+  # Each user sends that many messages to each topic
+  messages_per_topic_per_user: 10
+
+  # Log progress every N messages
+  log_interval: 100
+
+  # Auto-complete if inactive for this duration
+  timeout_seconds: 3
+
+report:
+  url_path: "/report"

@@ -109,6 +109,10 @@ def _generate_summary_section(collector:'TestCollector') -> 'str':
     message_rate = collector.get_message_rate()
     status = "Complete" if collector.is_complete() else "Incomplete"
 
+    topic_count = len(collector.topics_count)
+    subscription_count = len(collector.subscriptions_count)
+    publisher_count = len(collector.publisher_count)
+
     html = f"""
     <section class="summary">
         <h2>Test Summary</h2>
@@ -128,6 +132,18 @@ def _generate_summary_section(collector:'TestCollector') -> 'str':
             <tr>
                 <th>Message Rate</th>
                 <td>{message_rate:.2f} messages/second</td>
+            </tr>
+            <tr>
+                <th>Topics</th>
+                <td>{topic_count}</td>
+            </tr>
+            <tr>
+                <th>Subscriptions</th>
+                <td>{subscription_count}</td>
+            </tr>
+            <tr>
+                <th>Publishers</th>
+                <td>{publisher_count}</td>
             </tr>
             <tr>
                 <th>Start Time</th>
