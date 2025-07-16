@@ -50,6 +50,7 @@ logger = getLogger(__name__)
 # Default paths
 DEFAULT_YAML_CONFIG = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
+    'test',
     'users.yaml'
 )
 
