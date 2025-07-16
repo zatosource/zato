@@ -186,7 +186,7 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
         # Find and remove all queues with specified prefixes
         try:
             # Define the prefixes to clean up
-            prefixes = ['zpsk', 'zato-reply-']
+            prefixes = ['zpsk', 'zato-reply']
 
             # Get all queues
             logger.info(f'Listing queues with prefixes: {prefixes}')

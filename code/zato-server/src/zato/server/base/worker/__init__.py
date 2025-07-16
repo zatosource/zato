@@ -748,7 +748,7 @@ class WorkerStore(_WorkerStoreBase):
 
         print()
         # for item in self.worker_config.pubsub_subs.values():
-        for idx in range(1, 6001):
+        for idx in range(1, 5):
 
             idx = str(idx)
             sub_key = 'zpsk.00' + idx
