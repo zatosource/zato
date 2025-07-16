@@ -745,7 +745,16 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+    def _handle_pubsub_public_message(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+
+        print()
+        print(111, repr(body))
+        print(222, repr(msg))
+        print(333, repr(name))
+        print(444, repr(config))
+        print(555, msg.headers)
+        print(666, msg.properties)
+        print()
 
         # Local objects
         service_msg = {}
@@ -767,8 +776,16 @@ class WorkerStore(_WorkerStoreBase):
 
         logger.info('😀 ******** MSG MSG MSG %s', msg)
 
-        # .. and acknowledge it so we can read more of them.
-        msg.ack()
+# ################################################################################################################################
+
+    def _on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+
+        try:
+            self._handle_pubsub_public_message(body, msg, name, config)
+        except Exception as e:
+            msg.reject(requeue=True)
+        else:
+            msg.ack()
 
 # ################################################################################################################################
 
