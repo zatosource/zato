@@ -30,7 +30,6 @@ from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
-from gevent import spawn
 from gevent.pywsgi import WSGIServer
 
 # gunicorn
