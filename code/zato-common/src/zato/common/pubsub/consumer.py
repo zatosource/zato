@@ -20,7 +20,7 @@ from gevent import sleep, spawn
 from kombu.connection import Connection as KombuAMQPConnection
 
 # Zato
-from zato.common.api import AMQP
+from zato.common.api import AMQP, PubSub
 from zato.common.pubsub.util import get_broker_config
 from zato.server.connection.amqp_ import Consumer
 
@@ -49,6 +49,7 @@ class ConsumerConfig:
     on_msg_callback: 'callable_'
     wait_for_conection: 'bool'
     should_start: 'bool'
+    max_repeats: 'int' = PubSub.Max_Repeats
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +74,9 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
         'prefetch_count': consumer_config.prefetch_count,
         'conn_url': conn_url,
         'conn_class': KombuAMQPConnection,
-        'is_active': True
+        'is_active': True,
+        'queue_type': 'quorum',
+        'max_repeats': consumer_config.max_repeats
     })
 
     consumer = Consumer(broker_config, consumer_config.on_msg_callback)
