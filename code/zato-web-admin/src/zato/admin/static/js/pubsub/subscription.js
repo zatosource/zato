@@ -369,8 +369,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
-    row += String.format("<td class='ignore'>{0}</td>", JSON.stringify(item.topic_names));
-
+    row += String.format("<td class='ignore'>{0}</td>", item.topic_names);
 
     if(include_tr) {
         row += '</tr>';

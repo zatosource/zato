@@ -58,7 +58,17 @@ class Index(_Index):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Create(CreateEdit):
+class _CreateEdit(CreateEdit):
+
+    def post_process_return_data(self, return_data):
+        topic_names = return_data['topic_names']
+        return_data['topic_names'] = dumps(topic_names)
+        return return_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Create(_CreateEdit):
     method_allowed = 'POST'
     url_name = 'pubsub-subscription-create'
     service_name = 'zato.pubsub.subscription.create'
@@ -109,7 +119,7 @@ class Create(CreateEdit):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Edit(CreateEdit):
+class Edit(_CreateEdit):
     method_allowed = 'POST'
     url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
@@ -132,8 +142,6 @@ class Edit(CreateEdit):
         return input_dict
 
     def pre_process_input_dict(self, input_dict):
-
-        super().pre_process_input_dict(input_dict)
 
         # Extract topic IDs from form POST data
         if self.req.method == 'POST':
