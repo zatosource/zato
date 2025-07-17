@@ -23,6 +23,11 @@ security:
     username: enmasse.2
     password: Zato_Enmasse_Env.BasicAuth2
 
+  - name: enmasse.basic_auth.3
+    type: basic_auth
+    username: enmasse.3
+    password: Zato_Enmasse_Env.BasicAuth3
+
   - name: enmasse.bearer_token.1
     username: enmasse.1
     password: Zato_Enmasse_Env.EnmasseBearerToken1
@@ -251,6 +256,60 @@ elastic_search:
     hosts: http://elasticsearch:9200
     timeout: 60
     body_as: json
+
+pubsub_topic:
+
+  - name: enmasse.topic.1
+    description: Optional description for topic 1
+
+  - name: enmasse.topic.2
+    description: Optional description for topic 2
+
+  - name: enmasse.topic.3
+    description: Optional description for topic 3
+
+pubsub_permission:
+
+  - security: enmasse.basic_auth.1
+    pub:
+      - enmasse.topic.1
+      - enmasse.topic.2
+    sub:
+      - enmasse.topic.2
+      - enmasse.topic.3
+
+  - security: enmasse.basic_auth.2
+    pub:
+      - enmasse.topic.*
+    sub:
+      - enmasse.#
+
+  - security: enmasse.basic_auth.3
+    sub:
+      - enmasse.topic.3
+
+pubsub_subscription:
+
+  - security: enmasse.basic_auth.1
+    delivery_type: pull
+    max_retry_time: 365d
+    topic_list:
+      - enmasse.topic.1
+      - enmasse.topic.2
+
+  - security: enmasse.basic_auth.2
+    delivery_type: push
+    push_rest_endpoint: enmasse.outgoing.rest.1
+    max_retry_time: 48h
+    topic_list:
+      - enmasse.topic.1
+
+  - security: enmasse.basic_auth.2
+    delivery_type: push
+    push_service: demo.input-logger
+    max_retry_time: 30m
+    topic_list:
+      - enmasse.topic.1
 
 """
 
