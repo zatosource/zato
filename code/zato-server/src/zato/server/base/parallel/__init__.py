@@ -875,8 +875,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Set up the broker client
         self.broker_client = BrokerClient(server=self)
 
-        # Delete the queue to remove any message we don't want to read since they were published when we were not running
+        # Delete the queue to remove any message we don't want to read since they were published when we were not running,
+        # and then create it all again so we have a fresh start.
         self.broker_client.delete_queue('server')
+        self.broker_client.create_internal_queue('server')
 
         # Configure internal pub/sub
         _ = spawn_greenlet(
