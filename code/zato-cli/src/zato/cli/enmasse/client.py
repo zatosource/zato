@@ -133,6 +133,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                 try:
                     # Delete records with matching IDs
                     if len(security_ids) == 1:
+                        ids_string = str(security_ids[0])
                         query = f'DELETE FROM {table_name} WHERE id = {security_ids[0]}'
                     else:
                         ids_string = ', '.join(str(id) for id in security_ids)
