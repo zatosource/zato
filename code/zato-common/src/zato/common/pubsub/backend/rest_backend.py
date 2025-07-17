@@ -39,6 +39,28 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        new_topic_name:'str' = msg['new_topic_name']
+        old_topic_name:'str' = msg['old_topic_name']
+
+        # Move the topic in internal mappings
+        if old_topic_name in self.topics:
+            topic = self.topics.pop(old_topic_name)
+            self.topics[new_topic_name] = topic
+
+        # Move all subscriptions to the new topic name
+        if old_topic_name in self.subs_by_topic:
+            subs = self.subs_by_topic.pop(old_topic_name)
+            self.subs_by_topic[new_topic_name] = subs
+
+            # Update each subscription to point to the new topic
+            for sub in subs.values():
+                sub.topic_name = new_topic_name
+
+# ################################################################################################################################
+
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'strdict') -> 'None':
 
         # Local aliases

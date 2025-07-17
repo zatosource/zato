@@ -822,7 +822,7 @@ class BrokerClient:
                 conn
             )
 
-        logger.info(f'[{cid}] Successfully renamed topic {old_topic_name} to {new_topic_name}')
+        logger.info(f'[{cid}] Successfully renamed topic `{old_topic_name}` to `{new_topic_name}`')
 
 # ################################################################################################################################
 # ################################################################################################################################
