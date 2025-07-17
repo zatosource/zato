@@ -1592,6 +1592,9 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
+        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(msg)
+
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(msg.cid, msg.sub_key)
 
