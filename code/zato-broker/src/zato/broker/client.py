@@ -380,11 +380,6 @@ class BrokerClient:
                 reply_to=reply_queue
             )
 
-            print()
-            print(222, client)
-            print(333, dir(client))
-            print()
-
         return correlation_id
 
 # ################################################################################################################################
