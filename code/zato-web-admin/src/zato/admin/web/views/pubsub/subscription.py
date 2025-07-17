@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
+from json import dumps
 
 # Django
 from django.http import HttpResponse
@@ -38,8 +38,13 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_base_id', 'sec_name', 'delivery_type', \
-            'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name'
+            'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_names'
         output_repeated = True
+
+    def on_before_append_item(self, item):
+        topic_names = item.topic_names
+        item.topic_names = dumps(topic_names)
+        return item
 
     def handle(self):
         create_form = CreateForm(req=self.req)
@@ -178,7 +183,7 @@ def get_security_definitions(req):
         security_definitions = get_pubsub_security_definitions(req, form_type, 'subscription')
 
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'msg': 'Security definitions retrieved successfully',
                 'security_definitions': security_definitions
             }),
@@ -186,7 +191,7 @@ def get_security_definitions(req):
         )
     except Exception as e:
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'error': str(e) or 'Error retrieving security definitions'
             }),
             content_type='application/json',
@@ -222,7 +227,7 @@ def get_topics(req):
         logger.info('VIEW get_topics: returning %d topics', len(topics))
 
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'msg': 'Topics retrieved successfully',
                 'topics': topics
             }),
@@ -231,7 +236,7 @@ def get_topics(req):
     except Exception as e:
         logger.error('VIEW get_topics: error=%s', e)
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'error': str(e) or 'Error retrieving topics'
             }),
             content_type='application/json',
@@ -263,7 +268,7 @@ def get_rest_endpoints(req):
         logger.info('VIEW get_rest_endpoints: returning %d endpoints', len(endpoints_list))
 
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'msg': 'REST endpoints retrieved successfully',
                 'rest_endpoints': endpoints_list
             }),
@@ -272,7 +277,7 @@ def get_rest_endpoints(req):
     except Exception as e:
         logger.error('VIEW get_rest_endpoints: error=%s', e)
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'error': str(e) or 'Error retrieving REST endpoints'
             }),
             content_type='application/json',
@@ -297,7 +302,7 @@ def get_service_list(req):
         logger.info('VIEW get_service_list: returning %d services', len(services))
 
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'msg': 'Services retrieved successfully',
                 'services': services
             }),
@@ -306,7 +311,7 @@ def get_service_list(req):
     except Exception as e:
         logger.error('VIEW get_service_list: error=%s', e)
         return HttpResponse(
-            json.dumps({
+            dumps({
                 'error': str(e) or 'Error retrieving services'
             }),
             content_type='application/json',
