@@ -102,7 +102,7 @@ class ConsumerBackend(Backend):
     def stop_public_queue_consumer(self, cid:'str', sub_key:'str') -> 'None':
 
         # Get the consumer for this subscription ..
-        if consumer := self.consumers[sub_key]:
+        if consumer := self.consumers.get(sub_key):
 
             # .. first, stop it ..
             consumer.stop()
