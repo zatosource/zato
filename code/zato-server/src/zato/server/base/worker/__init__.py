@@ -780,7 +780,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+    def on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
         try:
             self._handle_pubsub_public_message(body, msg, name, config)
@@ -815,7 +815,7 @@ class WorkerStore(_WorkerStoreBase):
                 sec_name,
                 sub_key,
                 is_active,
-                self._on_pubsub_public_message_callback,
+                self.on_pubsub_public_message_callback,
             )
 
 # ################################################################################################################################

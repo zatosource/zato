@@ -193,10 +193,10 @@ class PubSubRESTServer:
                     if not topic_name:
                         continue
 
-                    logger.info(f'[{cid}] Setting up subscription: `{username}` -> `{topic_name}`')
+                    logger.info(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.subscribe_impl(cid, topic_name, sec_name, sub_key)
+                    _ = self.backend.register_subscriptioncid, topic_name, sec_name, sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
@@ -242,8 +242,8 @@ class PubSubRESTServer:
                 sub_key = sub_data['sub_key']
 
                 # Create the subscription
-                logger.info(f'[{cid}] Setting up subscription from YAML: {username} -> {topic_name} (key={sub_key})')
-                _ = self.backend.subscribe_impl(cid, topic_name, username, sub_key)
+                logger.info(f'[{cid}] Registering subscription from YAML: {username} -> {topic_name} (key={sub_key})')
+                _ = self.backend.register_subscriptioncid, topic_name, username, sub_key)
 
 # ################################################################################################################################
 
@@ -421,7 +421,7 @@ class PubSubRESTServer:
         username = self._ensure_authenticated(cid, environ)
 
         # Subscribe to topic using backend
-        result = self.backend.subscribe_impl(cid, topic_name, username)
+        result = self.backend.register_subscriptioncid, topic_name, username)
 
         response = APIResponse()
         response.is_ok = result.is_ok
@@ -441,7 +441,7 @@ class PubSubRESTServer:
         username = self._ensure_authenticated(cid, environ)
 
         # Unsubscribe from topic using backend
-        result = self.backend.unsubscribe_impl(cid, topic_name, username)
+        result = self.backend.unregister_subscription(cid, topic_name, username)
 
         response = APIResponse()
         response.is_ok = result.is_ok
