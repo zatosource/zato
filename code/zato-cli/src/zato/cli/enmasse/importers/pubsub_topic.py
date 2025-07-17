@@ -54,14 +54,15 @@ class PubSubTopicImporter:
                 items = query_result.result
             else:
                 items = query_result
-            
+
         logger.info('Processing %d pubsub topic definitions', len(items))
 
         for item in items:
             # Each item is a tuple: (PubSubTopic, publisher_count, subscriber_count)
             topic_obj = item[0]  # First element is the PubSubTopic object
-            topic_dict = to_json(topic_obj, return_as_dict=True)
-                
+            topic_json = to_json(topic_obj, return_as_dict=True)
+            topic_dict = topic_json['fields']  # Extract the fields dictionary
+
             name = topic_dict['name']
             logger.info('Processing pubsub topic definition: %s (id=%s)', name, topic_dict.get('id'))
             out[name] = topic_dict
