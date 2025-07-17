@@ -763,8 +763,6 @@ class BrokerClient:
             if binding['routing_key'] == routing_key:
                 out.append(binding)
 
-        out.sort()
-
         return out
 
 # ################################################################################################################################
