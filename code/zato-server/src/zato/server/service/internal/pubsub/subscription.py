@@ -108,7 +108,7 @@ class GetList(AdminService):
 
             # Store both fields
             sub_dict['topic_links'] = ', '.join(topic_links)
-            sub_dict['topic_names'] = ', '.join(sorted_topic_names)
+            sub_dict['topic_names'] = sorted_topic_names
 
             data.append(sub_dict)
 
