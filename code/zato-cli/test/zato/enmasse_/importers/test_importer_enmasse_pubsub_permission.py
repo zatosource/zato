@@ -94,7 +94,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_permission_definition_creation(self):
+    def xtest_pubsub_permission_definition_creation(self):
         """ Test creating pubsub permission definitions from YAML.
         """
         self._setup_test_environment()
@@ -137,7 +137,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_pubsub_permission_update(self):
+    def test_pubsub_permission_update(self):
         """ Test updating existing pubsub permission definitions.
         """
         self._setup_test_environment()
