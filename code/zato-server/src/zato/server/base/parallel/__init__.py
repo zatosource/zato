@@ -872,6 +872,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
+        # Set up the broker client
+        self.broker_client = BrokerClient(server=self)
+
+        # Delete the queue to remove any message we don't want to read since they were published when we were not running
+        self.broker_client.delete_queue('server')
+
         # Configure internal pub/sub
         _ = spawn_greenlet(
             start_internal_consumer,
@@ -881,7 +887,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_pubsub_message
         )
 
-        self.broker_client = BrokerClient(server=self)
+        # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
 
