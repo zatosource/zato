@@ -331,9 +331,6 @@ class Backend:
         # .. now add it for that user ..
         subs_by_sec_name[sec_name] = sub
 
-        # .. create bindings for the topic ..
-        self.broker_client.create_bindings(cid, sub_key, ModuleCtx.Exchange_Name, sub_key, topic_name)
-
         # .. build our response ..
         response = StatusResponse()
         response.is_ok = True
