@@ -13,6 +13,9 @@ from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
 
+# gevent
+from gevent.lock import RLock
+
 # Zato
 from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
@@ -72,6 +75,7 @@ class Backend:
         self.broker_client = broker_client
         self.topics = {}
         self.subs_by_topic = {}
+        self._main_lock = RLock()
 
 # ################################################################################################################################
 

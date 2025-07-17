@@ -230,6 +230,7 @@ class Create(AdminService):
                 pubsub_msg.topic_name_list = plain_topic_names
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
+                self.broker_client.publish(pubsub_msg)
                 self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
@@ -355,6 +356,7 @@ class Edit(AdminService):
                 pubsub_msg.topic_name_list = plain_topic_names
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
+                self.broker_client.publish(pubsub_msg)
                 self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 # Set response payload
@@ -411,6 +413,7 @@ class Delete(AdminService):
                 pubsub_msg.username = security_def.username
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
+                self.broker_client.publish(pubsub_msg)
                 self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
 # ################################################################################################################################
