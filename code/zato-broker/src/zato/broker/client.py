@@ -133,12 +133,6 @@ class BrokerClient:
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
 
-        print()
-        print(111, msg)
-        print(222, exchange)
-        print(333, routing_key)
-        print()
-
         with self.producer.acquire() as client:
             client.publish(
                 msg,
@@ -805,6 +799,7 @@ class BrokerClient:
 
         # If no bindings found, just return silently
         if not topic_bindings:
+            logger.info(f'[{cid}] Nothing to rename, no bindings found for `{old_topic_name}` in `{exchange_name}`')
             return
 
         count = len(topic_bindings)
