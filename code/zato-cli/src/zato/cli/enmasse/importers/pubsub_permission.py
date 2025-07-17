@@ -214,10 +214,9 @@ class PubSubPermissionImporter:
                     }
                 else:
                     permission_def['id'] = db_defs[key]['id']
-                    if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
-                        instance = self.update_pubsub_permission_definition(permission_def, session)
-                        updated.append(instance)
-                        self.pubsub_permission_defs[key] = {
+                    instance = self.update_pubsub_permission_definition(permission_def, session)
+                    updated.append(instance)
+                    self.pubsub_permission_defs[key] = {
                         'id': instance.id,
                         'sec_base_id': instance.sec_base_id,
                         'pattern': instance.pattern,
@@ -256,10 +255,9 @@ class PubSubPermissionImporter:
                     }
                 else:
                     permission_def['id'] = db_defs[key]['id']
-                    if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
-                        instance = self.update_pubsub_permission_definition(permission_def, session)
-                        updated.append(instance)
-                        self.pubsub_permission_defs[key] = {
+                    instance = self.update_pubsub_permission_definition(permission_def, session)
+                    updated.append(instance)
+                    self.pubsub_permission_defs[key] = {
                         'id': instance.id,
                         'sec_base_id': instance.sec_base_id,
                         'pattern': instance.pattern,
