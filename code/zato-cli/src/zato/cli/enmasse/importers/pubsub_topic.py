@@ -44,20 +44,14 @@ class PubSubTopicImporter:
 # ################################################################################################################################
 
     def _process_pubsub_topic_defs(self, query_result:'any_', out:'dict') -> 'None':
-        # pubsub_topic_list returns a tuple where first element is SearchResults
-        if isinstance(query_result, tuple):
-            search_results = query_result[0]
-            items = search_results.result
-        else:
-            # Handle SearchResults object directly
-            if hasattr(query_result, 'result'):
-                items = query_result.result
-            else:
-                items = query_result
+
+        search_results = query_result[0]
+        items = search_results.result
 
         logger.info('Processing %d pubsub topic definitions', len(items))
 
         for item in items:
+
             # Each item is a tuple: (PubSubTopic, publisher_count, subscriber_count)
             topic_obj = item[0]  # First element is the PubSubTopic object
             topic_json = to_json(topic_obj, return_as_dict=True)
