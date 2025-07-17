@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.odb.model import PubSubTopic, to_json
-from zato.common.odb.query import _pubsub_topic
+from zato.common.odb.query import pubsub_topic_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -54,12 +54,8 @@ class PubSubTopicImporter:
 
         for item in items:
             # pubsub_topic_list returns tuples: (PubSubTopic, publisher_count, subscriber_count)
-            if isinstance(item, tuple):
-                topic_obj = item[0]  # First element is the PubSubTopic object
-                topic_dict = to_json(topic_obj, return_as_dict=True)
-            else:
-                # Fallback for simple PubSubTopic objects
-                topic_dict = to_json(item, return_as_dict=True)
+            topic_obj = item[0]  # First element is the PubSubTopic object
+            topic_dict = to_json(topic_obj, return_as_dict=True)
                 
             name = topic_dict['name']
             logger.info('Processing pubsub topic definition: %s (id=%s)', name, topic_dict.get('id'))
