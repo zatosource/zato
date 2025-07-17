@@ -90,7 +90,7 @@ class TestEnmasseSecurity(TestCase):
         # Verify each definition was created correctly
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
-            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2'})
+            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2', 'enmasse.3'})
             self.assertIsNotNone(instance.password)
 
 # ################################################################################################################################
@@ -161,7 +161,7 @@ class TestEnmasseSecurity(TestCase):
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
             self.assertIn(instance.name, {'enmasse.apikey.1', 'enmasse.apikey.2'})
-            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2'})
+            self.assertIn(instance.username, {'enmasse.1', 'enmasse.2', 'enmasse.3'})
             self.assertIsNotNone(instance.password)
 
 # ################################################################################################################################
