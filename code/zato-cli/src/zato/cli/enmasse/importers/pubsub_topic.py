@@ -160,25 +160,22 @@ class PubSubTopicImporter:
             logger.info('Processing YAML pubsub topic definition: %s', name)
 
             if self.should_create_pubsub_topic_definition(yaml_def, db_defs):
+
                 # Create new definition
                 instance = self.create_pubsub_topic_definition(yaml_def, session)
                 created.append(instance)
+
                 # Add to our tracking dictionary
-                self.pubsub_topic_defs[name] = to_json(instance, return_as_dict=True)
+                self.pubsub_topic_defs[name] = to_json(instance, return_as_dict=True)['fields']
             else:
-                # Check if update is needed
-                db_def = db_defs[name]
-                if self.should_update_pubsub_topic_definition(yaml_def, db_def):
-                    # Update existing definition
-                    yaml_def['id'] = db_def['id']  # Add the ID for update
-                    instance = self.update_pubsub_topic_definition(yaml_def, session)
-                    updated.append(instance)
-                    # Update our tracking dictionary
-                    self.pubsub_topic_defs[name] = to_json(instance, return_as_dict=True)
-                else:
-                    logger.info('No update needed for pubsub topic definition: %s', name)
-                    # Still add to tracking dictionary
-                    self.pubsub_topic_defs[name] = db_def
+
+                # Update existing definition
+                yaml_def['id'] = db_defs[name]['id']  # Add the ID for update
+                instance = self.update_pubsub_topic_definition(yaml_def, session)
+                updated.append(instance)
+
+                # Update our tracking dictionary
+                self.pubsub_topic_defs[name] = to_json(instance, return_as_dict=True)['fields']
 
         logger.info('Pubsub topic definitions sync completed: created=%d, updated=%d', len(created), len(updated))
         return created, updated
