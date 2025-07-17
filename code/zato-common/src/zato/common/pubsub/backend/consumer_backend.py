@@ -227,3 +227,14 @@ class ConsumerBackend(Backend):
         self.broker_client.rename_topic(cid, old_topic_name, new_topic_name, CommonModuleCtx.Exchange_Name)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        topic_name:'str' = msg['topic_name']
+
+        # Delete all bindings for this topic from the exchange
+        self.broker_client.delete_topic(cid, topic_name, CommonModuleCtx.Exchange_Name)
+
+# ################################################################################################################################

@@ -129,9 +129,6 @@ class Backend:
         _ = self.topics.pop(topic_name)
         _ = self.subs_by_topic.pop(topic_name, None)
 
-        # Delete all bindings for this topic from the exchange
-        self.broker_client.delete_topic(cid, topic_name, ModuleCtx.Exchange_Name)
-
         logger.info(f'[{cid}] Successfully deleted topic {topic_name}')
 
 # ################################################################################################################################
