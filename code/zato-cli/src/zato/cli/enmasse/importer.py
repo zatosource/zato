@@ -32,6 +32,7 @@ from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
+from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -75,6 +76,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
+        self.pubsub_topic_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -99,6 +101,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
+        self.pubsub_topic_importer = PubSubTopicImporter(self)
 
 # ################################################################################################################################
 
@@ -539,6 +542,28 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_pubsub_topic(self, topic_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub topic definitions from a YAML configuration with the database.
+        """
+        if not topic_list:
+            return [], []
+
+        logger.info('Processing %d pubsub topic definitions', len(topic_list))
+
+        # Examine each pubsub topic item
+        for idx, item in enumerate(topic_list):
+            logger.info('Pubsub topic item %d: %s', idx, item)
+
+        topic_created, topic_updated = self.pubsub_topic_importer.sync_pubsub_topic_definitions(topic_list, session)
+
+        # Get pubsub topic definitions from the pubsub topic importer
+        self.pubsub_topic_defs = self.pubsub_topic_importer.pubsub_topic_defs
+        logger.info('Processed pubsub topic definitions: created=%d updated=%d', len(topic_created), len(topic_updated))
+
+        return topic_created, topic_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(
         self,
         yaml_config:'stranydict',
@@ -673,6 +698,13 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
             self.updated_objects['outgoing_soap'] = outgoing_soap_updated
+
+        # Process pubsub topic definitions
+        pubsub_topic_created, pubsub_topic_updated = self.sync_pubsub_topic(yaml_config.get('pubsub_topic', []), session)
+        if pubsub_topic_created:
+            self.created_objects['pubsub_topic'] = pubsub_topic_created
+        if pubsub_topic_updated:
+            self.updated_objects['pubsub_topic'] = pubsub_topic_updated
 
         logger.info('YAML synchronization completed')
 
