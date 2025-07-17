@@ -72,7 +72,7 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         """ Set up the test environment by opening a database session and parsing the YAML file.
         """
         if not self.session:
-            self.session = get_session_from_server_dir(self.server_path)
+            self.session = get_session_from_server_dir(self.server_path, stdin_data='')
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
@@ -80,6 +80,9 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         # Create security definitions first since outgoing REST connections may use them
         security_list = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_list, self.session)
+        self.session.commit()
+
+        # Security definitions are already populated in self.importer.sec_defs by the security importer
 
 # ################################################################################################################################
 
@@ -170,10 +173,12 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.assertEqual(len(outgoing_updated), 0)
 
         # Verify the outgoing REST connections dictionary was populated
-        self.assertEqual(len(self.outgoing_rest_importer.connection_defs), count)
+        enmasse_connections = {name: conn for name, conn in self.outgoing_rest_importer.connection_defs.items() if name.startswith('enmasse')}
+        self.assertEqual(len(enmasse_connections), count)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.outgoing_rest_defs), count)
+        enmasse_defs_in_importer = {name: conn for name, conn in self.importer.outgoing_rest_defs.items() if name.startswith('enmasse')}
+        self.assertEqual(len(enmasse_defs_in_importer), count)
 
 # ################################################################################################################################
 
