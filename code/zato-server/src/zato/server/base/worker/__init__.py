@@ -1606,5 +1606,8 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
 
+    def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
+        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
+
 # ################################################################################################################################
 # ################################################################################################################################
