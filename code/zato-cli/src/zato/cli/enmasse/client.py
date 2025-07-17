@@ -13,7 +13,7 @@ import time
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy import MetaData, inspect
+from sqlalchemy import MetaData, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
@@ -142,25 +142,36 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                     session.commit()
 
                     if result.rowcount > 0:
-                        logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} with ID{'s' if len(security_ids) != 1 else ''} from sec_base')
+                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with ID{"s" if len(security_ids) != 1 else ""} from sec_base')
+                        logger.debug(f'Deleted security names from {table_name}: {[row[1] for row in session.execute(f"SELECT name FROM {table_name} WHERE id IN ({ids_string})").fetchall()]}')
                 except SQLAlchemyError as e:
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
 
         # Special handling for pubsub_permission table - delete by sec_base_id
-        if security_ids:
+        if 'pubsub_permission' in table_names:
             try:
-                if len(security_ids) == 1:
-                    query = f'DELETE FROM pubsub_permission WHERE sec_base_id = {security_ids[0]}'
-                else:
-                    ids_string = ', '.join(str(id) for id in security_ids)
-                    query = f'DELETE FROM pubsub_permission WHERE sec_base_id IN ({ids_string})'
+                pubsub_permission_ids = session.execute(
+                    text('SELECT id FROM pubsub_permission WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
+                ).fetchall()
 
-                result = session.execute(query)
+                if pubsub_permission_ids:
+                    pubsub_permission_ids = [row[0] for row in pubsub_permission_ids]
+                    session.execute(
+                        text('DELETE FROM pubsub_permission WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
+                    )
+                    logger.info('Deleted %d rows from pubsub_permission with sec_base_ids from sec_base', len(pubsub_permission_ids))
+
+                # Also delete any remaining pubsub_permission rows to ensure clean test state
+                remaining_perms = session.execute(
+                    text('SELECT COUNT(*) FROM pubsub_permission')
+                ).fetchone()[0]
+
+                if remaining_perms > 0:
+                    session.execute(text('DELETE FROM pubsub_permission'))
+                    logger.info('Deleted %d remaining rows from pubsub_permission for clean test state', remaining_perms)
+
                 session.commit()
-
-                if result.rowcount > 0:
-                    logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from pubsub_permission with sec_base_id{'s' if len(security_ids) != 1 else ''} from sec_base')
             except SQLAlchemyError as e:
                 session.rollback()
                 logger.debug(f'Could not delete from pubsub_permission: {e}')
