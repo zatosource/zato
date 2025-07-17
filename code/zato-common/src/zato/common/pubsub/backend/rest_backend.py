@@ -144,7 +144,19 @@ class RESTBackend(Backend):
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'strdict') -> 'None':
 
-        logger.info('333 on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD %s', msg)
+        # Local aliases
+        cid = msg['cid']
+        username = msg['username']
+        new_password = msg['password']
+
+        # Update the password in the users dictionary
+        if username in self.rest_server.users:
+            self.rest_server.users[username] = new_password
+            logger.info(f'[{cid}] Updated password for user `{username}`')
+        else:
+            logger.info(f'[{cid}] User not found for password change: `{username}`')
+
+        logger.info('HTTP Basic Auth password changed -> msg: %s', replace_secrets(msg))
 
 # ################################################################################################################################
 # ################################################################################################################################
