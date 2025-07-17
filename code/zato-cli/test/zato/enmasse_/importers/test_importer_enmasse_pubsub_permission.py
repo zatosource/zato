@@ -132,11 +132,11 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         self.session.add(sec_base)
         self.session.commit()
 
-        # Create the pubsub permission definition using first pub pattern
-        first_pub_pattern = permission_def['pub'][0]
+        # Create the pubsub permission definition using a unique pattern for this test
+        test_pattern = 'test.update.pattern'
         definition = {
             'sec_base_id': sec_base.id,
-            'pattern': first_pub_pattern,
+            'pattern': test_pattern,
             'access_type': PubSub.API_Client.Publisher,
             'is_active': True
         }
