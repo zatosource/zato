@@ -147,6 +147,24 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
 
+        # Special handling for pubsub_permission table - delete by sec_base_id
+        if security_ids:
+            try:
+                if len(security_ids) == 1:
+                    query = f'DELETE FROM pubsub_permission WHERE sec_base_id = {security_ids[0]}'
+                else:
+                    ids_string = ', '.join(str(id) for id in security_ids)
+                    query = f'DELETE FROM pubsub_permission WHERE sec_base_id IN ({ids_string})'
+
+                result = session.execute(query)
+                session.commit()
+
+                if result.rowcount > 0:
+                    logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from pubsub_permission with sec_base_id{'s' if len(security_ids) != 1 else ''} from sec_base')
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.debug(f'Could not delete from pubsub_permission: {e}')
+
         # Special handling for job_interval_based table - need to handle it before job records are deleted
         # as it doesn't have a name column but depends on job_id from the job table
         try:

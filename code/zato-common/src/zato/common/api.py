@@ -1139,7 +1139,7 @@ class PubSub:
 
     class API_Client:
         Publisher = 'publisher'
-        Subscriber = 'publisher'
+        Subscriber = 'subscriber'
         Publisher_Subscriber = 'publisher-subscriber'
 
     class Delivery_Type:
