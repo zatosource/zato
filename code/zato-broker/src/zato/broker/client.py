@@ -133,6 +133,12 @@ class BrokerClient:
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
 
+        print()
+        print(111, msg)
+        print(222, exchange)
+        print(333, routing_key)
+        print()
+
         with self.producer.acquire() as client:
             client.publish(
                 msg,
@@ -571,7 +577,11 @@ class BrokerClient:
         queue_name: 'str',
         routing_key: 'str',
         conn: 'Connection | None'=None,
+        queue_arguments: 'stridctnone'=None,
     ) -> 'None':
+
+        # Make sure we have a cid
+        cid = cid or new_cid()
 
         # Get broker connection from input or build a new one
         if conn:
@@ -581,7 +591,11 @@ class BrokerClient:
             should_close = True
 
         # Customize the queue per our needs ..
-        queue_arguments = {'x-queue-type': 'quorum', 'x-delivery-limit': PubSub.Max_Repeats}
+        queue_arguments = queue_arguments or {}
+        queue_arguments.update({
+            'x-queue-type': 'quorum',
+            'x-delivery-limit': PubSub.Max_Repeats
+        })
 
         # Create exchange and queue objects
         exchange = Exchange(exchange_name, type='topic', durable=True)
@@ -597,6 +611,11 @@ class BrokerClient:
         # Close the connection if it was opened by us
         if should_close:
             conn.close()
+
+# ################################################################################################################################
+
+    def create_internal_queue(self, queue_name:'str') -> 'None':
+        self.create_bindings('', 'n/a', 'components', queue_name, queue_name)
 
 # ################################################################################################################################
 
