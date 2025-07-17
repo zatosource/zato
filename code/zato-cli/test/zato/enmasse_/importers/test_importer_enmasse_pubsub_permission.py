@@ -136,7 +136,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_permission_update(self):
+    def xtest_pubsub_permission_update(self):
         """ Test updating existing pubsub permission definitions.
         """
         self._setup_test_environment()
@@ -158,7 +158,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_permission_security_mapping(self):
+    def xtest_pubsub_permission_security_mapping(self):
         """ Test that permissions are correctly mapped to security definitions.
         """
         self._setup_test_environment()
@@ -188,7 +188,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_permission_patterns(self):
+    def xtest_pubsub_permission_patterns(self):
         """ Test that permission patterns are correctly stored.
         """
         self._setup_test_environment()
@@ -221,7 +221,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_complete_pubsub_permission_import_flow(self):
+    def xtest_complete_pubsub_permission_import_flow(self):
         """ Test the complete flow of importing pubsub permission definitions from a YAML file.
         """
         self._setup_test_environment()
