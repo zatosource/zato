@@ -24,6 +24,7 @@ from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from getpass import getuser as getpass_getuser
 from glob import glob
@@ -93,7 +94,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
-     SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     Secret_Shadow, SIMPLE_IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1978,5 +1979,18 @@ def publish_file(broker_client, cid:'str', file_path:'str') -> 'dict':
 def get_absolute_path(base_dir:'str', relative_path:'str') -> 'str':
     program_dir = Path(os.path.dirname(os.path.abspath(base_dir)))
     return os.path.abspath(os.path.join(program_dir, relative_path))
+
+# ################################################################################################################################
+
+def replace_secrets(data:'any_') -> 'strdict':
+
+    prefixes = ('password', 'secret')
+    data = deepcopy(data)
+
+    for key in list(data):
+        if key.startswith(prefixes):
+            data[key] = Secret_Shadow
+
+    return data
 
 # ################################################################################################################################

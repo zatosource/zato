@@ -11,6 +11,8 @@ from logging import getLogger
 
 # Zato
 from zato.common.pubsub.backend.common import Backend
+from zato.common.pubsub.consumer import start_internal_consumer
+from zato.common.util.api import replace_secrets, spawn_greenlet
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +41,17 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
+    def start_internal_pubusb_subscriber(self) -> 'None':
+        _ = spawn_greenlet(
+            start_internal_consumer,
+            'zato.pubsub',
+            'pubsub',
+            'zato-pubsub',
+            self._on_internal_message_callback
+        )
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
 
         # Local aliases
@@ -59,9 +72,13 @@ class RESTBackend(Backend):
             for sub in subs.values():
                 sub.topic_name = new_topic_name
 
+        logger.info('Topic updated -> msg: %s', msg)
+
 # ################################################################################################################################
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'strdict') -> 'None':
+
+        logger.warning('222 on_broker_msg_SECURITY_BASIC_AUTH_CREATE')
 
         # Local aliases
         cid = msg['cid']
@@ -71,9 +88,13 @@ class RESTBackend(Backend):
         # Create the user now
         self.rest_server.create_user(cid, sec_name, password)
 
+        logger.info('HTTP Basic Auth created -> msg: %s', replace_secrets(msg))
+
 # ################################################################################################################################
 
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'strdict') -> 'None':
+
+        logger.warning('333 on_broker_msg_SECURITY_BASIC_AUTH_EDIT')
 
         # Local aliases
         cid = msg['cid']
@@ -119,6 +140,8 @@ class RESTBackend(Backend):
                     # .. and confirm we're done.
                     log_msg = f'[{cid}] Updated subscription for topic `{topic_name}` from `{old_sec_name}` to `{new_sec_name}`'
                     logger.info(log_msg)
+
+        logger.info('HTTP Basic Auth updated -> msg: %s', msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
