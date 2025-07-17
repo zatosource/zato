@@ -33,6 +33,7 @@ from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
+from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -77,6 +78,7 @@ class EnmasseYAMLImporter:
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
         self.pubsub_topic_defs = {}
+        self.pubsub_permission_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -102,6 +104,7 @@ class EnmasseYAMLImporter:
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
         self.pubsub_topic_importer = PubSubTopicImporter(self)
+        self.pubsub_permission_importer = PubSubPermissionImporter(self)
 
 # ################################################################################################################################
 
@@ -706,6 +709,13 @@ class EnmasseYAMLImporter:
         if pubsub_topic_updated:
             self.updated_objects['pubsub_topic'] = pubsub_topic_updated
 
+        # Process pubsub permission definitions
+        pubsub_permission_created, pubsub_permission_updated = self.sync_pubsub_permission(yaml_config.get('pubsub_permission', []), session)
+        if pubsub_permission_created:
+            self.created_objects['pubsub_permission'] = pubsub_permission_created
+        if pubsub_permission_updated:
+            self.updated_objects['pubsub_permission'] = pubsub_permission_updated
+
         logger.info('YAML synchronization completed')
 
         return self.created_objects, self.updated_objects
@@ -725,6 +735,29 @@ class EnmasseYAMLImporter:
         """Synchronizes outgoing SOAP connection definitions from a YAML configuration with the database.
         """
         return self.outgoing_soap_importer.sync_outgoing_soap(outgoing_list, session)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def sync_pubsub_permission(self, permission_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub permission definitions from a YAML configuration with the database.
+        """
+        if not permission_list:
+            return [], []
+
+        logger.info('Processing %d pubsub permission definitions', len(permission_list))
+
+        # Examine each pubsub permission item
+        for idx, item in enumerate(permission_list):
+            logger.info('Pubsub permission item %d: %s', idx, item)
+
+        permission_created, permission_updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_list, session)
+
+        # Get pubsub permission definitions from the pubsub permission importer
+        self.pubsub_permission_defs = self.pubsub_permission_importer.pubsub_permission_defs
+        logger.info('Processed pubsub permission definitions: created=%d updated=%d', len(permission_created), len(permission_updated))
+
+        return permission_created, permission_updated
 
 # ################################################################################################################################
 # ################################################################################################################################

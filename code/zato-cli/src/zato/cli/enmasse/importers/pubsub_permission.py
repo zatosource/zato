@@ -1,0 +1,214 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import logging
+
+# Zato
+from zato.common.api import PubSub
+from zato.common.odb.model import PubSubPermission, SecurityBase, to_json
+from zato.common.odb.query import pubsub_permission_list
+from zato.common.util.sql import set_instance_opaque_attrs
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict, stranydict
+    from sqlalchemy.orm.session import Session as SASession
+    any_ = any_
+    anydict = anydict
+    stranydict = stranydict
+    SASession = SASession
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubPermissionImporter:
+    """ Handles importing pubsub permission definitions from YAML configuration files.
+    """
+
+    def __init__(self, importer:'any_') -> 'None':
+        self.importer = importer
+        self.pubsub_permission_defs = {}
+
+# ################################################################################################################################
+
+    def _process_pubsub_permission_defs(self, query_result:'any_', out:'dict') -> 'None':
+
+        items = query_result
+
+        logger.info('Processing %d pubsub permission definitions', len(items))
+
+        for item in items:
+            permission_obj = item[0]
+            permission_json = to_json(permission_obj, return_as_dict=True)
+            permission_dict = permission_json['fields']
+
+            key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
+            logger.info('Processing pubsub permission definition: %s (id=%s)', key, permission_dict.get('id'))
+            out[key] = permission_dict
+
+# ################################################################################################################################
+
+    def get_pubsub_permission_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+        out = {}
+
+        logger.info('Retrieving pubsub permission definitions from database for cluster_id=%s', cluster_id)
+        permissions = pubsub_permission_list(session, cluster_id)
+
+        self._process_pubsub_permission_defs(permissions, out)
+        logger.info('Total pubsub permission definitions from DB: %d', len(out))
+
+        for key in out:
+            logger.info('DB pubsub permission def: key=%s', key)
+
+        return out
+
+# ################################################################################################################################
+
+    def create_pubsub_permission_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubPermission':
+        """ Creates a new pubsub permission definition in the database.
+        """
+        logger.info('Creating pubsub permission definition: %s', definition)
+
+        instance = PubSubPermission()
+        instance.cluster_id = self.importer.cluster_id
+        instance.sec_base_id = definition['sec_base_id']
+        instance.pattern = definition['pattern']
+        instance.access_type = definition['access_type']
+        instance.is_active = definition.get('is_active', True)
+
+        set_instance_opaque_attrs(instance, definition)
+        session.add(instance)
+        session.commit()
+
+        return instance
+
+# ################################################################################################################################
+
+    def update_pubsub_permission_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubPermission':
+        """ Updates an existing pubsub permission definition in the database.
+        """
+        logger.info('Updating pubsub permission definition: %s', definition)
+
+        instance = session.query(PubSubPermission).filter_by(id=definition['id']).one()
+        instance.sec_base_id = definition['sec_base_id']
+        instance.pattern = definition['pattern']
+        instance.access_type = definition['access_type']
+        instance.is_active = definition.get('is_active', True)
+
+        set_instance_opaque_attrs(instance, definition)
+        session.commit()
+
+        return instance
+
+# ################################################################################################################################
+
+    def should_create_pubsub_permission_definition(self, yaml_def:'stranydict', db_defs:'anydict') -> 'bool':
+        """ Determines if a pubsub permission definition should be created.
+        """
+        key = f"{yaml_def['sec_base_id']}_{yaml_def['pattern']}_{yaml_def['access_type']}"
+        return key not in db_defs
+
+# ################################################################################################################################
+
+    def should_update_pubsub_permission_definition(self, yaml_def:'stranydict', db_def:'stranydict') -> 'bool':
+        """ Determines if a pubsub permission definition should be updated by comparing YAML and DB definitions.
+        """
+        # Compare is_active
+        yaml_is_active = yaml_def.get('is_active', True)
+        db_is_active = db_def.get('is_active', True)
+        if yaml_is_active != db_is_active:
+            logger.info('is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
+            return True
+
+        return False
+
+# ################################################################################################################################
+
+    def get_security_base_id_by_name(self, security_name:'str', session:'SASession') -> 'int':
+        """ Gets the security base ID by name.
+        """
+        sec_base = session.query(SecurityBase).filter_by(name=security_name, cluster_id=self.importer.cluster_id).one()
+        return sec_base.id
+
+# ################################################################################################################################
+
+    def sync_pubsub_permission_definitions(self, permission_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub permission definitions from YAML with the database.
+        """
+        logger.info('Processing %d pubsub permission definitions from YAML', len(permission_list))
+
+        # Get existing definitions from database
+        db_defs = self.get_pubsub_permission_defs_from_db(session, self.importer.cluster_id)
+
+        created = []
+        updated = []
+
+        for yaml_def in permission_list:
+            security_name = yaml_def['security']
+            logger.info('Processing YAML pubsub permission definition for security: %s', security_name)
+
+            # Get security base ID
+            sec_base_id = self.get_security_base_id_by_name(security_name, session)
+
+            # Process pub permissions
+            for pattern in yaml_def.get('pub', []):
+                permission_def = {
+                    'sec_base_id': sec_base_id,
+                    'pattern': pattern,
+                    'access_type': PubSub.API_Client.Publisher,
+                    'is_active': yaml_def.get('is_active', True)
+                }
+
+                key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Publisher}"
+
+                if self.should_create_pubsub_permission_definition(permission_def, db_defs):
+                    instance = self.create_pubsub_permission_definition(permission_def, session)
+                    created.append(instance)
+                    self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                else:
+                    permission_def['id'] = db_defs[key]['id']
+                    if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
+                        instance = self.update_pubsub_permission_definition(permission_def, session)
+                        updated.append(instance)
+                        self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+
+            # Process sub permissions
+            for pattern in yaml_def.get('sub', []):
+                permission_def = {
+                    'sec_base_id': sec_base_id,
+                    'pattern': pattern,
+                    'access_type': PubSub.API_Client.Subscriber,
+                    'is_active': yaml_def.get('is_active', True)
+                }
+
+                key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Subscriber}"
+
+                if self.should_create_pubsub_permission_definition(permission_def, db_defs):
+                    instance = self.create_pubsub_permission_definition(permission_def, session)
+                    created.append(instance)
+                    self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                else:
+                    permission_def['id'] = db_defs[key]['id']
+                    if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
+                        instance = self.update_pubsub_permission_definition(permission_def, session)
+                        updated.append(instance)
+                        self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+
+        logger.info('Pubsub permission definitions sync completed: created=%d, updated=%d', len(created), len(updated))
+        return created, updated
+
+# ################################################################################################################################
+# ################################################################################################################################
