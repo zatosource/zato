@@ -24,7 +24,7 @@ The framework is implemented using:
 - `pubsub_test_server.py` - Server entry point and runner
 - `users_yaml.py` - Parser and calculator for dynamic message count
 - `message_sender.py` - Client for generating and sending messages
-- `pubsub_test_client.py` - Client entry point and runner
+- `cli.py` - Command line interface utilities
 
 ## Server Configuration
 
@@ -208,13 +208,16 @@ python pubsub_test_client.py --config /path/to/client_config.yaml
 ### YAML Configuration File
 ```yaml
 client:
-  server_url: "http://127.0.0.1:44556/messages"  # URL of test server
+  server_url: "http://127.0.0.1:44556/pubsub/topic/"  # URL of PubSub server
   request_timeout: 30  # HTTP request timeout in seconds
   retry_count: 3  # Number of retries for failed requests
 
 messaging:
   users_yaml_path: "/path/to/zato/common/pubsub/users.yaml"  # Path to users.yaml
   messages_per_topic_per_user: 10  # Each publisher sends this many messages to each topic
+  max_concurrent_publishers: 50  # Maximum concurrent publisher greenlets
+  max_send_rate: 1000  # Maximum send rate
+  send_interval: 0.01  # Interval between sends
   max_concurrent_publishers: 50  # Maximum number of concurrent publisher greenlets
   max_send_rate: 1000  # Maximum messages per second overall
   send_interval: 0.01  # Interval between sends (seconds) per publisher
@@ -266,13 +269,14 @@ Messages are generated dynamically based on configuration parameters:
    - Unique message identifiers
    - Timestamps for tracking
 
-### Authentication and Security
+### Content Configuration
 
-The client uses HTTP Basic Authentication to connect to the PubSub REST server:
+The client generates message content based on configuration:
 
-1. Credentials are extracted from users.yaml
-2. Each publisher uses its own username/password
-3. Connections are made over configurable endpoints
+1. Template-based content generation
+2. Configurable message size (min_size, max_size)
+3. Complexity levels (simple, medium, complex)
+4. Publisher and topic identification in messages
 
 ### Concurrency Implementation
 
@@ -320,37 +324,40 @@ The client uses gevent for concurrency:
 
 ```python
 # Initialize the message sender with configuration
-sender = MessageSender('/path/to/client_config.yaml')
+sender = MessageSender('/path/to/sender_config.yaml')
 
 # Start sending messages and collect statistics
 results = sender.start()
 
 # Process the results
 print(f"Sent {results['summary']['total_sent']} messages")
+print(f"Failed: {results['summary']['failed']} messages")
 print(f"Rate: {results['summary']['rate_per_second']:.2f} msgs/sec")
 ```
 
-### Integration with PubSub REST Server
+### Integration with Test Server
 
-The client is designed to work with a PubSub REST server that provides the following endpoints:
+The message sender works with the test collection server:
 
-- `/pubsub/topic/<topic_name>` - For publishing messages
-- `/pubsub/subscribe/topic/<topic_name>` - For managing subscriptions
-- `/pubsub/health` - For health checks
+- Sends messages to `/messages` endpoint on the test server
+- Uses POST method with JSON payload
+- Tracks success/failure statistics
+- Implements retry logic for failed requests
 
-Messages are sent to the server with the following structure:
+Messages are sent to the test server with the following structure:
 
 ```json
 {
-  "data": { /* message content */ },
-  "ext_client_id": "test-client-username",
+  "message_id": "pub-123456789",
+  "publication_time": "2025-07-16T09:40:14+02:00",
+  "publisher_name": "service_x",
+  "topic_name": "example_topic",
+  "queue_name": "sub_key_12345",
   "priority": 5,
   "expiration": 3600,
-  "correl_id": "corr-uuid"
+  "content": "Message payload here"
 }
 ```
-
-The client expects HTTP 200 responses for successful publications, and handles error responses appropriately.
 
 ## Message Sender Capabilities
 
