@@ -55,6 +55,13 @@ class PubSubPermissionImporter:
 
         for item in items:
 
+            item = item.to_dict()
+            item = item['result']
+
+            print()
+            print(111, item)
+            print()
+
             # Each item is a tuple: (PubSubPermission, security_name, subscription_count)
             permission_obj = item[0]  # First element is the PubSubPermission object
             security_name = item[1]   # Second element is the security name
