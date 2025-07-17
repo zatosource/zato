@@ -134,7 +134,7 @@ class Consumer:
     def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
 
         # Public pub/sub queues require special configuration
-        if config.queue.startswith('zpsk'):
+        if config.queue.startswith('zpsk') or config.queue in {'server', 'pubsub', 'scheduler'}:
             queue_arguments={'x-queue-type': config.queue_type, 'x-delivery-limit': config.max_repeats}
         else:
             queue_arguments = None

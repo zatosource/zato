@@ -213,7 +213,6 @@ class ConsumerBackend(Backend):
         else:
             logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
 
-
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
