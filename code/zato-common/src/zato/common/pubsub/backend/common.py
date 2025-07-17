@@ -14,14 +14,13 @@ from traceback import format_exc
 from uuid import uuid4
 
 # gevent
-from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
 from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.broker_message import SERVICE
-from zato.common.pubsub.consumer import start_internal_consumer, start_public_consumer
+from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
 from zato.common.util.api import new_sub_key, spawn_greenlet, utcnow
 
@@ -32,8 +31,7 @@ if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
     from zato.common.pubsub.server import PubSubRESTServer
-    from zato.common.typing_ import any_, anydictnone, callable_, dict_, strdict, strlist, strnone
-    from zato.server.connection.amqp_ import Consumer
+    from zato.common.typing_ import any_, anydictnone, dict_, strdict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,10 +68,9 @@ def generate_msg_id() -> 'str':
 # ################################################################################################################################
 
 class Backend:
-    """ Backend implementation of pub/sub, irrespective of the actual REST server.
+    """ Backend implementation of pub/sub, irrespective of the actual server using it (REST pub/sub vs. Parallel).
     """
     topics: 'dict_[str, Topic]' # Maps topic_name to a Topic object
-    consumers: 'dict_[str, Consumer]' # Maps sub_keys to Consumer objects
     subs_by_topic: 'topic_subs'
 
     def __init__(self, rest_server:'PubSubRESTServer', broker_client:'BrokerClient') -> 'None':
@@ -81,7 +78,6 @@ class Backend:
         self.rest_server = rest_server
         self.broker_client = broker_client
         self.topics = {}
-        self.consumers = {}
         self.subs_by_topic = {}
 
         # This lock is used to update other locks
@@ -97,58 +93,17 @@ class Backend:
         # Local aliases
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
-        is_active:'bool' = msg['is_active']
         sec_name:'str' = msg['sec_name']
         topic_name_list:'strlist' = msg['topic_name_list']
 
         # Process each topic in the list
         for topic_name in topic_name_list:
-            _ = self.subscribe_impl(cid, topic_name, sec_name, sub_key, is_active)
+            _ = self.register_subscription(cid, topic_name, sec_name, sub_key)
 
         # Log all subscribed topics
         topic_name_list_human = ', '.join(topic_name_list)
         log_msg = f'[{cid}] Successfully subscribed {sec_name} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
-
-        # Local aliases
-        cid:'str' = msg['cid']
-        sub_key:'str' = msg['sub_key']
-        is_active:'bool' = msg['is_active']
-        topic_name_list:'strlist' = msg['topic_name_list']
-
-        # Do we have such a consumer ..
-        if consumer := self.consumers.get(sub_key):
-
-            # .. get a queue for that consumer ..
-            queue_name = consumer.config.queue
-
-            # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
-            self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
-
-            # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
-
-            if is_active:
-                if consumer.is_stopped:
-                    consumer.keep_running = True
-
-                    # .. if its start method has been called it means it's already running in a new thread ..
-                    if consumer.start_called:
-                        consumer.start()
-
-                    # .. otherwise, we start it in a new thread now ..
-                    else:
-                        _ = spawn_greenlet(consumer.start)
-            else:
-                if not consumer.is_stopped:
-                    consumer.stop()
-
-        # .. no consumer = we cannot continue.
-        else:
-            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
 
 # ################################################################################################################################
 
@@ -203,7 +158,7 @@ class Backend:
 
             # Unsubscribe each user
             for sec_name in sec_names:
-                _ = self.unsubscribe_impl(cid, topic_name, sec_name)
+                _ = self.unregister_subscription(cid, topic_name, sec_name)
 
         # Remove the topic from our mappings
         _ = self.topics.pop(topic_name)
@@ -240,7 +195,7 @@ class Backend:
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            _ = self.unsubscribe_impl(cid, topic_name, sec_name, sub_key=sub_key)
+            _ = self.unregister_subscription(cid, topic_name, sec_name, sub_key=sub_key)
 
 # ################################################################################################################################
 
@@ -413,53 +368,7 @@ class Backend:
 
 # ################################################################################################################################
 
-    def start_public_queue_consumer(
-        self,
-        cid: 'str',
-        topic_name: 'str',
-        sec_name: 'str',
-        sub_key: 'str',
-        is_active: 'bool',
-        on_msg_callback:'callable_',
-    ) -> 'None':
-
-        # Get or create a per-sub_key lock
-        with self._main_lock:
-            if sub_key not in self._sub_key_lock:
-                _lock = RLock()
-                self._sub_key_lock[sub_key] = _lock
-            else:
-                _lock = self._sub_key_lock[sub_key]
-
-        # .. create a new consumer if one doesn't exist yet ..
-        with _lock:
-
-            if sub_key not in self.consumers:
-
-                logger.info(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
-
-                # .. start a background consumer ..
-                result = spawn(
-                    start_public_consumer,
-                    cid,
-                    sec_name,
-                    sub_key,
-                    on_msg_callback,
-                    is_active
-                )
-
-                # .. get the actual consumer object ..
-                consumer:'Consumer' = result.get()
-
-                # .. store it for later use ..
-                self.consumers[sub_key] = consumer
-
-        # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}`')
-
-# ################################################################################################################################
-
-    def subscribe_impl(
+    def register_subscription(
         self,
         cid: 'str',
         topic_name: 'str',
@@ -504,7 +413,10 @@ class Backend:
 
 # ################################################################################################################################
 
-    def unsubscribe_impl(
+    #
+    # TODO: Move it to rest_backend.py
+    #
+    def unregister_subscription(
         self,
         cid: 'str',
         topic_name:'str',
@@ -525,32 +437,10 @@ class Backend:
         # .. but use its sub_key in case we don't have it on input ..
         sub_key = sub.sub_key
 
-        # .. remove the bindings on the broker ..
-        self.broker_client.delete_bindings(
-            cid,
-            sub_key,
-            ModuleCtx.Exchange_Name,
-            sub_key,
-            topic_name,
-        )
-
-        # .. get the consumer for this subscription ..
-        consumer = self.consumers[sub_key]
-
-        # .. check if there are any other bindings for this queue ..
-        remaining_bindings = self.broker_client.get_bindings_by_queue(cid, sub_key, ModuleCtx.Exchange_Name)
-
-        # .. if there are no more bindings for this queue, stop the consumer and remove it ..
-        if not remaining_bindings:
-
-            logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer and deleting queue')
-
-            # First stop it ..
-            consumer.stop()
-            _ = self.consumers.pop(sub_key)
-
-            # .. now, delete the queue ..
-            self.broker_client.delete_queue(sub_key)
+        #
+        # TODO: Send a message to the parallel server to call its backend's stop_public_queue_consumer
+        # TODO: Clean up all the internal structures
+        #
 
         logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({sec_name})')
 
