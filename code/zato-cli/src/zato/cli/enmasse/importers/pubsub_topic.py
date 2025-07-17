@@ -82,7 +82,7 @@ class PubSubTopicImporter:
     def create_pubsub_topic_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubTopic':
         """ Creates a new pubsub topic definition in the database.
         """
-        logger.info('Creating pubsub topic definition: %s', {k: v for k, v in definition.items() if k != 'password'})
+        logger.info('Creating pubsub topic definition: %s', definition)
 
         instance = PubSubTopic()
         instance.cluster_id = self.importer.cluster_id
@@ -101,7 +101,7 @@ class PubSubTopicImporter:
     def update_pubsub_topic_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubTopic':
         """ Updates an existing pubsub topic definition in the database.
         """
-        logger.info('Updating pubsub topic definition: name=%s id=%s', definition['name'], definition['id'])
+        logger.info('Updating pubsub topic definition: %s', definition)
 
         instance = session.query(PubSubTopic).filter_by(id=definition['id']).one()
         instance.name = definition['name']
@@ -170,7 +170,7 @@ class PubSubTopicImporter:
             else:
 
                 # Update existing definition
-                yaml_def['id'] = db_defs[name]['id']  # Add the ID for update
+                yaml_def['id'] = db_defs[name]['id'] # Add the ID for update
                 instance = self.update_pubsub_topic_definition(yaml_def, session)
                 updated.append(instance)
 
