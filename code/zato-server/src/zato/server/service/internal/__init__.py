@@ -18,7 +18,7 @@ from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_response_value
 from zato.common.util.sql import search as sql_search
@@ -283,7 +283,11 @@ class ChangePasswordBase(AdminService):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
                     self.broker_client.publish(self.request.input)
-                    self.broker_client.publish(self.request.input, routing_key='pubsub')
+
+                    if action == SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value:
+                        self.request.input.cid = self.cid
+                        self.request.input.username = instance.username
+                        self.broker_client.publish(self.request.input, routing_key='pubsub')
 
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())

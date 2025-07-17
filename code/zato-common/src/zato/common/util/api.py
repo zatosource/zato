@@ -1984,7 +1984,7 @@ def get_absolute_path(base_dir:'str', relative_path:'str') -> 'str':
 
 def replace_secrets(data:'any_') -> 'strdict':
 
-    prefixes = ('password', 'secret')
+    prefixes = ('password', 'secret', 'salt')
     data = deepcopy(data)
 
     for key in list(data):
