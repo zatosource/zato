@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.odb.model import PubSubPermission, SecurityBase, to_json
+from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
