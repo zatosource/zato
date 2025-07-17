@@ -1134,7 +1134,8 @@ class MyService(Service):
 
 class PubSub:
 
-    Max_Repeats = 500
+    # About 3 years if we repeat delivery attempts once per second
+    Max_Repeats = 100_000_000
 
     class API_Client:
         Publisher = 'publisher'

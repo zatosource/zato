@@ -46,9 +46,6 @@ class ConsumerBackend(Backend):
         self.broker_client = broker_client
         self.consumers = {}
 
-        # This lock is used to update other locks
-        self._main_lock = RLock()
-
         # This is a dictionary per-sub_key locks used to manipulate a specific consumer
         self._sub_key_lock:'dict_[str, RLock]' = {}
 
@@ -102,34 +99,51 @@ class ConsumerBackend(Backend):
 
 # ################################################################################################################################
 
-    def stop_public_queue_consumer(self, cid:'str', topic_name:'str', sub_key:'str') -> 'None':
+    def stop_public_queue_consumer(self, cid:'str', sub_key:'str') -> 'None':
 
-        # Remove the bindings on the broker ..
-        self.broker_client.delete_bindings(
-            cid,
-            sub_key,
-            CommonModuleCtx.Exchange_Name,
-            sub_key,
-            topic_name,
-        )
+        # Get the consumer for this subscription ..
+        if consumer := self.consumers[sub_key]:
 
-        # .. get the consumer for this subscription ..
-        consumer = self.consumers[sub_key]
-
-        # .. check if there are any other bindings for this queue ..
-        remaining_bindings = self.broker_client.get_bindings_by_queue(cid, sub_key, CommonModuleCtx.Exchange_Name)
-
-        # .. if there are no more bindings for this queue, stop the consumer and remove it ..
-        if not remaining_bindings:
-
-            logger.info(f'[{cid}] No more bindings for {sub_key}, stopping consumer and deleting queue')
-
-            # First stop it ..
+            # .. first, stop it ..
             consumer.stop()
             _ = self.consumers.pop(sub_key)
 
-            # .. now, delete the queue ..
-            self.broker_client.delete_queue(sub_key)
+            # .. now, log success.
+            logger.info(f'[{cid}] Stopped consumer for `{sub_key}`')
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, cid:'str', sub_key:'str') -> 'None':
+
+        # Log what we're about to do
+        logger.info(f'[{cid}] Deleting consumer for `{sub_key}`')
+
+        # Get all the bindings for that consumer ..
+        bindings = self.broker_client.get_bindings_by_queue(cid, sub_key, CommonModuleCtx.Exchange_Name)
+
+        # .. extrac topic names (same as routing key) ..
+        topic_names = [item['routing_key'] for item in bindings] # type: ignore
+        topic_names.sort()
+
+        logger.info(f'[{cid}] Consumer for `{sub_key}` is subscribed to {topic_names}')
+
+        # .. go through all of them ..
+        for topic_name in topic_names:
+
+            # .. delete that binding ..
+            self.broker_client.delete_bindings(
+                cid,
+                sub_key,
+                CommonModuleCtx.Exchange_Name,
+                sub_key,
+                topic_name,
+            )
+
+        # .. now, stop the consumer ..
+        self.stop_public_queue_consumer(cid, sub_key)
+
+        # .. and log success.
+        logger.info(f'[{cid}] Deleted consumer for `{sub_key}`')
 
 # ################################################################################################################################
 

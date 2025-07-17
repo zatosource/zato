@@ -147,7 +147,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    pubsub_backend:'PubSubBackend'
+    pubsub_consumer_backend:'PubSubBackend'
     broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
@@ -328,7 +328,7 @@ class WorkerStore(_WorkerStoreBase):
     def after_broker_client_set(self) -> 'None':
 
         # Create the container that will start all the queue listeners
-        self.pubsub_backend = ConsumerBackend(self, self.broker_client)
+        self.pubsub_consumer_backend = ConsumerBackend(self, self.broker_client)
 
         # Pub/sub
         self.init_pubsub()
@@ -807,7 +807,7 @@ class WorkerStore(_WorkerStoreBase):
             is_active = config['is_active']
 
             _ = spawn(
-                self.pubsub_backend.start_public_queue_consumer,
+                self.pubsub_consumer_backend.start_public_queue_consumer,
                 cid,
                 topic_name,
                 sec_name,
@@ -1590,4 +1590,10 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
         self.email_imap_api.change_password(msg)
 
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
+        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(msg.cid, msg.sub_key)
+
+# ################################################################################################################################
 # ################################################################################################################################
