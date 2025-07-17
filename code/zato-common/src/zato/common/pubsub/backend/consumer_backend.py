@@ -213,4 +213,17 @@ class ConsumerBackend(Backend):
         else:
             logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
 
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid:'str' = msg['cid']
+        new_topic_name:'str' = msg['new_topic_name']
+        old_topic_name:'str' = msg['old_topic_name']
+
+        # Call the broker client to rename the topic by changing all bindings
+        self.broker_client.rename_topic(cid, old_topic_name, new_topic_name, CommonModuleCtx.Exchange_Name)
+
 # ################################################################################################################################

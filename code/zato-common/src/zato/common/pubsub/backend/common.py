@@ -98,32 +98,6 @@ class Backend:
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
-
-        # Local aliases
-        cid:'str' = msg['cid']
-        new_topic_name:'str' = msg['new_topic_name']
-        old_topic_name:'str' = msg['old_topic_name']
-
-        # Move the topic in internal mappings
-        if old_topic_name in self.topics:
-            topic = self.topics.pop(old_topic_name)
-            self.topics[new_topic_name] = topic
-
-        # Move all subscriptions to the new topic name
-        if old_topic_name in self.subs_by_topic:
-            subs = self.subs_by_topic.pop(old_topic_name)
-            self.subs_by_topic[new_topic_name] = subs
-
-            # Update each subscription to point to the new topic
-            for sub in subs.values():
-                sub.topic_name = new_topic_name
-
-        # Call the broker client to rename the topic by changing all bindings
-        self.broker_client.rename_topic(cid, old_topic_name, new_topic_name, ModuleCtx.Exchange_Name)
-
-# ################################################################################################################################
-
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'strdict') -> 'None':
 
         # Local aliases
