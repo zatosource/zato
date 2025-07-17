@@ -48,7 +48,7 @@ from zato.common.util.api import new_cid
 from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
     UnauthorizedResponse
-from zato.common.pubsub.backend import Backend
+from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.util import get_broker_config
 
 # ################################################################################################################################
@@ -132,7 +132,7 @@ class PubSubRESTServer:
         self.broker_client = BrokerClient()
 
         # Initialize the backend
-        self.backend = Backend(self, self.broker_client)
+        self.backend = RESTBackend(self, self.broker_client)
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
@@ -196,7 +196,7 @@ class PubSubRESTServer:
                     logger.info(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.register_subscriptioncid, topic_name, sec_name, sub_key)
+                    _ = self.backend.register_subscription(cid, topic_name, sec_name, sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
@@ -243,7 +243,7 @@ class PubSubRESTServer:
 
                 # Create the subscription
                 logger.info(f'[{cid}] Registering subscription from YAML: {username} -> {topic_name} (key={sub_key})')
-                _ = self.backend.register_subscriptioncid, topic_name, username, sub_key)
+                _ = self.backend.register_subscription(cid, topic_name, username, sub_key)
 
 # ################################################################################################################################
 
@@ -421,7 +421,7 @@ class PubSubRESTServer:
         username = self._ensure_authenticated(cid, environ)
 
         # Subscribe to topic using backend
-        result = self.backend.register_subscriptioncid, topic_name, username)
+        result = self.backend.register_subscription(cid, topic_name, username)
 
         response = APIResponse()
         response.is_ok = result.is_ok

@@ -39,7 +39,7 @@ from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub.backend import Backend as PubSubBackend
+from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, utcnow, \
     visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
@@ -327,10 +327,8 @@ class WorkerStore(_WorkerStoreBase):
 
     def after_broker_client_set(self) -> 'None':
 
-        self.pubsub_backend = PubSubBackend(
-            None, # type: ignore
-            self.broker_client,
-        )
+        # Create the container that will start all the queue listeners
+        self.pubsub_backend = ConsumerBackend(self, self.broker_client)
 
         # Pub/sub
         self.init_pubsub()
