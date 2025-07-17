@@ -16,7 +16,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.common.api import PubSub
-from zato.common.odb.model import PubSubPermission, SecurityBase
+from zato.common.odb.model import HTTPBasicAuth, PubSubPermission, SecurityBase
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -71,6 +71,10 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+            
+        # Set cluster_id on importer if not already set
+        if not hasattr(self.importer, 'cluster_id') or not self.importer.cluster_id:
+            self.importer.cluster_id = 1
 
 # ################################################################################################################################
 
@@ -85,11 +89,12 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         # Create security bases from template
         sec_bases = []
         for permission_def in permission_defs:
-            sec_base = SecurityBase()
-            sec_base.name = permission_def['security']
-            sec_base.sec_type = 'basic_auth'
-            sec_base.cluster_id = self.importer.cluster_id
-            sec_base.is_active = True
+            sec_base = HTTPBasicAuth(
+                name=permission_def['security'],
+                is_active=True,
+                realm='test'
+            )
+            sec_base.cluster_id = 1  # Use explicit cluster_id
             self.session.add(sec_base)
             sec_bases.append(sec_base)
         self.session.commit()
@@ -102,7 +107,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         self.assertEqual(len(updated), 0)
 
         # Verify permissions were created correctly
-        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=self.importer.cluster_id).all()
+        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=1).all()
         self.assertEqual(len(all_permissions), 6)
 
         # Verify specific permissions
@@ -124,11 +129,12 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         permission_def = permission_defs[0]
 
         # Create security base from template
-        sec_base = SecurityBase()
-        sec_base.name = permission_def['security']
-        sec_base.sec_type = 'basic_auth'
-        sec_base.cluster_id = self.importer.cluster_id
-        sec_base.is_active = True
+        sec_base = HTTPBasicAuth(
+            name=permission_def['security'],
+            is_active=True,
+            realm='test'
+        )
+        sec_base.cluster_id = 1  # Use explicit cluster_id
         self.session.add(sec_base)
         self.session.commit()
 
@@ -138,7 +144,8 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
             'sec_base_id': sec_base.id,
             'pattern': test_pattern,
             'access_type': PubSub.API_Client.Publisher,
-            'is_active': True
+            'is_active': True,
+            'cluster_id': 1
         }
         instance = self.pubsub_permission_importer.create_pubsub_permission_definition(definition, self.session)
         self.session.commit()
@@ -167,11 +174,12 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         # Create security bases from template
         sec_bases = []
         for permission_def in permission_defs:
-            sec_base = SecurityBase()
-            sec_base.name = permission_def['security']
-            sec_base.sec_type = 'basic_auth'
-            sec_base.cluster_id = self.importer.cluster_id
-            sec_base.is_active = True
+            sec_base = HTTPBasicAuth(
+                name=permission_def['security'],
+                is_active=True,
+                realm='test'
+            )
+            sec_base.cluster_id = 1  # Use explicit cluster_id
             self.session.add(sec_base)
             sec_bases.append(sec_base)
         self.session.commit()
@@ -184,7 +192,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         self.assertEqual(len(updated), 0)
 
         # Verify permissions were created correctly
-        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=self.importer.cluster_id).all()
+        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=1).all()
         self.assertEqual(len(all_permissions), 6)
 
         # Verify specific permissions
