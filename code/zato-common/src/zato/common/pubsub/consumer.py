@@ -183,7 +183,7 @@ if __name__ == '__main__':
         # .. and acknowledge the message so we can read more of them.
         msg.ack()
 
-    _ = start_internal_consumer(process_message)
+    _ = start_internal_consumer('demo-consumer', 'server', 'hello123', process_message)
 
 # ################################################################################################################################
 # ################################################################################################################################
