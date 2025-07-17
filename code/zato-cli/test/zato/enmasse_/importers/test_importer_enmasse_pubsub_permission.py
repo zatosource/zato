@@ -16,20 +16,20 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.common.api import PubSub
 from zato.common.odb.model import PubSubPermission, SecurityBase
-from zato.common.test import BaseSSOTestCase
-from zato.common.test.enmasse_ import _template_complex_01
+from zato.common.test import BaseSIOTestCase
+from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubPermissionImporterTestCase(BaseSSOTestCase):
+class PubSubPermissionImporterTestCase(BaseSIOTestCase):
 
     def setUp(self):
         super().setUp()
 
         # Create a temporary YAML file with the complex template
         self.temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
-        self.temp_file.write(_template_complex_01)
+        self.temp_file.write(template_complex_01)
         self.temp_file.close()
 
         # Initialize the importer
