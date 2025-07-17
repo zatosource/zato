@@ -209,6 +209,7 @@
 
             'rest_push_endpoint_name',
             'push_service_name',
+            'topic_names',
         ]
     }
     </script>
@@ -260,6 +261,7 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -300,6 +302,7 @@
 
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
                         <td class='ignore'>{{ item.push_service_name }}</td>
+                        <td class='ignore'>{{ item.topic_names }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
