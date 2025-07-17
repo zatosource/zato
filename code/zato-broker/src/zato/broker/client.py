@@ -28,7 +28,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 # Zato
-from zato.common.api import AMQP
+from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
@@ -585,9 +585,12 @@ class BrokerClient:
             conn = self.get_connection()
             should_close = True
 
+        # Customize the queue per our needs ..
+        queue_arguments = {'x-queue-type': 'quorum', 'x-delivery-limit': PubSub.Max_Repeats}
+
         # Create exchange and queue objects
         exchange = Exchange(exchange_name, type='topic', durable=True)
-        queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True)
+        queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True, queue_arguments=queue_arguments)
 
         # Bind the queue to the exchange with the topic name as the routing key
         logger.info(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
