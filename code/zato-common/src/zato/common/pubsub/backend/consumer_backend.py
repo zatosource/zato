@@ -52,6 +52,8 @@ class ConsumerBackend(Backend):
         # This is a dictionary per-sub_key locks used to manipulate a specific consumer
         self._sub_key_lock:'dict_[str, RLock]' = {}
 
+        super().__init__(broker_client)
+
 # ################################################################################################################################
 
     def start_public_queue_consumer(
