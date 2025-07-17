@@ -49,31 +49,22 @@ class PubSubPermissionImporter:
         """
         logger.info('Processing pubsub permission definitions from database')
 
-        # Handle different result types - could be SearchResults or query object
-        if hasattr(query_result, 'result'):
-            # It's a SearchResults object
-            items = query_result.result
-        elif hasattr(query_result, '__iter__'):
-            # It's a query object, convert to list
-            items = list(query_result)
-        else:
-            # Fallback - assume it's already a list
-            items = query_result
-
+        # Convert query result to list
+        items = list(query_result)
         logger.info('Processing %d pubsub permission definitions', len(items))
 
         for item in items:
 
-            # Each item is a tuple: (PubSubPermission, name, subscription_count)
+            # Each item is a tuple: (PubSubPermission, security_name, subscription_count)
             permission_obj = item[0]  # First element is the PubSubPermission object
-            name = item[1]  # Second element is the security definition name
+            security_name = item[1]   # Second element is the security name
             subscription_count = item[2]  # Third element is the subscription count
 
             permission_json = to_json(permission_obj, return_as_dict=True)
             permission_dict = permission_json['fields']  # Extract the fields dictionary
 
-            # Add the security definition name to the permission dict
-            permission_dict['security_name'] = name
+            # Add additional fields from the query
+            permission_dict['security_name'] = security_name
             permission_dict['subscription_count'] = subscription_count
 
             # Create a unique key for this permission
