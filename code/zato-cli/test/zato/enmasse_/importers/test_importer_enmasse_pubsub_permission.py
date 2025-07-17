@@ -53,19 +53,24 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         # Load and parse the YAML configuration
         yaml_config = self.importer.load_yaml_config(self.temp_file.name)
 
+        # Get permission definitions from YAML
+        permission_defs = yaml_config['pubsub_permission']
+        first_permission = permission_defs[0]
+
         # Create security base from template
         sec_base = SecurityBase()
-        sec_base.name = 'enmasse.basic_auth.1'
+        sec_base.name = first_permission['security']
         sec_base.sec_type = 'basic_auth'
         sec_base.cluster_id = self.cluster_id
         sec_base.is_active = True
         self.session.add(sec_base)
         self.session.commit()
 
-        # Create pubsub permission definition using data from template
+        # Create pubsub permission definition using first pub pattern from template
+        first_pub_pattern = first_permission['pub'][0]
         definition = {
             'sec_base_id': sec_base.id,
-            'pattern': 'enmasse.topic.1',
+            'pattern': first_pub_pattern,
             'access_type': PubSub.API_Client.Publisher,
             'is_active': True
         }
@@ -76,7 +81,7 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         # Verify the permission was created
         self.assertIsNotNone(permission.id)
         self.assertEqual(permission.sec_base_id, sec_base.id)
-        self.assertEqual(permission.pattern, 'enmasse.topic.1')
+        self.assertEqual(permission.pattern, first_pub_pattern)
         self.assertEqual(permission.access_type, PubSub.API_Client.Publisher)
         self.assertTrue(permission.is_active)
         self.assertEqual(permission.cluster_id, self.cluster_id)
@@ -88,9 +93,13 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         # Load and parse the YAML configuration
         yaml_config = self.importer.load_yaml_config(self.temp_file.name)
 
+        # Get permission definitions from YAML
+        permission_defs = yaml_config['pubsub_permission']
+        second_permission = permission_defs[1]
+
         # Create security base from template
         sec_base = SecurityBase()
-        sec_base.name = 'enmasse.basic_auth.2'
+        sec_base.name = second_permission['security']
         sec_base.sec_type = 'basic_auth'
         sec_base.cluster_id = self.cluster_id
         sec_base.is_active = True
@@ -98,10 +107,11 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         self.session.commit()
 
         # Create initial pubsub permission using template data
+        first_pub_pattern = second_permission['pub'][0]
         permission = PubSubPermission()
         permission.cluster_id = self.cluster_id
         permission.sec_base_id = sec_base.id
-        permission.pattern = 'enmasse.topic.*'
+        permission.pattern = first_pub_pattern
         permission.access_type = PubSub.API_Client.Publisher
         permission.is_active = True
         self.session.add(permission)
@@ -111,7 +121,7 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         definition = {
             'id': permission.id,
             'sec_base_id': sec_base.id,
-            'pattern': 'enmasse.topic.*',
+            'pattern': first_pub_pattern,
             'access_type': PubSub.API_Client.Publisher,
             'is_active': False
         }
@@ -121,7 +131,7 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
 
         # Verify the permission was updated
         self.assertEqual(updated_permission.id, permission.id)
-        self.assertEqual(updated_permission.pattern, 'enmasse.topic.*')
+        self.assertEqual(updated_permission.pattern, first_pub_pattern)
         self.assertEqual(updated_permission.access_type, PubSub.API_Client.Publisher)
         self.assertFalse(updated_permission.is_active)
 
@@ -132,11 +142,14 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         # Load and parse the YAML configuration
         yaml_config = self.importer.load_yaml_config(self.temp_file.name)
 
+        # Get permission definitions from YAML
+        permission_defs = yaml_config['pubsub_permission']
+
         # Create security bases from template
         sec_bases = []
-        for i in range(1, 4):
+        for permission_def in permission_defs:
             sec_base = SecurityBase()
-            sec_base.name = f'enmasse.basic_auth.{i}'
+            sec_base.name = permission_def['security']
             sec_base.sec_type = 'basic_auth'
             sec_base.cluster_id = self.cluster_id
             sec_base.is_active = True
@@ -144,11 +157,8 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
             sec_bases.append(sec_base)
         self.session.commit()
 
-        # Get permission list from YAML config
-        permission_list = yaml_config.get('pubsub_permission', [])
-
         # Sync permissions
-        created, updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_list, self.session)
+        created, updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
 
         # Verify results
         self.assertEqual(len(created), 6)  # 2+2+2+1+1 = 6 total permissions
@@ -165,17 +175,19 @@ class PubSubPermissionImporterTestCase(BaseSSOTestCase):
         self.assertEqual(len(pub_permissions), 3)  # 2 + 1 + 0
         self.assertEqual(len(sub_permissions), 3)  # 2 + 1 + 1
 
-        # Check patterns from template
+        # Verify patterns match template data
         pub_patterns = {p.pattern for p in pub_permissions}
         sub_patterns = {p.pattern for p in sub_permissions}
 
-        self.assertIn('enmasse.topic.1', pub_patterns)
-        self.assertIn('enmasse.topic.2', pub_patterns)
-        self.assertIn('enmasse.topic.*', pub_patterns)
+        # Extract expected patterns from YAML
+        expected_pub_patterns = set()
+        expected_sub_patterns = set()
+        for perm_def in permission_defs:
+            expected_pub_patterns.update(perm_def.get('pub', []))
+            expected_sub_patterns.update(perm_def.get('sub', []))
 
-        self.assertIn('enmasse.topic.2', sub_patterns)
-        self.assertIn('enmasse.topic.3', sub_patterns)
-        self.assertIn('enmasse.#', sub_patterns)
+        self.assertEqual(pub_patterns, expected_pub_patterns)
+        self.assertEqual(sub_patterns, expected_sub_patterns)
 
 # ################################################################################################################################
 
