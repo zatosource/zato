@@ -84,7 +84,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         # Create security definitions first
         security_defs = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_defs, self.session)
-        self.importer.sec_defs = self.security_importer.sec_defs
+        self.importer.sec_defs = self.importer.sec_defs
 
         # Create pubsub topics
         topic_defs = self.yaml_config['pubsub_topic']

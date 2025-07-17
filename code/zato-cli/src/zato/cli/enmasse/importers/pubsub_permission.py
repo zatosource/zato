@@ -77,7 +77,7 @@ class PubSubPermissionImporter:
             permission_dict['subscription_count'] = subscription_count
 
             # Create a unique key for this permission
-            key = f"{permission_dict['sec_base_id']}:{permission_dict['pattern']}:{permission_dict['access_type']}"
+            key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
             logger.info('Processing pubsub permission definition: %s (id=%s)', key, permission_dict.get('id'))
             out[key] = permission_dict
 
