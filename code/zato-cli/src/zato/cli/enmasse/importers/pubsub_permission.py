@@ -46,8 +46,8 @@ class PubSubPermissionImporter:
 
     def _process_pubsub_permission_defs(self, query_result:'any_', out:'dict') -> 'None':
 
-        items = query_result
-
+        # Handle the query result - it's a SQLAlchemy query object
+        items = query_result.all()
         logger.info('Processing %d pubsub permission definitions', len(items))
 
         for item in items:
@@ -68,9 +68,7 @@ class PubSubPermissionImporter:
         logger.info('Retrieving pubsub permission definitions from database for cluster_id=%s', cluster_id)
         permissions = pubsub_permission_list(session, cluster_id)
 
-        # Convert query result to list to handle SearchResults
-        permission_items = list(permissions)
-        self._process_pubsub_permission_defs(permission_items, out)
+        self._process_pubsub_permission_defs(permissions, out)
         logger.info('Total pubsub permission definitions from DB: %d', len(out))
 
         for key in out:
@@ -86,7 +84,7 @@ class PubSubPermissionImporter:
         logger.info('Creating pubsub permission definition: %s', definition)
 
         instance = PubSubPermission()
-        instance.cluster_id = self.importer.cluster_id
+        instance.cluster_id = definition.get('cluster_id', 1)
         instance.sec_base_id = definition['sec_base_id']
         instance.pattern = definition['pattern']
         instance.access_type = definition['access_type']
@@ -172,7 +170,8 @@ class PubSubPermissionImporter:
                     'sec_base_id': sec_base_id,
                     'pattern': pattern,
                     'access_type': PubSub.API_Client.Publisher,
-                    'is_active': yaml_def.get('is_active', True)
+                    'is_active': yaml_def.get('is_active', True),
+                    'cluster_id': 1
                 }
 
                 key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Publisher}"
@@ -194,7 +193,8 @@ class PubSubPermissionImporter:
                     'sec_base_id': sec_base_id,
                     'pattern': pattern,
                     'access_type': PubSub.API_Client.Subscriber,
-                    'is_active': yaml_def.get('is_active', True)
+                    'is_active': yaml_def.get('is_active', True),
+                    'cluster_id': 1
                 }
 
                 key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Subscriber}"
