@@ -283,6 +283,7 @@ class ChangePasswordBase(AdminService):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
                     self.broker_client.publish(self.request.input)
+                    self.broker_client.publish(self.request.input, routing_key='pubsub')
 
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())

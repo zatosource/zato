@@ -19,9 +19,8 @@ from gevent.lock import RLock
 # Zato
 from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
-from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
-from zato.common.util.api import new_sub_key, spawn_greenlet, utcnow
+from zato.common.util.api import new_sub_key, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,17 +170,6 @@ class Backend:
         finally:
             # .. these are configuration messages so we always need to acknowledge them.
             msg.ack()
-
-# ################################################################################################################################
-
-    def start_internal_subscriber(self) -> 'None':
-        _ = spawn_greenlet(
-            start_internal_consumer,
-            'zato.pubsub',
-            'pubsub',
-            'zato-pubsub',
-            self._on_internal_message_callback
-        )
 
 # ################################################################################################################################
 

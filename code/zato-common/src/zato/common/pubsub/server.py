@@ -12,7 +12,6 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
-from datetime import datetime
 from http.client import OK
 from json import dumps, loads
 from logging import getLogger
@@ -44,7 +43,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid, utcnow
 from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
     UnauthorizedResponse
@@ -128,11 +127,14 @@ class PubSubRESTServer:
         if yaml_config_file:
             self.yaml_config = load_yaml_config(yaml_config_file)
 
-        # Initialize the broker client
+        # Build our broker client
         self.broker_client = BrokerClient()
 
         # Initialize the backend
         self.backend = RESTBackend(self, self.broker_client)
+
+        # Do start the broker client now
+        self._init_broker_client()
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
@@ -146,6 +148,18 @@ class PubSubRESTServer:
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
+
+# ################################################################################################################################
+
+    def _init_broker_client(self):
+
+        # Delete the queue to remove any message we don't want to read since they were published when we were not running,
+        # and then create it all again so we have a fresh start ..
+        self.broker_client.delete_queue('pubsub')
+        self.broker_client.create_internal_queue('pubsub')
+
+        # .. and now, start our subscriber.
+        self.backend.start_internal_pubusb_subscriber()
 
 # ################################################################################################################################
 
@@ -286,7 +300,7 @@ class PubSubRESTServer:
         logger.info(f'[{cid}] Setting up PubSub REST server at {self.host}:{self.port}')
 
         # For later use ..
-        start = datetime.now()
+        start = utcnow()
 
         # .. load test data ..
         # self._setup_from_yaml_config(cid)
@@ -295,7 +309,7 @@ class PubSubRESTServer:
         self._load_subscriptions(cid)
 
         # .. we're going to need it in a moment ..
-        end = datetime.now()
+        end = utcnow()
 
         user_count = len(self.users)
         topic_count = len(self.backend.topics)
