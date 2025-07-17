@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class PubSubPermissionImporter:
-    """ Handles importing pubsub permission definitions from YAML configuration files.
+    """ Handles importing pub/sub permission definitions from YAML configuration files.
     """
 
     def __init__(self, importer:'any_') -> 'None':
@@ -45,26 +45,36 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def _process_pubsub_permission_defs(self, query_result:'any_', out:'dict') -> 'None':
-        """ Process pubsub permission definitions from database query result.
+        """ Process pub/sub permission definitions from database query result.
         """
-        logger.info('Processing pubsub permission definitions from database')
+        logger.info('Processing pub/sub permission definitions from database')
 
-        # Convert query result to list
         items = list(query_result)
-        logger.info('Processing %d pubsub permission definitions', len(items))
+        search_result = items[0]
+        items = search_result.result
+
+        logger.info('Processing %d pub/sub permission definitions', len(search_result.result))
 
         for item in items:
-
-            item = item.to_dict()
-            item = item['result']
 
             # Each item is a tuple: (PubSubPermission, security_name, subscription_count)
             permission_obj = item[0]  # First element is the PubSubPermission object
             security_name = item[1]   # Second element is the security name
             subscription_count = item[2]  # Third element is the subscription count
 
-            permission_json = to_json(permission_obj, return_as_dict=True)
-            permission_dict = permission_json['fields']  # Extract the fields dictionary
+            if hasattr(permission_obj, '_asdict'):
+                permission_obj = permission_obj._asdict()
+                permission_obj = permission_obj['PubSubPermission']
+
+            # Extract fields directly from the permission object
+            permission_dict = {
+                'id': permission_obj.id,
+                'sec_base_id': permission_obj.sec_base_id,
+                'pattern': permission_obj.pattern,
+                'access_type': permission_obj.access_type,
+                'is_active': permission_obj.is_active,
+                'cluster_id': permission_obj.cluster_id
+            }
 
             # Add additional fields from the query
             permission_dict['security_name'] = security_name
@@ -72,7 +82,7 @@ class PubSubPermissionImporter:
 
             # Create a unique key for this permission
             key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
-            logger.info('Processing pubsub permission definition: %s (id=%s)', key, permission_dict.get('id'))
+            logger.info('Processing pub/sub permission definition: %s (id=%s)', key, permission_dict.get('id'))
             out[key] = permission_dict
 
 # ################################################################################################################################
@@ -80,23 +90,23 @@ class PubSubPermissionImporter:
     def get_pubsub_permission_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving pubsub permission definitions from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving pub/sub permission definitions from database for cluster_id=%s', cluster_id)
         permissions = pubsub_permission_list(session, cluster_id)
 
         self._process_pubsub_permission_defs(permissions, out)
-        logger.info('Total pubsub permission definitions from DB: %d', len(out))
+        logger.info('Total pub/sub permission definitions from DB: %d', len(out))
 
         for key in out:
-            logger.info('DB pubsub permission def: key=%s', key)
+            logger.info('DB pub/sub permission def: key=%s', key)
 
         return out
 
 # ################################################################################################################################
 
     def create_pubsub_permission_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubPermission':
-        """ Creates a new pubsub permission definition in the database.
+        """ Creates a new pub/sub permission definition in the database.
         """
-        logger.info('Creating pubsub permission definition: %s', definition)
+        logger.info('Creating pub/sub permission definition: %s', definition)
 
         instance = PubSubPermission()
         instance.cluster_id = definition.get('cluster_id', 1)
@@ -114,9 +124,9 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def update_pubsub_permission_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubPermission':
-        """ Updates an existing pubsub permission definition in the database.
+        """ Updates an existing pub/sub permission definition in the database.
         """
-        logger.info('Updating pubsub permission definition: %s', definition)
+        logger.info('Updating pub/sub permission definition: %s', definition)
 
         instance = session.query(PubSubPermission).filter_by(id=definition['id']).one()
         instance.sec_base_id = definition['sec_base_id']
@@ -132,7 +142,7 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def should_create_pubsub_permission_definition(self, yaml_def:'stranydict', db_defs:'anydict') -> 'bool':
-        """ Determines if a pubsub permission definition should be created.
+        """ Determines if a pub/sub permission definition should be created.
         """
         key = f"{yaml_def['sec_base_id']}_{yaml_def['pattern']}_{yaml_def['access_type']}"
         return key not in db_defs
@@ -140,7 +150,7 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def should_update_pubsub_permission_definition(self, yaml_def:'stranydict', db_def:'stranydict') -> 'bool':
-        """ Determines if a pubsub permission definition should be updated by comparing YAML and DB definitions.
+        """ Determines if a pub/sub permission definition should be updated by comparing YAML and DB definitions.
         """
         # Compare is_active
         yaml_is_active = yaml_def.get('is_active', True)
@@ -162,9 +172,9 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def sync_pubsub_permission_definitions(self, permission_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes pubsub permission definitions from YAML with the database.
+        """ Synchronizes pub/sub permission definitions from YAML with the database.
         """
-        logger.info('Processing %d pubsub permission definitions from YAML', len(permission_list))
+        logger.info('Processing %d pub/sub permission definitions from YAML', len(permission_list))
 
         # Get existing definitions from database
         db_defs = self.get_pubsub_permission_defs_from_db(session, self.importer.cluster_id)
@@ -174,7 +184,7 @@ class PubSubPermissionImporter:
 
         for yaml_def in permission_list:
             security_name = yaml_def['security']
-            logger.info('Processing YAML pubsub permission definition for security: %s', security_name)
+            logger.info('Processing YAML pub/sub permission definition for security: %s', security_name)
 
             # Get security base ID
             sec_base_id = self.get_security_base_id_by_name(security_name, session)
@@ -225,7 +235,7 @@ class PubSubPermissionImporter:
                         updated.append(instance)
                         self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
 
-        logger.info('Pubsub permission definitions sync completed: created=%d, updated=%d', len(created), len(updated))
+        logger.info('pub/sub permission definitions sync completed: created=%d, updated=%d', len(created), len(updated))
         return created, updated
 
 # ################################################################################################################################
