@@ -51,9 +51,10 @@ class PubSubPermissionImporter:
         logger.info('Processing %d pubsub permission definitions', len(items))
 
         for item in items:
-            permission_obj = item[0]
+            # Each item is a tuple: (PubSubPermission, name, subscription_count)
+            permission_obj = item[0]  # First element is the PubSubPermission object
             permission_json = to_json(permission_obj, return_as_dict=True)
-            permission_dict = permission_json['fields']
+            permission_dict = permission_json['fields']  # Extract the fields dictionary
 
             key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
             logger.info('Processing pubsub permission definition: %s (id=%s)', key, permission_dict.get('id'))
@@ -67,7 +68,9 @@ class PubSubPermissionImporter:
         logger.info('Retrieving pubsub permission definitions from database for cluster_id=%s', cluster_id)
         permissions = pubsub_permission_list(session, cluster_id)
 
-        self._process_pubsub_permission_defs(permissions, out)
+        # Convert query result to list to handle SearchResults
+        permission_items = list(permissions)
+        self._process_pubsub_permission_defs(permission_items, out)
         logger.info('Total pubsub permission definitions from DB: %d', len(out))
 
         for key in out:
