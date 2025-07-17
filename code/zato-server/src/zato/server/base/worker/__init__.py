@@ -147,7 +147,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    pubsub_consumer_backend:'PubSubBackend'
+    pubsub_consumer_backend:'ConsumerBackend'
     broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
@@ -1595,8 +1595,16 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(msg)
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
+        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(msg)
+
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(msg.cid, msg.sub_key)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
+        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
