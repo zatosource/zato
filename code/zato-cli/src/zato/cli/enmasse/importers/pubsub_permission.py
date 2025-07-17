@@ -200,17 +200,36 @@ class PubSubPermissionImporter:
                 }
 
                 key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Publisher}"
+                logger.info('DEBUG: Publisher constant value: %s', PubSub.API_Client.Publisher)
+                logger.info('DEBUG: Checking if should create permission with key: %s', key)
+                logger.info('DEBUG: Key exists in db_defs: %s', key in db_defs)
+                if key in db_defs:
+                    logger.info('DEBUG: Existing permission found: %s', db_defs[key])
 
                 if self.should_create_pubsub_permission_definition(permission_def, db_defs):
                     instance = self.create_pubsub_permission_definition(permission_def, session)
                     created.append(instance)
-                    self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                    self.pubsub_permission_defs[key] = {
+                        'id': instance.id,
+                        'sec_base_id': instance.sec_base_id,
+                        'pattern': instance.pattern,
+                        'access_type': instance.access_type,
+                        'is_active': instance.is_active,
+                        'cluster_id': instance.cluster_id
+                    }
                 else:
                     permission_def['id'] = db_defs[key]['id']
                     if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
                         instance = self.update_pubsub_permission_definition(permission_def, session)
                         updated.append(instance)
-                        self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                        self.pubsub_permission_defs[key] = {
+                        'id': instance.id,
+                        'sec_base_id': instance.sec_base_id,
+                        'pattern': instance.pattern,
+                        'access_type': instance.access_type,
+                        'is_active': instance.is_active,
+                        'cluster_id': instance.cluster_id
+                    }
 
             # Process sub permissions
             for pattern in yaml_def.get('sub', []):
@@ -223,17 +242,36 @@ class PubSubPermissionImporter:
                 }
 
                 key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Subscriber}"
+                logger.info('DEBUG: Subscriber constant value: %s', PubSub.API_Client.Subscriber)
+                logger.info('DEBUG: Checking if should create subscriber permission with key: %s', key)
+                logger.info('DEBUG: Key exists in db_defs: %s', key in db_defs)
+                if key in db_defs:
+                    logger.info('DEBUG: Existing subscriber permission found: %s', db_defs[key])
 
                 if self.should_create_pubsub_permission_definition(permission_def, db_defs):
                     instance = self.create_pubsub_permission_definition(permission_def, session)
                     created.append(instance)
-                    self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                    self.pubsub_permission_defs[key] = {
+                        'id': instance.id,
+                        'sec_base_id': instance.sec_base_id,
+                        'pattern': instance.pattern,
+                        'access_type': instance.access_type,
+                        'is_active': instance.is_active,
+                        'cluster_id': instance.cluster_id
+                    }
                 else:
                     permission_def['id'] = db_defs[key]['id']
                     if self.should_update_pubsub_permission_definition(permission_def, db_defs[key]):
                         instance = self.update_pubsub_permission_definition(permission_def, session)
                         updated.append(instance)
-                        self.pubsub_permission_defs[key] = to_json(instance, return_as_dict=True)['fields']
+                        self.pubsub_permission_defs[key] = {
+                        'id': instance.id,
+                        'sec_base_id': instance.sec_base_id,
+                        'pattern': instance.pattern,
+                        'access_type': instance.access_type,
+                        'is_active': instance.is_active,
+                        'cluster_id': instance.cluster_id
+                    }
 
         logger.info('pub/sub permission definitions sync completed: created=%d, updated=%d', len(created), len(updated))
         return created, updated
