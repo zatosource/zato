@@ -354,6 +354,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             topicLinksHtml = topicLinks.join(', ');
         }
     }
+
     row += String.format('<td>{0}</td>', topicLinksHtml);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
@@ -368,6 +369,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
+    row += String.format("<td class='ignore'>{0}</td>", JSON.stringify(item.topic_names));
 
 
     if(include_tr) {
