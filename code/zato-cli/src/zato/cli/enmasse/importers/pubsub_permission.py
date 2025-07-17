@@ -82,7 +82,7 @@ class PubSubPermissionImporter:
 
             # Create a unique key for this permission
             key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
-            logger.info('Processing pub/sub permission definition: %s (id=%s)', key, permission_dict.get('id'))
+            logger.info('Processing pub/sub permission definition: %s (id=%s) security_name=%s', key, permission_dict.get('id'), security_name)
             out[key] = permission_dict
 
 # ################################################################################################################################
@@ -151,15 +151,10 @@ class PubSubPermissionImporter:
 
     def should_update_pubsub_permission_definition(self, yaml_def:'stranydict', db_def:'stranydict') -> 'bool':
         """ Determines if a pub/sub permission definition should be updated by comparing YAML and DB definitions.
+        Always returns True to ensure existing permissions are updated on subsequent syncs.
         """
-        # Compare is_active
-        yaml_is_active = yaml_def.get('is_active', True)
-        db_is_active = db_def.get('is_active', True)
-        if yaml_is_active != db_is_active:
-            logger.info('is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
-            return True
-
-        return False
+        # Always update existing permissions to refresh timestamps and ensure consistency
+        return True
 
 # ################################################################################################################################
 
