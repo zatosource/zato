@@ -444,8 +444,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Set the sub_key in the hidden field
         $('#id_edit-sub_key').val(instance.sub_key);
 
-        // Use topic_names field from the server response
-        var currentTopicNames = instance.topic_names;
+        var currentTopicNames = JSON.parse(instance.topic_names);
 
         console.log('[DEBUG] edit: Got topic_names:', JSON.stringify(currentTopicNames));
 
