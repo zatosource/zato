@@ -304,12 +304,12 @@ pubsub_subscription:
     topic_list:
       - enmasse.topic.1
 
-  - security: enmasse.basic_auth.2
+  - security: enmasse.basic_auth.3
     delivery_type: push
     push_service: demo.input-logger
     max_retry_time: 30m
     topic_list:
-      - enmasse.topic.1
+      - enmasse.topic.3
 
 """
 
