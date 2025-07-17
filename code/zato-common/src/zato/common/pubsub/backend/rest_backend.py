@@ -94,8 +94,6 @@ class RESTBackend(Backend):
 
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'strdict') -> 'None':
 
-        logger.warning('333 on_broker_msg_SECURITY_BASIC_AUTH_EDIT')
-
         # Local aliases
         cid = msg['cid']
 
@@ -142,6 +140,11 @@ class RESTBackend(Backend):
                     logger.info(log_msg)
 
         logger.info('HTTP Basic Auth updated -> msg: %s', msg)
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'strdict') -> 'None':
+
+        logger.info('333 on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD %s', msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
