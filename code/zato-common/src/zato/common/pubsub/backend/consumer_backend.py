@@ -78,6 +78,9 @@ class ConsumerBackend(Backend):
 
                 logger.info(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
 
+                # .. create bindings for the topic ..
+                self.broker_client.create_bindings(cid, sub_key, CommonModuleCtx.Exchange_Name, sub_key, topic_name)
+
                 # .. start a background consumer ..
                 result = spawn(
                     start_public_consumer,
@@ -141,6 +144,9 @@ class ConsumerBackend(Backend):
 
         # .. now, stop the consumer ..
         self.stop_public_queue_consumer(cid, sub_key)
+
+        # .. and delete its now-no-longer-in-use queue ..
+        self.broker_client.delete_queue(sub_key)
 
         # .. and log success.
         logger.info(f'[{cid}] Deleted consumer for `{sub_key}`')
