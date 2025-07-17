@@ -45,18 +45,38 @@ class PubSubPermissionImporter:
 # ################################################################################################################################
 
     def _process_pubsub_permission_defs(self, query_result:'any_', out:'dict') -> 'None':
-
-        # Handle the query result - it's a SQLAlchemy query object
-        items = query_result.all()
+        """ Process pubsub permission definitions from database query result.
+        """
+        logger.info('Processing pubsub permission definitions from database')
+        
+        # Handle different result types - could be SearchResults or query object
+        if hasattr(query_result, 'result'):
+            # It's a SearchResults object
+            items = query_result.result
+        elif hasattr(query_result, '__iter__'):
+            # It's a query object, convert to list
+            items = list(query_result)
+        else:
+            # Fallback - assume it's already a list
+            items = query_result
+        
         logger.info('Processing %d pubsub permission definitions', len(items))
-
+        
         for item in items:
             # Each item is a tuple: (PubSubPermission, name, subscription_count)
             permission_obj = item[0]  # First element is the PubSubPermission object
+            name = item[1]  # Second element is the security definition name
+            subscription_count = item[2]  # Third element is the subscription count
+            
             permission_json = to_json(permission_obj, return_as_dict=True)
             permission_dict = permission_json['fields']  # Extract the fields dictionary
-
-            key = f"{permission_dict['sec_base_id']}_{permission_dict['pattern']}_{permission_dict['access_type']}"
+            
+            # Add the security definition name to the permission dict
+            permission_dict['security_name'] = name
+            permission_dict['subscription_count'] = subscription_count
+            
+            # Create a unique key for this permission
+            key = f"{permission_dict['sec_base_id']}:{permission_dict['pattern']}:{permission_dict['access_type']}"
             logger.info('Processing pubsub permission definition: %s (id=%s)', key, permission_dict.get('id'))
             out[key] = permission_dict
 
