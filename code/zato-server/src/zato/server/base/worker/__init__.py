@@ -794,7 +794,7 @@ class WorkerStore(_WorkerStoreBase):
 
     def init_pubsub(self):
 
-        # One cid for all the actions
+        # Local aliases
         cid = new_cid()
 
         for item in self.worker_config.pubsub_subs.values():
