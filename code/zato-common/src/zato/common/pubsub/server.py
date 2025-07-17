@@ -180,14 +180,14 @@ class PubSubRESTServer:
                 sec_name = item['sec_name']
                 username = item['username']
                 password = item['password']
-                topic_names = item.get('topic_names') or ''
+                topic_names = item.get('topic_names') or []
                 sub_key = item['sub_key']
 
                 # Add user credentials
                 self.create_user(cid, username, password)
 
                 # Handle multiple topics (comma-separated)
-                for topic_name in topic_names.split(','):
+                for topic_name in topic_names:
 
                     topic_name = topic_name.strip()
                     if not topic_name:

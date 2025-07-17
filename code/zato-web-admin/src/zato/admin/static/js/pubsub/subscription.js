@@ -445,7 +445,9 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         $('#id_edit-sub_key').val(instance.sub_key);
 
         // Use topic_names field from the server response
-        currentTopicNames = instance.topic_names;
+        var currentTopicNames = instance.topic_names;
+
+        console.log('[DEBUG] edit: Got topic_names:', JSON.stringify(currentTopicNames));
 
         // Get security ID from original form field before we remove it
         var currentSecId = instance.sec_base_id;
