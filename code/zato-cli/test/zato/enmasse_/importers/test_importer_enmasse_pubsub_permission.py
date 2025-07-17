@@ -9,141 +9,78 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import tempfile
-from unittest import main
+from unittest import TestCase, main
 
 # Zato
+from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.common.api import PubSub
 from zato.common.odb.model import PubSubPermission, SecurityBase
-from zato.common.test import BaseSIOTestCase
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubPermissionImporterTestCase(BaseSIOTestCase):
+if 0:
+    from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
 
-    def setUp(self):
-        super().setUp()
+# ################################################################################################################################
+# ################################################################################################################################
 
-        # Create a temporary YAML file with the complex template
-        self.temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
-        self.temp_file.write(template_complex_01)
+class TestEnmassePubSubPermissionFromYAML(TestCase):
+    """ Tests importing pubsub permission definitions from YAML files using enmasse.
+    """
+
+    def setUp(self) -> 'None':
+        # Server path for database connection
+        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+
+        # Create a temporary file using the existing template which already contains permission definitions
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
+        _ = self.temp_file.write(template_complex_01.encode('utf-8'))
         self.temp_file.close()
 
         # Initialize the importer
         self.importer = EnmasseYAMLImporter()
-        self.importer.cluster_id = self.cluster_id
-        self.importer.session = self.session
 
-        # Initialize the pubsub permission importer
+        # Initialize PubSubPermission importer
         self.pubsub_permission_importer = PubSubPermissionImporter(self.importer)
 
-    def tearDown(self):
-        # Clean up the temporary file
-        if os.path.exists(self.temp_file.name):
-            os.unlink(self.temp_file.name)
-        super().tearDown()
+        # Parse the YAML file
+        self.yaml_config = cast_('stranydict', None)
+        self.session = cast_('any_', None)
 
 # ################################################################################################################################
 
-    def test_create_pubsub_permission_definition(self):
-
-        # Load and parse the YAML configuration
-        yaml_config = self.importer.load_yaml_config(self.temp_file.name)
-
-        # Get permission definitions from YAML
-        permission_defs = yaml_config['pubsub_permission']
-        first_permission = permission_defs[0]
-
-        # Create security base from template
-        sec_base = SecurityBase()
-        sec_base.name = first_permission['security']
-        sec_base.sec_type = 'basic_auth'
-        sec_base.cluster_id = self.cluster_id
-        sec_base.is_active = True
-        self.session.add(sec_base)
-        self.session.commit()
-
-        # Create pubsub permission definition using first pub pattern from template
-        first_pub_pattern = first_permission['pub'][0]
-        definition = {
-            'sec_base_id': sec_base.id,
-            'pattern': first_pub_pattern,
-            'access_type': PubSub.API_Client.Publisher,
-            'is_active': True
-        }
-
-        # Create the permission
-        permission = self.pubsub_permission_importer.create_pubsub_permission_definition(definition, self.session)
-
-        # Verify the permission was created
-        self.assertIsNotNone(permission.id)
-        self.assertEqual(permission.sec_base_id, sec_base.id)
-        self.assertEqual(permission.pattern, first_pub_pattern)
-        self.assertEqual(permission.access_type, PubSub.API_Client.Publisher)
-        self.assertTrue(permission.is_active)
-        self.assertEqual(permission.cluster_id, self.cluster_id)
+    def tearDown(self) -> 'None':
+        if self.session:
+            self.session.close()
+        os.unlink(self.temp_file.name)
+        cleanup_enmasse()
 
 # ################################################################################################################################
 
-    def test_update_pubsub_permission_definition(self):
+    def _setup_test_environment(self):
+        """ Set up the test environment by opening a database session and parsing the YAML file.
+        """
+        if not self.session:
+            self.session = get_session_from_server_dir(self.server_path)
 
-        # Load and parse the YAML configuration
-        yaml_config = self.importer.load_yaml_config(self.temp_file.name)
-
-        # Get permission definitions from YAML
-        permission_defs = yaml_config['pubsub_permission']
-        second_permission = permission_defs[1]
-
-        # Create security base from template
-        sec_base = SecurityBase()
-        sec_base.name = second_permission['security']
-        sec_base.sec_type = 'basic_auth'
-        sec_base.cluster_id = self.cluster_id
-        sec_base.is_active = True
-        self.session.add(sec_base)
-        self.session.commit()
-
-        # Create initial pubsub permission using template data
-        first_pub_pattern = second_permission['pub'][0]
-        permission = PubSubPermission()
-        permission.cluster_id = self.cluster_id
-        permission.sec_base_id = sec_base.id
-        permission.pattern = first_pub_pattern
-        permission.access_type = PubSub.API_Client.Publisher
-        permission.is_active = True
-        self.session.add(permission)
-        self.session.commit()
-
-        # Update definition
-        definition = {
-            'id': permission.id,
-            'sec_base_id': sec_base.id,
-            'pattern': first_pub_pattern,
-            'access_type': PubSub.API_Client.Publisher,
-            'is_active': False
-        }
-
-        # Update the permission
-        updated_permission = self.pubsub_permission_importer.update_pubsub_permission_definition(definition, self.session)
-
-        # Verify the permission was updated
-        self.assertEqual(updated_permission.id, permission.id)
-        self.assertEqual(updated_permission.pattern, first_pub_pattern)
-        self.assertEqual(updated_permission.access_type, PubSub.API_Client.Publisher)
-        self.assertFalse(updated_permission.is_active)
+        if not self.yaml_config:
+            self.yaml_config = self.importer.from_path(self.temp_file.name)
 
 # ################################################################################################################################
 
-    def test_sync_pubsub_permission_definitions_full_import(self):
+    def test_pubsub_permission_definition_creation(self):
+        """ Test creating pubsub permission definitions from YAML.
+        """
+        self._setup_test_environment()
 
-        # Load and parse the YAML configuration
-        yaml_config = self.importer.load_yaml_config(self.temp_file.name)
-
-        # Get permission definitions from YAML
-        permission_defs = yaml_config['pubsub_permission']
+        # Get definitions from YAML
+        permission_defs = self.yaml_config['pubsub_permission']
 
         # Create security bases from template
         sec_bases = []
@@ -151,29 +88,111 @@ class PubSubPermissionImporterTestCase(BaseSIOTestCase):
             sec_base = SecurityBase()
             sec_base.name = permission_def['security']
             sec_base.sec_type = 'basic_auth'
-            sec_base.cluster_id = self.cluster_id
+            sec_base.cluster_id = self.importer.cluster_id
             sec_base.is_active = True
             self.session.add(sec_base)
             sec_bases.append(sec_base)
         self.session.commit()
 
-        # Sync permissions
+        # Process all pubsub permission definitions
         created, updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
 
-        # Verify results
-        self.assertEqual(len(created), 6)  # 2+2+2+1+1 = 6 total permissions
+        # Should have created 6 permissions (2+2+2+1+1)
+        self.assertEqual(len(created), 6)
         self.assertEqual(len(updated), 0)
 
-        # Verify permissions in database
-        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=self.cluster_id).all()
+        # Verify permissions were created correctly
+        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=self.importer.cluster_id).all()
         self.assertEqual(len(all_permissions), 6)
 
         # Verify specific permissions
         pub_permissions = [p for p in all_permissions if p.access_type == PubSub.API_Client.Publisher]
         sub_permissions = [p for p in all_permissions if p.access_type == PubSub.API_Client.Subscriber]
 
-        self.assertEqual(len(pub_permissions), 3)  # 2 + 1 + 0
-        self.assertEqual(len(sub_permissions), 3)  # 2 + 1 + 1
+        self.assertEqual(len(pub_permissions), 3)
+        self.assertEqual(len(sub_permissions), 3)
+
+# ################################################################################################################################
+
+    def test_pubsub_permission_update(self):
+        """ Test updating existing pubsub permission definitions.
+        """
+        self._setup_test_environment()
+
+        # First, get the pubsub permission definition from YAML and create it
+        permission_defs = self.yaml_config['pubsub_permission']
+        permission_def = permission_defs[0]
+
+        # Create security base from template
+        sec_base = SecurityBase()
+        sec_base.name = permission_def['security']
+        sec_base.sec_type = 'basic_auth'
+        sec_base.cluster_id = self.importer.cluster_id
+        sec_base.is_active = True
+        self.session.add(sec_base)
+        self.session.commit()
+
+        # Create the pubsub permission definition using first pub pattern
+        first_pub_pattern = permission_def['pub'][0]
+        definition = {
+            'sec_base_id': sec_base.id,
+            'pattern': first_pub_pattern,
+            'access_type': PubSub.API_Client.Publisher,
+            'is_active': True
+        }
+        instance = self.pubsub_permission_importer.create_pubsub_permission_definition(definition, self.session)
+        self.session.commit()
+        self.assertTrue(instance.is_active)
+
+        # Now update the permission to be inactive
+        definition['id'] = instance.id
+        definition['is_active'] = False
+        updated_instance = self.pubsub_permission_importer.update_pubsub_permission_definition(definition, self.session)
+        self.session.commit()
+
+        # Verify the permission was updated
+        self.assertEqual(updated_instance.id, instance.id)
+        self.assertFalse(updated_instance.is_active)
+
+# ################################################################################################################################
+
+    def test_full_import_sync(self):
+        """ Test full import sync of pubsub permission definitions.
+        """
+        self._setup_test_environment()
+
+        # Get definitions from YAML
+        permission_defs = self.yaml_config['pubsub_permission']
+
+        # Create security bases from template
+        sec_bases = []
+        for permission_def in permission_defs:
+            sec_base = SecurityBase()
+            sec_base.name = permission_def['security']
+            sec_base.sec_type = 'basic_auth'
+            sec_base.cluster_id = self.importer.cluster_id
+            sec_base.is_active = True
+            self.session.add(sec_base)
+            sec_bases.append(sec_base)
+        self.session.commit()
+
+        # Process all pubsub permission definitions
+        created, updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
+
+        # Should have created 6 permissions (2+2+2+1+1)
+        self.assertEqual(len(created), 6)
+        self.assertEqual(len(updated), 0)
+
+        # Verify permissions were created correctly
+        all_permissions = self.session.query(PubSubPermission).filter_by(cluster_id=self.importer.cluster_id).all()
+        self.assertEqual(len(all_permissions), 6)
+
+        # Verify specific permissions
+        pub_permissions = [p for p in all_permissions if p.access_type == PubSub.API_Client.Publisher]
+        sub_permissions = [p for p in all_permissions if p.access_type == PubSub.API_Client.Subscriber]
+
+        self.assertEqual(len(pub_permissions), 3)
+        self.assertEqual(len(sub_permissions), 3)
 
         # Verify patterns match template data
         pub_patterns = {p.pattern for p in pub_permissions}
