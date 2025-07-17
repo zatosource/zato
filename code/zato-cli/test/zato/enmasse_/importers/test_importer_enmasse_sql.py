@@ -15,6 +15,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
+from zato.cli.enmasse.util import get_engine_from_type
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
@@ -88,7 +89,7 @@ class TestEnmasseSQLFromYAML(TestCase):
         self.assertEqual(sql.port, 3306)
         self.assertEqual(sql.username, 'enmasse.1')
         self.assertEqual(sql.db_name, 'MYDB_01')
-        self.assertEqual(sql.engine, 'mysql')
+        self.assertEqual(sql.engine, 'mysql+pymysql')
         self.assertTrue(hasattr(sql, 'password'))
 
     def test_sql_update(self):
@@ -125,7 +126,8 @@ class TestEnmasseSQLFromYAML(TestCase):
         # Make sure other fields were preserved from the original YAML definition
         self.assertEqual(updated_instance.username, sql_def['username'])
         self.assertEqual(updated_instance.db_name, sql_def['db_name'])
-        self.assertEqual(updated_instance.engine, sql_def['type'])
+        expected_engine = get_engine_from_type(sql_def['type'])
+        self.assertEqual(updated_instance.engine, expected_engine)
 
     def test_complete_sql_import_flow(self):
         """ Test the complete flow of importing SQL connection pool definitions from a YAML file.
