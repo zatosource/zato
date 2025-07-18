@@ -181,4 +181,16 @@ class PubSubTopicImporter:
         return created, updated
 
 # ################################################################################################################################
+
+    def import_(self, yaml_file_path:'str') -> 'None':
+        """ Imports pubsub topic definitions from a YAML file.
+        """
+        logger.info('Importing pubsub topic definitions from %s', yaml_file_path)
+
+        # This method would be called by the main importer
+        # For now, it's a placeholder that would be implemented
+        # when integrated with the main import process
+        pass
+
+# ################################################################################################################################
 # ################################################################################################################################

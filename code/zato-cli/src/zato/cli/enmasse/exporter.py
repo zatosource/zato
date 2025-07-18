@@ -26,6 +26,7 @@ from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
+from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -69,6 +70,7 @@ class EnmasseYAMLExporter:
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
+        self.pubsub_topic_exporter = PubSubTopicExporter(self)
 
 # ################################################################################################################################
 
@@ -226,6 +228,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_pubsub_topic(self, session:'SASession') -> 'list':
+        """ Exports pub/sub topic definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        pubsub_topic_list = self.pubsub_topic_exporter.export(session, self.cluster_id)
+        return pubsub_topic_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -313,6 +324,11 @@ class EnmasseYAMLExporter:
         elastic_search_defs = self.export_elastic_search(session)
         if elastic_search_defs:
             output_dict['elastic_search'] = elastic_search_defs
+
+        # Export pub/sub topic definitions
+        pubsub_topic_defs = self.export_pubsub_topic(session)
+        if pubsub_topic_defs:
+            output_dict['pubsub_topic'] = pubsub_topic_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
