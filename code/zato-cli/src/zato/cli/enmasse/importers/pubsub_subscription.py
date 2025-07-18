@@ -250,7 +250,8 @@ class PubSubSubscriptionImporter:
                 'sec_base_id': sec_base_id,
                 'delivery_type': delivery_type,
                 'topic_id_list': topic_id_list,
-                'is_active': yaml_def.get('is_active', True)
+                'is_active': yaml_def.get('is_active', True),
+                'username': security_name
             }
 
             # Handle push-specific fields

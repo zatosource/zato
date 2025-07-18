@@ -172,7 +172,8 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             'delivery_type': subscription_def['delivery_type'],
             'topic_id_list': topic_id_list,
             'is_active': subscription_def.get('is_active', True),
-            'max_retry_time': subscription_def.get('max_retry_time', '365d')
+            'max_retry_time': subscription_def.get('max_retry_time', '365d'),
+            'username': subscription_def['security']
         }
 
         # Create the pubsub subscription definition
