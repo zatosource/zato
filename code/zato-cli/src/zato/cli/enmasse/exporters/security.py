@@ -40,6 +40,10 @@ class SecurityExporter:
 
     def _should_skip_item(self, item, excluded_names, excluded_prefixes):
 
+        # Only keep items that start with "enmasse"
+        if not item['name'].startswith('enmasse'):
+            return True
+
         # Skip items in exclude list
         if item['name'] in excluded_names:
             return True
