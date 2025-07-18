@@ -62,7 +62,7 @@ class PubSubSubscriptionExporter:
             push_service_name = item.push_service_name
             topic_name = item.topic_name
 
-            logger.info('DEBUG: Processing subscription item: id=%s security=%s delivery_type=%s topic=%s', 
+            logger.info('DEBUG: Processing subscription item: id=%s security=%s delivery_type=%s topic=%s',
                        subscription_id, security_name, delivery_type, topic_name)
 
             # Only export subscriptions for enmasse security definitions
@@ -80,10 +80,13 @@ class PubSubSubscriptionExporter:
             if not topic_name:
                 raise ValueError(f'Subscription missing topic_name: subscription_id={subscription_id} security={security_name}')
 
+            # Create unique key for grouping by security and delivery type
+            group_key = (security_name, delivery_type)
+
             # Initialize subscription group if not exists
-            if subscription_id not in subscription_groups:
-                logger.info('DEBUG: Creating new subscription group: id=%s security=%s delivery_type=%s', 
-                           subscription_id, security_name, delivery_type)
+            if group_key not in subscription_groups:
+                logger.info('DEBUG: Creating new subscription group: security=%s delivery_type=%s',
+                           security_name, delivery_type)
                 subscription_data = {
                     'security': security_name,
                     'delivery_type': delivery_type,
@@ -106,18 +109,20 @@ class PubSubSubscriptionExporter:
                     else:
                         raise ValueError(f'Push subscription has unknown push_type {push_type}: subscription_id={subscription_id} security={security_name}')
 
-                subscription_groups[subscription_id] = subscription_data
+                subscription_groups[group_key] = subscription_data
 
             # Add topic to the subscription's topic list
-            subscription_data = subscription_groups[subscription_id]
+            subscription_data = subscription_groups[group_key]
             if topic_name not in subscription_data['topic_list']:
                 subscription_data['topic_list'].append(topic_name)
-                logger.info('DEBUG: Added topic %s to subscription %s', topic_name, subscription_id)
+                logger.info('DEBUG: Added topic %s to group %s', topic_name, group_key)
 
         # Convert grouped subscriptions to export format
         for subscription_data in subscription_groups.values():
             exported_subscriptions.append(subscription_data)
 
+        logger.info('DEBUG: Total subscription groups created: %d', len(subscription_groups))
+        logger.info('DEBUG: Total exported subscriptions: %d', len(exported_subscriptions))
         logger.info('Successfully prepared %d pub/sub subscription definitions for export', len(exported_subscriptions))
         return exported_subscriptions
 

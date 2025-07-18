@@ -68,6 +68,14 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
 
 # ################################################################################################################################
 
+    def tearDown(self) -> 'None':
+        if self.session:
+            _ = self.session.close()
+        os.unlink(self.temp_file.name)
+        cleanup_enmasse()
+
+# ################################################################################################################################
+
     def _setup_test_environment(self) -> 'None':
 
         if not self.session:
