@@ -63,7 +63,8 @@ $(document).ready(function() {
             $topicSelect.chosen({
                 placeholder_text_multiple: 'Select topics...',
                 search_contains: true,
-                width: '100%'
+                width: '100%',
+                hide_results_on_select: false
             });
         }
 
