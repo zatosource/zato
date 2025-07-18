@@ -55,21 +55,21 @@ $(document).ready(function() {
         // Call the original create_edit function
         var result = originalCreateEdit(form_type, title, id);
 
-        // Initialize security definition change handler after form is opened
+        // Initialize Chosen for topic select elements immediately
+        var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
+        var $topicSelect = $(topicSelectId);
+
+        if ($topicSelect.length > 0) {
+            $topicSelect.chosen({
+                placeholder_text_multiple: 'Select topics...',
+                search_contains: true,
+                width: '100%'
+            });
+        }
+
+        // Initialize security definition change handler and set initial state
         setTimeout(function() {
             $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler(form_type);
-
-            // Initialize Chosen for topic select elements
-            var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
-            var $topicSelect = $(topicSelectId);
-
-            if ($topicSelect.length > 0) {
-                $topicSelect.chosen({
-                    placeholder_text_multiple: 'Select topics...',
-                    search_contains: true,
-                    width: '100%'
-                });
-            }
 
             // Set initial state for topic dropdown (only for create form)
             if (form_type === 'create') {
