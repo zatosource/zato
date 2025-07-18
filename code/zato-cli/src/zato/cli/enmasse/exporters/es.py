@@ -71,14 +71,11 @@ class ElasticSearchExporter:
         out = []
 
         for es_item in es_definitions:
-            logger.info('DEBUG Processing ES row: %s', es_item)
 
             if GENERIC.ATTR_NAME in es_item:
                 opaque = parse_instance_opaque_attr(es_item)
-                logger.info('DEBUG Parsed opaque attributes: %s', opaque)
                 es_item.update(opaque)
                 del es_item[GENERIC.ATTR_NAME]
-                logger.info('DEBUG Row after opaque processing: %s', es_item)
 
             item = {
                 'name': es_item['name'],
@@ -86,12 +83,10 @@ class ElasticSearchExporter:
                 'is_active': es_item['is_active'],
                 'body_as': es_item['body_as']
             }
-            logger.info('DEBUG Base item created: %s', item)
 
             if (timeout := es_item.get('timeout')) and timeout != 90:
                 item['timeout'] = timeout
 
-            logger.info('DEBUG Final item before append: %s', item)
             out.append(item)
 
         logger.info('Successfully prepared %d ElasticSearch connection definitions for export', len(out))
