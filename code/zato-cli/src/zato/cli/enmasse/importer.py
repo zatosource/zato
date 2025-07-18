@@ -34,6 +34,7 @@ from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
+from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -79,6 +80,7 @@ class EnmasseYAMLImporter:
         self.outgoing_soap_defs = {}
         self.pubsub_topic_defs = {}
         self.pubsub_permission_defs = {}
+        self.pubsub_subscription_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -105,6 +107,7 @@ class EnmasseYAMLImporter:
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
         self.pubsub_topic_importer = PubSubTopicImporter(self)
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
+        self.pubsub_subscription_importer = PubSubSubscriptionImporter(self)
 
 # ################################################################################################################################
 
@@ -716,6 +719,13 @@ class EnmasseYAMLImporter:
         if pubsub_permission_updated:
             self.updated_objects['pubsub_permission'] = pubsub_permission_updated
 
+        # Process pubsub subscription definitions
+        pubsub_subscription_created, pubsub_subscription_updated = self.sync_pubsub_subscription(yaml_config.get('pubsub_subscription', []), session)
+        if pubsub_subscription_created:
+            self.created_objects['pubsub_subscription'] = pubsub_subscription_created
+        if pubsub_subscription_updated:
+            self.updated_objects['pubsub_subscription'] = pubsub_subscription_updated
+
         logger.info('YAML synchronization completed')
 
         return self.created_objects, self.updated_objects
@@ -758,6 +768,29 @@ class EnmasseYAMLImporter:
         logger.info('Processed pubsub permission definitions: created=%d updated=%d', len(permission_created), len(permission_updated))
 
         return permission_created, permission_updated
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def sync_pubsub_subscription(self, subscription_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub subscription definitions from a YAML configuration with the database.
+        """
+        if not subscription_list:
+            return [], []
+
+        logger.info('Processing %d pubsub subscription definitions', len(subscription_list))
+
+        # Examine each pubsub subscription item
+        for idx, item in enumerate(subscription_list):
+            logger.info('Pubsub subscription item %d: %s', idx, item)
+
+        subscription_created, subscription_updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_list, session)
+
+        # Get pubsub subscription definitions from the pubsub subscription importer
+        self.pubsub_subscription_defs = self.pubsub_subscription_importer.pubsub_subscription_defs
+        logger.info('Processed pubsub subscription definitions: created=%d updated=%d', len(subscription_created), len(subscription_updated))
+
+        return subscription_created, subscription_updated
 
 # ################################################################################################################################
 # ################################################################################################################################
