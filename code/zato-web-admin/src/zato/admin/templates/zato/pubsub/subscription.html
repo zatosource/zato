@@ -160,6 +160,30 @@
             color: #f44336 !important;
         }
 
+        /* Stylish input field */
+        .chosen-container-multi .chosen-choices li.search-field input[type="text"] {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+            border: 2px solid transparent !important;
+            border-radius: 8px !important;
+            padding: 6px 12px !important;
+            transition: all 0.04s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: inset 0 1px 3px rgba(82, 73, 73, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+            outline: none !important;
+            font-size:0.74rem !important;
+        }
+
+        .chosen-container-multi .chosen-choices li.search-field input[type="text"]:focus {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: inset 0 1px 3px rgba(82, 73, 73, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+            font-size:0.64rem !important;
+        }
+
+        .chosen-container-multi .chosen-choices li.search-field input[type="text"]::placeholder {
+            font-style: italic !important;
+        }
+
     </style>
 {% endblock %}
 
