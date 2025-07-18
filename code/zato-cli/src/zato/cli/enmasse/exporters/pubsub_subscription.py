@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.odb.query import pubsub_subscription_list
+from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,9 +45,23 @@ class PubSubSubscriptionExporter:
         logger.info('Exporting pub/sub subscription definitions')
         exported_subscriptions = []
 
-        query_result = pubsub_subscription_list(session, cluster_id, needs_columns=False)
-        search_results = query_result[0]
-        items = search_results.result
+        items = session.query(
+            PubSubSubscription.id,
+            PubSubSubscription.delivery_type,
+            PubSubSubscription.push_type,
+            PubSubSubscription.rest_push_endpoint_id,
+            PubSubSubscription.push_service_name,
+            PubSubTopic.name.label('topic_name'),
+            SecurityBase.name.label('sec_name'),
+            HTTPSOAP.name.label('rest_push_endpoint_name')
+        ).\
+            join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
+            join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
+            join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
+            outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
+            filter(PubSubSubscription.cluster_id == cluster_id).\
+            filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
+            order_by(PubSubSubscription.id, PubSubTopic.name, SecurityBase.name).all()
 
         # Group subscriptions by subscription ID to collect all topics
         subscription_groups = {}
