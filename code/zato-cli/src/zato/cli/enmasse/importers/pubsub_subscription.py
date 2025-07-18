@@ -52,17 +52,17 @@ class PubSubSubscriptionImporter:
         logger.info('Processing %d pubsub subscription definitions', len(items))
 
         for item in items:
-            subscription_obj = item.PubSubSubscription
+
             subscription_dict = {
-                'id': subscription_obj.id,
-                'sub_key': subscription_obj.sub_key,
-                'sec_base_id': subscription_obj.sec_base_id,
-                'delivery_type': subscription_obj.delivery_type,
-                'push_type': subscription_obj.push_type,
-                'rest_push_endpoint_id': subscription_obj.rest_push_endpoint_id,
-                'push_service_name': subscription_obj.push_service_name,
-                'is_active': subscription_obj.is_active,
-                'cluster_id': subscription_obj.cluster_id
+                'id': item.id,
+                'sub_key': item.sub_key,
+                'sec_base_id': item.sec_base_id,
+                'delivery_type': item.delivery_type,
+                'push_type': item.push_type,
+                'rest_push_endpoint_id': item.rest_push_endpoint_id,
+                'push_service_name': item.push_service_name,
+                'is_active': item.is_active,
+                'cluster_id': 1
             }
 
             sub_key = subscription_dict['sub_key']

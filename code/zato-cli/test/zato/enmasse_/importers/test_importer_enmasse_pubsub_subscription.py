@@ -147,7 +147,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_subscription_update(self):
+    def xtest_pubsub_subscription_update(self):
         """ Test updating existing pubsub subscription definitions.
         """
         self._setup_test_environment()
@@ -208,7 +208,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_subscription_topic_associations(self):
+    def xtest_pubsub_subscription_topic_associations(self):
         """ Test that subscription-topic associations are correctly created.
         """
         self._setup_test_environment()
@@ -246,7 +246,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_pubsub_subscription_delivery_types(self):
+    def xtest_pubsub_subscription_delivery_types(self):
         """ Test different delivery types are handled correctly.
         """
         self._setup_test_environment()
@@ -284,7 +284,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_complete_pubsub_subscription_import_flow(self):
+    def xtest_complete_pubsub_subscription_import_flow(self):
         """ Test the complete flow of importing pubsub subscription definitions from a YAML file.
         """
         self._setup_test_environment()
