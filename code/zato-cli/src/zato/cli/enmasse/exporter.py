@@ -28,6 +28,7 @@ from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
 from zato.cli.enmasse.exporters.pubsub_permission import PubSubPermissionExporter
+from zato.cli.enmasse.exporters.pubsub_subscription import PubSubSubscriptionExporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -73,6 +74,7 @@ class EnmasseYAMLExporter:
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
         self.pubsub_topic_exporter = PubSubTopicExporter(self)
         self.pubsub_permission_exporter = PubSubPermissionExporter(self)
+        self.pubsub_subscription_exporter = PubSubSubscriptionExporter(self)
 
 # ################################################################################################################################
 
@@ -248,6 +250,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_pubsub_subscription(self, session:'SASession') -> 'list':
+        """ Exports pub/sub subscription definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        pubsub_subscription_list = self.pubsub_subscription_exporter.export(session, self.cluster_id)
+        return pubsub_subscription_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -345,6 +356,11 @@ class EnmasseYAMLExporter:
         pubsub_permission_defs = self.export_pubsub_permission(session)
         if pubsub_permission_defs:
             output_dict['pubsub_permission'] = pubsub_permission_defs
+
+        # Export pub/sub subscription definitions
+        pubsub_subscription_defs = self.export_pubsub_subscription(session)
+        if pubsub_subscription_defs:
+            output_dict['pubsub_subscription'] = pubsub_subscription_defs
 
         logger.info('Successfully exported objects to dictionary format')
         return output_dict
