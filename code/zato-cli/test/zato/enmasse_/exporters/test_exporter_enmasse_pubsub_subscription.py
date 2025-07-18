@@ -160,33 +160,33 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
 
             # Verify each exported subscription against expected values
             for subscription in exported_subscriptions:
-                security_name = subscription['security']
+                security_name = subscription['security'] # type: ignore
                 self.assertIn(security_name, expected_subscriptions, f'Unexpected security {security_name} in export')
                 expected = expected_subscriptions[security_name]
 
                 # Check required fields
                 self.assertIn('security', subscription, f'Required field security missing in subscription {security_name}')
-                self.assertEqual(subscription['security'], expected['security'],
+                self.assertEqual(subscription['security'], expected['security'], # type: ignore
                     f'Field security has incorrect value in subscription {security_name}')
 
                 self.assertIn('delivery_type', subscription, f'Required field delivery_type missing in subscription {security_name}')
-                self.assertEqual(subscription['delivery_type'], expected['delivery_type'],
+                self.assertEqual(subscription['delivery_type'], expected['delivery_type'], # type: ignore
                     f'Field delivery_type has incorrect value in subscription {security_name}')
 
                 self.assertIn('topic_list', subscription, f'Required field topic_list missing in subscription {security_name}')
-                self.assertEqual(set(subscription['topic_list']), set(expected['topic_list']),
+                self.assertEqual(set(subscription['topic_list']), set(expected['topic_list']), # type: ignore
                     f'Field topic_list has incorrect value in subscription {security_name}')
 
                 # Check push-specific fields
                 if expected['delivery_type'] == 'push':
                     if 'push_rest_endpoint' in expected:
                         self.assertIn('push_rest_endpoint', subscription, f'Expected push_rest_endpoint missing in subscription {security_name}')
-                        self.assertEqual(subscription['push_rest_endpoint'], expected['push_rest_endpoint'],
+                        self.assertEqual(subscription['push_rest_endpoint'], expected['push_rest_endpoint'], # type: ignore
                             f'Field push_rest_endpoint has incorrect value in subscription {security_name}')
 
                     if 'push_service' in expected:
                         self.assertIn('push_service', subscription, f'Expected push_service missing in subscription {security_name}')
-                        self.assertEqual(subscription['push_service'], expected['push_service'],
+                        self.assertEqual(subscription['push_service'], expected['push_service'], # type: ignore
                             f'Field push_service has incorrect value in subscription {security_name}')
 
                 # Verify no unexpected fields
@@ -195,44 +195,36 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                     self.assertIn(field, allowed_fields, f'Unexpected field {field} in subscription {security_name}')
 
             # Verify specific expected subscriptions from the template
-            exported_by_security = {sub['security']: sub for sub in exported_subscriptions}
+            exported_by_security = {sub['security']: sub for sub in exported_subscriptions} # type: ignore
 
             # Check enmasse.basic_auth.1 subscription
             if 'enmasse.basic_auth.1' in exported_by_security:
                 auth1_sub = exported_by_security['enmasse.basic_auth.1']
-                self.assertEqual(auth1_sub['delivery_type'], 'pull')
-                self.assertEqual(set(auth1_sub['topic_list']), {'enmasse.topic.1', 'enmasse.topic.2'})
+                self.assertEqual(auth1_sub['delivery_type'], 'pull') # type: ignore
+                self.assertEqual(set(auth1_sub['topic_list']), {'enmasse.topic.1', 'enmasse.topic.2'}) # type: ignore
                 self.assertNotIn('push_rest_endpoint', auth1_sub)
                 self.assertNotIn('push_service', auth1_sub)
 
             # Check enmasse.basic_auth.2 subscription
             if 'enmasse.basic_auth.2' in exported_by_security:
                 auth2_sub = exported_by_security['enmasse.basic_auth.2']
-                self.assertEqual(auth2_sub['delivery_type'], 'push')
-                self.assertEqual(auth2_sub['topic_list'], ['enmasse.topic.1'])
+                self.assertEqual(auth2_sub['delivery_type'], 'push') # type: ignore
+                self.assertEqual(auth2_sub['topic_list'], ['enmasse.topic.1']) # type: ignore
                 self.assertIn('push_rest_endpoint', auth2_sub)
-                self.assertEqual(auth2_sub['push_rest_endpoint'], 'enmasse.outgoing.rest.1')
+                self.assertEqual(auth2_sub['push_rest_endpoint'], 'enmasse.outgoing.rest.1') # type: ignore
                 self.assertNotIn('push_service', auth2_sub)
 
             # Check enmasse.basic_auth.3 subscription
             if 'enmasse.basic_auth.3' in exported_by_security:
                 auth3_sub = exported_by_security['enmasse.basic_auth.3']
-                self.assertEqual(auth3_sub['delivery_type'], 'push')
-                self.assertEqual(auth3_sub['topic_list'], ['enmasse.topic.3'])
+                self.assertEqual(auth3_sub['delivery_type'], 'push') # type: ignore
+                self.assertEqual(auth3_sub['topic_list'], ['enmasse.topic.3']) # type: ignore
                 self.assertIn('push_service', auth3_sub)
-                self.assertEqual(auth3_sub['push_service'], 'demo.input-logger')
+                self.assertEqual(auth3_sub['push_service'], 'demo.input-logger') # type: ignore
                 self.assertNotIn('push_rest_endpoint', auth3_sub)
 
         else:
             logger.warning('No pubsub subscription definitions found in test YAML template')
-
-# ################################################################################################################################
-
-    def tearDown(self) -> 'None':
-        if self.session:
-            _ = self.session.close()
-        os.unlink(self.temp_file.name)
-        cleanup_enmasse()
 
 # ################################################################################################################################
 # ################################################################################################################################
