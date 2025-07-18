@@ -747,7 +747,7 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                     $topicSelect.hide();
                     $('.ss-main').hide(); // Hide SlimSelect container if it exists
 
-                    $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">No topics match this security definition - <a href="/zato/pubsub/permission/?cluster=1" target="_blank">Click to manage permissions</a></span>');
+                    $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">No matching topics - <a href="/zato/pubsub/permission/?cluster=1" target="_blank">Click to manage permissions</a></span>');
                 }
             },
             error: function(xhr, status, error) {
