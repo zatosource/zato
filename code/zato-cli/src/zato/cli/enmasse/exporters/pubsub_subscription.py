@@ -62,12 +62,8 @@ class PubSubSubscriptionExporter:
             push_service_name = item.push_service_name
             topic_name = item.topic_name
 
-            logger.info('DEBUG: Processing subscription item: id=%s security=%s delivery_type=%s topic=%s',
-                       subscription_id, security_name, delivery_type, topic_name)
-
-            # Only export subscriptions for enmasse security definitions
-            if not security_name.startswith('enmasse'):
-                logger.info('DEBUG: Skipping non-enmasse security: %s', security_name)
+            # Skip non-enmasse security names
+            if not security_name.startswith('enmasse.'):
                 continue
 
             # Validate required fields exist
@@ -85,8 +81,6 @@ class PubSubSubscriptionExporter:
 
             # Initialize subscription group if not exists
             if group_key not in subscription_groups:
-                logger.info('DEBUG: Creating new subscription group: security=%s delivery_type=%s',
-                           security_name, delivery_type)
                 subscription_data = {
                     'security': security_name,
                     'delivery_type': delivery_type,
@@ -95,17 +89,14 @@ class PubSubSubscriptionExporter:
 
                 # Add push-specific fields
                 if delivery_type == 'push':
-                    logger.info('DEBUG: Processing push subscription: id=%s push_type=%s', subscription_id, push_type)
                     if push_type == 'rest':
                         if not rest_push_endpoint_name:
                             raise ValueError(f'Push subscription missing rest_push_endpoint_name: subscription_id={subscription_id} security={security_name}')
                         subscription_data['push_rest_endpoint'] = rest_push_endpoint_name
-                        logger.info('DEBUG: Added push_rest_endpoint: %s', rest_push_endpoint_name)
                     elif push_type == 'service':
                         if not push_service_name:
                             raise ValueError(f'Push subscription missing push_service_name: subscription_id={subscription_id} security={security_name}')
                         subscription_data['push_service'] = push_service_name
-                        logger.info('DEBUG: Added push_service: %s', push_service_name)
                     else:
                         raise ValueError(f'Push subscription has unknown push_type {push_type}: subscription_id={subscription_id} security={security_name}')
 
@@ -115,14 +106,10 @@ class PubSubSubscriptionExporter:
             subscription_data = subscription_groups[group_key]
             if topic_name not in subscription_data['topic_list']:
                 subscription_data['topic_list'].append(topic_name)
-                logger.info('DEBUG: Added topic %s to group %s', topic_name, group_key)
 
         # Convert grouped subscriptions to export format
         for subscription_data in subscription_groups.values():
             exported_subscriptions.append(subscription_data)
-
-        logger.info('DEBUG: Total subscription groups created: %d', len(subscription_groups))
-        logger.info('DEBUG: Total exported subscriptions: %d', len(exported_subscriptions))
         logger.info('Successfully prepared %d pub/sub subscription definitions for export', len(exported_subscriptions))
         return exported_subscriptions
 
