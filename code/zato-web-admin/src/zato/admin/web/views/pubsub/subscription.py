@@ -328,3 +328,122 @@ def get_service_list(req):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('GET')
+def get_topics_by_security(req):
+    """ Retrieves a list of topics filtered by security definition's subscribe permissions.
+    """
+    cluster_id = req.GET.get('cluster_id')
+    sec_base_id = req.GET.get('sec_base_id')
+    form_type = req.GET.get('form_type', 'create')
+
+    logger.info('VIEW get_topics_by_security: received request with cluster_id=%s, sec_base_id=%s, form_type=%s',
+                cluster_id, sec_base_id, form_type)
+
+    if not sec_base_id:
+        return HttpResponse(
+            dumps({
+                'error': 'Security definition ID is required'
+            }),
+            content_type='application/json',
+            status=400
+        )
+
+    try:
+        # Get subscribe permissions for this security definition
+        permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
+            'cluster_id': cluster_id
+        })
+
+        # Filter permissions for this security definition and subscribe access
+        subscribe_permissions = []
+        if permissions_response and hasattr(permissions_response, 'data'):
+            for perm in permissions_response.data:
+                if (perm.sec_base_id == int(sec_base_id) and
+                    (perm.access_type == 'subscriber' or perm.access_type == 'publisher-subscriber')):
+                    subscribe_permissions.append(perm)
+
+        logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
+
+        if not subscribe_permissions:
+            # No subscribe permissions found for this security definition
+            logger.info('VIEW get_topics_by_security: no subscribe permissions found')
+            return HttpResponse(
+                dumps({
+                    'msg': 'No topics available for this security definition',
+                    'topics': []
+                }),
+                content_type='application/json'
+            )
+
+        # Collect all patterns from permissions (split newline-separated patterns)
+        all_patterns = []
+        for perm in subscribe_permissions:
+            patterns = [p.strip() for p in perm.pattern.split('\n') if p.strip()]
+            # Only include patterns that start with 'sub=' or have no prefix (assume subscribe)
+            for pattern in patterns:
+                if pattern.startswith('sub='):
+                    all_patterns.append(pattern[4:])  # Remove 'sub=' prefix
+                elif not pattern.startswith('pub='):
+                    all_patterns.append(pattern)  # No prefix, assume subscribe
+
+        logger.info('VIEW get_topics_by_security: extracted %d patterns: %s', len(all_patterns), all_patterns)
+
+        if not all_patterns:
+            # No valid subscribe patterns found
+            logger.info('VIEW get_topics_by_security: no valid subscribe patterns found')
+            return HttpResponse(
+                dumps({
+                    'msg': 'No topics available for this security definition',
+                    'topics': []
+                }),
+                content_type='application/json'
+            )
+
+        # Get matching topics for each pattern using existing service
+        matched_topics = set()  # Use set to avoid duplicates
+        for pattern in all_patterns:
+            try:
+                matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+                    'cluster_id': cluster_id,
+                    'pattern': pattern
+                })
+
+                if matches_response and hasattr(matches_response, 'data'):
+                    for topic in matches_response.data:
+                        matched_topics.add((topic.id, topic.name))  # Use tuple to ensure uniqueness
+
+            except Exception as e:
+                logger.warning('VIEW get_topics_by_security: error matching pattern %s: %s', pattern, e)
+                continue
+
+        # Convert set back to list of dicts
+        topics_list = []
+        for topic_id, topic_name in matched_topics:
+            topics_list.append({
+                'id': topic_id,
+                'name': topic_name
+            })
+
+        # Sort topics by name for consistent display
+        topics_list.sort(key=lambda x: x['name'])
+
+        logger.info('VIEW get_topics_by_security: returning %d filtered topics', len(topics_list))
+
+        return HttpResponse(
+            dumps({
+                'msg': 'Topics retrieved successfully',
+                'topics': topics_list
+            }),
+            content_type='application/json'
+        )
+
+    except Exception as e:
+        logger.error('VIEW get_topics_by_security: error=%s', e)
+        return HttpResponse(
+            dumps({
+                'error': str(e) or 'Error retrieving topics for security definition'
+            }),
+            content_type='application/json',
+            status=500
+        )
