@@ -79,7 +79,6 @@ $(document).ready(function() {
                 var topicSelectId = '#id_topic_id';
                 var $topicSelect = $(topicSelectId);
                 $topicSelect.parent().find('.no-topics-message').remove();
-                $topicSelect.parent().append('<span class="no-topics-message" style="font-style: italic; color: #666;">Select a security definition first</span>');
             }
         }, 100);
 
@@ -674,7 +673,6 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
             var $topicSelect = $(topicSelectId);
             $topicSelect.empty().hide();
             $topicSelect.parent().find('.no-topics-message').remove();
-            $topicSelect.parent().append('<span class="no-topics-message" style="font-style: italic; color: #666;">Select a security definition first</span>');
             return;
         }
 
