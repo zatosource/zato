@@ -111,6 +111,8 @@ class PubSubSubscriptionImporter:
             sub_topic = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
+            sub_topic.pattern_matched = 'enmasse'
+            sub_topic.cluster_id = self.importer.cluster_id
             session.add(sub_topic)
 
         session.commit()
@@ -139,6 +141,8 @@ class PubSubSubscriptionImporter:
             sub_topic = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
+            sub_topic.pattern_matched = 'enmasse'
+            sub_topic.cluster_id = self.importer.cluster_id
             session.add(sub_topic)
 
         session.commit()
