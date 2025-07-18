@@ -42,17 +42,6 @@ $(document).ready(function() {
     $.fn.zato.data_table._create_edit = function(form_type, title, id) {
         // Clean up any previous state completely
         $('.loading-spinner').remove();
-        $('.ss-main').remove();
-
-        // Destroy any existing SlimSelect instances
-        if (window.topicSelectCreate) {
-            try { window.topicSelectCreate.destroy(); } catch (e) {}
-            window.topicSelectCreate = null;
-        }
-        if (window.topicSelectEdit) {
-            try { window.topicSelectEdit.destroy(); } catch (e) {}
-            window.topicSelectEdit = null;
-        }
 
         // Reset select element visibility
         $('#id_topic_id, #id_edit-topic_id').hide();
@@ -707,45 +696,13 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                     // Show the select
                     $topicSelect.show();
 
-                    // Initialize SlimSelect for create form
+                    // For create form, clear any default selections
                     if (form_type === 'create') {
-                        if (window.topicSelectCreate) {
-                            window.topicSelectCreate.destroy();
-                        }
-
-                        // Clear any default selections for create form
                         $topicSelect.find('option').prop('selected', false);
-                        window.topicSelectCreate = new SlimSelect({
-                            select: topicSelectId,
-                            settings: {
-                                searchPlaceholder: 'Search topics...',
-                                placeholderText: 'Select topics',
-                                closeOnSelect: false
-                            }
-                        });
-
-                        // Force dropdown to be clickable and visible
-                        setTimeout(function() {
-                            $('.ss-main.topic-select').off('click').on('click', function(e) {
-                                if (window.topicSelectCreate && window.topicSelectCreate.open) {
-                                    window.topicSelectCreate.open();
-                                }
-                            });
-
-                            // Ensure dropdown content is properly styled
-                            $('.ss-content.topic-select').css({
-                                'display': 'block',
-                                'visibility': 'visible',
-                                'z-index': '9999'
-                            });
-                        }, 100);
-                        // Force show SlimSelect container if it's hidden
-                        $('.ss-main').show();
                     }
                 } else {
                     // No matching topics - hide select and show permissions link
                     $topicSelect.hide();
-                    $('.ss-main').hide(); // Hide SlimSelect container if it exists
 
                     $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">No matching topics - <a href="/zato/pubsub/permission/?cluster=1" target="_blank">Click to manage permissions</a></span>');
                 }
@@ -758,7 +715,6 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                 $container.find('.no-topics-message').remove();
 
                 $topicSelect.hide();
-                $('.ss-main').hide();
 
                 $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">Error loading topics</span>');
             }
