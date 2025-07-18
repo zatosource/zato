@@ -68,8 +68,22 @@
         .no-topics-message,
         .no-security-definitions-message {
             display: inline-block;
-            height: 20px;
-            line-height: 20px;
+            line-height: 34px;
+            vertical-align: middle;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Fixed height for topic table row to prevent visual jumping */
+        #create-form tr:has(#id_topic_id),
+        #edit-form tr:has(#id_edit-topic_id) {
+            height: 50px;
+        }
+
+        /* Alternative selector for older browsers */
+        #create-form td:has(#id_topic_id),
+        #edit-form td:has(#id_edit-topic_id) {
+            height: 50px;
             vertical-align: middle;
         }
 
