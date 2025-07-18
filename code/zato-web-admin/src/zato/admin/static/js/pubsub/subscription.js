@@ -706,11 +706,17 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                         $topicSelect.find('option').prop('selected', false);
                     }
 
+                    // Show the Chosen select
+                    $topicSelect.next('.chosen-container').show();
+
                     // Refresh Chosen after populating options
                     $topicSelect.trigger('chosen:updated');
                 } else {
-                    // No matching topics - clear select and show permissions link
+                    // No matching topics - clear select and hide it
                     $topicSelect.empty();
+
+                    // Hide the Chosen select
+                    $topicSelect.next('.chosen-container').hide();
 
                     // Refresh Chosen after clearing options
                     $topicSelect.trigger('chosen:updated');
