@@ -337,8 +337,7 @@ def get_topics_by_security(req):
     sec_base_id = req.GET.get('sec_base_id')
     form_type = req.GET.get('form_type', 'create')
 
-    logger.info('VIEW get_topics_by_security: received request with cluster_id=%s, sec_base_id=%s, form_type=%s',
-                cluster_id, sec_base_id, form_type)
+    logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
 
     if not sec_base_id:
         return HttpResponse(
@@ -360,7 +359,7 @@ def get_topics_by_security(req):
         if permissions_response and hasattr(permissions_response, 'data'):
             for perm in permissions_response.data:
                 if (perm.sec_base_id == int(sec_base_id) and
-                    (perm.access_type == 'sub' or perm.access_type == 'all')):
+                    (perm.access_type == 'subscriber' or perm.access_type == 'publisher-subscriber')):
                     subscribe_permissions.append(perm)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
@@ -387,7 +386,7 @@ def get_topics_by_security(req):
                 elif not pattern.startswith('pub='):
                     all_patterns.append(pattern)  # No prefix, assume subscribe
 
-        logger.info('VIEW get_topics_by_security: extracted %d patterns: %s', len(all_patterns), all_patterns)
+        logger.info('VIEW get_topics_by_security: collected %d patterns', len(all_patterns))
 
         if not all_patterns:
             # No valid subscribe patterns found
@@ -428,7 +427,7 @@ def get_topics_by_security(req):
         # Sort topics by name for consistent display
         topics_list.sort(key=lambda x: x['name'])
 
-        logger.info('VIEW get_topics_by_security: returning %d filtered topics', len(topics_list))
+        logger.info('VIEW get_topics_by_security: returning %d topics', len(topics_list))
 
         return HttpResponse(
             dumps({

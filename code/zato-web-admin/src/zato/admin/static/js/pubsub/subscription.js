@@ -680,54 +680,91 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
 
         // Use the existing populateTopics function with the security-filtered endpoint
         var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
-        var endpoint = '/zato/pubsub/subscription/get-topics-by-security/?sec_base_id=' + secBaseId;
+        // Make direct AJAX call to get filtered topics
+        $.ajax({
+            url: '/zato/pubsub/subscription/get-topics-by-security/',
+            type: 'GET',
+            data: {
+                cluster_id: clusterId,
+                sec_base_id: secBaseId
+            },
+            success: function(response) {
+                var $topicSelect = $(topicSelectId);
+                var $container = $topicSelect.parent();
 
-        $.fn.zato.pubsub.common.populateTopics(
-            form_type,
-            null, // No pre-selected topics
-            endpoint,
-            topicSelectId,
-            function() {
-                // Callback after topics are loaded - initialize SlimSelect for create form
-                if (form_type === 'create') {
-                    if (window.topicSelectCreate) {
-                        window.topicSelectCreate.destroy();
-                    }
+                // Clear any existing messages
+                $container.find('.no-topics-message').remove();
 
-                    // Clear any default selections for create form
-                    $('#id_topic_id option').prop('selected', false);
-                    window.topicSelectCreate = new SlimSelect({
-                        select: '#id_topic_id',
-                        settings: {
-                            searchPlaceholder: 'Search topics...',
-                            placeholderText: 'Select topics',
-                            closeOnSelect: false
-                        }
+                if (response.topics && response.topics.length > 0) {
+                    // Clear existing options and populate with filtered topics
+                    $topicSelect.empty();
+
+                    $.each(response.topics, function(index, topic) {
+                        var option = $('<option></option>')
+                            .attr('value', topic.id)
+                            .text(topic.name);
+                        $topicSelect.append(option);
                     });
 
-                    // Force dropdown to be clickable and visible
-                    setTimeout(function() {
-                        $('.ss-main.topic-select').off('click').on('click', function(e) {
-                            if (window.topicSelectCreate && window.topicSelectCreate.open) {
-                                window.topicSelectCreate.open();
+                    // Show the select
+                    $topicSelect.show();
+
+                    // Initialize SlimSelect for create form
+                    if (form_type === 'create') {
+                        if (window.topicSelectCreate) {
+                            window.topicSelectCreate.destroy();
+                        }
+
+                        // Clear any default selections for create form
+                        $topicSelect.find('option').prop('selected', false);
+                        window.topicSelectCreate = new SlimSelect({
+                            select: topicSelectId,
+                            settings: {
+                                searchPlaceholder: 'Search topics...',
+                                placeholderText: 'Select topics',
+                                closeOnSelect: false
                             }
                         });
 
-                        // Ensure dropdown content is properly styled
-                        $('.ss-content.topic-select').css({
-                            'display': 'block',
-                            'visibility': 'visible',
-                            'z-index': '9999'
-                        });
-                    }, 100);
-                    // Force show SlimSelect container if it's hidden
-                    $('.ss-main').show();
+                        // Force dropdown to be clickable and visible
+                        setTimeout(function() {
+                            $('.ss-main.topic-select').off('click').on('click', function(e) {
+                                if (window.topicSelectCreate && window.topicSelectCreate.open) {
+                                    window.topicSelectCreate.open();
+                                }
+                            });
+
+                            // Ensure dropdown content is properly styled
+                            $('.ss-content.topic-select').css({
+                                'display': 'block',
+                                'visibility': 'visible',
+                                'z-index': '9999'
+                            });
+                        }, 100);
+                        // Force show SlimSelect container if it's hidden
+                        $('.ss-main').show();
+                    }
                 } else {
-                    // For edit form, just show the select
-                    $(topicSelectId).show();
+                    // No matching topics - hide select and show permissions link
+                    $topicSelect.hide();
+                    $('.ss-main').hide(); // Hide SlimSelect container if it exists
+
+                    $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">No topics match this security definition - <a href="/zato/pubsub/permission/?cluster=1" target="_blank">Click to manage permissions</a></span>');
                 }
+            },
+            error: function(xhr, status, error) {
+                var $topicSelect = $(topicSelectId);
+                var $container = $topicSelect.parent();
+
+                // Clear any existing messages
+                $container.find('.no-topics-message').remove();
+
+                $topicSelect.hide();
+                $('.ss-main').hide();
+
+                $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">Error loading topics</span>');
             }
-        );
+        });
     });
 
     // Trigger initial load if security definition is already selected
