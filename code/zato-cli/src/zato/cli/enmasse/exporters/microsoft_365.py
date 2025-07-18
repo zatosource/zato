@@ -92,7 +92,10 @@ class Microsoft365Exporter:
                 clean_scopes = [line.strip() for line in lines if line.strip()]
 
                 if clean_scopes:
-                    item['scopes'] = clean_scopes
+                    if len(clean_scopes) <= 1:
+                        item['scopes'] = clean_scopes[0] if clean_scopes else ''
+                    else:
+                        item['scopes'] = sorted(clean_scopes)
 
             if (pool_size := row.get('pool_size')) and pool_size != 10:
                 item['pool_size'] = pool_size
