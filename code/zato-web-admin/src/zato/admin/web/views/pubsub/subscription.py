@@ -360,7 +360,7 @@ def get_topics_by_security(req):
         if permissions_response and hasattr(permissions_response, 'data'):
             for perm in permissions_response.data:
                 if (perm.sec_base_id == int(sec_base_id) and
-                    (perm.access_type == 'subscriber' or perm.access_type == 'publisher-subscriber')):
+                    (perm.access_type == 'sub' or perm.access_type == 'all')):
                     subscribe_permissions.append(perm)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
