@@ -69,7 +69,6 @@ class ConfluenceExporter:
         exported_confluence = []
 
         for row in confluence_connections:
-
             # Process opaque attributes first
             if GENERIC.ATTR_NAME in row:
                 opaque = parse_instance_opaque_attr(row)
@@ -80,7 +79,8 @@ class ConfluenceExporter:
                 'name': row['name'],
                 'username': row['username'],
                 'address': row['address'],
-                'api_version': row['api_version']
+                'api_version': row['api_version'],
+                'is_active': row['is_active']
             }
 
             if site_url := row.get('site_url'):
