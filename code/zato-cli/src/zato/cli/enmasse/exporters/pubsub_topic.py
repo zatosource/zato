@@ -39,29 +39,30 @@ class PubSubTopicExporter:
         """
         logger.info('Exporting pub/sub topic definitions')
 
-        # Get pub/sub topics from database
-        db_topics = pubsub_topic_list(session, cluster_id, needs_columns=False)
-
-        if not db_topics:
-            logger.info('No pub/sub topic definitions found in DB')
-            return []
-
         exported_topics: 'pubsub_topic_def_list' = []
 
-        for topic_row in db_topics:
-            topic_dict = topic_row.asdict()
+        # Get pub/sub topics from database
+        query_result = pubsub_topic_list(session, cluster_id, needs_columns=False)
 
-            if not topic_dict['name'].startswith('enmasse'):
+        search_results = query_result[0]
+        items = search_results.result
+
+        for item in items:
+
+            item = item._asdict()
+            item = item['PubSubTopic']
+
+            if not item.name.startswith('enmasse'):
                 continue
 
             # Create basic topic definition with required fields
             exported_topic: 'anydict' = {
-                'name': topic_dict['name'],
+                'name': item.name,
             }
 
             # Add description if present
-            if description := topic_dict.get('description'):
-                exported_topic['description'] = description
+            if item.description:
+                exported_topic['description'] = item.description
 
             exported_topics.append(exported_topic)
 
