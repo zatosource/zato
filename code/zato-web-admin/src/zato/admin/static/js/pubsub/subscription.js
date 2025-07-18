@@ -28,7 +28,7 @@ $(document).ready(function() {
         // Clean up any spinners and reset visibility states
         $('.loading-spinner').remove();
         $('.topic-select, .security-select').removeClass('hide');
-        $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
+        $('#id_topic_id, #id_edit-topic_id').hide();
         $('#rest-endpoint-edit, #rest-endpoint-create').hide();
         $('#push-service-edit, #push-service-create').hide();
         $('#push-type-edit, #push-type-create').hide();
@@ -55,7 +55,7 @@ $(document).ready(function() {
         }
 
         // Reset select element visibility
-        $('#id_topic_id, #id_edit-topic_id, #id_sec_base_id, #id_edit-sec_base_id').hide();
+        $('#id_topic_id, #id_edit-topic_id').hide();
 
         // Ensure REST endpoint, service and push type spans are hidden before opening any form
         $('#rest-endpoint-create, #rest-endpoint-edit').hide();
@@ -68,7 +68,22 @@ $(document).ready(function() {
         }
 
         // Call the original create_edit function
-        return originalCreateEdit(form_type, title, id);
+        var result = originalCreateEdit(form_type, title, id);
+
+        // Initialize security definition change handler after form is opened
+        setTimeout(function() {
+            $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler(form_type);
+
+            // Set initial state for topic dropdown (only for create form)
+            if (form_type === 'create') {
+                var topicSelectId = '#id_topic_id';
+                var $topicSelect = $(topicSelectId);
+                $topicSelect.parent().find('.no-topics-message').remove();
+                $topicSelect.parent().append('<span class="no-topics-message" style="font-style: italic; color: #666;">Select a security definition first</span>');
+            }
+        }, 100);
+
+        return result;
     };
 
     // Override the on_submit function to add validation
@@ -383,45 +398,11 @@ $.fn.zato.pubsub.subscription.create = function() {
     $('#rest-endpoint-create').hide();
 
     $.fn.zato.data_table._create_edit('create', 'Create a pub/sub subscription', null);
-    // Populate topics and security definitions after form opens
+    // Populate security definitions after form opens
     setTimeout(function() {
-        // Initialize SlimSelect after topics are populated via callback
-        $.fn.zato.pubsub.common.populateTopics('create', null, '/zato/pubsub/subscription/get-topics/', '#id_topic_id', function() {
-            if (window.topicSelectCreate) {
-                window.topicSelectCreate.destroy();
-            }
+        // Prepare topic select for SlimSelect but don't populate yet
+        $('#id_topic_id').attr('multiple', true);
 
-            $('#id_topic_id').attr('multiple', true);
-
-            // Clear any default selections for create form
-            $('#id_topic_id option').prop('selected', false);
-            window.topicSelectCreate = new SlimSelect({
-                select: '#id_topic_id',
-                settings: {
-                    searchPlaceholder: 'Search topics...',
-                    placeholderText: 'Select topics',
-                    closeOnSelect: false
-                }
-            });
-
-            // Force dropdown to be clickable and visible
-            setTimeout(function() {
-                $('.ss-main.topic-select').off('click').on('click', function(e) {
-                    if (window.topicSelectCreate && window.topicSelectCreate.open) {
-                        window.topicSelectCreate.open();
-                    }
-                });
-
-                // Ensure dropdown content is properly styled
-                $('.ss-content.topic-select').css({
-                    'display': 'block',
-                    'visibility': 'visible',
-                    'z-index': '9999'
-                });
-            }, 100);
-            // Force show SlimSelect container if it's hidden
-            $('.ss-main').show();
-        });
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
 
         // Add security definition change handler for topic filtering
@@ -674,69 +655,84 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
     var $securitySelect = $(securitySelectId);
 
     if ($securitySelect.length === 0) {
+        // For edit form, security definition is shown as a link, not a select
+        // The topic filtering is not needed since security definition cannot be changed
         return;
     }
 
+    // Remove any existing change handlers to prevent duplicates
+    $securitySelect.off('change.security-filter');
+
     // Add change handler for security definition dropdown
-    $securitySelect.on('change', function() {
+    $securitySelect.on('change.security-filter', function() {
         var secBaseId = $(this).val();
-        var clusterId = $('#id_cluster_id').val();
+        var clusterId = $('#cluster_id').val();
 
         if (!secBaseId || !clusterId) {
+            // Clear topics if no security definition selected
+            var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
+            var $topicSelect = $(topicSelectId);
+            $topicSelect.empty().hide();
+            $topicSelect.parent().find('.no-topics-message').remove();
+            $topicSelect.parent().append('<span class="no-topics-message" style="font-style: italic; color: #666;">Select a security definition first</span>');
             return;
         }
 
-        // Show loading spinner
+        // Use the existing populateTopics function with the security-filtered endpoint
         var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
-        var $topicSelect = $(topicSelectId);
-        var $topicContainer = $topicSelect.parent();
+        var endpoint = '/zato/pubsub/subscription/get-topics-by-security/?sec_base_id=' + secBaseId;
 
-        // Add loading spinner
-        $topicContainer.append('<span class="loading-spinner">Loading topics...</span>');
-
-        // Make AJAX request to get filtered topics
-        $.ajax({
-            url: '/zato/pubsub/subscription/get-topics-by-security/',
-            type: 'GET',
-            data: {
-                cluster_id: clusterId,
-                sec_base_id: secBaseId,
-                form_type: form_type
-            },
-            success: function(response) {
-                // Remove loading spinner
-                $('.loading-spinner').remove();
-
-                if (response.error) {
-                    $.fn.zato.user_message(false, response.error);
-                    return;
-                }
-
-                // Use existing populateTopics function to update the dropdown
-                if (typeof $.fn.zato.common.topics.populateTopics === 'function') {
-                    $.fn.zato.common.topics.populateTopics(form_type, response.topics, null);
-                } else {
-                    // Fallback: manually populate the dropdown
-                    $topicSelect.empty();
-                    if (response.topics && response.topics.length > 0) {
-                        response.topics.forEach(function(topic) {
-                            $topicSelect.append('<option value="' + topic.id + '">' + topic.name + '</option>');
-                        });
-                    } else {
-                        $topicSelect.append('<option value="">No topics available</option>');
+        $.fn.zato.pubsub.common.populateTopics(
+            form_type,
+            null, // No pre-selected topics
+            endpoint,
+            topicSelectId,
+            function() {
+                // Callback after topics are loaded - initialize SlimSelect for create form
+                if (form_type === 'create') {
+                    if (window.topicSelectCreate) {
+                        window.topicSelectCreate.destroy();
                     }
-                }
-            },
-            error: function(xhr, status, error) {
-                // Remove loading spinner
-                $('.loading-spinner').remove();
 
-                var errorMsg = 'Error loading topics for security definition';
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMsg = xhr.responseJSON.error;
+                    // Clear any default selections for create form
+                    $('#id_topic_id option').prop('selected', false);
+                    window.topicSelectCreate = new SlimSelect({
+                        select: '#id_topic_id',
+                        settings: {
+                            searchPlaceholder: 'Search topics...',
+                            placeholderText: 'Select topics',
+                            closeOnSelect: false
+                        }
+                    });
+
+                    // Force dropdown to be clickable and visible
+                    setTimeout(function() {
+                        $('.ss-main.topic-select').off('click').on('click', function(e) {
+                            if (window.topicSelectCreate && window.topicSelectCreate.open) {
+                                window.topicSelectCreate.open();
+                            }
+                        });
+
+                        // Ensure dropdown content is properly styled
+                        $('.ss-content.topic-select').css({
+                            'display': 'block',
+                            'visibility': 'visible',
+                            'z-index': '9999'
+                        });
+                    }, 100);
+                    // Force show SlimSelect container if it's hidden
+                    $('.ss-main').show();
+                } else {
+                    // For edit form, just show the select
+                    $(topicSelectId).show();
                 }
-                $.fn.zato.user_message(false, errorMsg);
             }
-        });
+        );
     });
+
+    // Trigger initial load if security definition is already selected
+    var initialSecBaseId = $securitySelect.val();
+    if (initialSecBaseId) {
+        $securitySelect.trigger('change.security-filter');
+    }
 }
