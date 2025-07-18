@@ -18,7 +18,7 @@ from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
 from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
-from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic
+from zato.common.odb.model import PubSubSubscriptionTopic
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -116,9 +116,9 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         self.assertEqual(len(updated), 0)
 
         # Verify subscriptions were created correctly
-        pull_sub = None
-        push_rest_sub = None
-        push_service_sub = None
+        pull_sub = cast_('any_', None)
+        push_rest_sub = cast_('any_', None)
+        push_service_sub = cast_('any_', None)
 
         for sub in created:
             if sub.delivery_type == 'pull':
@@ -226,7 +226,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             sub_topics = self.session.query(PubSubSubscriptionTopic).filter_by(subscription_id=subscription.id).all()
 
             # Find the corresponding YAML definition
-            yaml_def = None
+            yaml_def = cast_('any_', None)
             for yaml_sub in subscription_defs:
                 sec_base_id = self.pubsub_subscription_importer.get_security_base_id_by_name(yaml_sub['security'], self.session)
                 if sec_base_id == subscription.sec_base_id and yaml_sub['delivery_type'] == subscription.delivery_type:

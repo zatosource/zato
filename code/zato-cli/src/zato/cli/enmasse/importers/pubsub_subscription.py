@@ -11,7 +11,6 @@ import logging
 
 # Zato
 from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
-from zato.common.odb.query import pubsub_subscription_list
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -75,11 +74,25 @@ class PubSubSubscriptionImporter:
         out = {}
 
         logger.info('Retrieving pubsub subscription definitions from database for cluster_id=%s', cluster_id)
-        subscriptions = pubsub_subscription_list(session, cluster_id)
+        query = session.query(PubSubSubscription).filter(PubSubSubscription.cluster_id == cluster_id)
+        subscriptions = query.all()
 
-        self._process_pubsub_subscription_defs(subscriptions, out)
+        # Process subscriptions directly
+        for subscription in subscriptions:
+            subscription_dict = {
+                'id': subscription.id,
+                'sub_key': subscription.sub_key,
+                'sec_base_id': subscription.sec_base_id,
+                'delivery_type': subscription.delivery_type,
+                'push_type': subscription.push_type,
+                'rest_push_endpoint_id': subscription.rest_push_endpoint_id,
+                'push_service_name': subscription.push_service_name,
+                'is_active': subscription.is_active,
+                'cluster_id': subscription.cluster_id
+            }
+            out[subscription.sub_key] = subscription_dict
+
         logger.info('Total pubsub subscription definitions from DB: %d', len(out))
-
         for sub_key in out:
             logger.info('DB pubsub subscription def: sub_key=%s', sub_key)
 
