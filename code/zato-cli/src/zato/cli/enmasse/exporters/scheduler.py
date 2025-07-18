@@ -65,6 +65,7 @@ class SchedulerExporter:
                 'service': row['service_name'],
                 'job_type': row['job_type'],
                 'start_date': row['start_date'],
+                'is_active': row['is_active'],
             }
 
             for attr in ['weeks', 'days', 'hours', 'minutes', 'seconds']:
