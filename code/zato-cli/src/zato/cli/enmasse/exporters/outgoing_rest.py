@@ -56,10 +56,11 @@ class OutgoingRESTExporter:
             return []
 
         exported_outgoing: 'outgoing_rest_def_list' = []
-        logger.debug('Processing %d outgoing REST connection definitions', len(db_outgoing))
 
         for outgoing_row in db_outgoing:
-            logger.debug('Processing outgoing REST connection row %s', outgoing_row)
+
+            if not outgoing_row['name'].startswith('enmasse'):
+                continue
 
             # Create basic connection definition with required fields
             exported_conn: 'anydict' = {
