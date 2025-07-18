@@ -59,10 +59,20 @@ $(document).ready(function() {
         setTimeout(function() {
             $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler(form_type);
 
+            // Initialize Chosen for topic select elements
+            var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
+            var $topicSelect = $(topicSelectId);
+
+            if ($topicSelect.length > 0) {
+                $topicSelect.chosen({
+                    placeholder_text_multiple: 'Select topics...',
+                    search_contains: true,
+                    width: '100%'
+                });
+            }
+
             // Set initial state for topic dropdown (only for create form)
             if (form_type === 'create') {
-                var topicSelectId = '#id_topic_id';
-                var $topicSelect = $(topicSelectId);
                 $topicSelect.parent().find('.no-topics-message').remove();
             }
         }, 100);
@@ -657,6 +667,7 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
             var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
             var $topicSelect = $(topicSelectId);
             $topicSelect.empty();
+            $topicSelect.trigger('chosen:updated');
             $topicSelect.parent().find('.no-topics-message').remove();
             return;
         }
@@ -693,9 +704,15 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                     if (form_type === 'create') {
                         $topicSelect.find('option').prop('selected', false);
                     }
+
+                    // Refresh Chosen after populating options
+                    $topicSelect.trigger('chosen:updated');
                 } else {
                     // No matching topics - clear select and show permissions link
                     $topicSelect.empty();
+
+                    // Refresh Chosen after clearing options
+                    $topicSelect.trigger('chosen:updated');
 
                     $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">No matching topics - <a href="/zato/pubsub/permission/?cluster=1" target="_blank">Click to manage permissions</a></span>');
                 }
@@ -708,6 +725,9 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                 $container.find('.no-topics-message').remove();
 
                 $topicSelect.empty();
+
+                // Refresh Chosen after clearing options
+                $topicSelect.trigger('chosen:updated');
 
                 $container.append('<span class="no-topics-message" style="font-style: italic; color: #666;">Error loading topics</span>');
             }
