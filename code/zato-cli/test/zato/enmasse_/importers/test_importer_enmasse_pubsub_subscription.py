@@ -239,7 +239,6 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             self.assertEqual(len(sub_topics), len(yaml_def['topic_list']))
 
             # Verify each topic is correctly associated
-            topic_names = []
             for sub_topic in sub_topics:
                 topic = self.session.query(PubSubSubscriptionTopic).filter_by(subscription_id=subscription.id, topic_id=sub_topic.topic_id).first()
                 self.assertIsNotNone(topic)
