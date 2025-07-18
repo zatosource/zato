@@ -78,7 +78,7 @@ class PubSubSubscriptionExporter:
 
             # Initialize subscription group if not exists
             if subscription_id not in subscription_groups:
-                subscription_groups[subscription_id] = {
+                subscription_data = {
                     'security': security_name,
                     'delivery_type': delivery_type,
                     'topic_list': []
@@ -89,17 +89,20 @@ class PubSubSubscriptionExporter:
                     if push_type == 'rest':
                         if not rest_push_endpoint_name:
                             raise ValueError(f'Push subscription missing rest_push_endpoint_name: subscription_id={subscription_id} security={security_name}')
-                        subscription_groups[subscription_id]['push_rest_endpoint'] = rest_push_endpoint_name
+                        subscription_data['push_rest_endpoint'] = rest_push_endpoint_name
                     elif push_type == 'service':
                         if not push_service_name:
                             raise ValueError(f'Push subscription missing push_service_name: subscription_id={subscription_id} security={security_name}')
-                        subscription_groups[subscription_id]['push_service'] = push_service_name
+                        subscription_data['push_service'] = push_service_name
                     else:
                         raise ValueError(f'Push subscription has unknown push_type {push_type}: subscription_id={subscription_id} security={security_name}')
 
+                subscription_groups[subscription_id] = subscription_data
+
             # Add topic to the subscription's topic list
-            if topic_name not in subscription_groups[subscription_id]['topic_list']:
-                subscription_groups[subscription_id]['topic_list'].append(topic_name)
+            subscription_data = subscription_groups[subscription_id]
+            if topic_name not in subscription_data['topic_list']:
+                subscription_data['topic_list'].append(topic_name)
 
         # Convert grouped subscriptions to export format
         for subscription_data in subscription_groups.values():
