@@ -424,6 +424,9 @@ $.fn.zato.pubsub.subscription.create = function() {
         });
         $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
 
+        // Add security definition change handler for topic filtering
+        $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler('create');
+
         // Setup delivery type visibility first, then populate REST endpoints for create form
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
         $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
@@ -664,4 +667,76 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
     // Handle push type changes
     $pushType.on('change', toggleEndpointTypeVisibility);
+}
+
+$.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(form_type) {
+    var securitySelectId = form_type === 'create' ? '#id_sec_base_id' : '#id_edit-sec_base_id';
+    var $securitySelect = $(securitySelectId);
+
+    if ($securitySelect.length === 0) {
+        return;
+    }
+
+    // Add change handler for security definition dropdown
+    $securitySelect.on('change', function() {
+        var secBaseId = $(this).val();
+        var clusterId = $('#id_cluster_id').val();
+
+        if (!secBaseId || !clusterId) {
+            return;
+        }
+
+        // Show loading spinner
+        var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
+        var $topicSelect = $(topicSelectId);
+        var $topicContainer = $topicSelect.parent();
+
+        // Add loading spinner
+        $topicContainer.append('<span class="loading-spinner">Loading topics...</span>');
+
+        // Make AJAX request to get filtered topics
+        $.ajax({
+            url: '/zato/pubsub/subscription/get-topics-by-security/',
+            type: 'GET',
+            data: {
+                cluster_id: clusterId,
+                sec_base_id: secBaseId,
+                form_type: form_type
+            },
+            success: function(response) {
+                // Remove loading spinner
+                $('.loading-spinner').remove();
+
+                if (response.error) {
+                    $.fn.zato.user_message(false, response.error);
+                    return;
+                }
+
+                // Use existing populateTopics function to update the dropdown
+                if (typeof $.fn.zato.common.topics.populateTopics === 'function') {
+                    $.fn.zato.common.topics.populateTopics(form_type, response.topics, null);
+                } else {
+                    // Fallback: manually populate the dropdown
+                    $topicSelect.empty();
+                    if (response.topics && response.topics.length > 0) {
+                        response.topics.forEach(function(topic) {
+                            $topicSelect.append('<option value="' + topic.id + '">' + topic.name + '</option>');
+                        });
+                    } else {
+                        $topicSelect.append('<option value="">No topics available</option>');
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                // Remove loading spinner
+                $('.loading-spinner').remove();
+
+                var errorMsg = 'Error loading topics for security definition';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                }
+                $.fn.zato.user_message(false, errorMsg);
+            }
+        });
+    });
 }
