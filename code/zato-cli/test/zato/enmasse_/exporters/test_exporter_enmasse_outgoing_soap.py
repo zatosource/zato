@@ -75,6 +75,10 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         # Ensure importer has cluster context
         _ = self.importer.get_cluster(self.session)
 
+        # Clear existing data before importing
+        cleanup_enmasse()
+        _ = self.session.commit()
+
         # Import security definitions first, as outgoing connections may depend on them
         security_defs_from_yaml = self.yaml_config.get('security', [])
         if security_defs_from_yaml:
@@ -102,10 +106,6 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         # Skip test if no outgoing SOAP connections in template
         if outgoing_soap_list:
             logger.info('Found %d outgoing SOAP connections in test YAML template', len(outgoing_soap_list))
-
-            # Clear existing data and create fresh test data
-            cleanup_enmasse()
-            _ = self.session.commit()
 
             # Import outgoing SOAP connections
             created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
