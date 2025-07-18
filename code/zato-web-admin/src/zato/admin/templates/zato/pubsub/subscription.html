@@ -115,6 +115,34 @@
             min-width: 164.8% !important;
         }
 
+        /* Chosen multi-select tag styling */
+        .chosen-container-multi .chosen-choices li.search-choice {
+            background: linear-gradient(135deg, #0936d5 0%, #0a2bb8 100%) !important;
+            border: 1px solid #072a9e !important;
+            color: white !important;
+            border-radius: 4px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .chosen-container-multi .chosen-choices li.search-choice span {
+            color: white !important;
+        }
+
+        /* Close button styling - lighter than the tag */
+        .chosen-container-multi .chosen-choices li.search-choice .search-choice-close {
+            border-radius: 50% !important;
+            width: 16px !important;
+            height: 16px !important;
+            right: -2px !important;
+            top: 4px !important;
+            opacity: 0.8 !important;
+            color: #fff !important;
+        }
+
+        .chosen-container-multi .chosen-choices li.search-choice .search-choice-close:hover {
+            opacity: 1 !important;
+        }
+
     </style>
 {% endblock %}
 
