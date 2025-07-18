@@ -54,7 +54,6 @@ class SchedulerExporter:
             return []
 
         jobs = to_json(db_jobs, return_as_dict=True)
-        logger.debug('Processing %d scheduler job definitions', len(jobs))
 
         exported_jobs = []
 
