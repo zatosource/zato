@@ -106,7 +106,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
         if outgoing_rest_defs_from_yaml:
 
             # Import the connections into the database
-            created, updated = self.outgoing_rest_importer.sync_outgoing_rest_definitions(outgoing_rest_defs_from_yaml, self.session)
+            created, updated = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_defs_from_yaml, self.session)
             logger.info('Imported %d outgoing REST definitions (created=%d, updated=%d)',
                 len(created) + len(updated), len(created), len(updated))
 
