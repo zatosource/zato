@@ -246,6 +246,22 @@ class PatternMatcher:
         result.reason = None
         return result
 
+    def _check_cached_match(self, cache_key:'str', client_id:'str', topic:'str', operation:'str', pattern:'str') -> 'EvaluationResult | None':
+        """ Check cache for pattern match and return result if found.
+        """
+        if cache_key in self._evaluation_cache:
+            if self._evaluation_cache[cache_key]:
+                return self._create_success_result(client_id, topic, operation, pattern)
+        return None
+
+    def _evaluate_and_cache_match(self, cache_key:'str', matches:'bool', client_id:'str', topic:'str', operation:'str', pattern:'str') -> 'EvaluationResult | None':
+        """ Cache match result and return success result if matched.
+        """
+        self._evaluation_cache[cache_key] = matches
+        if matches:
+            return self._create_success_result(client_id, topic, operation, pattern)
+        return None
+
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
         """ Create a PatternInfo object.
         """
@@ -292,29 +308,25 @@ class PatternMatcher:
             if not pattern_info.has_wildcards:
                 # Exact match
                 cache_key = f'exact:{topic.lower()}:{pattern_info.pattern}'
-                if cache_key in self._evaluation_cache:
-                    if self._evaluation_cache[cache_key]:
-                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                        return result
-                else:
-                    matches = topic.lower() == pattern_info.pattern
-                    self._evaluation_cache[cache_key] = matches
-                    if matches:
-                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                        return result
+                cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
+                if cached_result:
+                    return cached_result
+
+                matches = topic.lower() == pattern_info.pattern
+                match_result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+                if match_result:
+                    return match_result
             else:
                 # Wildcard match using compiled regex
                 cache_key = f'regex:{topic}:{pattern_info.pattern}'
-                if cache_key in self._evaluation_cache:
-                    if self._evaluation_cache[cache_key]:
-                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                        return result
-                else:
-                    matches = pattern_info.compiled_regex.match(topic)
-                    self._evaluation_cache[cache_key] = bool(matches)
-                    if matches:
-                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                        return result
+                cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
+                if cached_result:
+                    return cached_result
+
+                matches = bool(pattern_info.compiled_regex.match(topic))
+                match_result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+                if match_result:
+                    return match_result
 
         # No pattern matched
         result = EvaluationResult()
