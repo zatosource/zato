@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.matcher import PatternMatcher
 
 # ################################################################################################################################
@@ -24,7 +25,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_exact_match_patterns(self):
-        permissions = [{'pattern': 'orders.processed', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.processed', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.processed', 'publish')
@@ -40,7 +41,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_single_wildcard_patterns(self):
-        permissions = [{'pattern': 'orders.*', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.*', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.processed', 'publish')
@@ -62,7 +63,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_multi_level_wildcard_patterns(self):
-        permissions = [{'pattern': 'orders.**', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.processed', 'publish')
@@ -84,7 +85,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_wildcards_at_beginning(self):
-        permissions = [{'pattern': '*.orders', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': '*.orders', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'urgent.orders', 'publish')
@@ -97,7 +98,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_mixed_wildcards_in_pattern(self):
-        permissions = [{'pattern': 'orders.*.processed.**', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.*.processed.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.urgent.processed.daily', 'publish')
@@ -110,7 +111,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_empty_segments_allowed(self):
-        permissions = [{'pattern': 'orders..123', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders..123', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders..123', 'publish')
@@ -120,7 +121,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_wildcard_matches_empty_segments(self):
-        permissions = [{'pattern': 'orders.*.123', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.*.123', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders..123', 'publish')
@@ -130,7 +131,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_multi_wildcard_matches_empty_segments(self):
-        permissions = [{'pattern': 'orders.**', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders..123', 'publish')
@@ -140,7 +141,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_special_characters_treated_literally(self):
-        permissions = [{'pattern': 'orders-2024', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders-2024', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders-2024', 'publish')
@@ -150,7 +151,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_double_wildcard_at_end_matches_multiple_segments(self):
-        permissions = [{'pattern': 'orders.**', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.urgent', 'publish')
@@ -165,7 +166,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_double_wildcard_in_middle_of_pattern(self):
-        permissions = [{'pattern': 'orders.**.new', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.**.new', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.new', 'publish')
@@ -184,8 +185,8 @@ class PatternMatcherTestCase(TestCase):
 
     def test_overlapping_patterns_exact_before_wildcards(self):
         permissions = [
-            {'pattern': 'orders.*', 'is_pub': True, 'is_sub': False},
-            {'pattern': 'orders.urgent', 'is_pub': True, 'is_sub': False}
+            {'pattern': 'orders.*', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'orders.urgent', 'access_type': PubSub.API_Client.Publisher}
         ]
         self.matcher.add_client(self.client_id, permissions)
 
@@ -196,7 +197,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_case_insensitive_matching(self):
-        permissions = [{'pattern': 'Orders.Processed', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'Orders.Processed', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.processed', 'publish')
@@ -212,10 +213,10 @@ class PatternMatcherTestCase(TestCase):
 
     def test_alphabetical_evaluation_order(self):
         permissions = [
-            {'pattern': 'transaction.priority', 'is_pub': True, 'is_sub': False},
-            {'pattern': 'transaction.*', 'is_pub': True, 'is_sub': False},
-            {'pattern': 'transaction.**.processed', 'is_pub': True, 'is_sub': False},
-            {'pattern': 'transaction.international', 'is_pub': True, 'is_sub': False}
+            {'pattern': 'transaction.priority', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'transaction.*', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'transaction.**.processed', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'transaction.international', 'access_type': PubSub.API_Client.Publisher}
         ]
         self.matcher.add_client(self.client_id, permissions)
 
@@ -235,9 +236,9 @@ class PatternMatcherTestCase(TestCase):
 
     def test_publish_vs_subscribe_permissions(self):
         permissions = [
-            {'pattern': 'commands.user.**', 'is_pub': True, 'is_sub': False},
-            {'pattern': 'events.user.*', 'is_pub': False, 'is_sub': True},
-            {'pattern': 'notifications.user.email', 'is_pub': False, 'is_sub': True}
+            {'pattern': 'commands.user.**', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'events.user.*', 'access_type': PubSub.API_Client.Subscriber},
+            {'pattern': 'notifications.user.email', 'access_type': PubSub.API_Client.Subscriber}
         ]
         self.matcher.add_client(self.client_id, permissions)
 
@@ -263,7 +264,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_invalid_operation(self):
-        permissions = [{'pattern': 'orders.*', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.*', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'orders.processed', 'invalid_op')
@@ -273,7 +274,7 @@ class PatternMatcherTestCase(TestCase):
 # ################################################################################################################################
 
     def test_no_matching_pattern(self):
-        permissions = [{'pattern': 'orders.*', 'is_pub': True, 'is_sub': False}]
+        permissions = [{'pattern': 'orders.*', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
         result = self.matcher.evaluate(self.client_id, 'inventory.low', 'publish')
