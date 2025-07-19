@@ -262,6 +262,28 @@ class PatternMatcher:
             return self._create_success_result(client_id, topic, operation, pattern)
         return None
 
+    def _try_pattern_match(self, pattern_info:'PatternInfo', topic:'str', client_id:'str', operation:'str') -> 'EvaluationResult | None':
+        """ Try to match a pattern against a topic with caching.
+        """
+        topic_lower = topic.lower()
+
+        if not pattern_info.has_wildcards:
+            cache_key = f'exact:{topic_lower}:{pattern_info.pattern}'
+            cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
+            if cached_result:
+                return cached_result
+
+            matches = topic_lower == pattern_info.pattern
+            return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+        else:
+            cache_key = f'regex:{topic_lower}:{pattern_info.pattern}'
+            cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
+            if cached_result:
+                return cached_result
+
+            matches = bool(pattern_info.compiled_regex.match(topic))
+            return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
         """ Create a PatternInfo object.
         """
@@ -305,28 +327,9 @@ class PatternMatcher:
 
         # Check patterns in order: exact matches first, then wildcards (pre-sorted)
         for pattern_info in pattern_list:
-            if not pattern_info.has_wildcards:
-                # Exact match
-                cache_key = f'exact:{topic.lower()}:{pattern_info.pattern}'
-                cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
-                if cached_result:
-                    return cached_result
-
-                matches = topic.lower() == pattern_info.pattern
-                match_result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
-                if match_result:
-                    return match_result
-            else:
-                # Wildcard match using compiled regex
-                cache_key = f'regex:{topic}:{pattern_info.pattern}'
-                cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
-                if cached_result:
-                    return cached_result
-
-                matches = bool(pattern_info.compiled_regex.match(topic))
-                match_result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
-                if match_result:
-                    return match_result
+            match_result = self._try_pattern_match(pattern_info, topic, client_id, operation)
+            if match_result:
+                return match_result
 
         # No pattern matched
         result = EvaluationResult()
