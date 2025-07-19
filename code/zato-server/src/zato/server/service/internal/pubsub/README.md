@@ -83,23 +83,26 @@ This allows publishing to any user command topic, subscribing to direct user eve
 **A:** Yes. `*.orders` matches `urgent.orders`, `daily.orders`, etc.
 
 ### Q: What's the difference between `*` and `**`?
-**A:** `*` stops at dots, `**` crosses them, so `topic.*` matches `topic.abc` but not `topic.abc.def`, but `topic.**` matches both.
+**A:** `*` stops at dots, `**` crosses them, so `topic.*` matches `topic.abc` but not `topic.abc.def`, while `topic.**` matches both.
 
 ### Q: Can I mix wildcards in one pattern?
 **A:** Yes. `orders.*.processed.**` matches `orders.urgent.processed.daily` and `orders.bulk.processed.summary.final`.
 
-### Q: Do patterns work with empty segments?
-**A:** No. `topic..name` (double dot) is not valid and won't match patterns like `topic.*.name`.
+### Q: Does ** match to the end of a topic name?
+**A:** Yes. `orders.**` matches `orders.urgent`, `orders.urgent.high`, and `orders.urgent.high.priority`. The ** wildcard consumes all remaining segments from its position to the end of the topic name.
 
-### Q: Can I use other wildcard characters like `?`?
+### Q: Can I have empty segments?
+**A:** Yes. E.g. `orders..123` (double dot) will be treated as this exact, literal name, "orders", then two dots and then "123".
+
+### Q: Can I use other wildcard characters like `?` or `>`?
 **A:** No. Only `*` and `**` are supported wildcards.
 
 ### Q: What happens if I have overlapping patterns?
 **A:** Only the first matching pattern applies due to the "first match wins" rule. If you have both `orders.*`
-and `orders.urgent`, and `orders.*` comes first alphabetically, only `orders.*` will be evaluated for `orders.urgent`.
+and `orders.urgent`, `orders.urgent` comes first (exact patterns before wildcards), so `orders.urgent` will be evaluated first for topic `orders.urgent`.
 
 ### Q: Are there any reserved topic names?
-**A:** No specific reserved names, but avoid using dots at the start or end of topic names for clarity.
+**A:** Yes. Topic names cannot contain "zato" or "zpsk" anywhere in the name (case insensitive). Also avoid using dots at the start or end of topic names for clarity.
 
 ### Q: How do I match topics with special characters?
 **A:** Special characters (except dots and wildcards) are treated literally. `orders-2024` matches exactly `orders-2024`.
