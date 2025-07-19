@@ -108,12 +108,15 @@ class PatternMatcher:
             # Has wildcards
             regex_pattern = pattern.replace('**', '__DOUBLE_ASTERISK__')
             regex_pattern = regex_pattern.replace('*', '[^.]*')
-            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
+            regex_pattern = regex_pattern.replace('.__DOUBLE_ASTERISK__', r'(?:\..*)?')
+            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__.', r'(?:.*\.)?')
+            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', r'.*')
             regex_pattern = '^' + regex_pattern + '$'
         else:
             # Exact pattern - escape special regex chars and add ^ $ anchors
             regex_pattern = '^' + re.escape(pattern) + '$'
 
+        print(f"DEBUG: pattern={pattern}, regex_pattern={regex_pattern}")
         compiled_regex = re.compile(regex_pattern, re.IGNORECASE)
 
         # Cache the compiled regex
@@ -279,8 +282,9 @@ class PatternMatcher:
             return cached_result
 
         match_result = pattern_info.compiled_regex.match(topic)
-        matches = bool(match_result)
-        result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+        is_match = bool(match_result)
+        print(f"DEBUG: topic={topic}, pattern={pattern_info.pattern}, regex={pattern_info.compiled_regex.pattern}, match={is_match}")
+        result = self._evaluate_and_cache_match(cache_key, is_match, client_id, topic, operation, pattern_info.pattern)
         return result
 
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
