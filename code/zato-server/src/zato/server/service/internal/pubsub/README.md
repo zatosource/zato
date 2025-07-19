@@ -108,18 +108,18 @@ This allows publishing to any user command topic, subscribing to direct user eve
 
 ```
 Given patterns:
-- sub=orders.urgent
-- sub=orders.*
-- sub=orders.**.processed
+- sub=transaction.priority
+- sub=transaction.*
+- sub=transaction.**.processed
 
 Evaluation order:
-1. orders.* (comes first alphabetically)
-2. orders.**.processed
-3. orders.urgent
+1. transaction.* (comes first alphabetically)
+2. transaction.**.processed
+3. transaction.priority
 ```
 
-For instance, when a message is sent to topic `ZZZ.urgent`, the system will check the publisher's publication permissions in this order:
+For instance, when a message is sent to topic `transaction.swift`, the system will check the publisher's publication permissions in this order:
 
-* First, `ZZZ.*` first (no match)
-* Then `ZZZ.**.processed` (matches)
-* and the last one `ZZZ` will be skipped because the previous one already matched, although otherwise it would've been a match
+* First, `transaction.*` first (no match)
+* Then `transaction.**.processed` (matches)
+* and the last one `transaction.urgent` will be skipped because the previous one already matched, although otherwise it would've been a match
