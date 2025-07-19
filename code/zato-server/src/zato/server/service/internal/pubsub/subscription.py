@@ -19,6 +19,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
+from zato.common.pubsub.util import evaluate_pattern_match
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
@@ -195,7 +196,9 @@ class Create(AdminService):
                     sub_topic.subscription = sub
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
-                    sub_topic.pattern_matched = topic.name
+
+                    pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                    sub_topic.pattern_matched = pattern_matched
 
                     session.add(sub_topic)
 
@@ -321,7 +324,9 @@ class Edit(AdminService):
                             sub_topic.cluster_id = input.cluster_id
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
-                            sub_topic.pattern_matched = 'zato.manual' # type: ignore
+
+                            pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                            sub_topic.pattern_matched = pattern_matched
 
                             session.add(sub_topic)
 
