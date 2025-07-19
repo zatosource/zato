@@ -9,9 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from json import dumps
+from traceback import format_exc
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
@@ -256,21 +257,67 @@ def get_topics(req):
 
 @method_allowed('POST')
 def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
-    """ Returns a list of topics to which a given security definition has access for subscription,
-    including both topics that it's already subscribed to or all the remaining ones
-    the security definition may be possible subscribe to.
+    """ Returns HTML for topics to which a given security definition has access for subscription.
     """
+    logger = logging.getLogger(__name__)
+    logger.info('sec_def_topic_sub_list: Starting with sec_base_id=%s, cluster_id=%s', sec_base_id, cluster_id)
 
     try:
-        response = req.zato.client.invoke('zato.pubsub.subscription.get-topic-sub-list', {
+        # Get permissions for this security definition
+        permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
             'cluster_id': cluster_id,
-            'sec_base_id': sec_base_id,
-            'topic_filter_by': req.GET.get('topic_filter_by'),
         })
+
+        # Filter permissions for this security definition and subscriber access
+        subscriber_patterns = []
+        for perm in permissions_response.data:
+            if perm.sec_base_id == int(sec_base_id) and perm.access_type == 'subscriber':
+                # Split multiline patterns
+                patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
+                subscriber_patterns.extend(patterns)
+
+        if not subscriber_patterns:
+            return HttpResponse('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><em>No subscription permissions defined for this security definition</em></td></tr></table>', content_type='text/html')
+
+        # Get all matching topics for all patterns
+        all_topics = set()
+        for pattern in subscriber_patterns:
+            matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+                'cluster_id': cluster_id,
+                'pattern': pattern
+            })
+            for topic in matches_response.data:
+                all_topics.add((topic.get('id', ''), topic.get('name', '')))
+
+        # Build HTML for the multi-checkbox
+        html_parts = []
+        html_parts.append('<table id="multi-select-table" class="multi-select-table">')
+
+        if all_topics:
+            # Sort topics by name for consistent display
+            sorted_topics = sorted(all_topics, key=lambda x: x[1])
+            for topic_id, topic_name in sorted_topics:
+                checkbox_id = f'topic_checkbox_{topic_id}'
+                html_parts.append(f'<tr>')
+                html_parts.append(f'<td>')
+                html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="name" value="{topic_name}" />')
+                html_parts.append(f'</td>')
+                html_parts.append(f'<td>')
+                html_parts.append(f'<label for="{checkbox_id}">')
+                html_parts.append(f'<a href="/zato/pubsub/topic/?cluster={cluster_id}&query={topic_name}" target="_blank">{topic_name}</a>')
+                html_parts.append(f'</label>')
+                html_parts.append(f'</td>')
+                html_parts.append(f'</tr>')
+        else:
+            html_parts.append('<tr><td colspan="2"><em>No topics match the subscription patterns for this security definition</em></td></tr>')
+
+        html_parts.append('</table>')
+        html_content = ''.join(html_parts)
+
+        return HttpResponse(html_content, content_type='text/html')
+
     except Exception:
         return HttpResponseServerError(format_exc())
-    else:
-        return HttpResponse(dumps(response.data.response.topic_sub_list), content_type='application/javascript')
 
 # ################################################################################################################################
 # ################################################################################################################################
