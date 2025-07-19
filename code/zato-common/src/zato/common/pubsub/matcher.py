@@ -110,13 +110,13 @@ class PatternMatcher:
             regex_pattern = regex_pattern.replace('*', '[^.]*')
             regex_pattern = regex_pattern.replace('.__DOUBLE_ASTERISK__', r'(?:\..*)?')
             regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__.', r'(?:.*\.)?')
-            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', r'.*')
+            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', r'(?:.*)?')
             regex_pattern = '^' + regex_pattern + '$'
         else:
             # Exact pattern - escape special regex chars and add ^ $ anchors
             regex_pattern = '^' + re.escape(pattern) + '$'
 
-        print(f"DEBUG: pattern={pattern}, regex_pattern={regex_pattern}")
+
         compiled_regex = re.compile(regex_pattern, re.IGNORECASE)
 
         # Cache the compiled regex
@@ -166,6 +166,14 @@ class PatternMatcher:
         """
         with self._lock:
             parsed_permissions = self._parse_permissions(permissions)
+            
+            # Validate patterns for reserved names and ASCII-only
+            all_patterns = parsed_permissions.pub_patterns + parsed_permissions.sub_patterns
+            for pattern in all_patterns:
+                if self._contains_reserved_name(pattern):
+                    raise ValueError(f'Pattern contains reserved name: {pattern}')
+                if not self._is_ascii_only(pattern):
+                    raise ValueError(f'Pattern contains non-ASCII characters: {pattern}')
 
             publisher_pattern_list = []
             for pattern in parsed_permissions.pub_patterns:
@@ -243,6 +251,40 @@ class PatternMatcher:
         """
         return (pattern_info.has_wildcards, pattern_info.pattern)
 
+    def _contains_reserved_name(self, pattern:'str') -> 'bool':
+        """ Check if pattern contains reserved names case-insensitively.
+        """
+        pattern_lower = pattern.lower()
+        return 'zato' in pattern_lower or 'zpsk' in pattern_lower
+
+    def _is_ascii_only(self, pattern:'str') -> 'bool':
+        """ Check if pattern contains only ASCII characters.
+        """
+        try:
+            pattern.encode('ascii')
+            return True
+        except UnicodeEncodeError:
+            return False
+
+    def _has_more_specific_pattern(self, client_permissions:'ClientPermissions', topic:'str', operation:'str') -> 'bool':
+        """ Check if there's a more specific (exact) pattern that would override wildcard matches.
+        """
+        # Get all patterns for this client (both pub and sub)
+        all_patterns = client_permissions.pub_patterns + client_permissions.sub_patterns
+        
+        # Look for exact matches (patterns without wildcards)
+        for pattern_info in all_patterns:
+            if not pattern_info.has_wildcards:
+                if pattern_info.compiled_regex.match(topic):
+                    # Found exact match - check if it grants the requested operation
+                    if operation == 'publish' and pattern_info.is_pub:
+                        return False  # Exact pattern allows this operation
+                    elif operation == 'subscribe' and pattern_info.is_sub:
+                        return False  # Exact pattern allows this operation
+                    else:
+                        return True  # Exact pattern exists but doesn't allow this operation
+        return False  # No exact pattern found
+
     def _create_success_result(self, client_id:'str', topic:'str', operation:'str', matched_pattern:'str') -> 'EvaluationResult':
         """ Create a successful evaluation result.
         """
@@ -283,7 +325,7 @@ class PatternMatcher:
 
         match_result = pattern_info.compiled_regex.match(topic)
         is_match = bool(match_result)
-        print(f"DEBUG: topic={topic}, pattern={pattern_info.pattern}, regex={pattern_info.compiled_regex.pattern}, match={is_match}")
+
         result = self._evaluate_and_cache_match(cache_key, is_match, client_id, topic, operation, pattern_info.pattern)
         return result
 
@@ -332,6 +374,11 @@ class PatternMatcher:
         for pattern_info in pattern_list:
             match_result = self._try_pattern_match(pattern_info, topic, client_id, operation)
             if match_result:
+                # If this is a wildcard match, check if there's a more specific exact pattern
+                # that would override this permission
+                if pattern_info.has_wildcards:
+                    if self._has_more_specific_pattern(client_permissions, topic, operation):
+                        continue  # Skip this wildcard match, exact pattern takes precedence
                 return match_result
 
         # No pattern matched
