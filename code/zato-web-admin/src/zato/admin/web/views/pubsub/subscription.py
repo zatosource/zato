@@ -259,20 +259,20 @@ def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
     """ Get subscriber patterns for a given security definition.
     """
     logger = logging.getLogger(__name__)
-    
+
     logger.info('Getting permissions for cluster_id=%s', cluster_id)
     permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
         'cluster_id': cluster_id,
     })
     logger.info('Got %d permissions', len(permissions_response.data))
-    
+
     subscriber_patterns = []
     for perm in permissions_response.data:
         if perm.sec_base_id == int(sec_base_id) and ('subscriber' in perm.access_type.lower()):
             logger.info('Found subscriber permission with pattern: %s', perm.pattern)
             patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
             subscriber_patterns.extend(patterns)
-    
+
     logger.info('Found %d subscriber patterns: %s', len(subscriber_patterns), subscriber_patterns)
     return subscriber_patterns
 
@@ -282,7 +282,7 @@ def _get_topics_for_patterns(req, subscriber_patterns, cluster_id):
     """ Get all topics matching the given patterns.
     """
     logger = logging.getLogger(__name__)
-    
+
     all_topics = set()
     for pattern in subscriber_patterns:
         try:
@@ -295,7 +295,7 @@ def _get_topics_for_patterns(req, subscriber_patterns, cluster_id):
                 all_topics.add((topic.get('id', ''), topic.get('name', '')))
         except Exception as e:
             logger.error('Error getting matches for pattern: %s, error: %s', pattern, e)
-    
+
     logger.info('Found %d topics', len(all_topics))
     return all_topics
 
@@ -306,7 +306,7 @@ def _build_topic_checkbox_html(all_topics, cluster_id):
     """
     html_parts = []
     html_parts.append('<table id="multi-select-table" class="multi-select-table">')
-    
+
     if all_topics:
         sorted_topics = sorted(all_topics, key=lambda x: x[1])
         for topic_id, topic_name in sorted_topics:
@@ -323,7 +323,7 @@ def _build_topic_checkbox_html(all_topics, cluster_id):
             html_parts.append(f'</tr>')
     else:
         html_parts.append('<tr><td colspan="2"><em>No topics match the subscription patterns for this security definition</em></td></tr>')
-    
+
     html_parts.append('</table>')
     return ''.join(html_parts)
 
@@ -338,7 +338,7 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
 
     try:
         subscriber_patterns = _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id)
-        
+
         if not subscriber_patterns:
             logger.warning('No subscription permissions found for sec_base_id=%s', sec_base_id)
             return HttpResponse('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><em>No subscription permissions defined for this security definition</em></td></tr></table>', content_type='text/html')
@@ -347,7 +347,7 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
         html_content = _build_topic_checkbox_html(all_topics, cluster_id)
 
         return HttpResponse(html_content, content_type='text/html')
-        
+
     except Exception as e:
         logger.error('Exception occurred: %s', format_exc())
         return HttpResponseServerError(format_exc())
