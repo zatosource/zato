@@ -30,6 +30,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+    Max_Length = 200
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class PatternInfo:
     """ Information about a single pattern.
@@ -166,12 +172,12 @@ class PatternMatcher:
         """
         with self._lock:
             parsed_permissions = self._parse_permissions(permissions)
-            
+
             # Validate patterns for reserved names, ASCII-only, and length
             all_patterns = parsed_permissions.pub_patterns + parsed_permissions.sub_patterns
             for pattern in all_patterns:
-                if len(pattern) > 200:
-                    raise ValueError(f'Pattern exceeds maximum length of 200 characters: {len(pattern)}')
+                if len(pattern) > ModuleCtx.Max_Length:
+                    raise ValueError(f'Pattern exceeds maximum length of {ModuleCtx.Max_Length} characters: {len(pattern)}')
                 if self._contains_reserved_name(pattern):
                     raise ValueError(f'Pattern contains reserved name: {pattern}')
                 if not self._is_ascii_only(pattern):
@@ -263,7 +269,7 @@ class PatternMatcher:
         """ Check if pattern contains only ASCII characters.
         """
         try:
-            pattern.encode('ascii')
+            _ = pattern.encode('ascii')
             return True
         except UnicodeEncodeError:
             return False
@@ -273,7 +279,7 @@ class PatternMatcher:
         """
         # Get all patterns for this client (both pub and sub)
         all_patterns = client_permissions.pub_patterns + client_permissions.sub_patterns
-        
+
         # Look for exact matches (patterns without wildcards)
         for pattern_info in all_patterns:
             if not pattern_info.has_wildcards:
