@@ -711,8 +711,8 @@ patternData = instance.pattern;
 
                 // Function to display security definition name and add hidden input for ID
                 function initializeEditForm() {
-                    // Store the security definition ID in a hidden field
-                    var $container = $('.security-definition-container');
+                    // Store the security definition ID in a hidden field - target only the edit form's container
+                    var $container = $('#edit-form .security-definition-container');
 
                     // Clear all existing content from the container
                     $container.empty();
