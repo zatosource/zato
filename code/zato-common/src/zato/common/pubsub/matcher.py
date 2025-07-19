@@ -277,21 +277,17 @@ class PatternMatcher:
     def _has_more_specific_pattern(self, client_permissions:'ClientPermissions', topic:'str', operation:'str') -> 'bool':
         """ Check if there's a more specific (exact) pattern that would override wildcard matches.
         """
+        topic_lower = topic.lower()
+
         # Get all patterns for this client (both pub and sub)
         all_patterns = client_permissions.pub_patterns + client_permissions.sub_patterns
 
         # Look for exact matches (patterns without wildcards)
         for pattern_info in all_patterns:
             if not pattern_info.has_wildcards:
-                if pattern_info.compiled_regex.match(topic):
-                    # Found exact match - check if it grants the requested operation
-                    if operation == 'publish' and pattern_info.is_pub:
-                        return False  # Exact pattern allows this operation
-                    elif operation == 'subscribe' and pattern_info.is_sub:
-                        return False  # Exact pattern allows this operation
-                    else:
-                        return True  # Exact pattern exists but doesn't allow this operation
-        return False  # No exact pattern found
+                if pattern_info.compiled_regex.match(topic_lower):
+                    return True  # Found more specific exact pattern
+        return False  # No more specific pattern found
 
     def _create_success_result(self, client_id:'str', topic:'str', operation:'str', matched_pattern:'str') -> 'EvaluationResult':
         """ Create a successful evaluation result.
@@ -331,8 +327,11 @@ class PatternMatcher:
         if cached_result:
             return cached_result
 
-        match_result = pattern_info.compiled_regex.match(topic)
+        match_result = pattern_info.compiled_regex.match(topic_lower)
         is_match = bool(match_result)
+
+        # Debug logging
+        print(f"DEBUG: pattern='{pattern_info.pattern}', topic='{topic_lower}', regex='{pattern_info.compiled_regex.pattern}', match={is_match}")
 
         result = self._evaluate_and_cache_match(cache_key, is_match, client_id, topic, operation, pattern_info.pattern)
         return result
@@ -340,9 +339,10 @@ class PatternMatcher:
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
         """ Create a PatternInfo object.
         """
-        compiled_regex = self._compile_pattern(pattern)
+        pattern_lower = pattern.lower()
+        compiled_regex = self._compile_pattern(pattern_lower)
         pattern_info = PatternInfo()
-        pattern_info.pattern = pattern.lower()
+        pattern_info.pattern = pattern_lower
         pattern_info.compiled_regex = compiled_regex
         pattern_info.is_pub = is_pub
         pattern_info.is_sub = is_sub
@@ -354,6 +354,8 @@ class PatternMatcher:
     def evaluate(self, client_id:'str', topic:'str', operation:'str') -> 'EvaluationResult':
         """ Evaluate if a client can perform an operation on a topic.
         """
+        print(f"DEBUG EVAL: client_id='{client_id}', topic='{topic}', operation='{operation}'")
+
         client_permissions = self._clients.get(client_id)
         if not client_permissions:
             result = EvaluationResult()
@@ -362,6 +364,7 @@ class PatternMatcher:
             result.topic = topic
             result.operation = operation
             result.reason = 'Client not found'
+            print(f"DEBUG EVAL: Client not found")
             return result
 
         # Get patterns based on operation
@@ -376,18 +379,21 @@ class PatternMatcher:
             result.topic = topic
             result.operation = operation
             result.reason = f'Invalid operation: {operation}'
+            print(f"DEBUG EVAL: Invalid operation: {operation}")
             return result
 
-        # Check patterns in order: exact matches first, then wildcards (pre-sorted)
-        for pattern_info in pattern_list:
+        print(f"DEBUG EVAL: Found {len(pattern_list)} patterns for {operation}")
+
+        # Check patterns in order
+        for i, pattern_info in enumerate(pattern_list):
+            print(f"DEBUG EVAL: Checking pattern {i}: {pattern_info.pattern}")
             match_result = self._try_pattern_match(pattern_info, topic, client_id, operation)
             if match_result:
-                # If this is a wildcard match, check if there's a more specific exact pattern
-                # that would override this permission
-                if pattern_info.has_wildcards:
-                    if self._has_more_specific_pattern(client_permissions, topic, operation):
-                        continue  # Skip this wildcard match, exact pattern takes precedence
+                print(f"DEBUG EVAL: Pattern matched: {pattern_info.pattern}")
+                print(f"DEBUG EVAL: Returning success result")
                 return match_result
+            else:
+                print(f"DEBUG EVAL: Pattern did not match: {pattern_info.pattern}")
 
         # No pattern matched
         result = EvaluationResult()
@@ -397,6 +403,7 @@ class PatternMatcher:
         result.operation = operation
         result.matched_pattern = None
         result.reason = 'No matching pattern found'
+        print(f"DEBUG EVAL: No pattern matched")
         return result
 
 # ################################################################################################################################
