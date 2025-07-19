@@ -254,6 +254,27 @@ def get_topics(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('POST')
+def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
+    """ Returns a list of topics to which a given security definition has access for subscription,
+    including both topics that it's already subscribed to or all the remaining ones
+    the security definition may be possible subscribe to.
+    """
+
+    try:
+        response = req.zato.client.invoke('zato.pubsub.subscription.get-topic-sub-list', {
+            'cluster_id': cluster_id,
+            'sec_base_id': sec_base_id,
+            'topic_filter_by': req.GET.get('topic_filter_by'),
+        })
+    except Exception:
+        return HttpResponseServerError(format_exc())
+    else:
+        return HttpResponse(dumps(response.data.response.topic_sub_list), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def get_rest_endpoints(req):
     """ Retrieves a list of REST outgoing connections for pubsub subscriptions.
