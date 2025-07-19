@@ -107,7 +107,7 @@ The ** wildcard matches zero or more segments between its position and the next 
 and `orders.urgent`, `orders.urgent` comes first (exact patterns before wildcards), so `orders.urgent` will be evaluated first for topic `orders.urgent`.
 
 ### Q: Are there any reserved topic names?
-**A:** Yes. Topic names cannot contain "zato" or "zpsk" anywhere in the name (case insensitive). Also avoid using dots at the start or end of topic names for clarity.
+**A:** Yes. Topic names cannot contain "zato" or "zpsk" anywhere in the name (case insensitive). Additionally, all topic names must contain only ASCII characters - Unicode characters are not allowed. Also avoid using dots at the start or end of topic names for clarity.
 
 ### Q: How do I match topics with special characters?
 **A:** Special characters (except dots and wildcards) are treated literally. `orders-2024` matches exactly `orders-2024`.
