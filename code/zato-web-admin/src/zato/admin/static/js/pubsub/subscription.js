@@ -15,14 +15,14 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
-    var success = status == 'success';
-    if(success) {
-        // Display the HTML directly in the multi-select div
+    if(data && typeof data === 'string') {
+        $('#multi-select-div').html(data);
+    }
+    else if(data && data.responseText) {
         $('#multi-select-div').html(data.responseText);
     }
     else {
-        console.log(data.responseText);
-        $('#multi-select-div').html('<em>Error loading topics</em>');
+        $('#multi-select-div').html('<span style="font-style: italic; color: #666;">Error loading topics</span>');
     }
 }
 

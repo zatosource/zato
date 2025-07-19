@@ -376,7 +376,7 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
             html_content = (
                 '<table id="multi-select-table" class="multi-select-table">'
                 '<tr><td colspan="2">'
-                '<em>No subscription permissions defined for this security definition</em>'
+                '<span style="font-style: italic; color: #666;">No subscription permissions defined for this security definition</span>'
                 '</td></tr>'
                 '</table>'
             )
