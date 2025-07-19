@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from traceback import format_exc
-import re
 
 # Bunch
 from bunch import Bunch
@@ -18,6 +17,7 @@ from bunch import Bunch
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
+from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -236,6 +236,7 @@ class GetMatches(AdminService):
         output_optional = 'id', 'name', 'description'
 
     def handle(self):
+
         input_pattern = self.request.input.pattern
         cluster_id = self.request.input.cluster_id
 
@@ -252,35 +253,24 @@ class GetMatches(AdminService):
                 PubSubTopic.is_active == True
             ).all()
 
+            # Create temporary matcher with the pattern
+            matcher = PatternMatcher()
+            client_id = 'temp_client'
+            permissions = [{
+                'pattern': topic_pattern,
+                'access_type': 'subscriber'
+            }]
+            matcher.add_client(client_id, permissions)
+
             matching_topics = []
-
-            # Use pattern matching based on whether wildcards are present
-            if '*' not in topic_pattern and '?' not in topic_pattern:
-                for topic in topics:
-                    if topic.name == topic_pattern:
-                        matching_topics.append({
-                            'id': topic.id,
-                            'name': topic.name,
-                            'description': topic.description or ''
-                        })
-            else:
-                # Convert pattern to regex
-                regex_pattern = topic_pattern.replace('**', '__DOUBLE_ASTERISK__')
-                regex_pattern = regex_pattern.replace('*', '[^.]*')
-                regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
-                regex_pattern = '^' + regex_pattern + '$'
-
-                compiled_pattern = re.compile(regex_pattern)
-
-                # Check each topic against the regex pattern
-                for topic in topics:
-                    match_result = bool(compiled_pattern.match(topic.name))
-                    if match_result:
-                        matching_topics.append({
-                            'id': topic.id,
-                            'name': topic.name,
-                            'description': topic.description or ''
-                        })
+            for topic in topics:
+                result = matcher.evaluate(client_id, topic.name, 'subscribe')
+                if result.is_ok:
+                    matching_topics.append({
+                        'id': topic.id,
+                        'name': topic.name,
+                        'description': topic.description or ''
+                    })
 
             self.response.payload = matching_topics
 
