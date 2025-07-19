@@ -24,20 +24,20 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_regex_dos_nested_wildcards(self):
-        """ Test potential regex DoS with nested wildcards.
+    def test_nested_wildcards(self):
+        """ Test nested wildcard patterns.
         """
         permissions = [{'pattern': '**.**.**.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
-        # Should not hang or crash
+        # Should handle nested wildcards correctly
         result = self.matcher.evaluate(self.client_id, 'a.b.c.d.e.f.g.h', 'publish')
         self.assertTrue(result.is_ok)
 
 # ################################################################################################################################
 
-    def test_case_sensitivity_bypass_reserved_names(self):
-        """ Test case variations of reserved names.
+    def test_reserved_names_case_sensitivity(self):
+        """ Test case variations of reserved names are rejected.
         """
         reserved_patterns = ['ZaTo.admin.**', 'zato.admin.**', 'ZPSK.secret.**', 'zpsk.secret.**']
 
@@ -48,10 +48,10 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unicode_homograph_attacks(self):
+    def test_non_ascii_patterns(self):
         """ Test non-ASCII characters are rejected.
         """
-        # Non-ASCII patterns that should be rejected
+        # Test various non-ASCII patterns
         non_ascii_patterns = [
             'ᴢᴀᴛᴏ.admin.**',   # Small caps
             'ᴢᴘsᴋ.secret.**',  # Small caps
@@ -66,13 +66,13 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_wildcard_boundary_exploitation(self):
-        """ Test wildcard boundary conditions.
+    def test_wildcard_boundaries(self):
+        """ Test wildcard patterns at topic boundaries.
         """
         permissions = [{'pattern': '**.admin.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
-        # Test various boundary cases
+        # Test boundary cases
         boundary_topics = [
             '.admin.',
             'admin.',
@@ -94,7 +94,7 @@ class PatternMatcherMiscTestCase(TestCase):
         permissions = [{'pattern': 'admin.*', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
-        # Topics with regex special chars - should be treated literally
+        # Topics with regex special chars
         special_topics = [
             'admin.[test]',
             'admin.(test)',
@@ -112,8 +112,8 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_empty_segment_abuse(self):
-        """ Test empty segment manipulation.
+    def test_empty_segments(self):
+        """ Test empty segments in topic names.
         """
         permissions = [
             {'pattern': 'admin.*.secret', 'access_type': PubSub.API_Client.Publisher},
@@ -131,12 +131,12 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_permission_escalation_overlapping(self):
-        """ Test permission escalation through overlapping patterns.
+    def test_overlapping_patterns(self):
+        """ Test overlapping patterns with different permissions.
         """
         permissions = [
-            {'pattern': 'admin.*', 'access_type': PubSub.API_Client.Subscriber},    # Less privilege
-            {'pattern': 'admin.delete', 'access_type': PubSub.API_Client.Publisher} # More privilege
+            {'pattern': 'admin.*', 'access_type': PubSub.API_Client.Subscriber},
+            {'pattern': 'admin.delete', 'access_type': PubSub.API_Client.Publisher}
         ]
         self.matcher.add_client(self.client_id, permissions)
 
