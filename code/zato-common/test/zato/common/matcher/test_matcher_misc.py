@@ -181,6 +181,19 @@ class PatternMatcherMiscTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_pattern_max_length_validation(self):
+        """ Test pattern exceeding maximum length is rejected.
+        """
+        # Test pattern exceeding 200 characters
+        long_pattern = 'a' * 201
+        permissions = [{'pattern': long_pattern, 'access_type': PubSub.API_Client.Publisher}]
+
+        with self.assertRaises(ValueError) as cm:
+            self.matcher.add_client(self.client_id, permissions)
+        self.assertIn('exceeds maximum length', str(cm.exception))
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
     _ = main()
 
