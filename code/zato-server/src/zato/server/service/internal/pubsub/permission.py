@@ -76,7 +76,8 @@ class Create(AdminService):
         if not input.pattern or not input.pattern.strip():
             raise Exception('At least one pattern is required')
 
-        patterns = [p.strip() for p in input.pattern.split('\n') if p.strip()]
+        patterns = [item.strip() for item in input.pattern.splitlines() if item.strip()]
+
         if not patterns:
             raise Exception('At least one valid pattern is required')
 
@@ -138,7 +139,8 @@ class Edit(AdminService):
         if not input.pattern or not input.pattern.strip():
             raise Exception('At least one pattern is required')
 
-        patterns = [p.strip() for p in input.pattern.split('\n') if p.strip()]
+        patterns = [item.strip() for item in input.pattern.splitlines() if item.strip()]
+
         if not patterns:
             raise Exception('At least one valid pattern is required')
 
