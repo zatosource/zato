@@ -330,9 +330,6 @@ class PatternMatcher:
         match_result = pattern_info.compiled_regex.match(topic_lower)
         is_match = bool(match_result)
 
-        # Debug logging
-        print(f"DEBUG: pattern='{pattern_info.pattern}', topic='{topic_lower}', regex='{pattern_info.compiled_regex.pattern}', match={is_match}")
-
         result = self._evaluate_and_cache_match(cache_key, is_match, client_id, topic, operation, pattern_info.pattern)
         return result
 
@@ -354,8 +351,6 @@ class PatternMatcher:
     def evaluate(self, client_id:'str', topic:'str', operation:'str') -> 'EvaluationResult':
         """ Evaluate if a client can perform an operation on a topic.
         """
-        print(f"DEBUG EVAL: client_id='{client_id}', topic='{topic}', operation='{operation}'")
-
         client_permissions = self._clients.get(client_id)
         if not client_permissions:
             result = EvaluationResult()
@@ -364,7 +359,6 @@ class PatternMatcher:
             result.topic = topic
             result.operation = operation
             result.reason = 'Client not found'
-            print(f"DEBUG EVAL: Client not found")
             return result
 
         # Get patterns based on operation
@@ -379,21 +373,13 @@ class PatternMatcher:
             result.topic = topic
             result.operation = operation
             result.reason = f'Invalid operation: {operation}'
-            print(f"DEBUG EVAL: Invalid operation: {operation}")
             return result
 
-        print(f"DEBUG EVAL: Found {len(pattern_list)} patterns for {operation}")
-
         # Check patterns in order
-        for i, pattern_info in enumerate(pattern_list):
-            print(f"DEBUG EVAL: Checking pattern {i}: {pattern_info.pattern}")
+        for pattern_info in pattern_list:
             match_result = self._try_pattern_match(pattern_info, topic, client_id, operation)
             if match_result:
-                print(f"DEBUG EVAL: Pattern matched: {pattern_info.pattern}")
-                print(f"DEBUG EVAL: Returning success result")
                 return match_result
-            else:
-                print(f"DEBUG EVAL: Pattern did not match: {pattern_info.pattern}")
 
         # No pattern matched
         result = EvaluationResult()
@@ -403,7 +389,6 @@ class PatternMatcher:
         result.operation = operation
         result.matched_pattern = None
         result.reason = 'No matching pattern found'
-        print(f"DEBUG EVAL: No pattern matched")
         return result
 
 # ################################################################################################################################
