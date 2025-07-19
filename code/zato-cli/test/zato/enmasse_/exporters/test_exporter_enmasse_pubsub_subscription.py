@@ -133,14 +133,21 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
 
             # Import the subscriptions into the database
             created, updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(pubsub_subscription_defs_from_yaml, self.session)
+
+            created_count = len(created)
+            updated_count = len(updated)
+            total_count = created_count + updated_count
+
             logger.info('Imported %d pubsub subscription definitions (created=%d, updated=%d)',
-                len(created) + len(updated), len(created), len(updated))
+                total_count, created_count, updated_count)
 
             _ = self.session.commit()
 
             # Now test the export functionality
             exported_subscriptions = self.pubsub_subscription_exporter.export(self.session, self.exporter.cluster_id)
-            logger.info('Exported %d pubsub subscription definitions', len(exported_subscriptions))
+
+            exported_count = len(exported_subscriptions)
+            logger.info('Exported %d pubsub subscription definitions', exported_count)
 
             # Verify that all expected subscriptions from template are exported
             template_dict = yaml.safe_load(template_complex_01)
@@ -158,70 +165,133 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 exported_by_security[security_name] = subscription
 
             # Verify that all expected subscriptions from template are found in export
-            for security_name in expected_subscriptions.keys():
-                self.assertIn(security_name, exported_by_security, f'Expected security {security_name} from template not found in export')
+            expected_security_names = expected_subscriptions.keys()
+            for security_name in expected_security_names:
+                error_msg = f'Expected security {security_name} from template not found in export'
+                self.assertIn(security_name, exported_by_security, error_msg)
 
             # Verify that all expected subscriptions are present in the export
             for security_name, expected in expected_subscriptions.items():
                 subscription = exported_by_security[security_name]
 
                 # Check required fields
-                self.assertIn('security', subscription, f'Required field security missing in subscription {security_name}')
-                self.assertEqual(subscription['security'], expected['security'], # type: ignore
-                    f'Field security has incorrect value in subscription {security_name}')
+                security_missing_msg = f'Required field security missing in subscription {security_name}'
+                self.assertIn('security', subscription, security_missing_msg)
 
-                self.assertIn('delivery_type', subscription, f'Required field delivery_type missing in subscription {security_name}')
-                self.assertEqual(subscription['delivery_type'], expected['delivery_type'], # type: ignore
-                    f'Field delivery_type has incorrect value in subscription {security_name}')
+                subscription_security = subscription['security'] # type: ignore
+                expected_security = expected['security']
+                security_incorrect_msg = f'Field security has incorrect value in subscription {security_name}'
+                self.assertEqual(subscription_security, expected_security, security_incorrect_msg)
 
-                self.assertIn('topic_list', subscription, f'Required field topic_list missing in subscription {security_name}')
-                self.assertEqual(set(subscription['topic_list']), set(expected['topic_list']), # type: ignore
-                    f'Field topic_list has incorrect value in subscription {security_name}')
+                delivery_type_missing_msg = f'Required field delivery_type missing in subscription {security_name}'
+                self.assertIn('delivery_type', subscription, delivery_type_missing_msg)
+
+                subscription_delivery_type = subscription['delivery_type'] # type: ignore
+                expected_delivery_type = expected['delivery_type']
+                delivery_type_incorrect_msg = f'Field delivery_type has incorrect value in subscription {security_name}'
+                self.assertEqual(subscription_delivery_type, expected_delivery_type, delivery_type_incorrect_msg)
+
+                topic_list_missing_msg = f'Required field topic_list missing in subscription {security_name}'
+                self.assertIn('topic_list', subscription, topic_list_missing_msg)
+
+                subscription_topic_list = set(subscription['topic_list']) # type: ignore
+                expected_topic_list = set(expected['topic_list'])
+                topic_list_incorrect_msg = f'Field topic_list has incorrect value in subscription {security_name}'
+                self.assertEqual(subscription_topic_list, expected_topic_list, topic_list_incorrect_msg)
 
                 # Check push-specific fields
-                if expected['delivery_type'] == 'push':
-                    if 'push_rest_endpoint' in expected:
-                        self.assertIn('push_rest_endpoint', subscription, f'Expected push_rest_endpoint missing in subscription {security_name}')
-                        self.assertEqual(subscription['push_rest_endpoint'], expected['push_rest_endpoint'], # type: ignore
-                            f'Field push_rest_endpoint has incorrect value in subscription {security_name}')
+                expected_delivery_type = expected['delivery_type']
+                if expected_delivery_type == 'push':
 
-                    if 'push_service' in expected:
-                        self.assertIn('push_service', subscription, f'Expected push_service missing in subscription {security_name}')
-                        self.assertEqual(subscription['push_service'], expected['push_service'], # type: ignore
-                            f'Field push_service has incorrect value in subscription {security_name}')
+                    push_rest_endpoint_in_expected = 'push_rest_endpoint' in expected
+                    if push_rest_endpoint_in_expected:
+                        push_rest_endpoint_missing_msg = f'Expected push_rest_endpoint missing in subscription {security_name}'
+                        self.assertIn('push_rest_endpoint', subscription, push_rest_endpoint_missing_msg)
+
+                        subscription_push_rest_endpoint = subscription['push_rest_endpoint'] # type: ignore
+                        expected_push_rest_endpoint = expected['push_rest_endpoint']
+                        push_rest_endpoint_incorrect_msg = f'Field push_rest_endpoint has incorrect value in subscription {security_name}'
+                        self.assertEqual(subscription_push_rest_endpoint, expected_push_rest_endpoint, push_rest_endpoint_incorrect_msg)
+
+                    push_service_in_expected = 'push_service' in expected
+                    if push_service_in_expected:
+                        push_service_missing_msg = f'Expected push_service missing in subscription {security_name}'
+                        self.assertIn('push_service', subscription, push_service_missing_msg)
+
+                        subscription_push_service = subscription['push_service'] # type: ignore
+                        expected_push_service = expected['push_service']
+                        push_service_incorrect_msg = f'Field push_service has incorrect value in subscription {security_name}'
+                        self.assertEqual(subscription_push_service, expected_push_service, push_service_incorrect_msg)
 
                 # Verify no unexpected fields
                 allowed_fields = {'security', 'delivery_type', 'topic_list', 'push_rest_endpoint', 'push_service', 'max_retry_time'}
-                for field in subscription:
-                    self.assertIn(field, allowed_fields, f'Unexpected field {field} in subscription {security_name}')
+                subscription_fields = subscription
+                for field in subscription_fields:
+                    unexpected_field_msg = f'Unexpected field {field} in subscription {security_name}'
+                    self.assertIn(field, allowed_fields, unexpected_field_msg)
 
             # Verify specific expected subscriptions from the template
-            exported_by_security = {sub['security']: sub for sub in exported_subscriptions} # type: ignore
+            exported_by_security = {}
+            for sub in exported_subscriptions:
+                sub_security = sub['security'] # type: ignore
+                exported_by_security[sub_security] = sub
 
             # Check enmasse.basic_auth.1 subscription
-            if 'enmasse.basic_auth.1' in exported_by_security:
-                auth1_sub = exported_by_security['enmasse.basic_auth.1']
-                self.assertEqual(auth1_sub['delivery_type'], 'pull') # type: ignore
-                self.assertEqual(set(auth1_sub['topic_list']), {'enmasse.topic.1', 'enmasse.topic.2'}) # type: ignore
+            auth1_security_name = 'enmasse.basic_auth.1'
+            auth1_in_exported = auth1_security_name in exported_by_security
+            if auth1_in_exported:
+                auth1_sub = exported_by_security[auth1_security_name]
+
+                auth1_delivery_type = auth1_sub['delivery_type'] # type: ignore
+                self.assertEqual(auth1_delivery_type, 'pull')
+
+                auth1_topic_list = set(auth1_sub['topic_list']) # type: ignore
+                expected_auth1_topics = {'enmasse.topic.1', 'enmasse.topic.2'}
+                self.assertEqual(auth1_topic_list, expected_auth1_topics)
+
                 self.assertNotIn('push_rest_endpoint', auth1_sub)
                 self.assertNotIn('push_service', auth1_sub)
 
             # Check enmasse.basic_auth.2 subscription
-            if 'enmasse.basic_auth.2' in exported_by_security:
-                auth2_sub = exported_by_security['enmasse.basic_auth.2']
-                self.assertEqual(auth2_sub['delivery_type'], 'push') # type: ignore
-                self.assertEqual(auth2_sub['topic_list'], ['enmasse.topic.1']) # type: ignore
+            auth2_security_name = 'enmasse.basic_auth.2'
+            auth2_in_exported = auth2_security_name in exported_by_security
+            if auth2_in_exported:
+                auth2_sub = exported_by_security[auth2_security_name]
+
+                auth2_delivery_type = auth2_sub['delivery_type'] # type: ignore
+                self.assertEqual(auth2_delivery_type, 'push')
+
+                auth2_topic_list = auth2_sub['topic_list'] # type: ignore
+                expected_auth2_topics = ['enmasse.topic.1']
+                self.assertEqual(auth2_topic_list, expected_auth2_topics)
+
                 self.assertIn('push_rest_endpoint', auth2_sub)
-                self.assertEqual(auth2_sub['push_rest_endpoint'], 'enmasse.outgoing.rest.1') # type: ignore
+
+                auth2_push_rest_endpoint = auth2_sub['push_rest_endpoint'] # type: ignore
+                expected_auth2_endpoint = 'enmasse.outgoing.rest.1'
+                self.assertEqual(auth2_push_rest_endpoint, expected_auth2_endpoint)
+
                 self.assertNotIn('push_service', auth2_sub)
 
             # Check enmasse.basic_auth.3 subscription
-            if 'enmasse.basic_auth.3' in exported_by_security:
-                auth3_sub = exported_by_security['enmasse.basic_auth.3']
-                self.assertEqual(auth3_sub['delivery_type'], 'push') # type: ignore
-                self.assertEqual(auth3_sub['topic_list'], ['enmasse.topic.3']) # type: ignore
+            auth3_security_name = 'enmasse.basic_auth.3'
+            auth3_in_exported = auth3_security_name in exported_by_security
+            if auth3_in_exported:
+                auth3_sub = exported_by_security[auth3_security_name]
+
+                auth3_delivery_type = auth3_sub['delivery_type'] # type: ignore
+                self.assertEqual(auth3_delivery_type, 'push')
+
+                auth3_topic_list = auth3_sub['topic_list'] # type: ignore
+                expected_auth3_topics = ['enmasse.topic.3']
+                self.assertEqual(auth3_topic_list, expected_auth3_topics)
+
                 self.assertIn('push_service', auth3_sub)
-                self.assertEqual(auth3_sub['push_service'], 'demo.input-logger') # type: ignore
+
+                auth3_push_service = auth3_sub['push_service'] # type: ignore
+                expected_auth3_service = 'demo.input-logger'
+                self.assertEqual(auth3_push_service, expected_auth3_service)
+
                 self.assertNotIn('push_rest_endpoint', auth3_sub)
 
         else:
