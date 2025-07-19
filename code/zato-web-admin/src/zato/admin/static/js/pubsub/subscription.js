@@ -398,7 +398,6 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id);
 
-    // Populate topics and security definitions after form opens with current selections
     setTimeout(function() {
 
         var instance = $.fn.zato.data_table.data[instance_id];
@@ -406,39 +405,13 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Set the sub_key in the hidden field
         $('#id_edit-sub_key').val(instance.sub_key);
 
-        // Get security ID from original form field before we remove it
         var currentSecId = instance.sec_base_id;
         var currentRestEndpointId = instance.rest_push_endpoint_id || '';
         var currentServiceName = instance.push_service_name || '';
 
-        // Instead of showing a dropdown for security definition, show it as a link and keep a hidden input
-        if(instance.sec_name) {
-            // Remove the security definition select to prevent duplicate form fields
-            $('#id_edit-sec_base_id').remove();
-
-            // Clear any existing content in the container
-            $('#edit-sec-def-container').empty();
-
-            // Create a hidden input with the security definition ID
-            var hiddenInput = $('<input>', {
-                type: 'hidden',
-                name: 'edit-sec_base_id',
-                value: currentSecId
-            });
-
-            // Create a link to the security definition
-            var secDefLink = $('<a>', {
-                href: '/zato/security/basic-auth/?cluster=1&query=' + encodeURIComponent(instance.sec_name),
-                target: '_blank',
-                text: instance.sec_name
-            });
-
-            // Add the hidden input and link to the container
-            $('#edit-sec-def-container').append(hiddenInput).append(secDefLink);
-        } else {
-            // If no security definition, still remove the select
-            $('#id_edit-sec_base_id').remove();
-            $('#edit-sec-def-container').text('(None)');
+        // Add hidden input for security definition ID
+        if (currentSecId && !$('#id_edit-sec_base_id').length) {
+            $('#edit-form').append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + currentSecId + '" />');
         }
 
         // Immediately hide REST endpoint span if not push to prevent flicker
