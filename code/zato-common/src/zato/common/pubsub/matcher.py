@@ -35,12 +35,6 @@ class PatternInfo:
     compiled_regex: 'Pattern[str]'
     is_pub: 'bool'
     is_sub: 'bool'
-    
-    def __init__(self, pattern:'str', compiled_regex:'Pattern[str]', is_pub:'bool', is_sub:'bool') -> 'None':
-        self.pattern = pattern
-        self.compiled_regex = compiled_regex
-        self.is_pub = is_pub
-        self.is_sub = is_sub
 
 # ################################################################################################################################
 
@@ -51,11 +45,6 @@ class ClientPermissions:
     client_id: 'str'
     pub_patterns: 'List[PatternInfo]'
     sub_patterns: 'List[PatternInfo]'
-    
-    def __init__(self, client_id:'str', pub_patterns:'List[PatternInfo]', sub_patterns:'List[PatternInfo]') -> 'None':
-        self.client_id = client_id
-        self.pub_patterns = pub_patterns
-        self.sub_patterns = sub_patterns
 
 # ################################################################################################################################
 
@@ -69,22 +58,6 @@ class EvaluationResult:
     operation: 'str'
     matched_pattern: 'Optional[str]'
     reason: 'Optional[str]'
-    
-    def __init__(
-        self,
-        is_ok:'bool',
-        client_id:'str',
-        topic:'str',
-        operation:'str',
-        matched_pattern:'Optional[str]' = None,
-        reason:'Optional[str]' = None
-    ) -> 'None':
-        self.is_ok = is_ok
-        self.client_id = client_id
-        self.topic = topic
-        self.operation = operation
-        self.matched_pattern = matched_pattern
-        self.reason = reason
 
 # ################################################################################################################################
 
@@ -94,10 +67,15 @@ class CacheEntry:
     """
     compiled_regex: 'Pattern[str]'
     pattern: 'str'
-    
-    def __init__(self, compiled_regex:'Pattern[str]', pattern:'str') -> 'None':
-        self.compiled_regex = compiled_regex
-        self.pattern = pattern
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ParsedPermissions:
+    """ Parsed permissions split into pub and sub patterns.
+    """
+    pub_patterns: 'List[str]'
+    sub_patterns: 'List[str]'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,14 +104,14 @@ class PatternMatcher:
         compiled_regex = re.compile(regex_pattern)
         
         # Cache the compiled pattern
-        self._pattern_cache[pattern] = CacheEntry(
-            compiled_regex=compiled_regex,
-            pattern=pattern
-        )
+        cache_entry = CacheEntry()
+        cache_entry.compiled_regex = compiled_regex
+        cache_entry.pattern = pattern
+        self._pattern_cache[pattern] = cache_entry
         
         return compiled_regex
     
-    def _parse_permissions(self, permissions:'List[anydict]') -> 'tuple[List[str], List[str]]':
+    def _parse_permissions(self, permissions:'List[anydict]') -> 'ParsedPermissions':
         """ Parse permission dicts into pub and sub patterns.
         """
         pub_patterns = []
@@ -151,39 +129,42 @@ class PatternMatcher:
                 pub_patterns.append(pattern)
                 sub_patterns.append(pattern)
         
-        return pub_patterns, sub_patterns
+        parsed_perms = ParsedPermissions()
+        parsed_perms.pub_patterns = pub_patterns
+        parsed_perms.sub_patterns = sub_patterns
+        return parsed_perms
     
     def add_client(self, client_id:'str', permissions:'List[anydict]') -> 'None':
         """ Add a new client with permissions.
         """
         with self._lock:
-            pub_patterns, sub_patterns = self._parse_permissions(permissions)
+            parsed_perms = self._parse_permissions(permissions)
             
             pub_pattern_infos = []
-            for pattern in pub_patterns:
+            for pattern in parsed_perms.pub_patterns:
                 compiled_regex = self._compile_pattern(pattern)
-                pub_pattern_infos.append(PatternInfo(
-                    pattern=pattern,
-                    compiled_regex=compiled_regex,
-                    is_pub=True,
-                    is_sub=False
-                ))
+                pattern_info = PatternInfo()
+                pattern_info.pattern = pattern
+                pattern_info.compiled_regex = compiled_regex
+                pattern_info.is_pub = True
+                pattern_info.is_sub = False
+                pub_pattern_infos.append(pattern_info)
             
             sub_pattern_infos = []
-            for pattern in sub_patterns:
+            for pattern in parsed_perms.sub_patterns:
                 compiled_regex = self._compile_pattern(pattern)
-                sub_pattern_infos.append(PatternInfo(
-                    pattern=pattern,
-                    compiled_regex=compiled_regex,
-                    is_pub=False,
-                    is_sub=True
-                ))
+                pattern_info = PatternInfo()
+                pattern_info.pattern = pattern
+                pattern_info.compiled_regex = compiled_regex
+                pattern_info.is_pub = False
+                pattern_info.is_sub = True
+                sub_pattern_infos.append(pattern_info)
             
-            self._clients[client_id] = ClientPermissions(
-                client_id=client_id,
-                pub_patterns=pub_pattern_infos,
-                sub_patterns=sub_pattern_infos
-            )
+            client_perms = ClientPermissions()
+            client_perms.client_id = client_id
+            client_perms.pub_patterns = pub_pattern_infos
+            client_perms.sub_patterns = sub_pattern_infos
+            self._clients[client_id] = client_perms
     
     def remove_client(self, client_id:'str') -> 'None':
         """ Remove a client and all its permissions.
@@ -200,27 +181,27 @@ class PatternMatcher:
                 self.add_client(client_id, permissions)
             else:
                 # Update existing client
-                pub_patterns, sub_patterns = self._parse_permissions(permissions)
+                parsed_perms = self._parse_permissions(permissions)
                 
                 pub_pattern_infos = []
-                for pattern in pub_patterns:
+                for pattern in parsed_perms.pub_patterns:
                     compiled_regex = self._compile_pattern(pattern)
-                    pub_pattern_infos.append(PatternInfo(
-                        pattern=pattern,
-                        compiled_regex=compiled_regex,
-                        is_pub=True,
-                        is_sub=False
-                    ))
+                    pattern_info = PatternInfo()
+                    pattern_info.pattern = pattern
+                    pattern_info.compiled_regex = compiled_regex
+                    pattern_info.is_pub = True
+                    pattern_info.is_sub = False
+                    pub_pattern_infos.append(pattern_info)
                 
                 sub_pattern_infos = []
-                for pattern in sub_patterns:
+                for pattern in parsed_perms.sub_patterns:
                     compiled_regex = self._compile_pattern(pattern)
-                    sub_pattern_infos.append(PatternInfo(
-                        pattern=pattern,
-                        compiled_regex=compiled_regex,
-                        is_pub=False,
-                        is_sub=True
-                    ))
+                    pattern_info = PatternInfo()
+                    pattern_info.pattern = pattern
+                    pattern_info.compiled_regex = compiled_regex
+                    pattern_info.is_pub = False
+                    pattern_info.is_sub = True
+                    sub_pattern_infos.append(pattern_info)
                 
                 self._clients[client_id].pub_patterns = pub_pattern_infos
                 self._clients[client_id].sub_patterns = sub_pattern_infos
@@ -235,13 +216,14 @@ class PatternMatcher:
         """
         # No lock needed for read-only evaluation
         if client_id not in self._clients:
-            return EvaluationResult(
-                is_ok=False,
-                client_id=client_id,
-                topic=topic,
-                operation=operation,
-                reason=f'Client {client_id} not found'
-            )
+            result = EvaluationResult()
+            result.is_ok = False
+            result.client_id = client_id
+            result.topic = topic
+            result.operation = operation
+            result.matched_pattern = None
+            result.reason = f'Client {client_id} not found'
+            return result
         
         client_perms = self._clients[client_id]
         
@@ -251,13 +233,14 @@ class PatternMatcher:
         elif operation == 'sub':
             patterns = client_perms.sub_patterns
         else:
-            return EvaluationResult(
-                is_ok=False,
-                client_id=client_id,
-                topic=topic,
-                operation=operation,
-                reason=f'Invalid operation: {operation}'
-            )
+            result = EvaluationResult()
+            result.is_ok = False
+            result.client_id = client_id
+            result.topic = topic
+            result.operation = operation
+            result.matched_pattern = None
+            result.reason = f'Invalid operation: {operation}'
+            return result
         
         # Sort patterns alphabetically with wildcards last (as per README)
         sorted_patterns = sorted(patterns, key=self._pattern_sort_key)
@@ -267,32 +250,35 @@ class PatternMatcher:
             if '*' not in pattern_info.pattern:
                 # Exact match
                 if topic == pattern_info.pattern:
-                    return EvaluationResult(
-                        is_ok=True,
-                        client_id=client_id,
-                        topic=topic,
-                        operation=operation,
-                        matched_pattern=pattern_info.pattern
-                    )
+                    result = EvaluationResult()
+                    result.is_ok = True
+                    result.client_id = client_id
+                    result.topic = topic
+                    result.operation = operation
+                    result.matched_pattern = pattern_info.pattern
+                    result.reason = None
+                    return result
             else:
                 # Wildcard match using compiled regex
                 if pattern_info.compiled_regex.match(topic):
-                    return EvaluationResult(
-                        is_ok=True,
-                        client_id=client_id,
-                        topic=topic,
-                        operation=operation,
-                        matched_pattern=pattern_info.pattern
-                    )
+                    result = EvaluationResult()
+                    result.is_ok = True
+                    result.client_id = client_id
+                    result.topic = topic
+                    result.operation = operation
+                    result.matched_pattern = pattern_info.pattern
+                    result.reason = None
+                    return result
         
         # No pattern matched
-        return EvaluationResult(
-            is_ok=False,
-            client_id=client_id,
-            topic=topic,
-            operation=operation,
-            reason='No matching pattern found'
-        )
+        result = EvaluationResult()
+        result.is_ok = False
+        result.client_id = client_id
+        result.topic = topic
+        result.operation = operation
+        result.matched_pattern = None
+        result.reason = 'No matching pattern found'
+        return result
     
     def get_client_count(self) -> 'int':
         """ Get the number of registered clients.
