@@ -75,6 +75,7 @@ This allows publishing to any user command topic, subscribing to direct user eve
 4. **Case Insensitive**: All matching is case-insensitive
 5. **No Partial Matches**: Patterns must match the complete topic name
 6. **Alphabetical Evaluation**: Patterns are evaluated in alphabetical order
+7. **First Match Wins**: Evaluation stops at the first matching pattern
 
 ## FAQ
 
@@ -103,7 +104,7 @@ This allows publishing to any user command topic, subscribing to direct user eve
 **A:** Special characters (except dots and wildcards) are treated literally. `orders-2024` matches exactly `orders-2024`.
 
 ### Q: In what order are patterns evaluated?
-**A:** Patterns are evaluated alphabetically. This means:
+**A:** Patterns are evaluated alphabetically and the first match wins. This means:
 
 ```
 Given patterns:
@@ -117,9 +118,8 @@ Evaluation order:
 3. orders.urgent
 ```
 
-For instance, when a message is sent to topic `ZZZ.urgent`, the system will check the publisher's publication permissions
-in this order:
+For instance, when a message is sent to topic `ZZZ.urgent`, the system will check the publisher's publication permissions in this order:
 
 * First, `ZZZ.*` first (no match)
 * Then `ZZZ.**.processed` (matches)
-*  and the last one `ZZZ` will be skipped because the previous one already matched, although otherwise it would've been a match
+* and the last one `ZZZ` will be skipped because the previous one already matched, although otherwise it would've been a match
