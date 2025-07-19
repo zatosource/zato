@@ -291,7 +291,7 @@ class PatternMatcher:
         for pattern_info in pattern_list:
             if not pattern_info.has_wildcards:
                 # Exact match
-                cache_key = f"exact:{topic.lower()}:{pattern_info.pattern}"
+                cache_key = f'exact:{topic.lower()}:{pattern_info.pattern}'
                 if cache_key in self._evaluation_cache:
                     if self._evaluation_cache[cache_key]:
                         result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
@@ -304,7 +304,7 @@ class PatternMatcher:
                         return result
             else:
                 # Wildcard match using compiled regex
-                cache_key = f"regex:{topic}:{pattern_info.pattern}"
+                cache_key = f'regex:{topic}:{pattern_info.pattern}'
                 if cache_key in self._evaluation_cache:
                     if self._evaluation_cache[cache_key]:
                         result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
