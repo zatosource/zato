@@ -92,4 +92,53 @@ def _is_ascii_only(text:'str') -> 'bool':
         return False
 
 # ################################################################################################################################
+
+def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -> 'list':
+    """ Get all active permissions for a security definition.
+    Returns a list of permission dictionaries with pattern and access_type.
+    """
+    from zato.common.odb.model import PubSubPermission
+
+    permissions = session.query(PubSubPermission).filter(
+        PubSubPermission.sec_base_id == sec_base_id,
+        PubSubPermission.cluster_id == cluster_id,
+        PubSubPermission.is_active == True
+    ).all()
+
+    return [{
+        'pattern': perm.pattern,
+        'access_type': perm.access_type
+    } for perm in permissions]
+
+# ################################################################################################################################
+
+def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_name:'str') -> 'str':
+    """ Evaluate which pattern matches the given topic name for a security definition.
+    Returns the matched pattern or raises an exception if no pattern matches.
+    """
+
+    # Zato
+    from zato.common.pubsub.matcher import PatternMatcher
+
+    permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
+
+    if not permissions:
+        raise ValueError(f'No permissions defined for security definition {sec_base_id}')
+
+    # Create temporary matcher
+    matcher = PatternMatcher()
+
+    # Add client to matcher
+    client_id = f'eval.{sec_base_id}.{topic_name}'
+    matcher.add_client(client_id, permissions)
+
+    # Evaluate for subscribe operation (subscriptions are for subscribers)
+    result = matcher.evaluate(client_id, topic_name, 'subscribe')
+
+    if result.is_ok and result.matched_pattern:
+        return result.matched_pattern
+    else:
+        raise ValueError(f'Topic "{topic_name}" does not match any subscription patterns for security definition {sec_base_id}')
+
+# ################################################################################################################################
 # ################################################################################################################################
