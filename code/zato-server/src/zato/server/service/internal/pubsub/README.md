@@ -95,7 +95,8 @@ This allows publishing to any user command topic, subscribing to direct user eve
 **A:** No. Only `*` and `**` are supported wildcards.
 
 ### Q: What happens if I have overlapping patterns?
-**A:** All matching patterns apply. If you have both `orders.*` and `orders.urgent`, both will match `orders.urgent`.
+**A:** Only the first matching pattern applies due to the "first match wins" rule. If you have both `orders.*`
+and `orders.urgent`, and `orders.*` comes first alphabetically, only `orders.*` will be evaluated for `orders.urgent`.
 
 ### Q: Are there any reserved topic names?
 **A:** No specific reserved names, but avoid using dots at the start or end of topic names for clarity.
