@@ -117,4 +117,9 @@ Evaluation order:
 3. orders.urgent
 ```
 
-For topic `orders.urgent`, the system will check `orders.*` first (matches), then `orders.**.processed` (no match), then `orders.urgent` (matches). Both matching patterns apply.
+For instance, when a message is sent to topic `ZZZ.urgent`, the system will check the publisher's publication permissions
+in this order:
+
+* First, `ZZZ.*` first (no match)
+* Then `ZZZ.**.processed` (matches)
+*  and the last one `ZZZ` will be skipped because the previous one already matched, although otherwise it would've been a match
