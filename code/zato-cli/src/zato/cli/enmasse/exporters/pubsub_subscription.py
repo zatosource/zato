@@ -67,6 +67,7 @@ class PubSubSubscriptionExporter:
         subscription_groups = {}
 
         for item in items:
+
             # Each item contains subscription data and related information
             subscription_id = item.id
             security_name = item.sec_name
@@ -90,8 +91,8 @@ class PubSubSubscriptionExporter:
             if not topic_name:
                 raise ValueError(f'Subscription missing topic_name: subscription_id={subscription_id} security={security_name}')
 
-            # Create unique key for grouping by security and delivery type
-            group_key = (security_name, delivery_type)
+            # Create unique key for grouping by subscription ID
+            group_key = subscription_id
 
             # Initialize subscription group if not exists
             if group_key not in subscription_groups:
@@ -124,7 +125,9 @@ class PubSubSubscriptionExporter:
         # Convert grouped subscriptions to export format
         for subscription_data in subscription_groups.values():
             exported_subscriptions.append(subscription_data)
+
         logger.info('Successfully prepared %d pub/sub subscription definitions for export', len(exported_subscriptions))
+
         return exported_subscriptions
 
 # ################################################################################################################################
