@@ -255,81 +255,101 @@ def get_topics(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
+    """ Get subscriber patterns for a given security definition.
+    """
+    logger = logging.getLogger(__name__)
+    
+    logger.info('Getting permissions for cluster_id=%s', cluster_id)
+    permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
+        'cluster_id': cluster_id,
+    })
+    logger.info('Got %d permissions', len(permissions_response.data))
+    
+    subscriber_patterns = []
+    for perm in permissions_response.data:
+        if perm.sec_base_id == int(sec_base_id) and ('subscriber' in perm.access_type.lower()):
+            logger.info('Found subscriber permission with pattern: %s', perm.pattern)
+            patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
+            subscriber_patterns.extend(patterns)
+    
+    logger.info('Found %d subscriber patterns: %s', len(subscriber_patterns), subscriber_patterns)
+    return subscriber_patterns
+
+# ################################################################################################################################
+
+def _get_topics_for_patterns(req, subscriber_patterns, cluster_id):
+    """ Get all topics matching the given patterns.
+    """
+    logger = logging.getLogger(__name__)
+    
+    all_topics = set()
+    for pattern in subscriber_patterns:
+        try:
+            matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
+                'cluster_id': cluster_id,
+                'pattern': pattern
+            })
+            logger.info('Got %d matches for pattern: %s', len(matches_response.data), pattern)
+            for topic in matches_response.data:
+                all_topics.add((topic.get('id', ''), topic.get('name', '')))
+        except Exception as e:
+            logger.error('Error getting matches for pattern: %s, error: %s', pattern, e)
+    
+    logger.info('Found %d topics', len(all_topics))
+    return all_topics
+
+# ################################################################################################################################
+
+def _build_topic_checkbox_html(all_topics, cluster_id):
+    """ Build HTML for topic checkboxes.
+    """
+    html_parts = []
+    html_parts.append('<table id="multi-select-table" class="multi-select-table">')
+    
+    if all_topics:
+        sorted_topics = sorted(all_topics, key=lambda x: x[1])
+        for topic_id, topic_name in sorted_topics:
+            checkbox_id = f'topic_checkbox_{topic_id}'
+            html_parts.append(f'<tr>')
+            html_parts.append(f'<td>')
+            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="name" value="{topic_name}" />')
+            html_parts.append(f'</td>')
+            html_parts.append(f'<td>')
+            html_parts.append(f'<label for="{checkbox_id}">')
+            html_parts.append(f'<a href="/zato/pubsub/topic/?cluster={cluster_id}&query={topic_name}" target="_blank">{topic_name}</a>')
+            html_parts.append(f'</label>')
+            html_parts.append(f'</td>')
+            html_parts.append(f'</tr>')
+    else:
+        html_parts.append('<tr><td colspan="2"><em>No topics match the subscription patterns for this security definition</em></td></tr>')
+    
+    html_parts.append('</table>')
+    return ''.join(html_parts)
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
     """ Returns HTML for topics to which a given security definition has access for subscription.
     """
     logger = logging.getLogger(__name__)
-    logger.info('sec_def_topic_sub_list: Starting with sec_base_id=%s, cluster_id=%s', sec_base_id, cluster_id)
+    logger.info('Starting with sec_base_id=%s, cluster_id=%s', sec_base_id, cluster_id)
 
     try:
-        # Get permissions for this security definition
-        logger.info('sec_def_topic_sub_list: Getting permissions for cluster_id=%s', cluster_id)
-        permissions_response = req.zato.client.invoke('zato.pubsub.permission.get-list', {
-            'cluster_id': cluster_id,
-        })
-        logger.info('sec_def_topic_sub_list: Got %d permissions', len(permissions_response.data))
-        
-        # Filter permissions for this security definition and subscriber access
-        subscriber_patterns = []
-        for perm in permissions_response.data:
-            if perm.sec_base_id == int(sec_base_id) and ('subscriber' in perm.access_type.lower()):
-                logger.info('sec_def_topic_sub_list: Found subscriber permission with pattern: %s', perm.pattern)
-                # Split multiline patterns
-                patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
-                subscriber_patterns.extend(patterns)
-        
-        logger.info('sec_def_topic_sub_list: Found %d subscriber patterns: %s', len(subscriber_patterns), subscriber_patterns)
+        subscriber_patterns = _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id)
         
         if not subscriber_patterns:
-            logger.warning('sec_def_topic_sub_list: No subscription permissions found for sec_base_id=%s', sec_base_id)
+            logger.warning('No subscription permissions found for sec_base_id=%s', sec_base_id)
             return HttpResponse('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><em>No subscription permissions defined for this security definition</em></td></tr></table>', content_type='text/html')
 
-        # Get all matching topics for all patterns
-        all_topics = set()
-        for pattern in subscriber_patterns:
-            try:
-                matches_response = req.zato.client.invoke('zato.pubsub.topic.get-matches', {
-                    'cluster_id': cluster_id,
-                    'pattern': pattern
-                })
-                logger.info('sec_def_topic_sub_list: Got %d matches for pattern: %s', len(matches_response.data), pattern)
-                for topic in matches_response.data:
-                    all_topics.add((topic.get('id', ''), topic.get('name', '')))
-            except Exception as e:
-                logger.error('sec_def_topic_sub_list: error getting matches for pattern: %s, error: %s', pattern, e)
-
-        logger.info('sec_def_topic_sub_list: Found %d topics', len(all_topics))
-
-        # Build HTML for the multi-checkbox
-        html_parts = []
-        html_parts.append('<table id="multi-select-table" class="multi-select-table">')
-
-        if all_topics:
-            # Sort topics by name for consistent display
-            sorted_topics = sorted(all_topics, key=lambda x: x[1])
-            for topic_id, topic_name in sorted_topics:
-                checkbox_id = f'topic_checkbox_{topic_id}'
-                html_parts.append(f'<tr>')
-                html_parts.append(f'<td>')
-                html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="name" value="{topic_name}" />')
-                html_parts.append(f'</td>')
-                html_parts.append(f'<td>')
-                html_parts.append(f'<label for="{checkbox_id}">')
-                html_parts.append(f'<a href="/zato/pubsub/topic/?cluster={cluster_id}&query={topic_name}" target="_blank">{topic_name}</a>')
-                html_parts.append(f'</label>')
-                html_parts.append(f'</td>')
-                html_parts.append(f'</tr>')
-        else:
-            html_parts.append('<tr><td colspan="2"><em>No topics match the subscription patterns for this security definition</em></td></tr>')
-
-        html_parts.append('</table>')
-        html_content = ''.join(html_parts)
+        all_topics = _get_topics_for_patterns(req, subscriber_patterns, cluster_id)
+        html_content = _build_topic_checkbox_html(all_topics, cluster_id)
 
         return HttpResponse(html_content, content_type='text/html')
         
     except Exception as e:
-        logger.error('sec_def_topic_sub_list: Exception occurred: %s', format_exc())
+        logger.error('Exception occurred: %s', format_exc())
         return HttpResponseServerError(format_exc())
 
 # ################################################################################################################################
