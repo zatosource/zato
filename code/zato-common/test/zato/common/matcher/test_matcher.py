@@ -254,6 +254,41 @@ class PatternMatcherTestCase(TestCase):
         result = self.matcher.evaluate(self.client_id, 'events.user.created', 'publish')
         self.assertFalse(result.is_ok)
 
+        result = self.matcher.evaluate(self.client_id, 'commands.user.create', 'subscribe')
+        self.assertFalse(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'events.user.login', 'subscribe')
+        self.assertTrue(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'events.user.login', 'publish')
+        self.assertFalse(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'notifications.user.email', 'subscribe')
+        self.assertTrue(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'notifications.user.email', 'publish')
+        self.assertFalse(result.is_ok)
+
+# ################################################################################################################################
+
+    def test_publisher_subscriber_permissions(self):
+        permissions = [
+            {'pattern': 'bidirectional.**', 'access_type': PubSub.API_Client.Publisher_Subscriber}
+        ]
+        self.matcher.add_client(self.client_id, permissions)
+
+        result = self.matcher.evaluate(self.client_id, 'bidirectional.messages', 'publish')
+        self.assertTrue(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'bidirectional.messages', 'subscribe')
+        self.assertTrue(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'bidirectional.events.user', 'publish')
+        self.assertTrue(result.is_ok)
+
+        result = self.matcher.evaluate(self.client_id, 'bidirectional.events.user', 'subscribe')
+        self.assertTrue(result.is_ok)
+
 # ################################################################################################################################
 
     def test_client_not_found(self):
