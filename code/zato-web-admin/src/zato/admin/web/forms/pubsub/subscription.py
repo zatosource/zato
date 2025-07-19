@@ -65,8 +65,9 @@ class CreateForm(forms.Form):
             # Topics will be populated dynamically via AJAX
             self.fields['topic_id'].choices = []
 
-            # Use filtered security definitions for PubSub clients
-            self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'create', 'subscription')
+            # Use filtered security definitions for PubSub clients with empty first option
+            choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'create', 'subscription')
+            self.fields['sec_base_id'].choices = choices
 
             # Set default option for REST endpoints
             self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
@@ -82,7 +83,8 @@ class EditForm(CreateForm):
         if req:
             # Topics will be populated dynamically via AJAX
             self.fields['topic_id'].choices = []
-            # Use filtered security definitions for edit (allows all available ones)
-            self.fields['sec_base_id'].choices = get_pubsub_security_choices(req, 'edit', 'subscription')
+            # Use filtered security definitions for edit (allows all available ones) with empty first option
+            choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'edit', 'subscription')
+            self.fields['sec_base_id'].choices = choices
             # Set default option for REST endpoints (will be populated via AJAX)
             self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]
