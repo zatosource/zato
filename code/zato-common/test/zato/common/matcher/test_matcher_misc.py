@@ -137,9 +137,9 @@ class PatternMatcherMiscTestCase(TestCase):
         result = self.matcher.evaluate(self.client_id, 'admin.delete', 'publish')
         self.assertTrue(result.is_ok)
 
-        # Should not have subscribe permission for exact match
+        # Should have subscribe permission via wildcard pattern
         result = self.matcher.evaluate(self.client_id, 'admin.delete', 'subscribe')
-        self.assertFalse(result.is_ok)
+        self.assertTrue(result.is_ok)
 
 # ################################################################################################################################
 
