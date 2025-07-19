@@ -104,22 +104,18 @@ This allows publishing to any user command topic, subscribing to direct user eve
 **A:** Special characters (except dots and wildcards) are treated literally. `orders-2024` matches exactly `orders-2024`.
 
 ### Q: In what order are patterns evaluated?
-**A:** Patterns are evaluated alphabetically and the first match wins. This means:
+**A:** Patterns are evaluated alphabetically and the first match wins, but patterns are evaluated last. This means:
 
 ```
 Given patterns:
 - sub=transaction.priority
 - sub=transaction.*
 - sub=transaction.**.processed
+- sub=transaction.international
 
 Evaluation order:
-1. transaction.* (comes first alphabetically)
-2. transaction.**.processed
-3. transaction.priority
+1. transaction.international
+2. transaction.priority
+3. transaction.*
+4. transaction.**.processed
 ```
-
-For instance, when a message is sent to topic `transaction.swift`, the system will check the publisher's publication permissions in this order:
-
-* First, `transaction.*` first (no match)
-* Then `transaction.**.processed` (matches)
-* and the last one `transaction.urgent` will be skipped because the previous one already matched, although otherwise it would've been a match
