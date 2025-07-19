@@ -92,6 +92,7 @@ class PatternMatcher:
         self._lock = RLock()
         self._clients: 'Dict[str, ClientPermissions]' = {}
         self._pattern_cache: 'Dict[str, CacheEntry]' = {}
+        self._evaluation_cache: 'Dict[str, bool]' = {}
 
 # ################################################################################################################################
 
@@ -144,6 +145,13 @@ class PatternMatcher:
 
 # ################################################################################################################################
 
+    def _clear_evaluation_cache(self) -> 'None':
+        """ Clear evaluation cache when patterns change.
+        """
+        self._evaluation_cache.clear()
+
+# ################################################################################################################################
+
     def add_client(self, client_id:'str', permissions:'List[anydict]') -> 'None':
         """ Add a new client with permissions.
         """
@@ -169,6 +177,7 @@ class PatternMatcher:
             client_permissions.pub_patterns = publisher_pattern_list
             client_permissions.sub_patterns = subscriber_pattern_list
             self._clients[client_id] = client_permissions
+            self._clear_evaluation_cache()
 
 # ################################################################################################################################
 
@@ -178,6 +187,7 @@ class PatternMatcher:
         with self._lock:
             if client_id in self._clients:
                 del self._clients[client_id]
+                self._clear_evaluation_cache()
 
 # ################################################################################################################################
 
@@ -207,6 +217,7 @@ class PatternMatcher:
 
                 self._clients[client_id].pub_patterns = publisher_pattern_list
                 self._clients[client_id].sub_patterns = subscriber_pattern_list
+                self._clear_evaluation_cache()
 
 # ################################################################################################################################
 
@@ -280,14 +291,30 @@ class PatternMatcher:
         for pattern_info in pattern_list:
             if not pattern_info.has_wildcards:
                 # Exact match
-                if topic.lower() == pattern_info.pattern:
-                    result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                    return result
+                cache_key = f"exact:{topic.lower()}:{pattern_info.pattern}"
+                if cache_key in self._evaluation_cache:
+                    if self._evaluation_cache[cache_key]:
+                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
+                        return result
+                else:
+                    matches = topic.lower() == pattern_info.pattern
+                    self._evaluation_cache[cache_key] = matches
+                    if matches:
+                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
+                        return result
             else:
                 # Wildcard match using compiled regex
-                if pattern_info.compiled_regex.match(topic):
-                    result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
-                    return result
+                cache_key = f"regex:{topic}:{pattern_info.pattern}"
+                if cache_key in self._evaluation_cache:
+                    if self._evaluation_cache[cache_key]:
+                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
+                        return result
+                else:
+                    matches = pattern_info.compiled_regex.match(topic)
+                    self._evaluation_cache[cache_key] = bool(matches)
+                    if matches:
+                        result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
+                        return result
 
         # No pattern matched
         result = EvaluationResult()
@@ -320,6 +347,7 @@ class PatternMatcher:
         """
         with self._lock:
             self._pattern_cache.clear()
+            self._clear_evaluation_cache()
 
             # Recompile all patterns for existing clients
             for client_perms in self._clients.values():
