@@ -153,22 +153,12 @@ class PatternMatcher:
 
             pub_pattern_infos = []
             for pattern in parsed_perms.pub_patterns:
-                compiled_regex = self._compile_pattern(pattern)
-                pattern_info = PatternInfo()
-                pattern_info.pattern = pattern
-                pattern_info.compiled_regex = compiled_regex
-                pattern_info.is_pub = True
-                pattern_info.is_sub = False
+                pattern_info = self._create_pattern_info(pattern, True, False)
                 pub_pattern_infos.append(pattern_info)
 
             sub_pattern_infos = []
             for pattern in parsed_perms.sub_patterns:
-                compiled_regex = self._compile_pattern(pattern)
-                pattern_info = PatternInfo()
-                pattern_info.pattern = pattern
-                pattern_info.compiled_regex = compiled_regex
-                pattern_info.is_pub = False
-                pattern_info.is_sub = True
+                pattern_info = self._create_pattern_info(pattern, False, True)
                 sub_pattern_infos.append(pattern_info)
 
             # Sort patterns alphabetically with wildcards last
@@ -205,22 +195,12 @@ class PatternMatcher:
 
                 pub_pattern_infos = []
                 for pattern in parsed_perms.pub_patterns:
-                    compiled_regex = self._compile_pattern(pattern)
-                    pattern_info = PatternInfo()
-                    pattern_info.pattern = pattern
-                    pattern_info.compiled_regex = compiled_regex
-                    pattern_info.is_pub = True
-                    pattern_info.is_sub = False
+                    pattern_info = self._create_pattern_info(pattern, True, False)
                     pub_pattern_infos.append(pattern_info)
 
                 sub_pattern_infos = []
                 for pattern in parsed_perms.sub_patterns:
-                    compiled_regex = self._compile_pattern(pattern)
-                    pattern_info = PatternInfo()
-                    pattern_info.pattern = pattern
-                    pattern_info.compiled_regex = compiled_regex
-                    pattern_info.is_pub = False
-                    pattern_info.is_sub = True
+                    pattern_info = self._create_pattern_info(pattern, False, True)
                     sub_pattern_infos.append(pattern_info)
 
                 # Sort patterns alphabetically with wildcards last
@@ -245,6 +225,29 @@ class PatternMatcher:
         """
         has_wildcard = '*' in pattern_info.pattern
         return (pattern_info.pattern, has_wildcard)
+
+    def _create_success_result(self, client_id:'str', topic:'str', operation:'str', matched_pattern:'str') -> 'EvaluationResult':
+        """ Create a successful evaluation result.
+        """
+        result = EvaluationResult()
+        result.is_ok = True
+        result.client_id = client_id
+        result.topic = topic
+        result.operation = operation
+        result.matched_pattern = matched_pattern
+        result.reason = None
+        return result
+
+    def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
+        """ Create a PatternInfo object.
+        """
+        compiled_regex = self._compile_pattern(pattern)
+        pattern_info = PatternInfo()
+        pattern_info.pattern = pattern
+        pattern_info.compiled_regex = compiled_regex
+        pattern_info.is_pub = is_pub
+        pattern_info.is_sub = is_sub
+        return pattern_info
 
 # ################################################################################################################################
 
@@ -283,24 +286,12 @@ class PatternMatcher:
             if '*' not in pattern_info.pattern:
                 # Exact match
                 if topic == pattern_info.pattern:
-                    result = EvaluationResult()
-                    result.is_ok = True
-                    result.client_id = client_id
-                    result.topic = topic
-                    result.operation = operation
-                    result.matched_pattern = pattern_info.pattern
-                    result.reason = None
+                    result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
                     return result
             else:
                 # Wildcard match using compiled regex
                 if pattern_info.compiled_regex.match(topic):
-                    result = EvaluationResult()
-                    result.is_ok = True
-                    result.client_id = client_id
-                    result.topic = topic
-                    result.operation = operation
-                    result.matched_pattern = pattern_info.pattern
-                    result.reason = None
+                    result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
                     return result
 
         # No pattern matched
