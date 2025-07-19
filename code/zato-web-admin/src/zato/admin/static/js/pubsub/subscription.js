@@ -72,6 +72,8 @@ $(document).ready(function() {
         return originalClose(elem);
     };
 
+
+
     // Override the create_edit function to ensure proper cleanup before opening a new form
     var originalCreateEdit = $.fn.zato.data_table._create_edit;
     $.fn.zato.data_table._create_edit = function(form_type, title, id) {
@@ -376,10 +378,8 @@ $.fn.zato.pubsub.subscription.create = function() {
     $('#rest-endpoint-create').hide();
 
     $.fn.zato.data_table._create_edit('create', 'Create a pub/sub subscription', null);
-    // Populate security definitions after form opens
-    setTimeout(function() {
-        $.fn.zato.common.security.populateSecurityDefinitions('create', null, '/zato/pubsub/subscription/get-security-definitions/', '#id_sec_base_id');
 
+    setTimeout(function() {
         // Setup delivery type visibility first, then populate REST endpoints for create form
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
         $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
