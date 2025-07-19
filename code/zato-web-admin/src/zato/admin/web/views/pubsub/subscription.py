@@ -335,7 +335,6 @@ def get_topics_by_security(req):
     """
     cluster_id = req.GET.get('cluster_id')
     sec_base_id = req.GET.get('sec_base_id')
-    form_type = req.GET.get('form_type', 'create')
 
     logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
 
