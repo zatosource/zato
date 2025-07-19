@@ -106,7 +106,7 @@ class PatternMatcher:
         regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
         regex_pattern = '^' + regex_pattern + '$'
 
-        compiled_regex = re.compile(regex_pattern)
+        compiled_regex = re.compile(regex_pattern, re.IGNORECASE)
 
         # Cache the compiled pattern
         cache_entry = CacheEntry()
@@ -123,11 +123,11 @@ class PatternMatcher:
         """
         publisher_patterns = []
         subscriber_patterns = []
-        
+
         for permission_dict in permissions:
             access_type = permission_dict.get('access_type', '')
             pattern = permission_dict.get('pattern', '')
-            
+
             if access_type == PubSub.API_Client.Publisher:
                 publisher_patterns.append(pattern)
             elif access_type == PubSub.API_Client.Subscriber:
@@ -135,7 +135,7 @@ class PatternMatcher:
             elif access_type == PubSub.API_Client.Publisher_Subscriber:
                 publisher_patterns.append(pattern)
                 subscriber_patterns.append(pattern)
-        
+
         parsed_permissions = ParsedPermissions()
         parsed_permissions.pub_patterns = publisher_patterns
         parsed_permissions.sub_patterns = subscriber_patterns
@@ -153,7 +153,7 @@ class PatternMatcher:
             for pattern in parsed_permissions.pub_patterns:
                 pattern_info = self._create_pattern_info(pattern, True, False)
                 publisher_pattern_list.append(pattern_info)
-            
+
             subscriber_pattern_list = []
             for pattern in parsed_permissions.sub_patterns:
                 pattern_info = self._create_pattern_info(pattern, False, True)
@@ -194,7 +194,7 @@ class PatternMatcher:
                 for pattern in parsed_permissions.pub_patterns:
                     pattern_info = self._create_pattern_info(pattern, True, False)
                     publisher_pattern_list.append(pattern_info)
-                
+
                 subscriber_pattern_list = []
                 for pattern in parsed_permissions.sub_patterns:
                     pattern_info = self._create_pattern_info(pattern, False, True)
@@ -240,7 +240,7 @@ class PatternMatcher:
         """
         compiled_regex = self._compile_pattern(pattern)
         pattern_info = PatternInfo()
-        pattern_info.pattern = pattern
+        pattern_info.pattern = pattern.lower()
         pattern_info.compiled_regex = compiled_regex
         pattern_info.is_pub = is_pub
         pattern_info.is_sub = is_sub
@@ -279,7 +279,7 @@ class PatternMatcher:
         for pattern_info in pattern_list:
             if '*' not in pattern_info.pattern:
                 # Exact match
-                if topic == pattern_info.pattern:
+                if topic.lower() == pattern_info.pattern:
                     result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
                     return result
             else:
