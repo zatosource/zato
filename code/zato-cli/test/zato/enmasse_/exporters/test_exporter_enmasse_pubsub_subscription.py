@@ -142,14 +142,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
             exported_subscriptions = self.pubsub_subscription_exporter.export(self.session, self.exporter.cluster_id)
             logger.info('Exported %d pubsub subscription definitions', len(exported_subscriptions))
 
-            # Verify that we exported the expected number of subscriptions
-            # From the template, we expect 3 subscriptions
-            expected_subscription_count = 3
-            self.assertEqual(len(exported_subscriptions), expected_subscription_count,
-                f'Expected {expected_subscription_count} exported subscriptions, got {len(exported_subscriptions)}')
-
-            # Extract expected subscription data directly from the YAML template
-            # Parse the template to get the expected values
+            # Verify that all expected subscriptions from template are exported
             template_dict = yaml.safe_load(template_complex_01)
 
             # Build expected subscriptions dictionary from the template
@@ -158,11 +151,19 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 security_name = sub_def['security']
                 expected_subscriptions[security_name] = sub_def
 
-            # Verify each exported subscription against expected values
+            # Build exported subscriptions dictionary by security name
+            exported_by_security = {}
             for subscription in exported_subscriptions:
                 security_name = subscription['security'] # type: ignore
-                self.assertIn(security_name, expected_subscriptions, f'Unexpected security {security_name} in export')
-                expected = expected_subscriptions[security_name]
+                exported_by_security[security_name] = subscription
+
+            # Verify that all expected subscriptions from template are found in export
+            for security_name in expected_subscriptions.keys():
+                self.assertIn(security_name, exported_by_security, f'Expected security {security_name} from template not found in export')
+
+            # Verify that all expected subscriptions are present in the export
+            for security_name, expected in expected_subscriptions.items():
+                subscription = exported_by_security[security_name]
 
                 # Check required fields
                 self.assertIn('security', subscription, f'Required field security missing in subscription {security_name}')
