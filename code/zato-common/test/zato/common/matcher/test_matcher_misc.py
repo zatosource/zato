@@ -156,8 +156,8 @@ class PatternMatcherMiscTestCase(TestCase):
         permissions = [{'pattern': 'test.**', 'access_type': PubSub.API_Client.Publisher}]
         self.matcher.add_client(self.client_id, permissions)
 
-        # Very long topic name
-        long_segment = 'a' * 1000
+        # Long topic name within limits (200 chars max)
+        long_segment = 'a' * 180  # Leave room for 'test.' and '.end'
         long_topic = f'test.{long_segment}.end'
 
         result = self.matcher.evaluate(self.client_id, long_topic, 'publish')
