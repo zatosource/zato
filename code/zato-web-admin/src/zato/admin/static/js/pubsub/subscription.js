@@ -44,6 +44,10 @@ $(document).ready(function() {
         $('#push-service-edit, #push-service-create').hide();
         $('#push-type-edit, #push-type-create').hide();
 
+        // Clear topic select options
+        $('#id_topic_id, #id_edit-topic_id').empty();
+        console.log('DEBUG close: Cleared topic select options');
+
         console.log('DEBUG close: Calling original close function');
         // Call the original close function
         return originalClose(elem);
@@ -135,6 +139,19 @@ $(document).ready(function() {
 
         // Call original on_submit if validation passes
         return originalOnSubmit.call(this, action);
+    };
+
+    // Override the on_submit_complete function to add cleanup
+    var originalOnSubmitComplete = $.fn.zato.data_table.on_submit_complete;
+    $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
+        console.log('DEBUG on_submit_complete: Starting cleanup after form submission');
+
+        // Clear topic select options after successful submission
+        $('#id_topic_id, #id_edit-topic_id').empty();
+        console.log('DEBUG on_submit_complete: Cleared topic select options');
+
+        // Call the original on_submit_complete function
+        return originalOnSubmitComplete(data, status, action);
     };
 })
 
@@ -727,7 +744,23 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                 var $topicSelect = $(topicSelectId);
                 var $container = $topicSelect.parent();
 
-                console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options before clearing:', JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+                var topicOptions = $topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get();
+                console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options before clearing:', JSON.stringify(topicOptions));
+
+                // Debug Chosen widget state before clearing
+                var chosenData = $topicSelect.data('chosen');
+                if (chosenData) {
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Chosen widget exists, results_data: ' + JSON.stringify(chosenData.results_data));
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Chosen widget search_results count: ' + (chosenData.search_results ? chosenData.search_results.find('li').length : 'no search_results'));
+                } else {
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: No Chosen widget data found');
+                }
+
+                // Clear Chosen widget selections first
+                $topicSelect.val([]).trigger('chosen:updated');
+                console.log('DEBUG setupSecurityDefinitionChangeHandler: Cleared Chosen selections');
+                
+                $topicSelect.empty();
 
                 // Clear any existing messages
                 $container.find('.no-topics-message').remove();
@@ -735,21 +768,30 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                 if (response.topics && response.topics.length > 0) {
                     console.log('DEBUG setupSecurityDefinitionChangeHandler: Populating', response.topics.length, 'topics');
                     // Clear existing options and populate with filtered topics
-                    $topicSelect.empty();
-
                     $.each(response.topics, function(index, topic) {
                         var option = $('<option></option>')
                             .attr('value', topic.id)
                             .text(topic.name);
+                        // For create form, clear any default selections
+                        if (form_type === 'create') {
+                            console.log('DEBUG setupSecurityDefinitionChangeHandler: Clearing selections for create form');
+                            $topicSelect.find('option').prop('selected', false);
+                        }
+
                         $topicSelect.append(option);
                     });
 
-                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options after populating:', JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+                    $topicSelect.trigger('chosen:updated');
+                    var topicOptionsAfter = $topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get();
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options after populating:', JSON.stringify(topicOptionsAfter));
 
-                    // For create form, clear any default selections
-                    if (form_type === 'create') {
-                        console.log('DEBUG setupSecurityDefinitionChangeHandler: Clearing selections for create form');
-                        $topicSelect.find('option').prop('selected', false);
+                    // Debug Chosen widget state after updating
+                    var chosenDataAfter = $topicSelect.data('chosen');
+                    if (chosenDataAfter) {
+                        console.log('DEBUG setupSecurityDefinitionChangeHandler: Chosen widget after update, results_data: ' + JSON.stringify(chosenDataAfter.results_data));
+                        console.log('DEBUG setupSecurityDefinitionChangeHandler: Chosen widget after update, search_results count: ' + (chosenDataAfter.search_results ? chosenDataAfter.search_results.find('li').length : 'no search_results'));
+                    } else {
+                        console.log('DEBUG setupSecurityDefinitionChangeHandler: No Chosen widget data found after update');
                     }
 
                     // Show the Chosen select
