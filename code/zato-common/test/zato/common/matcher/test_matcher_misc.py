@@ -80,7 +80,7 @@ class PatternMatcherMiscTestCase(TestCase):
 
         for topic in boundary_topics:
             result = self.matcher.evaluate(self.client_id, topic, 'publish')
-            self.assertTrue(isinstance(result.is_ok, bool), f"Boundary test failed for: {topic}")
+            self.assertTrue(isinstance(result.is_ok, bool), f"Boundary test failed for: {topic}") # type: ignore
 
 # ################################################################################################################################
 
@@ -174,6 +174,6 @@ class PatternMatcherMiscTestCase(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
