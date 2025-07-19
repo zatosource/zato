@@ -89,7 +89,12 @@ This allows publishing to any user command topic, subscribing to direct user eve
 **A:** Yes. `orders.*.processed.**` matches `orders.urgent.processed.daily` and `orders.bulk.processed.summary.final`.
 
 ### Q: Does ** match to the end of a topic name?
-**A:** Yes. `orders.**` matches `orders.urgent`, `orders.urgent.high`, and `orders.urgent.high.priority`. The ** wildcard consumes all remaining segments from its position to the end of the topic name.
+**A:** Yes. When ** appears at the end of a pattern like `orders.**`, it matches `orders.urgent`, `orders.urgent.high`,
+and `orders.urgent.high.priority`. The ** wildcard matches zero or more segments from its position to the end of the topic name.
+
+### Q: Can I use ** in the middle of a pattern?
+**A:** Yes. `orders.**.new` matches `orders.new`, `orders.urgent.new`, `orders.urgent.high.new`, and `orders.a.b.c.d.new`.
+The ** wildcard matches zero or more segments between its position and the next literal part of the pattern.
 
 ### Q: Can I have empty segments?
 **A:** Yes. E.g. `orders..123` (double dot) will be treated as this exact, literal name, "orders", then two dots and then "123".
