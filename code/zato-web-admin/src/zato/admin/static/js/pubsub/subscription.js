@@ -395,6 +395,9 @@ $.fn.zato.pubsub.subscription.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a pub/sub subscription', null);
     // Populate security definitions after form opens
     setTimeout(function() {
+        // Clear topic dropdown immediately to prevent showing previous topics
+        $('#id_topic_id').empty();
+
         // Prepare topic select for SlimSelect but don't populate yet
         $('#id_topic_id').attr('multiple', true);
 
@@ -406,6 +409,14 @@ $.fn.zato.pubsub.subscription.create = function() {
         // Setup delivery type visibility first, then populate REST endpoints for create form
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
         $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
+
+        // Trigger initial topic load after security definitions are populated
+        setTimeout(function() {
+            var $securitySelect = $('#id_sec_base_id');
+            if ($securitySelect.val()) {
+                $securitySelect.trigger('change.security-filter');
+            }
+        }, 100);
     }, 200);
 }
 
