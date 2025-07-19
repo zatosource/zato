@@ -97,23 +97,29 @@ class PatternMatcher:
 # ################################################################################################################################
 
     def _compile_pattern(self, pattern:'str') -> 'Pattern[str]':
-        """ Compile a topic pattern to regex, with caching.
+        """ Compile a pattern to a regex.
         """
-        if pattern in self._pattern_cache:
-            return self._pattern_cache[pattern].compiled_regex
+        cache_entry = self._pattern_cache.get(pattern)
+        if cache_entry:
+            return cache_entry.compiled_regex
 
-        # Convert pattern to regex based on GetMatches implementation
-        regex_pattern = pattern.replace('**', '__DOUBLE_ASTERISK__')
-        regex_pattern = regex_pattern.replace('*', '[^.]*')
-        regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
-        regex_pattern = '^' + regex_pattern + '$'
+        # Convert pattern to regex - always use regex even for exact patterns
+        if '*' in pattern:
+            # Has wildcards
+            regex_pattern = pattern.replace('**', '__DOUBLE_ASTERISK__')
+            regex_pattern = regex_pattern.replace('*', '[^.]*')
+            regex_pattern = regex_pattern.replace('__DOUBLE_ASTERISK__', '.*')
+            regex_pattern = '^' + regex_pattern + '$'
+        else:
+            # Exact pattern - escape special regex chars and add ^ $ anchors
+            regex_pattern = '^' + re.escape(pattern) + '$'
 
         compiled_regex = re.compile(regex_pattern, re.IGNORECASE)
 
-        # Cache the compiled pattern
+        # Cache the compiled regex
         cache_entry = CacheEntry()
-        cache_entry.compiled_regex = compiled_regex
         cache_entry.pattern = pattern
+        cache_entry.compiled_regex = compiled_regex
         self._pattern_cache[pattern] = cache_entry
 
         return compiled_regex
@@ -266,23 +272,14 @@ class PatternMatcher:
         """ Try to match a pattern against a topic with caching.
         """
         topic_lower = topic.lower()
+        cache_key = f'match:{topic_lower}:{pattern_info.pattern}'
 
-        if not pattern_info.has_wildcards:
-            cache_key = f'exact:{topic_lower}:{pattern_info.pattern}'
-            cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
-            if cached_result:
-                return cached_result
+        cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
+        if cached_result:
+            return cached_result
 
-            matches = topic_lower == pattern_info.pattern
-            return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
-        else:
-            cache_key = f'regex:{topic_lower}:{pattern_info.pattern}'
-            cached_result = self._check_cached_match(cache_key, client_id, topic, operation, pattern_info.pattern)
-            if cached_result:
-                return cached_result
-
-            matches = bool(pattern_info.compiled_regex.match(topic))
-            return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+        matches = bool(pattern_info.compiled_regex.match(topic))
+        return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
 
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
         """ Create a PatternInfo object.
