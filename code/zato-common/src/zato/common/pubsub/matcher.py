@@ -278,8 +278,10 @@ class PatternMatcher:
         if cached_result:
             return cached_result
 
-        matches = bool(pattern_info.compiled_regex.match(topic))
-        return self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+        match_result = pattern_info.compiled_regex.match(topic)
+        matches = bool(match_result)
+        result = self._evaluate_and_cache_match(cache_key, matches, client_id, topic, operation, pattern_info.pattern)
+        return result
 
     def _create_pattern_info(self, pattern:'str', is_pub:'bool', is_sub:'bool') -> 'PatternInfo':
         """ Create a PatternInfo object.
