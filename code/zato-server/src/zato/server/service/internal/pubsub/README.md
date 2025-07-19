@@ -5,6 +5,13 @@
 Zato's pub/sub system uses pattern matching to control access to topics. Patterns allow you to define flexible rules
 for which topics a client can publish to or subscribe from, without having to specify each topic individually.
 
+## Topic Name Restrictions
+
+Topic names must adhere to the following rules:
+- Maximum length: 200 characters
+- The "#" character is not allowed in topic names
+- Only ASCII characters are permitted
+
 ## Pattern Types
 
 ### Exact Match
