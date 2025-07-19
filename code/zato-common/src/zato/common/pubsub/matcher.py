@@ -121,27 +121,25 @@ class PatternMatcher:
     def _parse_permissions(self, permissions:'List[anydict]') -> 'ParsedPermissions':
         """ Parse permission dicts into pub and sub patterns.
         """
-        pub_patterns = []
-        sub_patterns = []
-
-        for perm_dict in permissions:
-
-            access_type = perm_dict.get('access_type', '')
-            pattern = perm_dict.get('pattern', '')
-
+        publisher_patterns = []
+        subscriber_patterns = []
+        
+        for permission_dict in permissions:
+            access_type = permission_dict.get('access_type', '')
+            pattern = permission_dict.get('pattern', '')
+            
             if access_type == PubSub.API_Client.Publisher:
-                pub_patterns.append(pattern)
+                publisher_patterns.append(pattern)
             elif access_type == PubSub.API_Client.Subscriber:
-                sub_patterns.append(pattern)
+                subscriber_patterns.append(pattern)
             elif access_type == PubSub.API_Client.Publisher_Subscriber:
-                pub_patterns.append(pattern)
-                sub_patterns.append(pattern)
-
-        parsed_perms = ParsedPermissions()
-        parsed_perms.pub_patterns = pub_patterns
-        parsed_perms.sub_patterns = sub_patterns
-
-        return parsed_perms
+                publisher_patterns.append(pattern)
+                subscriber_patterns.append(pattern)
+        
+        parsed_permissions = ParsedPermissions()
+        parsed_permissions.pub_patterns = publisher_patterns
+        parsed_permissions.sub_patterns = subscriber_patterns
+        return parsed_permissions
 
 # ################################################################################################################################
 
@@ -149,27 +147,27 @@ class PatternMatcher:
         """ Add a new client with permissions.
         """
         with self._lock:
-            parsed_perms = self._parse_permissions(permissions)
+            parsed_permissions = self._parse_permissions(permissions)
 
-            pub_pattern_infos = []
-            for pattern in parsed_perms.pub_patterns:
+            publisher_pattern_list = []
+            for pattern in parsed_permissions.pub_patterns:
                 pattern_info = self._create_pattern_info(pattern, True, False)
-                pub_pattern_infos.append(pattern_info)
-
-            sub_pattern_infos = []
-            for pattern in parsed_perms.sub_patterns:
+                publisher_pattern_list.append(pattern_info)
+            
+            subscriber_pattern_list = []
+            for pattern in parsed_permissions.sub_patterns:
                 pattern_info = self._create_pattern_info(pattern, False, True)
-                sub_pattern_infos.append(pattern_info)
+                subscriber_pattern_list.append(pattern_info)
 
             # Sort patterns alphabetically with wildcards last
-            pub_pattern_infos.sort(key=self._pattern_info_sort_key)
-            sub_pattern_infos.sort(key=self._pattern_info_sort_key)
+            publisher_pattern_list.sort(key=self._pattern_info_sort_key)
+            subscriber_pattern_list.sort(key=self._pattern_info_sort_key)
 
-            client_perms = ClientPermissions()
-            client_perms.client_id = client_id
-            client_perms.pub_patterns = pub_pattern_infos
-            client_perms.sub_patterns = sub_pattern_infos
-            self._clients[client_id] = client_perms
+            client_permissions = ClientPermissions()
+            client_permissions.client_id = client_id
+            client_permissions.pub_patterns = publisher_pattern_list
+            client_permissions.sub_patterns = subscriber_pattern_list
+            self._clients[client_id] = client_permissions
 
 # ################################################################################################################################
 
@@ -189,26 +187,25 @@ class PatternMatcher:
 
             if client_id not in self._clients:
                 self.add_client(client_id, permissions)
-            else:
+            if client_id in self._clients:
+                parsed_permissions = self._parse_permissions(permissions)
 
-                parsed_perms = self._parse_permissions(permissions)
-
-                pub_pattern_infos = []
-                for pattern in parsed_perms.pub_patterns:
+                publisher_pattern_list = []
+                for pattern in parsed_permissions.pub_patterns:
                     pattern_info = self._create_pattern_info(pattern, True, False)
-                    pub_pattern_infos.append(pattern_info)
-
-                sub_pattern_infos = []
-                for pattern in parsed_perms.sub_patterns:
+                    publisher_pattern_list.append(pattern_info)
+                
+                subscriber_pattern_list = []
+                for pattern in parsed_permissions.sub_patterns:
                     pattern_info = self._create_pattern_info(pattern, False, True)
-                    sub_pattern_infos.append(pattern_info)
+                    subscriber_pattern_list.append(pattern_info)
 
                 # Sort patterns alphabetically with wildcards last
-                pub_pattern_infos.sort(key=self._pattern_info_sort_key)
-                sub_pattern_infos.sort(key=self._pattern_info_sort_key)
+                publisher_pattern_list.sort(key=self._pattern_info_sort_key)
+                subscriber_pattern_list.sort(key=self._pattern_info_sort_key)
 
-                self._clients[client_id].pub_patterns = pub_pattern_infos
-                self._clients[client_id].sub_patterns = sub_pattern_infos
+                self._clients[client_id].pub_patterns = publisher_pattern_list
+                self._clients[client_id].sub_patterns = subscriber_pattern_list
 
 # ################################################################################################################################
 
@@ -254,35 +251,32 @@ class PatternMatcher:
     def evaluate(self, client_id:'str', topic:'str', operation:'str') -> 'EvaluationResult':
         """ Evaluate if a client can perform an operation on a topic.
         """
-        if client_id not in self._clients:
+        client_permissions = self._clients.get(client_id)
+        if not client_permissions:
             result = EvaluationResult()
             result.is_ok = False
             result.client_id = client_id
             result.topic = topic
             result.operation = operation
-            result.matched_pattern = None
-            result.reason = f'Client {client_id} not found'
+            result.reason = 'Client not found'
             return result
 
-        client_perms = self._clients[client_id]
-
-        # Select appropriate patterns based on operation
-        if operation == 'pub':
-            patterns = client_perms.pub_patterns
-        elif operation == 'sub':
-            patterns = client_perms.sub_patterns
+        # Get patterns based on operation
+        if operation == 'publish':
+            pattern_list = client_permissions.pub_patterns
+        elif operation == 'subscribe':
+            pattern_list = client_permissions.sub_patterns
         else:
             result = EvaluationResult()
             result.is_ok = False
             result.client_id = client_id
             result.topic = topic
             result.operation = operation
-            result.matched_pattern = None
             result.reason = f'Invalid operation: {operation}'
             return result
 
         # Check patterns in order: exact matches first, then wildcards (pre-sorted)
-        for pattern_info in patterns:
+        for pattern_info in pattern_list:
             if '*' not in pattern_info.pattern:
                 # Exact match
                 if topic == pattern_info.pattern:
