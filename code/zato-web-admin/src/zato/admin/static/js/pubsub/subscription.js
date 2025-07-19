@@ -14,45 +14,15 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_sec_def_topics = function(item_list) {
-
-    let item_html_prefix = "topic_checkbox_";
-    let id_field = "topic_id";
-    let name_field = "topic_name";
-    let is_taken_field = "is_subscribed";
-    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
-    let html_table_id = "multi-select-table";
-    let html_elem_id_selector = "#multi-select-div";
-    let checkbox_field_name = "name";
-    let disable_if_is_taken = false;
-
-    $.fn.zato.populate_multi_checkbox(
-        item_list,
-        item_html_prefix,
-        id_field,
-        name_field,
-        is_taken_field,
-        url_template,
-        html_table_id,
-        html_elem_id_selector,
-        checkbox_field_name,
-        disable_if_is_taken
-    );
-}
-
 $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
-        var item_list = $.parseJSON(data.responseText);
-        if(item_list.length) {
-            $.fn.zato.pubsub.populate_sec_def_topics(item_list);
-        }
-        else {
-            $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-        }
+        // Display the HTML directly in the multi-select div
+        $('#multi-select-div').html(data.responseText);
     }
     else {
         console.log(data.responseText);
+        $('#multi-select-div').html('<em>Error loading topics</em>');
     }
 }
 
@@ -66,6 +36,13 @@ $.fn.zato.pubsub.on_sec_def_changed = function() {
     else {
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
+    // Clear the multi-select div when no security definition is selected
+    $('#multi-select-div').html('<em>Select a security definition to see available topics</em>');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -166,7 +143,7 @@ $(document).ready(function() {
 })
 
 // Function to populate REST endpoints
-function populateRestEndpoints(form_type, selectedId, showSpan) {
+$.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId, showSpan) {
     console.log('DEBUG populateRestEndpoints: Starting, form_type:', form_type, 'selectedId:', selectedId, 'showSpan:', showSpan);
 
     var endpointSelectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit_rest_push_endpoint_id';
@@ -188,7 +165,7 @@ function populateRestEndpoints(form_type, selectedId, showSpan) {
 
     // Make AJAX call to get REST endpoints
     $.ajax({
-        url: '/zato/http-soap/get-endpoints/',
+        url: '/zato/pubsub/subscription/get-rest-endpoints/',
         type: 'GET',
         data: {
             cluster_id: $('#cluster_id').val() || $('#id_edit-cluster_id').val()
