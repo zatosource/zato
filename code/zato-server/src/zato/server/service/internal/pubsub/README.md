@@ -119,3 +119,19 @@ Evaluation order:
 3. transaction.*
 4. transaction.**.processed
 ```
+
+**Example 1:** When a message is sent to topic `transaction.international`, the system will check:
+* First, `transaction.international` (matches)
+* Evaluation stops here - remaining patterns are skipped
+
+**Example 2:** When a message is sent to topic `transaction.domestic`, the system will check:
+* First, `transaction.international` (no match)
+* Then `transaction.priority` (no match)
+* Then `transaction.*` (matches)
+* Evaluation stops here - `transaction.**.processed` is skipped
+
+**Example 3:** When a message is sent to topic `transaction.wire.processed`, the system will check:
+* First, `transaction.international` (no match)
+* Then `transaction.priority` (no match)
+* Then `transaction.*` (no match)
+* Finally `transaction.**.processed` (matches)
