@@ -197,18 +197,12 @@ class Create(AdminService):
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
 
-                    self.logger.info('DEBUG subscription create - evaluating pattern match for sec_base_id=%s, cluster_id=%s, topic_name=%s', input.sec_base_id, input.cluster_id, topic.name)
-                    
-                    # Use no_autoflush to prevent premature flush during pattern evaluation
                     with session.no_autoflush:
                         pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
-                    
-                    self.logger.info('DEBUG subscription create - pattern_matched result: %s (type: %s)', pattern_matched, type(pattern_matched))
                     sub_topic.pattern_matched = pattern_matched
 
                     session.add(sub_topic)
 
-                    # Append for later use
                     topic_link = get_topic_link(topic.name)
                     topic_name_list.append(topic_link)
 
