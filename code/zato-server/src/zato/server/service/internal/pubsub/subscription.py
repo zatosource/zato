@@ -197,7 +197,13 @@ class Create(AdminService):
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
 
-                    pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                    self.logger.info('DEBUG subscription create - evaluating pattern match for sec_base_id=%s, cluster_id=%s, topic_name=%s', input.sec_base_id, input.cluster_id, topic.name)
+                    
+                    # Use no_autoflush to prevent premature flush during pattern evaluation
+                    with session.no_autoflush:
+                        pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                    
+                    self.logger.info('DEBUG subscription create - pattern_matched result: %s (type: %s)', pattern_matched, type(pattern_matched))
                     sub_topic.pattern_matched = pattern_matched
 
                     session.add(sub_topic)
@@ -325,7 +331,9 @@ class Edit(AdminService):
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
 
-                            pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                            # Use no_autoflush to prevent premature flush during pattern evaluation
+                            with session.no_autoflush:
+                                pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
                             sub_topic.pattern_matched = pattern_matched
 
                             session.add(sub_topic)
