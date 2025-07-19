@@ -16,6 +16,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.util import validate_pattern, validate_topic_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,15 +174,10 @@ class PatternMatcher:
         with self._lock:
             parsed_permissions = self._parse_permissions(permissions)
 
-            # Validate patterns for reserved names, ASCII-only, and length
+            # Validate patterns
             all_patterns = parsed_permissions.pub_patterns + parsed_permissions.sub_patterns
             for pattern in all_patterns:
-                if len(pattern) > ModuleCtx.Max_Length:
-                    raise ValueError(f'Pattern exceeds maximum length of {ModuleCtx.Max_Length} characters: {len(pattern)}')
-                if self._contains_reserved_name(pattern):
-                    raise ValueError(f'Pattern contains reserved name: {pattern}')
-                if not self._is_ascii_only(pattern):
-                    raise ValueError(f'Pattern contains non-ASCII characters: {pattern}')
+                validate_pattern(pattern)
 
             publisher_pattern_list = []
             for pattern in parsed_permissions.pub_patterns:
@@ -259,20 +255,7 @@ class PatternMatcher:
         """
         return (pattern_info.has_wildcards, pattern_info.pattern)
 
-    def _contains_reserved_name(self, pattern:'str') -> 'bool':
-        """ Check if pattern contains reserved names case-insensitively.
-        """
-        pattern_lower = pattern.lower()
-        return 'zato' in pattern_lower or 'zpsk' in pattern_lower
 
-    def _is_ascii_only(self, pattern:'str') -> 'bool':
-        """ Check if pattern contains only ASCII characters.
-        """
-        try:
-            _ = pattern.encode('ascii')
-            return True
-        except UnicodeEncodeError:
-            return False
 
     def _has_more_specific_pattern(self, client_permissions:'ClientPermissions', topic:'str', operation:'str') -> 'bool':
         """ Check if there's a more specific (exact) pattern that would override wildcard matches.
@@ -351,6 +334,18 @@ class PatternMatcher:
     def evaluate(self, client_id:'str', topic:'str', operation:'str') -> 'EvaluationResult':
         """ Evaluate if a client can perform an operation on a topic.
         """
+        # Validate topic name first
+        try:
+            validate_topic_name(topic)
+        except ValueError as e:
+            result = EvaluationResult()
+            result.is_ok = False
+            result.client_id = client_id
+            result.topic = topic
+            result.operation = operation
+            result.reason = str(e)
+            return result
+
         client_permissions = self._clients.get(client_id)
         if not client_permissions:
             result = EvaluationResult()

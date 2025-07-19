@@ -18,6 +18,7 @@ from bunch import Bunch
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
+from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -70,6 +71,9 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         cluster_id = self.server.cluster_id
+
+        # Validate topic name
+        validate_topic_name(input.name)
 
         with closing(self.odb.session()) as session:
             try:
@@ -126,6 +130,9 @@ class Edit(AdminService):
         input = self.request.input
         input_id = input.get('id')
         cluster_id = self.server.cluster_id
+
+        # Validate topic name
+        validate_topic_name(input.name)
 
         with closing(self.odb.session()) as session:
             try:
