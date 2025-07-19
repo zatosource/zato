@@ -38,6 +38,7 @@ class PatternInfo:
     compiled_regex: 'Pattern[str]'
     is_pub: 'bool'
     is_sub: 'bool'
+    has_wildcards: 'bool'
 
 # ################################################################################################################################
 
@@ -217,11 +218,10 @@ class PatternMatcher:
 
 # ################################################################################################################################
 
-    def _pattern_info_sort_key(self, pattern_info:'PatternInfo') -> 'tuple[str, bool]':
+    def _pattern_info_sort_key(self, pattern_info:'PatternInfo') -> 'tuple':
         """ Sort key for PatternInfo objects: alphabetical with wildcards last.
         """
-        has_wildcard = '*' in pattern_info.pattern
-        return (pattern_info.pattern, has_wildcard)
+        return (pattern_info.has_wildcards, pattern_info.pattern)
 
     def _create_success_result(self, client_id:'str', topic:'str', operation:'str', matched_pattern:'str') -> 'EvaluationResult':
         """ Create a successful evaluation result.
@@ -244,6 +244,7 @@ class PatternMatcher:
         pattern_info.compiled_regex = compiled_regex
         pattern_info.is_pub = is_pub
         pattern_info.is_sub = is_sub
+        pattern_info.has_wildcards = '*' in pattern
         return pattern_info
 
 # ################################################################################################################################
@@ -277,7 +278,7 @@ class PatternMatcher:
 
         # Check patterns in order: exact matches first, then wildcards (pre-sorted)
         for pattern_info in pattern_list:
-            if '*' not in pattern_info.pattern:
+            if not pattern_info.has_wildcards:
                 # Exact match
                 if topic.lower() == pattern_info.pattern:
                     result = self._create_success_result(client_id, topic, operation, pattern_info.pattern)
