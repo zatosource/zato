@@ -74,7 +74,7 @@ This allows publishing to any user command topic, subscribing to direct user eve
 3. **Multi-Level Wildcard (`**`)**: Matches one or more segments
 4. **Case Insensitive**: All matching is case-insensitive
 5. **No Partial Matches**: Patterns must match the complete topic name
-6. **Alphabetical Evaluation**: Patterns are evaluated in alphabetical order
+6. **Alphabetical Evaluation**: Patterns are evaluated in alphabetical order, and wildcards are evaluated last
 7. **First Match Wins**: Evaluation stops at the first matching pattern
 
 ## FAQ
@@ -105,7 +105,7 @@ and `orders.urgent`, and `orders.*` comes first alphabetically, only `orders.*` 
 **A:** Special characters (except dots and wildcards) are treated literally. `orders-2024` matches exactly `orders-2024`.
 
 ### Q: In what order are patterns evaluated?
-**A:** Patterns are evaluated alphabetically and the first match wins, but patterns are evaluated last. This means:
+**A:** Patterns are evaluated alphabetically and the first match wins, and wildcards are evaluated last. This means:
 
 ```
 Given patterns:
