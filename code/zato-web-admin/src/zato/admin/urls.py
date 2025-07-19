@@ -763,6 +763,8 @@ urlpatterns += [
         login_required(subscription.get_service_list), name='pubsub-subscription-get-service-list'),
     url(r'^zato/pubsub/subscription/get-topics-by-security/$',
         login_required(subscription.get_topics_by_security), name='pubsub-subscription-get-topics-by-security'),
+    url(r'^zato/pubsub/subscription/sec-def-topic-sub-list/(?P<sec_base_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(subscription.sec_def_topic_sub_list), name='pubsub-subscription-sec-def-topic-sub-list'),
 ]
 
 # ################################################################################################################################
