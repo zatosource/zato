@@ -167,9 +167,11 @@ class PatternMatcher:
         with self._lock:
             parsed_permissions = self._parse_permissions(permissions)
             
-            # Validate patterns for reserved names and ASCII-only
+            # Validate patterns for reserved names, ASCII-only, and length
             all_patterns = parsed_permissions.pub_patterns + parsed_permissions.sub_patterns
             for pattern in all_patterns:
+                if len(pattern) > 200:
+                    raise ValueError(f'Pattern exceeds maximum length of 200 characters: {len(pattern)}')
                 if self._contains_reserved_name(pattern):
                     raise ValueError(f'Pattern contains reserved name: {pattern}')
                 if not self._is_ascii_only(pattern):
