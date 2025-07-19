@@ -146,6 +146,10 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
             # Now test the export functionality
             exported_subscriptions = self.pubsub_subscription_exporter.export(self.session, self.exporter.cluster_id)
 
+            print()
+            print(333, exported_subscriptions)
+            print()
+
             exported_count = len(exported_subscriptions)
             logger.info('Exported %d pubsub subscription definitions', exported_count)
 
@@ -197,6 +201,12 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 subscription_topic_list = set(subscription['topic_list']) # type: ignore
                 expected_topic_list = set(expected['topic_list'])
                 topic_list_incorrect_msg = f'Field topic_list has incorrect value in subscription {security_name}'
+
+                print()
+                print(111, subscription_topic_list)
+                print(222, security_name, expected_topic_list)
+                print()
+
                 self.assertEqual(subscription_topic_list, expected_topic_list, topic_list_incorrect_msg)
 
                 # Check push-specific fields
