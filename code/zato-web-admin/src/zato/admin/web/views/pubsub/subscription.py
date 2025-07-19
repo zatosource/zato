@@ -18,6 +18,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions, get_service_list as util_get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
+from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscription
 
 # ################################################################################################################################
@@ -255,6 +256,37 @@ def get_topics(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_topic_name_from_tuple(topic_tuple):
+    """ Get topic name from tuple (id, name).
+    """
+    return topic_tuple[1]
+
+def _get_topic_name_from_dict(topic_dict):
+    """ Get topic name from dictionary.
+    """
+    return topic_dict['name']
+
+def _sort_topics_by_name(topics):
+    """ Sort topics by name.
+    """
+    return sorted(topics, key=_get_topic_name_from_tuple)
+
+# ################################################################################################################################
+
+def _sort_topic_dicts_by_name(topic_dicts):
+    """ Sort topic dictionaries by name.
+    """
+    return sorted(topic_dicts, key=_get_topic_name_from_dict)
+
+# ################################################################################################################################
+
+def _is_subscriber_access(access_type):
+    """ Check if access type allows subscription.
+    """
+    return access_type in (PubSub.API_Client.Subscriber, PubSub.API_Client.Publisher_Subscriber)
+
+# ################################################################################################################################
+
 def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
     """ Get subscriber patterns for a given security definition.
     """
@@ -268,7 +300,7 @@ def _get_subscriber_patterns_for_sec_def(req, sec_base_id, cluster_id):
 
     subscriber_patterns = []
     for perm in permissions_response.data:
-        if perm.sec_base_id == int(sec_base_id) and ('subscriber' in perm.access_type.lower()):
+        if perm.sec_base_id == sec_base_id and _is_subscriber_access(perm.access_type):
             logger.info('Found subscriber permission with pattern: %s', perm.pattern)
             patterns = [p.strip() for p in perm.pattern.splitlines() if p.strip()]
             subscriber_patterns.extend(patterns)
@@ -308,7 +340,7 @@ def _build_topic_checkbox_html(all_topics, cluster_id):
     html_parts.append('<table id="multi-select-table" class="multi-select-table">')
 
     if all_topics:
-        sorted_topics = sorted(all_topics, key=lambda x: x[1])
+        sorted_topics = _sort_topics_by_name(all_topics)
         for topic_id, topic_name in sorted_topics:
             checkbox_id = f'topic_checkbox_{topic_id}'
             html_parts.append(f'<tr>')
@@ -341,14 +373,21 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
 
         if not subscriber_patterns:
             logger.warning('No subscription permissions found for sec_base_id=%s', sec_base_id)
-            return HttpResponse('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><em>No subscription permissions defined for this security definition</em></td></tr></table>', content_type='text/html')
+            html_content = (
+                '<table id="multi-select-table" class="multi-select-table">'
+                '<tr><td colspan="2">'
+                '<em>No subscription permissions defined for this security definition</em>'
+                '</td></tr>'
+                '</table>'
+            )
+            return HttpResponse(html_content, content_type='text/html')
 
         all_topics = _get_topics_for_patterns(req, subscriber_patterns, cluster_id)
         html_content = _build_topic_checkbox_html(all_topics, cluster_id)
 
         return HttpResponse(html_content, content_type='text/html')
 
-    except Exception as e:
+    except Exception:
         logger.error('Exception occurred: %s', format_exc())
         return HttpResponseServerError(format_exc())
 
@@ -458,8 +497,8 @@ def get_topics_by_security(req):
         subscribe_permissions = []
         if permissions_response and hasattr(permissions_response, 'data'):
             for perm in permissions_response.data:
-                if (perm.sec_base_id == int(sec_base_id) and
-                    (perm.access_type == 'subscriber' or perm.access_type == 'publisher-subscriber')):
+                if (perm.sec_base_id == sec_base_id and
+                    _is_subscriber_access(perm.access_type)):
                     subscribe_permissions.append(perm)
 
         logger.info('VIEW get_topics_by_security: found %d subscribe permissions', len(subscribe_permissions))
@@ -525,7 +564,7 @@ def get_topics_by_security(req):
             })
 
         # Sort topics by name for consistent display
-        topics_list.sort(key=lambda x: x['name'])
+        topics_list = _sort_topic_dicts_by_name(topics_list)
 
         logger.info('VIEW get_topics_by_security: returning %d topics', len(topics_list))
 
