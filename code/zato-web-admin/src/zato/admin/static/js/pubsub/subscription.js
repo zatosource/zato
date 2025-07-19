@@ -25,6 +25,18 @@ $(document).ready(function() {
     // Override the close function to clean up spinners and selects
     var originalClose = $.fn.zato.data_table.close;
     $.fn.zato.data_table.close = function(elem) {
+        console.log('DEBUG close: Starting form close');
+
+        // Log current topic select state before cleanup
+        var $topicSelectCreate = $('#id_topic_id');
+        var $topicSelectEdit = $('#id_edit-topic_id');
+        if ($topicSelectCreate.length > 0) {
+            console.log('DEBUG close: Create topic select options before cleanup:', JSON.stringify($topicSelectCreate.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+        }
+        if ($topicSelectEdit.length > 0) {
+            console.log('DEBUG close: Edit topic select options before cleanup:', JSON.stringify($topicSelectEdit.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+        }
+
         // Clean up any spinners and reset visibility states
         $('.loading-spinner').remove();
         $('.topic-select, .security-select').removeClass('hide');
@@ -32,6 +44,7 @@ $(document).ready(function() {
         $('#push-service-edit, #push-service-create').hide();
         $('#push-type-edit, #push-type-create').hide();
 
+        console.log('DEBUG close: Calling original close function');
         // Call the original close function
         return originalClose(elem);
     };
@@ -39,6 +52,15 @@ $(document).ready(function() {
     // Override the create_edit function to ensure proper cleanup before opening a new form
     var originalCreateEdit = $.fn.zato.data_table._create_edit;
     $.fn.zato.data_table._create_edit = function(form_type, title, id) {
+        console.log('DEBUG _create_edit: Starting form open, type:', form_type, 'id:', id);
+
+        // Log current topic select state before cleanup
+        var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
+        var $topicSelect = $(topicSelectId);
+        if ($topicSelect.length > 0) {
+            console.log('DEBUG _create_edit: Topic select options before cleanup:', JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+        }
+
         // Clean up any previous state completely
         $('.loading-spinner').remove();
 
@@ -52,6 +74,7 @@ $(document).ready(function() {
             $('#id_delivery_type').val('pull');
         }
 
+        console.log('DEBUG _create_edit: Calling original create_edit function');
         // Call the original create_edit function
         var result = originalCreateEdit(form_type, title, id);
 
@@ -59,7 +82,10 @@ $(document).ready(function() {
         var topicSelectId = form_type === 'create' ? '#id_topic_id' : '#id_edit-topic_id';
         var $topicSelect = $(topicSelectId);
 
+        console.log('DEBUG _create_edit: Topic select after original create_edit:', $topicSelect.length > 0 ? JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()) : 'not found');
+
         if ($topicSelect.length > 0) {
+            console.log('DEBUG _create_edit: Initializing Chosen for topic select');
             $topicSelect.chosen({
                 placeholder_text_multiple: 'Select topics...',
                 search_contains: true,
@@ -70,10 +96,12 @@ $(document).ready(function() {
 
         // Initialize security definition change handler and set initial state
         setTimeout(function() {
+            console.log('DEBUG _create_edit: Setting up security definition change handler');
             $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler(form_type);
 
             // Set initial state for topic dropdown (only for create form)
             if (form_type === 'create') {
+                console.log('DEBUG _create_edit: Removing no-topics-message for create form');
                 $topicSelect.parent().find('.no-topics-message').remove();
             }
         }, 100);
@@ -695,13 +723,17 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                 sec_base_id: secBaseId
             },
             success: function(response) {
+                console.log('DEBUG setupSecurityDefinitionChangeHandler: AJAX success, response:', JSON.stringify(response));
                 var $topicSelect = $(topicSelectId);
                 var $container = $topicSelect.parent();
+
+                console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options before clearing:', JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
 
                 // Clear any existing messages
                 $container.find('.no-topics-message').remove();
 
                 if (response.topics && response.topics.length > 0) {
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Populating', response.topics.length, 'topics');
                     // Clear existing options and populate with filtered topics
                     $topicSelect.empty();
 
@@ -712,8 +744,11 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                         $topicSelect.append(option);
                     });
 
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: Topic select options after populating:', JSON.stringify($topicSelect.find('option').map(function() { return {value: this.value, text: this.text}; }).get()));
+
                     // For create form, clear any default selections
                     if (form_type === 'create') {
+                        console.log('DEBUG setupSecurityDefinitionChangeHandler: Clearing selections for create form');
                         $topicSelect.find('option').prop('selected', false);
                     }
 
@@ -723,6 +758,7 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
                     // Refresh Chosen after populating options
                     $topicSelect.trigger('chosen:updated');
                 } else {
+                    console.log('DEBUG setupSecurityDefinitionChangeHandler: No topics found, clearing select');
                     // No matching topics - clear select and hide it
                     $topicSelect.empty();
 
@@ -754,7 +790,9 @@ $.fn.zato.pubsub.subscription.setupSecurityDefinitionChangeHandler = function(fo
 
     // Trigger initial load if security definition is already selected
     var initialSecBaseId = $securitySelect.val();
+    console.log('DEBUG setupSecurityDefinitionChangeHandler: Initial security base ID:', initialSecBaseId);
     if (initialSecBaseId) {
+        console.log('DEBUG setupSecurityDefinitionChangeHandler: Triggering initial change event');
         $securitySelect.trigger('change.security-filter');
     }
 }
