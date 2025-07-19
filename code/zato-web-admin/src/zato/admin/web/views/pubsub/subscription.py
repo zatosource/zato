@@ -376,7 +376,8 @@ def sec_def_topic_sub_list(req, sec_base_id, cluster_id):
             html_content = (
                 '<table id="multi-select-table" class="multi-select-table">'
                 '<tr><td colspan="2">'
-                '<span style="font-style: italic; color: #666;">No subscription permissions defined for this security definition</span>'
+                '<span style="font-style: italic; color: #666;">No matching subscription permissions.'
+                '<a href="/zato/pubsub/permission/?cluster=1" style="color: #0936d5;" target="_new">Click to manage permissions</a></span>'
                 '</td></tr>'
                 '</table>'
             )
