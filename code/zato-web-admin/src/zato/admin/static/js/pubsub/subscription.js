@@ -14,6 +14,62 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.populate_sec_def_topics = function(item_list) {
+
+    let item_html_prefix = "topic_checkbox_";
+    let id_field = "topic_id";
+    let name_field = "topic_name";
+    let is_taken_field = "is_subscribed";
+    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
+    let html_table_id = "multi-select-table";
+    let html_elem_id_selector = "#multi-select-div";
+    let checkbox_field_name = "name";
+    let disable_if_is_taken = false;
+
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        id_field,
+        name_field,
+        is_taken_field,
+        url_template,
+        html_table_id,
+        html_elem_id_selector,
+        checkbox_field_name,
+        disable_if_is_taken
+    );
+}
+
+$.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.pubsub.populate_sec_def_topics(item_list);
+        }
+        else {
+            $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+        }
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
+
+$.fn.zato.pubsub.on_sec_def_changed = function() {
+    var sec_base_id = $('#id_sec_base_id').val();
+    if(sec_base_id) {
+        var cluster_id = $('#cluster_id').val();
+        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        $.fn.zato.post(url, $.fn.zato.pubsub.populate_sec_def_topics_callback, null, null, true);
+    }
+    else {
+        $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
@@ -350,6 +406,11 @@ $.fn.zato.pubsub.subscription.create = function() {
         // Setup delivery type visibility first, then populate REST endpoints for create form
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
         $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
+
+        // Add event handler for security definition change
+        $('#id_sec_base_id').change(function() {
+            $.fn.zato.pubsub.on_sec_def_changed();
+        });
     }, 200);
 }
 
@@ -427,6 +488,13 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // when switching to push, but they'll remain hidden if not push type
         $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
         $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
+
+        // Load topics for the current security definition in edit mode
+        if(instance.sec_base_id) {
+            var cluster_id = $('#cluster_id').val();
+            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+            $.fn.zato.post(url, $.fn.zato.pubsub.populate_sec_def_topics_callback, null, null, true);
+        }
     }, 200);
 }
 
