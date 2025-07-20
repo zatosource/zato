@@ -577,8 +577,12 @@ def pre_process_sys_argv(sys_argv):
 def main() -> 'any_':
 
     # stdlib
+    import logging
     import os
     import sys
+
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
 
     # Used by start/stop commands
     os.environ['ZATO_CURDIR'] = os.getcwd()

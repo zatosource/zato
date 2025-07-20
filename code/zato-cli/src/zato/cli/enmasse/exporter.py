@@ -267,6 +267,7 @@ class EnmasseYAMLExporter:
 
         output_dict: 'stranydict' = {}
 
+        '''
         # Export cache definitions
         cache_defs = self.export_cache(session)
         if cache_defs:
@@ -356,13 +357,15 @@ class EnmasseYAMLExporter:
         pubsub_permission_defs = self.export_pubsub_permission(session)
         if pubsub_permission_defs:
             output_dict['pubsub_permission'] = pubsub_permission_defs
+        '''
 
         # Export pub/sub subscription definitions
         pubsub_subscription_defs = self.export_pubsub_subscription(session)
         if pubsub_subscription_defs:
             output_dict['pubsub_subscription'] = pubsub_subscription_defs
 
-        logger.info('Successfully exported objects to dictionary format')
+
+        logger.info('Successfully exported objects to dictionary format: %s', output_dict)
         return output_dict
 
 # ################################################################################################################################
