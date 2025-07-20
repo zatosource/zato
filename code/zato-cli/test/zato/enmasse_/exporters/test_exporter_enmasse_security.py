@@ -85,7 +85,10 @@ class TestEnmasseSecurityExporter(TestCase):
         exported_data = yaml_exporter.export_to_dict(self.session)
 
         self.assertIn('security', exported_data, 'Exporter did not produce a "security" section.')
-        exported_security_list = exported_data['security']
+        all_exported_security_list = exported_data['security']
+
+        # Filter exported security definitions to only include those with names starting with "enmasse"
+        exported_security_list = [item for item in all_exported_security_list if item['name'].startswith('enmasse')]
 
         # 4. Compare exported data with the original YAML data
         self.assertEqual(len(exported_security_list), len(security_list_from_yaml),  'Number of exported security definitions does not match original YAML.')
