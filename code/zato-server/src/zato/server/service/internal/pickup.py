@@ -135,7 +135,7 @@ class UpdateEnmasse(Service):
             return
 
         # .. and execute it now.
-        _ = self.commands.run_enmasse_async(enmasse_file_path)
+        _ = self.commands.run_enmasse_async_import(enmasse_file_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
