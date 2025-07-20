@@ -63,8 +63,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
-        topic_names = return_data['topic_names']
-        return_data['topic_names'] = dumps(topic_names)
+        topic_link_list = return_data['topic_link_list']
+        return_data['topic_link_list'] = ', '.join(topic_link_list)
         return return_data
 
 # ################################################################################################################################
@@ -76,19 +76,20 @@ class Create(_CreateEdit):
     service_name = 'zato.pubsub.subscription.create'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
+        input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'topic_links', 'sec_name', 'delivery_type', 'topic_names'
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'sec_name', 'delivery_type', \
+            'topic_name_list', 'topic_link_list',
 
     def _get_input_dict(self):
 
         input_dict = {}
 
-        # Map topic_id form field (which can be multiple) to topic_id_list service input
+        # Map topic_name form field (which can be multiple) to topic_name_list service input
         if self.req.method == 'POST':
-            topic_ids = self.req.POST.getlist('create-topic_id')
-            if topic_ids:
-                input_dict['topic_id_list'] = topic_ids
+            topic_name_list = self.req.POST.getlist('create-topic_name')
+            if topic_name_list:
+                input_dict['topic_name_list'] = topic_name_list
 
         return input_dict
 
@@ -96,8 +97,8 @@ class Create(_CreateEdit):
 
         # Extract topic IDs from form POST data
         if self.req.method == 'POST':
-            topic_ids = self.req.POST.getlist('topic_id')
-            input_dict['topic_id_list'] = topic_ids
+            topic_name_list = self.req.POST.getlist('topic_name')
+            input_dict['topic_name_list'] = topic_name_list
 
             # Map other form fields
             field_mapping = {
@@ -345,7 +346,7 @@ def _build_topic_checkbox_html(all_topics, cluster_id):
             checkbox_id = f'topic_checkbox_{topic_id}'
             html_parts.append(f'<tr>')
             html_parts.append(f'<td>')
-            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="name" value="{topic_name}" />')
+            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="topic_name" value="{topic_name}" />')
             html_parts.append(f'</td>')
             html_parts.append(f'<td>')
             html_parts.append(f'<label for="{checkbox_id}">')
