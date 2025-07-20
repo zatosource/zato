@@ -60,32 +60,24 @@ class PubSubPermissionExporter:
                 permission_obj = permission_obj._asdict()
                 permission_obj = permission_obj['PubSubPermission']
 
-            # Only export permissions for enmasse security definitions
-            if not security_name.startswith('enmasse'):
-                continue
-
-            # Validate required fields exist
-            if not hasattr(permission_obj, 'pattern') or not permission_obj.pattern:
-                logger.warning('Permission object missing pattern field, skipping: security=%s', security_name)
-                continue
-
-            if not hasattr(permission_obj, 'access_type') or not permission_obj.access_type:
-                logger.warning('Permission object missing access_type field, skipping: security=%s pattern=%s',
-                             security_name, permission_obj.pattern)
-                continue
-
             if security_name not in security_permissions:
                 security_permissions[security_name] = {'pub': [], 'sub': []}
 
+            permission = security_permissions[security_name]
+
             # Determine access type and add to appropriate list
             if permission_obj.access_type == PubSub.API_Client.Publisher:
-                security_permissions[security_name]['pub'].append(permission_obj.pattern)
+                permission['pub'].append(permission_obj.pattern)
+
             elif permission_obj.access_type == PubSub.API_Client.Subscriber:
-                security_permissions[security_name]['sub'].append(permission_obj.pattern)
+                permission['sub'].append(permission_obj.pattern)
+
+            elif permission_obj.access_type == PubSub.API_Client.Publisher_Subscriber:
+                permission['pub'].append(permission_obj.pattern)
+                permission['sub'].append(permission_obj.pattern)
+
             else:
-                logger.warning('Unknown access_type %s for permission: security=%s pattern=%s',
-                             permission_obj.access_type, security_name, permission_obj.pattern)
-                continue
+                raise ValueError(f'Unknown access_type: {permission_obj.access_type}')
 
         # Convert grouped permissions to export format
         for security_name, permissions in security_permissions.items():
