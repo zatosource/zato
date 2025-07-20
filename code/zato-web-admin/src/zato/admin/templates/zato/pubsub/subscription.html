@@ -223,7 +223,7 @@
             '_is_active',
             '_delivery_type',
 
-            'topic_links',
+            'topic_link_list',
             '_edit',
             '_delete',
 
@@ -237,7 +237,7 @@
 
             'rest_push_endpoint_name',
             'push_service_name',
-            'topic_names',
+            'topic_name_list',
         ]
     }
     </script>
@@ -316,7 +316,7 @@
                             {% endif %}
                         </td>
 
-                        <td>{{ item.topic_links|safe }}</td>
+                        <td>{{ item.topic_link_list|safe }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
@@ -330,7 +330,7 @@
 
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
                         <td class='ignore'>{{ item.push_service_name }}</td>
-                        <td class='ignore'>{{ item.topic_names }}</td>
+                        <td class='ignore'>{{ item.topic_name_list }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
