@@ -266,6 +266,7 @@ class FileWriter:
 
                                     # Check if it's actually a list
                                     if isinstance(field_value, list):
+
                                         # Write the field name as a list header
                                         _ = f.write(f'    {actual_field}:\n')
 
