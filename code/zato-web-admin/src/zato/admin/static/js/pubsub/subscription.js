@@ -17,7 +17,7 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
+$.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, instance_id) {
     console.log('DEBUG populate_sec_def_topics_callback: status=' + JSON.stringify(status) + ', data type=' + JSON.stringify(typeof data));
     var htmlContent = '';
 
@@ -63,11 +63,10 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
         console.log('DEBUG populate_sec_def_topics_callback: in edit mode, checking for existing topics to select');
 
         // Get the current instance data to find subscribed topics
-        var instanceId = editForm.find('input[name="id"]').val();
-        console.log('DEBUG populate_sec_def_topics_callback: looking for instanceId=' + JSON.stringify(instanceId));
+        console.log('DEBUG populate_sec_def_topics_callback: looking for instanceId=' + JSON.stringify(instance_id));
 
-        if (instanceId && $.fn.zato.data_table.data[instanceId]) {
-            var instance = $.fn.zato.data_table.data[instanceId];
+        if (instance_id && $.fn.zato.data_table.data[instance_id]) {
+            var instance = $.fn.zato.data_table.data[instance_id];
             console.log('DEBUG populate_sec_def_topics_callback: found instance data for edit, topic_names=' + JSON.stringify(instance.topic_names));
 
             if (instance.topic_names) {
@@ -102,7 +101,7 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
                 console.log('DEBUG populate_sec_def_topics_callback: instance has no topic_names data');
             }
         } else {
-            console.log('DEBUG populate_sec_def_topics_callback: no instance data found for instanceId=' + JSON.stringify(instanceId));
+            console.log('DEBUG populate_sec_def_topics_callback: no instance data found for instanceId=' + JSON.stringify(instance_id));
         }
     } else {
         console.log('DEBUG populate_sec_def_topics_callback: not in edit mode, no topics to pre-select');
@@ -116,7 +115,9 @@ $.fn.zato.pubsub.on_sec_def_changed = function() {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
         console.log('DEBUG on_sec_def_changed: posting to url=' + JSON.stringify(url));
-        $.fn.zato.post(url, $.fn.zato.pubsub.populate_sec_def_topics_callback, null, null, true);
+        $.fn.zato.post(url, function(data, status) {
+            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null);
+        }, null, null, true);
     }
     else {
         console.log('DEBUG on_sec_def_changed: no sec_base_id, calling cleanup_hook');
@@ -569,7 +570,9 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         if(instance.sec_base_id) {
             var cluster_id = $('#cluster_id').val();
             var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
-            $.fn.zato.post(url, $.fn.zato.pubsub.populate_sec_def_topics_callback, null, null, true);
+            $.fn.zato.post(url, function(data, status) {
+                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
+            }, null, null, true);
         }
     }, 200);
 }
