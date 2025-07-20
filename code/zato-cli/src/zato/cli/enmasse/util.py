@@ -227,6 +227,8 @@ class FileWriter:
         top_level = get_top_level_order()
 
         with open(self.path, 'w') as f:
+
+            previous_had_data = False
             for element in top_level:
 
                 # Check if this element exists on input
@@ -234,6 +236,7 @@ class FileWriter:
 
                     # Write the element header with newline before it
                     _ = f.write(f'\n{element}:\n')
+                    previous_had_data = True
 
                     # Get the field order dictionary
                     fields = get_object_order(element)
@@ -293,8 +296,12 @@ class FileWriter:
                                     _ = f.write(f'    {field}: {field_value}\n')
 
                 else:
-                    # Write the element header without newline for empty sections
-                    _ = f.write(f'{element}:\n')
+                    # Write the element header for empty sections
+                    if previous_had_data:
+                        _ = f.write(f'\n{element}:\n')
+                    else:
+                        _ = f.write(f'{element}:\n')
+                    previous_had_data = False
 
 
 # ################################################################################################################################
