@@ -142,11 +142,33 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
 
-    // Add open callback to edit dialog for proper initialization
+    // Add open callbacks to both create and edit dialogs for proper initialization
+    $('#create-div').dialog('option', 'open', function() {
+        // Clean up any previous state
+        $('.loading-spinner').remove();
+        $('#rest-endpoint-create, #push-service-create, #push-type-create').hide();
+
+        // Reset delivery type to pull (default)
+        $('#id_delivery_type').val('pull');
+
+        // Setup delivery type visibility and populate REST endpoints
+        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create', null);
+        $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
+
+        // Add event handler for security definition change
+        $('#id_sec_base_id').change(function() {
+            $.fn.zato.pubsub.on_sec_def_changed();
+        });
+    });
+
     $('#edit-div').dialog('option', 'open', function() {
         var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
         if (instance_id) {
             var instance = $.fn.zato.data_table.data[instance_id];
+
+            // Clean up any previous state
+            $('.loading-spinner').remove();
+            $('#rest-endpoint-edit, #push-service-edit, #push-type-edit').hide();
 
             // Immediately hide REST endpoint span if not push to prevent flicker
             var currentDeliveryType = $('#id_edit-delivery_type').val();
@@ -484,21 +506,7 @@ $.fn.zato.pubsub.subscription.create = function() {
     console.log('DEBUG create: Clearing multi-select div');
     $('#multi-select-div').html(Multi_Select_Empty_Message);
 
-    // Hide REST endpoint span immediately before form opens
-    $('#rest-endpoint-create').hide();
-
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
-
-    setTimeout(function() {
-        // Setup delivery type visibility first, then populate REST endpoints for create form
-        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create');
-        $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
-
-        // Add event handler for security definition change
-        $('#id_sec_base_id').change(function() {
-            $.fn.zato.pubsub.on_sec_def_changed();
-        });
-    }, 200);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(instance_id) {
