@@ -1396,6 +1396,10 @@ class PubSubSubscription(Base):
     # This is equivalent to service.name but cannot be turned into a foreing key
     push_service_name = Column(String(400), nullable=True)
 
+    # Not used by the DB
+    topic_name_list = None
+    topic_link_list = None
+
 # ################################################################################################################################
 # ################################################################################################################################
 

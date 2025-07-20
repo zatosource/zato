@@ -56,9 +56,9 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
         input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_base_id', 'sec_name', 'username', \
+        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_link_list'), 'sec_base_id', 'sec_name', 'username', \
             'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_optional = 'rest_push_endpoint_name', AsIs('topic_names'), 'password'
+        output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
         output_repeated = True
 
     def get_data(self, session):
@@ -105,11 +105,11 @@ class GetList(AdminService):
             sorted_topic_names = sorted(topic_names_by_id[sub_id])
 
             # Create topic links
-            topic_links = [get_topic_link(name) for name in sorted_topic_names]
+            topic_link_list = [get_topic_link(name) for name in sorted_topic_names]
 
             # Store both fields
-            sub_dict['topic_links'] = ', '.join(topic_links)
-            sub_dict['topic_names'] = sorted_topic_names
+            sub_dict['topic_link_list'] = ', '.join(topic_link_list)
+            sub_dict['topic_name_list'] = sorted_topic_names
 
             data.append(sub_dict)
 
@@ -157,7 +157,6 @@ class Create(AdminService):
 
                 # Get topics
                 topics = []
-                topic_names = []
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
@@ -166,9 +165,6 @@ class Create(AdminService):
 
                     if not topic:
                         raise Exception('Pub/sub topic with ID `{}` not found in this cluster'.format(topic_name))
-
-                    topics.append(topic)
-                    topic_names.append(topic.name)
 
                 # Create the subscription
                 sub = PubSubSubscription()
