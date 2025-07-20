@@ -142,6 +142,50 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
 
+    // Add open callback to edit dialog for proper initialization
+    $('#edit-div').dialog('option', 'open', function() {
+        var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
+        if (instance_id) {
+            var instance = $.fn.zato.data_table.data[instance_id];
+
+            // Immediately hide REST endpoint span if not push to prevent flicker
+            var currentDeliveryType = $('#id_edit-delivery_type').val();
+            if (currentDeliveryType !== 'push') {
+                $('#rest-endpoint-edit').hide();
+            }
+
+            // Set the correct push_type value from instance data
+            if(instance.push_type) {
+                $('#id_edit-push_type').val(instance.push_type);
+
+                // If push type is service, set the service name in the dropdown
+                if(instance.push_type === 'service' && instance.push_service_name) {
+                    $('#id_edit-push_service_name').val(instance.push_service_name);
+                    $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
+                }
+            }
+
+            // Setup delivery type visibility first, then conditionally populate REST endpoints
+            $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
+
+            // Populate REST endpoints regardless of delivery type to avoid a flicker
+            // when switching to push, but they'll remain hidden if not push type
+            var currentRestEndpointId = instance.rest_push_endpoint_id || '';
+            var currentServiceName = instance.push_service_name || '';
+            $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
+            $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
+
+            // Load topics for the current security definition in edit mode
+            if(instance.sec_base_id) {
+                var cluster_id = $('#cluster_id').val();
+                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+                $.fn.zato.post(url, function(data, status) {
+                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
+                }, null, null, true);
+            }
+        }
+    });
+
     // Override the close function to clean up spinners and selects
     var originalClose = $.fn.zato.data_table.close;
     $.fn.zato.data_table.close = function(elem) {
@@ -161,39 +205,6 @@ $(document).ready(function() {
         console.log('DEBUG close: Calling original close function');
         // Call the original close function
         return originalClose(elem);
-    };
-
-
-
-    // Override the create_edit function to ensure proper cleanup before opening a new form
-    var originalCreateEdit = $.fn.zato.data_table._create_edit;
-    $.fn.zato.data_table._create_edit = function(form_type, title, id) {
-        console.log('DEBUG _create_edit: Starting form open, type=' + JSON.stringify(form_type) + ', id=' + JSON.stringify(id));
-
-        // Clean up any previous state completely
-        $('.loading-spinner').remove();
-
-        // Ensure REST endpoint, service and push type spans are hidden before opening any form
-        $('#rest-endpoint-create, #rest-endpoint-edit').hide();
-        $('#push-service-create, #push-service-edit').hide();
-        $('#push-type-create, #push-type-edit').hide();
-
-        // Reset delivery type to pull (default)
-        if (form_type === 'create') {
-            console.log('DEBUG _create_edit: resetting delivery type to pull for create form');
-            $('#id_delivery_type').val('pull');
-        }
-
-        console.log('DEBUG _create_edit: calling original function');
-        var result = originalCreateEdit(form_type, title, id);
-
-        // Set up delivery type visibility after the form is opened
-        setTimeout(function() {
-            console.log('DEBUG _create_edit: setting up delivery type visibility for form_type=' + JSON.stringify(form_type));
-            $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility(form_type, id);
-        }, 100);
-
-        return result;
     };
 
     // Override the on_submit function to add validation
@@ -536,45 +547,10 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     // Hide REST endpoint span immediately to prevent flicker during form population
     $('#rest-endpoint-edit').hide();
 
+    // Store the instance_id for the dialog open callback
+    $.fn.zato.pubsub.subscription._current_edit_instance_id = instance_id;
+
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id);
-
-    setTimeout(function() {
-        // Immediately hide REST endpoint span if not push to prevent flicker
-        var currentDeliveryType = $('#id_edit-delivery_type').val();
-        if (currentDeliveryType !== 'push') {
-            $('#rest-endpoint-edit').hide();
-        }
-
-        // Set the correct push_type value from instance data
-        if(instance.push_type) {
-            $('#id_edit-push_type').val(instance.push_type);
-
-            // If push type is service, set the service name in the dropdown
-            if(instance.push_type === 'service' && instance.push_service_name) {
-                $('#id_edit-push_service_name').val(instance.push_service_name);
-                $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
-            }
-        }
-
-        // Setup delivery type visibility first, then conditionally populate REST endpoints
-        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
-
-        // Populate REST endpoints regardless of delivery type to avoid a flicker
-        // when switching to push, but they'll remain hidden if not push type
-        var currentRestEndpointId = instance.rest_push_endpoint_id || '';
-        var currentServiceName = instance.push_service_name || '';
-        $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
-        $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
-
-        // Load topics for the current security definition in edit mode
-        if(instance.sec_base_id) {
-            var cluster_id = $('#cluster_id').val();
-            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
-            $.fn.zato.post(url, function(data, status) {
-                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
-            }, null, null, true);
-        }
-    }, 200);
 }
 
 $.fn.zato.pubsub.subscription.stripHtml = function(html) {
