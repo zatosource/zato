@@ -45,8 +45,8 @@ class Index(_Index):
         output_repeated = True
 
     def on_before_append_item(self, item):
-        topic_names = item.topic_name_list
-        item.topic_name_list = dumps(topic_names)
+        topic_name_list = item.topic_name_list
+        item.topic_name_list = dumps(topic_name_list)
         return item
 
     def handle(self):
@@ -69,8 +69,8 @@ class _CreateEdit(CreateEdit):
         print(111, return_data)
         print()
 
-        topic_names = return_data.get('topic_name_list', [])
-        return_data['topic_names'] = dumps(topic_names)
+        topic_name_list = return_data.get('topic_name_list', [])
+        return_data['topic_name_list'] = dumps(topic_name_list)
 
         topic_link_list = return_data.get('topic_link_list', [])
         return_data['topic_link_list'] = ', '.join(topic_link_list)
@@ -140,7 +140,7 @@ class Edit(_CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'topic_link_list', 'sec_name', 'delivery_type', 'is_active', 'topic_names'
+        output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'is_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
 
