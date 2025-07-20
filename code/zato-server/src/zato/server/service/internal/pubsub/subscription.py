@@ -246,7 +246,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
-        input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
+        input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
@@ -285,19 +285,19 @@ class Edit(AdminService):
                     delete()
 
                 # Process topics if any are provided
-                topic_id_list = input.get('topic_id_list') or []
+                topic_name_list = input.get('topic_name_list') or []
                 topic_link_list = []
                 topics = []
 
-                if topic_id_list:
+                if topic_name_list:
 
                     # Create new topic associations
-                    for topic_id in topic_id_list:
+                    for topic_name in topic_name_list:
 
                         # Make sure the topic exists
                         topic = session.query(PubSubTopic).\
                             filter(PubSubTopic.cluster_id==input.cluster_id).\
-                            filter(PubSubTopic.id==topic_id).\
+                            filter(PubSubTopic.name==topic_name).\
                             first()
 
                         if topic:

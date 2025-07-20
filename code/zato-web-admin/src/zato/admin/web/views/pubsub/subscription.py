@@ -145,20 +145,20 @@ class Edit(_CreateEdit):
 
         input_dict = {}
 
-        # Map topic_id form field (which can be multiple) to topic_id_list service input
+        # Map topic_name form field (which can be multiple) to topic_name_list service input
         if self.req.method == 'POST':
-            topic_ids = self.req.POST.getlist('edit-topic_id')
-            if topic_ids:
-                input_dict['topic_id_list'] = topic_ids
+            topic_names = self.req.POST.getlist('topic_name')
+            if topic_names:
+                input_dict['topic_name_list'] = topic_names
 
         return input_dict
 
     def pre_process_input_dict(self, input_dict):
 
-        # Extract topic IDs from form POST data
+        # Extract topic names from form POST data
         if self.req.method == 'POST':
-            topic_ids = self.req.POST.getlist('edit-topic_id')
-            input_dict['topic_id_list'] = topic_ids
+            topic_names = self.req.POST.getlist('topic_name')
+            input_dict['topic_name_list'] = topic_names
 
             # Map other form fields
             field_mapping = {
