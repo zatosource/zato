@@ -109,6 +109,8 @@ urlpatterns += [
         login_required(service_ide.get_service_list), name='service-ide-get-service-list'),
     url(r'^zato/service/ide/(?P<object_type>.*)/(?P<name>.*)/$',
         login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
+    url(r'^zato/service/enmasse-export$',
+        login_required(service.enmasse_export), name='service-enmasse-export'), # type: ignore
     ]
 
 # ################################################################################################################################
