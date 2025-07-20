@@ -272,10 +272,11 @@ class FileWriter:
                                         # Write each list item with proper indentation
                                         for list_item in field_value:
                                             cleaned_item = str(list_item)
-                                            for prefix in prefixes_to_remove:
-                                                if cleaned_item.startswith(prefix):
-                                                    cleaned_item = cleaned_item[len(prefix):]
-                                                    break
+                                            if element == 'pubsub_permission' and actual_field in ['pub', 'sub']:
+                                                for prefix in prefixes_to_remove:
+                                                    if cleaned_item.startswith(prefix):
+                                                        cleaned_item = cleaned_item[len(prefix):]
+                                                        break
                                             _ = f.write(f'      - {cleaned_item}\n')
                                     else:
                                         _ = f.write(f'    {actual_field}: {field_value}\n')
@@ -287,10 +288,11 @@ class FileWriter:
                                     _ = f.write(f'    {field}:\n')
                                     for list_item in field_value:
                                         cleaned_item = str(list_item)
-                                        for prefix in prefixes_to_remove:
-                                            if cleaned_item.startswith(prefix):
-                                                cleaned_item = cleaned_item[len(prefix):]
-                                                break
+                                        if element == 'pubsub_permission' and field in ['pub', 'sub']:
+                                            for prefix in prefixes_to_remove:
+                                                if cleaned_item.startswith(prefix):
+                                                    cleaned_item = cleaned_item[len(prefix):]
+                                                    break
                                         _ = f.write(f'      - {cleaned_item}\n')
                                 else:
                                     _ = f.write(f'    {field}: {field_value}\n')
