@@ -106,6 +106,69 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     } else {
         console.log('DEBUG populate_sec_def_topics_callback: not in edit mode, no topics to pre-select');
     }
+
+    // Add mutation observer to detect changes to multi-select-div
+    var targetNode = document.getElementById('multi-select-div');
+    if (targetNode && !targetNode._observer) {
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    console.log('DEBUG MutationObserver: multi-select-div content changed');
+                    console.log('DEBUG MutationObserver: new content=' + targetNode.innerHTML.substring(0, 200));
+                    console.log('DEBUG MutationObserver: stack trace:', new Error().stack);
+                }
+            });
+        });
+        observer.observe(targetNode, { childList: true, subtree: true });
+        targetNode._observer = observer;
+        console.log('DEBUG populate_sec_def_topics_callback: mutation observer attached');
+    }
+
+    // Comprehensive diagnostic logging
+    console.log('DEBUG populate_sec_def_topics_callback: === DIAGNOSTIC CHECKS ===');
+    console.log('DEBUG populate_sec_def_topics_callback: dialog visible=' + $('#edit-div').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: dialog open=' + $('#edit-div').dialog('isOpen'));
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div visible=' + $('#multi-select-div').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div display=' + $('#multi-select-div').css('display'));
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div width=' + $('#multi-select-div').width());
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-div height=' + $('#multi-select-div').height());
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-table visible=' + $('#multi-select-table').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: multi-select-table display=' + $('#multi-select-table').css('display'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list visible=' + $('#td_topic_list').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_1 exists=' + $('#topic_checkbox_1').length);
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_2 exists=' + $('#topic_checkbox_2').length);
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_3 exists=' + $('#topic_checkbox_3').length);
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_1 checked=' + $('#topic_checkbox_1').prop('checked'));
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_2 checked=' + $('#topic_checkbox_2').prop('checked'));
+    console.log('DEBUG populate_sec_def_topics_callback: topic_checkbox_3 checked=' + $('#topic_checkbox_3').prop('checked'));
+
+    // Check parent visibility chain
+    console.log('DEBUG populate_sec_def_topics_callback: === PARENT VISIBILITY CHAIN ===');
+    console.log('DEBUG populate_sec_def_topics_callback: edit-div visible=' + $('#edit-div').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: edit form visible=' + $('#edit-form').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: edit table visible=' + $('#edit-div table').first().is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list parent tr visible=' + $('#td_topic_list').parent('tr').is(':visible'));
+
+    // Check CSS properties of td_topic_list
+    console.log('DEBUG populate_sec_def_topics_callback: === TD_TOPIC_LIST CSS ===');
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list visibility=' + $('#td_topic_list').css('visibility'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list opacity=' + $('#td_topic_list').css('opacity'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list position=' + $('#td_topic_list').css('position'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list left=' + $('#td_topic_list').css('left'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list top=' + $('#td_topic_list').css('top'));
+    console.log('DEBUG populate_sec_def_topics_callback: td_topic_list overflow=' + $('#td_topic_list').css('overflow'));
+
+    // Check other form elements visibility for comparison
+    console.log('DEBUG populate_sec_def_topics_callback: === OTHER FORM ELEMENTS ===');
+    console.log('DEBUG populate_sec_def_topics_callback: delivery_type field visible=' + $('#id_edit-delivery_type').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: sec_def container visible=' + $('#id_edit_sec_def_container').is(':visible'));
+
+    // Force browser repaint and check again
+    $('#multi-select-div').hide().show();
+    console.log('DEBUG populate_sec_def_topics_callback: after repaint - multi-select-div visible=' + $('#multi-select-div').is(':visible'));
+    console.log('DEBUG populate_sec_def_topics_callback: after repaint - td_topic_list visible=' + $('#td_topic_list').is(':visible'));
+
+    console.log('DEBUG populate_sec_def_topics_callback: callback complete, final DOM content=' + $('#multi-select-div').html().substring(0, 200));
 }
 
 $.fn.zato.pubsub.on_sec_def_changed = function() {
@@ -170,41 +233,56 @@ $(document).ready(function() {
             $('.loading-spinner').remove();
             $('#rest-endpoint-edit, #push-service-edit, #push-type-edit').hide();
 
-            // Immediately hide REST endpoint span if not push to prevent flicker
-            var currentDeliveryType = $('#id_edit-delivery_type').val();
-            if (currentDeliveryType !== 'push') {
-                $('#rest-endpoint-edit').hide();
-            }
+            // Use requestAnimationFrame to ensure dialog is painted before making changes
+            requestAnimationFrame(function() {
+                console.log('DEBUG requestAnimationFrame: starting edit dialog initialization for instance_id=' + instance_id);
 
-            // Set the correct push_type value from instance data
-            if(instance.push_type) {
-                $('#id_edit-push_type').val(instance.push_type);
-
-                // If push type is service, set the service name in the dropdown
-                if(instance.push_type === 'service' && instance.push_service_name) {
-                    $('#id_edit-push_service_name').val(instance.push_service_name);
-                    $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
+                // Immediately hide REST endpoint span if not push to prevent flicker
+                var currentDeliveryType = $('#id_edit-delivery_type').val();
+                console.log('DEBUG requestAnimationFrame: currentDeliveryType=' + currentDeliveryType);
+                if (currentDeliveryType !== 'push') {
+                    $('#rest-endpoint-edit').hide();
                 }
-            }
 
-            // Setup delivery type visibility first, then conditionally populate REST endpoints
-            $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
+                // Set the correct push_type value from instance data
+                if(instance.push_type) {
+                    console.log('DEBUG requestAnimationFrame: setting push_type=' + instance.push_type);
+                    $('#id_edit-push_type').val(instance.push_type);
 
-            // Populate REST endpoints regardless of delivery type to avoid a flicker
-            // when switching to push, but they'll remain hidden if not push type
-            var currentRestEndpointId = instance.rest_push_endpoint_id || '';
-            var currentServiceName = instance.push_service_name || '';
-            $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
-            $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
+                    // If push type is service, set the service name in the dropdown
+                    if(instance.push_type === 'service' && instance.push_service_name) {
+                        $('#id_edit-push_service_name').val(instance.push_service_name);
+                        $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
+                    }
+                }
 
-            // Load topics for the current security definition in edit mode
-            if(instance.sec_base_id) {
-                var cluster_id = $('#cluster_id').val();
-                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
-                $.fn.zato.post(url, function(data, status) {
-                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
-                }, null, null, true);
-            }
+                // Setup delivery type visibility first, then conditionally populate REST endpoints
+                console.log('DEBUG requestAnimationFrame: calling setupDeliveryTypeVisibility');
+                $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
+
+                // Populate REST endpoints regardless of delivery type to avoid a flicker
+                // when switching to push, but they'll remain hidden if not push type
+                var currentRestEndpointId = instance.rest_push_endpoint_id || '';
+                var currentServiceName = instance.push_service_name || '';
+                console.log('DEBUG requestAnimationFrame: calling populateRestEndpoints and populateServices');
+                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
+                $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
+
+                // Load topics for the current security definition in edit mode
+                if(instance.sec_base_id) {
+                    console.log('DEBUG requestAnimationFrame: loading topics for sec_base_id=' + instance.sec_base_id);
+                    var cluster_id = $('#cluster_id').val();
+                    var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+                    $.fn.zato.post(url, function(data, status) {
+                        console.log('DEBUG requestAnimationFrame: topics loaded, calling populate_sec_def_topics_callback');
+                        $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id);
+                    }, null, null, true);
+                } else {
+                    console.log('DEBUG requestAnimationFrame: no sec_base_id found, skipping topic loading');
+                }
+
+                console.log('DEBUG requestAnimationFrame: edit dialog initialization complete');
+            });
         }
     });
 
