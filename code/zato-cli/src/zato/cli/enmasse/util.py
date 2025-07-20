@@ -275,8 +275,6 @@ class FileWriter:
                                 # Regular field
                                 _ = f.write(f'    {field}: {item[field]}\n')
 
-                        # .. and add blank line after each item.
-                        _ = f.write('\n')
                 else:
                     # Write the element header without newline for empty sections
                     _ = f.write(f'{element}:\n')
