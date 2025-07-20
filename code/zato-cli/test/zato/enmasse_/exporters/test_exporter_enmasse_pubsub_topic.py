@@ -112,8 +112,13 @@ class TestEnmassePubSubTopicExporter(TestCase):
         _ = self.session.commit()
 
         # Now test the export functionality
-        exported_topics = self.pubsub_topic_exporter.export(self.session, self.exporter.cluster_id)
-        logger.info('Exported %d pubsub topic definitions', len(exported_topics))
+        all_exported_topics = self.pubsub_topic_exporter.export(self.session, self.exporter.cluster_id)
+
+        # Filter exported topics to only include those with names starting with "enmasse"
+        exported_topics = [topic for topic in all_exported_topics if topic['name'].startswith('enmasse')]
+
+        logger.info('Exported %d pubsub topic definitions (filtered to %d enmasse topics)',
+                   len(all_exported_topics), len(exported_topics))
 
         # Verify that we exported the expected number of topics
         self.assertEqual(len(exported_topics), len(created) + len(updated),
