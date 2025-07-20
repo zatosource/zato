@@ -19,17 +19,82 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
     console.log('DEBUG populate_sec_def_topics_callback: status=' + JSON.stringify(status) + ', data type=' + JSON.stringify(typeof data));
+    var htmlContent = '';
+
     if(data && typeof data === 'string') {
-        console.log('DEBUG populate_sec_def_topics_callback: received string data=' + JSON.stringify(data));
-        $('#multi-select-div').html(data);
+        console.log('DEBUG populate_sec_def_topics_callback: received string HTML data, length=' + data.length);
+        htmlContent = data;
     }
     else if(data && data.responseText) {
-        console.log('DEBUG populate_sec_def_topics_callback: received responseText=' + JSON.stringify(data.responseText));
-        $('#multi-select-div').html(data.responseText);
+        console.log('DEBUG populate_sec_def_topics_callback: received responseText HTML data, length=' + data.responseText.length);
+        htmlContent = data.responseText;
     }
     else {
         console.log('DEBUG populate_sec_def_topics_callback: no valid data received, showing error');
         $('#multi-select-div').html('<span style="font-style: italic; color: #666;">Error loading topics</span>');
+        return;
+    }
+
+    console.log('DEBUG populate_sec_def_topics_callback: setting HTML content in multi-select-div');
+    // Set the HTML content
+    $('#multi-select-div').html(htmlContent);
+
+    // Check how many checkboxes were created
+    var checkboxCount = $('#multi-select-div input[name="topic_name"]').length;
+    console.log('DEBUG populate_sec_def_topics_callback: created ' + checkboxCount + ' topic checkboxes');
+
+    // Check if we're in edit mode and need to select existing topics
+    var editForm = $('#edit-form');
+    var isEditMode = editForm.is(':visible');
+    console.log('DEBUG populate_sec_def_topics_callback: edit form visible=' + JSON.stringify(isEditMode));
+
+    if (isEditMode) {
+        console.log('DEBUG populate_sec_def_topics_callback: in edit mode, checking for existing topics to select');
+
+        // Get the current instance data to find subscribed topics
+        var instanceId = editForm.find('input[name="id"]').val();
+        console.log('DEBUG populate_sec_def_topics_callback: looking for instanceId=' + JSON.stringify(instanceId));
+
+        if (instanceId && $.fn.zato.data_table.data[instanceId]) {
+            var instance = $.fn.zato.data_table.data[instanceId];
+            console.log('DEBUG populate_sec_def_topics_callback: found instance data for edit, topic_names=' + JSON.stringify(instance.topic_names));
+
+            if (instance.topic_names) {
+                var topicNames = [];
+                try {
+                    topicNames = JSON.parse(instance.topic_names);
+                    console.log('DEBUG populate_sec_def_topics_callback: parsed topic names=' + JSON.stringify(topicNames) + ', count=' + topicNames.length);
+                } catch (e) {
+                    console.log('DEBUG populate_sec_def_topics_callback: failed to parse topic_names as JSON, error=' + JSON.stringify(e.message) + ', treating as string');
+                    topicNames = [instance.topic_names];
+                }
+
+                console.log('DEBUG populate_sec_def_topics_callback: attempting to check ' + topicNames.length + ' topics');
+                // Check the checkboxes for subscribed topics
+                topicNames.forEach(function(topicName, index) {
+                    console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topicName));
+                    var checkbox = $('input[name="topic_name"][value="' + topicName + '"]');
+                    console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topicName) + ', exists=' + JSON.stringify(checkbox.length > 0));
+
+                    if (checkbox.length) {
+                        checkbox.prop('checked', true);
+                        console.log('DEBUG populate_sec_def_topics_callback: checked topic=' + JSON.stringify(topicName));
+                    } else {
+                        console.log('DEBUG populate_sec_def_topics_callback: topic checkbox not found for=' + JSON.stringify(topicName));
+                    }
+                });
+
+                // Log final state of checkboxes
+                var checkedCount = $('#multi-select-div input[name="topic_name"]:checked').length;
+                console.log('DEBUG populate_sec_def_topics_callback: final state - ' + checkedCount + ' out of ' + checkboxCount + ' checkboxes are checked');
+            } else {
+                console.log('DEBUG populate_sec_def_topics_callback: instance has no topic_names data');
+            }
+        } else {
+            console.log('DEBUG populate_sec_def_topics_callback: no instance data found for instanceId=' + JSON.stringify(instanceId));
+        }
+    } else {
+        console.log('DEBUG populate_sec_def_topics_callback: not in edit mode, no topics to pre-select');
     }
 }
 
