@@ -28,12 +28,15 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
 
 $.fn.zato.pubsub.on_sec_def_changed = function() {
     var sec_base_id = $('#id_sec_base_id').val();
+    console.log('DEBUG on_sec_def_changed: sec_base_id=' + JSON.stringify(sec_base_id));
     if(sec_base_id) {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        console.log('DEBUG on_sec_def_changed: posting to url=' + JSON.stringify(url));
         $.fn.zato.post(url, $.fn.zato.pubsub.populate_sec_def_topics_callback, null, null, true);
     }
     else {
+        console.log('DEBUG on_sec_def_changed: no sec_base_id, calling cleanup_hook');
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
 }
@@ -77,7 +80,7 @@ $(document).ready(function() {
     // Override the create_edit function to ensure proper cleanup before opening a new form
     var originalCreateEdit = $.fn.zato.data_table._create_edit;
     $.fn.zato.data_table._create_edit = function(form_type, title, id) {
-        console.log('DEBUG _create_edit: Starting form open, type:', form_type, 'id:', id);
+        console.log('DEBUG _create_edit: Starting form open, type=' + JSON.stringify(form_type) + ', id=' + JSON.stringify(id));
 
         // Clean up any previous state completely
         $('.loading-spinner').remove();
@@ -89,17 +92,16 @@ $(document).ready(function() {
 
         // Reset delivery type to pull (default)
         if (form_type === 'create') {
+            console.log('DEBUG _create_edit: resetting delivery type to pull for create form');
             $('#id_delivery_type').val('pull');
         }
 
-        console.log('DEBUG _create_edit: Calling original create_edit function');
-        // Call the original create_edit function
-        var result = originalCreateEdit.call(this, form_type, title, id);
+        console.log('DEBUG _create_edit: calling original function');
+        var result = originalCreateEdit(form_type, title, id);
 
-        // After opening the form, set up handlers
+        // Set up delivery type visibility after the form is opened
         setTimeout(function() {
-            console.log('DEBUG _create_edit: Setting up handlers after form open');
-            // Set up delivery type visibility
+            console.log('DEBUG _create_edit: setting up delivery type visibility for form_type=' + JSON.stringify(form_type));
             $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility(form_type, id);
         }, 100);
 
@@ -109,6 +111,8 @@ $(document).ready(function() {
     // Override the on_submit function to add validation
     var originalOnSubmit = $.fn.zato.data_table.on_submit;
     $.fn.zato.data_table.on_submit = function(action) {
+        console.log('DEBUG on_submit: Starting form submission, action=' + JSON.stringify(action));
+
         // Validate push delivery type
         var deliveryTypeId = action === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
         var pushTypeId = action === 'create' ? '#id_push_type' : '#id_edit-push_type';
@@ -120,17 +124,16 @@ $(document).ready(function() {
         var restEndpoint = $(restEndpointId).val();
         var service = $(serviceId).val();
 
-        if (deliveryType === 'push') {
-            if (pushType === 'rest' && (!restEndpoint || restEndpoint === '')) {
-                alert('Please select a push REST endpoint.');
-                return false;
-            } else if (pushType === 'service' && (!service || service === '')) {
-                alert('Please select a push service.');
-                return false;
-            }
+        console.log('DEBUG on_submit: deliveryType=' + JSON.stringify(deliveryType) + ', pushType=' + JSON.stringify(pushType));
+
+        if (deliveryType === 'push' && !pushType) {
+            console.log('DEBUG on_submit: validation failed - push type required');
+            $.fn.zato.user_message(true, 'Push type is required when delivery type is push');
+            return false;
         }
 
         // Call original on_submit if validation passes
+        console.log('DEBUG on_submit: calling original on_submit');
         return originalOnSubmit.call(this, action);
     };
 
@@ -376,10 +379,11 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 }
 
 $.fn.zato.pubsub.subscription.create = function() {
+    console.log('DEBUG create: opening create form');
     // Hide REST endpoint span immediately before form opens
     $('#rest-endpoint-create').hide();
 
-    $.fn.zato.data_table._create_edit('create', 'Create a pub/sub subscription', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
 
     setTimeout(function() {
         // Setup delivery type visibility first, then populate REST endpoints for create form
@@ -394,6 +398,19 @@ $.fn.zato.pubsub.subscription.create = function() {
 }
 
 $.fn.zato.pubsub.subscription.edit = function(instance_id) {
+    console.log('DEBUG edit: opening edit form for instance_id=' + JSON.stringify(instance_id));
+
+    var instance = $.fn.zato.data_table.data[instance_id];
+    console.log('DEBUG edit: instance data=' + JSON.stringify(instance));
+    var form = $('#edit-form');
+
+    form.find('#id_edit-sub_key').val(instance.sub_key);
+    form.find('#id_edit-is_active').prop('checked', $.fn.zato.like_bool(instance.is_active) == true);
+    form.find('#id_edit-sec_base_id').val(instance.sec_base_id);
+    form.find('#id_edit-delivery_type').val(instance.delivery_type);
+    form.find('#id_edit-push_type').val(instance.push_type);
+    form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
+    form.find('#id_edit-push_service_name').val(instance.push_service_name);
 
     // Hide REST endpoint span immediately to prevent flicker during form population
     $('#rest-endpoint-edit').hide();
@@ -401,21 +418,6 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id);
 
     setTimeout(function() {
-
-        var instance = $.fn.zato.data_table.data[instance_id];
-
-        // Set the sub_key in the hidden field
-        $('#id_edit-sub_key').val(instance.sub_key);
-
-        var currentSecId = instance.sec_base_id;
-        var currentRestEndpointId = instance.rest_push_endpoint_id || '';
-        var currentServiceName = instance.push_service_name || '';
-
-        // Add hidden input for security definition ID
-        if (currentSecId && !$('#id_edit-sec_base_id').length) {
-            $('#edit-form').append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + currentSecId + '" />');
-        }
-
         // Immediately hide REST endpoint span if not push to prevent flicker
         var currentDeliveryType = $('#id_edit-delivery_type').val();
         if (currentDeliveryType !== 'push') {
@@ -506,6 +508,7 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
     function togglePushAndEndpointVisibility() {
         var deliveryTypeValue = $deliveryType.val();
+        console.log('DEBUG togglePushAndEndpointVisibility: deliveryTypeValue=' + JSON.stringify(deliveryTypeValue));
 
         if (deliveryTypeValue === 'push') {
             $pushTypeSpan.show();
@@ -519,16 +522,19 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
 
     function toggleEndpointTypeVisibility() {
         var pushTypeValue = $pushType.val();
+        console.log('DEBUG toggleEndpointTypeVisibility: pushTypeValue=' + JSON.stringify(pushTypeValue));
 
         // Preload both REST endpoints and services to avoid flicker when switching
         if (!window.endpointsLoaded) {
             var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
+            console.log('DEBUG toggleEndpointTypeVisibility: loading REST endpoints for selectedId=' + JSON.stringify(selectedId));
             $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId, false);
             window.endpointsLoaded = true;
         }
 
         if (!window.servicesLoaded) {
             var selectedServiceId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].push_service_name : null;
+            console.log('DEBUG toggleEndpointTypeVisibility: loading services for selectedServiceId=' + JSON.stringify(selectedServiceId));
             $.fn.zato.pubsub.subscription.populateServices(form_type, selectedServiceId, false);
             window.servicesLoaded = true;
         }
