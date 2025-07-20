@@ -254,7 +254,7 @@ class SchedulerImporter:
         out_updated = []
 
         try:
-            logger.info('Creating %d new scheduler job definitions', len(to_create))
+            logger.info('Creating new scheduler job definitions: %s', to_create)
 
             for item in to_create:
                 instance = self.create_job_definition(item, session)
@@ -267,7 +267,7 @@ class SchedulerImporter:
                     'name': instance.name,
                 }
 
-            logger.info('Updating %d existing scheduler job definitions', len(to_update))
+            logger.info('Updating existing scheduler job definitions: %s', to_update)
 
             for item in to_update:
                 instance = self.update_job_definition(item, session)
