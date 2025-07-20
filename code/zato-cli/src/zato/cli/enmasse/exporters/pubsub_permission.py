@@ -73,8 +73,12 @@ class PubSubPermissionExporter:
                 permission['sub'].append(permission_obj.pattern)
 
             elif permission_obj.access_type == PubSub.API_Client.Publisher_Subscriber:
-                permission['pub'].append(permission_obj.pattern)
-                permission['sub'].append(permission_obj.pattern)
+                if permission_obj.pattern.startswith('pub='):
+                    permission['pub'].append(permission_obj.pattern)
+                elif permission_obj.pattern.startswith('sub='):
+                    permission['sub'].append(permission_obj.pattern)
+                else:
+                    raise ValueError(f'Unknown permission pattern: {permission_obj.pattern}')
 
             else:
                 raise ValueError(f'Unknown access_type: {permission_obj.access_type}')

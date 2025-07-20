@@ -221,6 +221,9 @@ class FileWriter:
 
     def write(self, data_dict:'anydict') -> 'None':
 
+        # Prefixes to remove from list items
+        prefixes_to_remove = ['pub=', 'sub=']
+
         top_level = get_top_level_order()
 
         with open(self.path, 'w') as f:
@@ -265,7 +268,12 @@ class FileWriter:
 
                                         # Write each list item with proper indentation
                                         for list_item in field_value:
-                                            _ = f.write(f'      - {list_item}\n')
+                                            cleaned_item = str(list_item)
+                                            for prefix in prefixes_to_remove:
+                                                if cleaned_item.startswith(prefix):
+                                                    cleaned_item = cleaned_item[len(prefix):]
+                                                    break
+                                            _ = f.write(f'      - {cleaned_item}\n')
                                     else:
                                         _ = f.write(f'    {actual_field}: {field_value}\n')
 
@@ -275,7 +283,12 @@ class FileWriter:
                                 if isinstance(field_value, list):
                                     _ = f.write(f'    {field}:\n')
                                     for list_item in field_value:
-                                        _ = f.write(f'      - {list_item}\n')
+                                        cleaned_item = str(list_item)
+                                        for prefix in prefixes_to_remove:
+                                            if cleaned_item.startswith(prefix):
+                                                cleaned_item = cleaned_item[len(prefix):]
+                                                break
+                                        _ = f.write(f'      - {cleaned_item}\n')
                                 else:
                                     _ = f.write(f'    {field}: {field_value}\n')
 
