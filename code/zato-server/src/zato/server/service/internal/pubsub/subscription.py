@@ -142,10 +142,6 @@ class Create(AdminService):
         # Our input
         input = self.request.input
 
-        print()
-        print(111, input)
-        print()
-
         # A part of what we're returning
         topic_link_list = []
         topic_name_list = sorted(input.topic_name_list)
@@ -253,7 +249,7 @@ class Edit(AdminService):
         input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type', AsIs('topic_links')
-        output_optional = AsIs('topic_names')
+        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
 
@@ -365,11 +361,13 @@ class Edit(AdminService):
                 if topic_name_list:
                     topic_name_list = sorted(topic_name_list)
                     self.response.payload.topic_links = ', '.join(topic_name_list)
+                    self.response.payload.topic_link_list = topic_name_list
                 else:
                     self.response.payload.topic_links = []
+                    self.response.payload.topic_link_list = []
 
                 # Add topic names too
-                self.response.payload.topic_names = plain_topic_names
+                self.response.payload.topic_name_list = plain_topic_names
 
 # ################################################################################################################################
 # ################################################################################################################################
