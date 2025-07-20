@@ -256,6 +256,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
                         print()
                         print(111, e)
                         print()
+                        raise
                 else:
                     data = '(None)'
                 status_code = HTTPStatus.OK
@@ -286,8 +287,11 @@ def enmasse_export(req):
         'func_name': 'export_enmasse'
     })
 
-    print()
-    print(111, response)
-    print()
+    response = str(response.data)
+
+    out = HttpResponse()
+    out.content = response
+
+    return out
 
 # ################################################################################################################################
