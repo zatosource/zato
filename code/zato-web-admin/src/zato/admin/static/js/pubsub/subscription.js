@@ -42,7 +42,7 @@ $.fn.zato.pubsub.on_sec_def_changed = function() {
 
 $.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
     // Clear the multi-select div when no security definition is selected
-    $('#multi-select-div').html('<em>Select a security definition to see available topics</em>');
+    $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span style="font-style: italic; color: #666;">Select a security definition to see available topics</span></td></tr></table>');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
