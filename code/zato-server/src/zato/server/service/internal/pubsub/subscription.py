@@ -132,18 +132,23 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
-        input_required = 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
+        input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_links'), 'sec_name', 'delivery_type'
-        output_optional = AsIs('topic_names')
+        output_required = 'id', 'sub_key', 'is_active', 'created', 'sec_name', 'delivery_type'
+        output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
 
         # Our input
         input = self.request.input
 
+        print()
+        print(111, input)
+        print()
+
         # A part of what we're returning
-        topic_name_list = []
+        topic_link_list = []
+        topic_name_list = sorted(input.topic_name_list)
 
         with closing(self.odb.session()) as session:
             try:
@@ -155,17 +160,16 @@ class Create(AdminService):
                 sub_key = new_sub_key(security_def.username)
 
                 # Get topics
-                topic_id_list = input.topic_id_list
                 topics = []
                 topic_names = []
 
-                for topic_id in topic_id_list:
+                for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
                         filter(PubSubTopic.cluster_id==input.cluster_id).\
-                        filter(PubSubTopic.id==topic_id).first()
+                        filter(PubSubTopic.name==topic_name).first()
 
                     if not topic:
-                        raise Exception('pub/sub topic with ID `{}` not found in this cluster'.format(topic_id))
+                        raise Exception('Pub/sub topic with ID `{}` not found in this cluster'.format(topic_name))
 
                     topics.append(topic)
                     topic_names.append(topic.name)
@@ -204,7 +208,7 @@ class Create(AdminService):
                     session.add(sub_topic)
 
                     topic_link = get_topic_link(topic.name)
-                    topic_name_list.append(topic_link)
+                    topic_link_list.append(topic_link)
 
                 session.commit()
 
@@ -214,15 +218,6 @@ class Create(AdminService):
                 raise
             else:
 
-                # Plain topic names (without HTML)
-                plain_topic_names = []
-
-                for topic in topics:
-                    plain_topic_names.append(topic.name)
-
-                # Make sure they're always sorted
-                plain_topic_names.sort()
-
                 # Notify broker about the creation of a new subscription
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
@@ -230,7 +225,7 @@ class Create(AdminService):
                 pubsub_msg.is_active = input.is_active
                 pubsub_msg.sec_name = security_def.name # type: ignore
                 pubsub_msg.username = security_def.username
-                pubsub_msg.topic_name_list = plain_topic_names
+                pubsub_msg.topic_name_list = topic_name_list
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 self.broker_client.publish(pubsub_msg)
@@ -243,15 +238,8 @@ class Create(AdminService):
                 self.response.payload.sec_name = security_def.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
 
-                topic_name_list = sorted(topic_name_list)
-                self.response.payload.topic_links = ', '.join(topic_name_list)
-
-                # Add plain topic names (without HTML)
-                plain_topic_names = []
-                for topic in topics:
-                    plain_topic_names.append(topic.name)
-
-                self.response.payload.topic_names = plain_topic_names
+                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_link_list = sorted(topic_link_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
