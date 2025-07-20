@@ -582,7 +582,7 @@ def main() -> 'any_':
     import sys
 
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    logging.basicConfig(level=logging.WARN, format=log_format)
 
     # Used by start/stop commands
     os.environ['ZATO_CURDIR'] = os.getcwd()
