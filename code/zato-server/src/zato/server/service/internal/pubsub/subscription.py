@@ -248,7 +248,7 @@ class Edit(AdminService):
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_id_list'), 'sec_base_id', 'delivery_type'
         input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type', AsIs('topic_links')
+        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -286,7 +286,7 @@ class Edit(AdminService):
 
                 # Process topics if any are provided
                 topic_id_list = input.get('topic_id_list') or []
-                topic_name_list = []
+                topic_link_list = []
                 topics = []
 
                 if topic_id_list:
@@ -316,10 +316,8 @@ class Edit(AdminService):
 
                             session.add(sub_topic)
 
-                            # Create topic HTML link
-                            topic_name = topic.name
-                            topic_link = get_topic_link(topic_name)
-                            topic_name_list.append(topic_link)
+                            topic_link = get_topic_link(topic.name)
+                            topic_link_list.append(topic_link)
 
                 # Commit all changes
                 session.commit()
@@ -331,43 +329,32 @@ class Edit(AdminService):
             else:
 
                 # Plain topic names (without HTML)
-                plain_topic_names = []
-
+                topic_name_list = []
                 for topic in topics:
-                    plain_topic_names.append(topic.name)
-
-                # Make sure they're always sorted
-                plain_topic_names.sort()
+                    topic_name_list.append(topic.name)
+                topic_name_list.sort()
 
                 # Notify broker about the update
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
                 pubsub_msg.is_active = input.is_active
-                pubsub_msg.topic_name_list = plain_topic_names
+                pubsub_msg.sec_name = sec_def.name
+                pubsub_msg.username = sec_def.username
+                pubsub_msg.topic_name_list = topic_name_list
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 self.broker_client.publish(pubsub_msg)
                 self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
-                # Set response payload
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_active = sub.is_active
                 self.response.payload.sec_name = sec_def.name
                 self.response.payload.delivery_type = sub.delivery_type
 
-                # Add topic links
-                if topic_name_list:
-                    topic_name_list = sorted(topic_name_list)
-                    self.response.payload.topic_links = ', '.join(topic_name_list)
-                    self.response.payload.topic_link_list = topic_name_list
-                else:
-                    self.response.payload.topic_links = []
-                    self.response.payload.topic_link_list = []
-
-                # Add topic names too
-                self.response.payload.topic_name_list = plain_topic_names
+                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_link_list = sorted(topic_link_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
