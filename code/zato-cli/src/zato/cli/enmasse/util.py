@@ -267,13 +267,17 @@ class FileWriter:
                                         for list_item in field_value:
                                             _ = f.write(f'      - {list_item}\n')
                                     else:
-                                        # It's a string or other non-list value, treat as a regular field
                                         _ = f.write(f'    {actual_field}: {field_value}\n')
 
                             # For regular fields
                             elif field in item:
-                                # Regular field
-                                _ = f.write(f'    {field}: {item[field]}\n')
+                                field_value = item[field]
+                                if isinstance(field_value, list):
+                                    _ = f.write(f'    {field}:\n')
+                                    for list_item in field_value:
+                                        _ = f.write(f'      - {list_item}\n')
+                                else:
+                                    _ = f.write(f'    {field}: {field_value}\n')
 
                 else:
                     # Write the element header without newline for empty sections
