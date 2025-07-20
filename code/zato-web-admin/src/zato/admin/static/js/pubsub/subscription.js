@@ -422,11 +422,39 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     form.find('#id_edit-sub_key').val(instance.sub_key);
     form.find('#id_edit-is_active').prop('checked', $.fn.zato.like_bool(instance.is_active) == true);
-    form.find('#id_edit-sec_base_id').val(instance.sec_base_id);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
     form.find('#id_edit-push_service_name').val(instance.push_service_name);
+
+    // Handle security definition display as link instead of select
+    var $container = $('#edit-sec-def-container');
+    console.log('DEBUG edit: security definition container found=' + JSON.stringify($container.length > 0));
+    if ($container.length) {
+        // Hide the select element
+        $('#id_edit-sec_base_id').hide();
+        console.log('DEBUG edit: hidden security definition select');
+
+        // Clear all existing content from the container
+        $container.empty();
+        console.log('DEBUG edit: cleared security definition container');
+
+        // Add hidden input for the security definition ID
+        $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
+        console.log('DEBUG edit: added hidden input for sec_base_id=' + JSON.stringify(instance.sec_base_id));
+
+        // Display the security definition name as a link
+        var secName = instance.sec_name || 'Security definition ID: ' + instance.sec_base_id;
+        var clusterID = $('#cluster_id').val() || '1';
+        var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+        $container.append(secLink);
+        console.log('DEBUG edit: displaying security definition as link, secName=' + JSON.stringify(secName) + ', link=' + JSON.stringify(secLink));
+    } else {
+        // Fallback to original behavior if container doesn't exist
+        console.log('DEBUG edit: security definition container not found, using fallback select behavior');
+        form.find('#id_edit-sec_base_id').val(instance.sec_base_id);
+        console.log('DEBUG edit: set security definition select value to=' + JSON.stringify(instance.sec_base_id));
+    }
 
     // Hide REST endpoint span immediately to prevent flicker during form population
     $('#rest-endpoint-edit').hide();
