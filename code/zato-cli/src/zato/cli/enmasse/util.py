@@ -173,6 +173,9 @@ def get_top_level_order() -> 'strlist':
         'email_smtp',
         'odoo',
         'elastic_search',
+        'pubsub_topic',
+        'pubsub_permission',
+        'pubsub_subscription',
     ]
 
 # ################################################################################################################################
