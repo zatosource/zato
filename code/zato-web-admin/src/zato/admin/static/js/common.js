@@ -1829,3 +1829,33 @@ $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 $.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.service.export_config = function() {
+    var cluster_id = $(document).getUrlParam('cluster') || '1';
+    var export_url = '/zato/service/enmasse-export?cluster=' + cluster_id;
+
+    var spinner_html = '<div id="export-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;">Exporting ..</div>';
+    $('body').append(spinner_html);
+
+    $.ajax({
+        url: export_url,
+        method: 'GET',
+        success: function(data) {
+            $('#export-spinner').remove();
+
+            var blob = new Blob([data], { type: 'application/x-yaml' });
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'enmasse.yaml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        },
+        error: function() {
+            $('#export-spinner').remove();
+            alert('Export failed. Please try again.');
+        }
+    });
+}
