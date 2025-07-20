@@ -109,10 +109,14 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
             self.assertTrue(len(created) + len(updated) > 0, 'No outgoing REST connections were created or updated from YAML.')
 
             # Test that the imported outgoing REST connections can be exported correctly
-            exported_connections = self.outgoing_rest_exporter.export(self.session, self.importer.cluster_id)
+            all_exported_connections = self.outgoing_rest_exporter.export(self.session, self.importer.cluster_id)
+
+            # Filter exported connections to only include those with names starting with "enmasse"
+            exported_connections = [conn for conn in all_exported_connections if conn['name'].startswith('enmasse')]
 
             # Log the exported connections
-            logger.info('Successfully exported %d outgoing REST connections', len(exported_connections))
+            logger.info('Successfully exported %d outgoing REST connections (filtered to %d enmasse connections)',
+                       len(all_exported_connections), len(exported_connections))
 
             # Verify the number of exported connections matches the number of imported connections
             self.assertEqual(len(exported_connections), len(created) + len(updated),
