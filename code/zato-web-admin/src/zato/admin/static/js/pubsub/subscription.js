@@ -15,13 +15,17 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
+    console.log('DEBUG populate_sec_def_topics_callback: status=' + JSON.stringify(status) + ', data type=' + JSON.stringify(typeof data));
     if(data && typeof data === 'string') {
+        console.log('DEBUG populate_sec_def_topics_callback: received string data=' + JSON.stringify(data));
         $('#multi-select-div').html(data);
     }
     else if(data && data.responseText) {
+        console.log('DEBUG populate_sec_def_topics_callback: received responseText=' + JSON.stringify(data.responseText));
         $('#multi-select-div').html(data.responseText);
     }
     else {
+        console.log('DEBUG populate_sec_def_topics_callback: no valid data received, showing error');
         $('#multi-select-div').html('<span style="font-style: italic; color: #666;">Error loading topics</span>');
     }
 }
@@ -69,6 +73,10 @@ $(document).ready(function() {
         $('#rest-endpoint-edit, #rest-endpoint-create').hide();
         $('#push-service-edit, #push-service-create').hide();
         $('#push-type-edit, #push-type-create').hide();
+
+        // Clear the multi-select div
+        console.log('DEBUG close: Clearing multi-select div');
+        $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>');
 
         console.log('DEBUG close: Calling original close function');
         // Call the original close function
@@ -380,6 +388,11 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
 $.fn.zato.pubsub.subscription.create = function() {
     console.log('DEBUG create: opening create form');
+
+    // Clear the multi-select div before opening create form
+    console.log('DEBUG create: Clearing multi-select div');
+    $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>');
+
     // Hide REST endpoint span immediately before form opens
     $('#rest-endpoint-create').hide();
 
@@ -440,6 +453,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
         // Populate REST endpoints regardless of delivery type to avoid a flicker
         // when switching to push, but they'll remain hidden if not push type
+        var currentRestEndpointId = instance.rest_push_endpoint_id || '';
+        var currentServiceName = instance.push_service_name || '';
         $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
         $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
 
