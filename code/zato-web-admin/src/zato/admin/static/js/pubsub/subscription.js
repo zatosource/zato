@@ -36,6 +36,7 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
     }
 
     console.log('DEBUG populate_sec_def_topics_callback: setting HTML content in multi-select-div');
+    console.log('DEBUG populate_sec_def_topics_callback: HTML content being loaded=' + htmlContent);
     // Set the HTML content
     $('#multi-select-div').html(htmlContent);
 
