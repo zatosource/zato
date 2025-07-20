@@ -203,6 +203,9 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
     order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'
     order['elastic_search'] = 'name', 'is_active', 'hosts:list', 'timeout', 'body_as'
+    order['pubsub_topic'] = 'name', 'description'
+    order['pubsub_permission'] = 'security', 'pub', 'sub'
+    order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_service', 'max_retry_time', 'topic_list'
 
     return order[object_type]
 

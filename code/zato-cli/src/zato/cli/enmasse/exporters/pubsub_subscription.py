@@ -77,10 +77,6 @@ class PubSubSubscriptionExporter:
             push_service_name = item.push_service_name
             topic_name = item.topic_name
 
-            # Skip non-enmasse security names
-            if not security_name.startswith('enmasse.'):
-                continue
-
             # Validate required fields exist
             if not security_name:
                 raise ValueError(f'Subscription missing security name: subscription_id={subscription_id}')
@@ -126,7 +122,7 @@ class PubSubSubscriptionExporter:
         for subscription_data in subscription_groups.values():
             exported_subscriptions.append(subscription_data)
 
-        logger.info('Successfully prepared %d pub/sub subscription definitions for export', len(exported_subscriptions))
+        logger.info('Successfully prepared pub/sub subscription definitions for export: %s', exported_subscriptions)
 
         return exported_subscriptions
 
