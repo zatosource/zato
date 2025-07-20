@@ -226,11 +226,11 @@ class FileWriter:
         with open(self.path, 'w') as f:
             for element in top_level:
 
-                # Write the element header
-                _ = f.write(f'{element}:\n\n')
-
                 # Check if this element exists on input
                 if element in data_dict:
+
+                    # Write the element header with newline before it
+                    _ = f.write(f'\n{element}:\n')
 
                     # Get the field order dictionary
                     fields = get_object_order(element)
@@ -277,6 +277,9 @@ class FileWriter:
 
                         # .. and add blank line after each item.
                         _ = f.write('\n')
+                else:
+                    # Write the element header without newline for empty sections
+                    _ = f.write(f'{element}:\n')
 
 
 # ################################################################################################################################
