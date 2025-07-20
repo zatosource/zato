@@ -267,7 +267,6 @@ class EnmasseYAMLExporter:
 
         output_dict: 'stranydict' = {}
 
-        '''
         # Export cache definitions
         cache_defs = self.export_cache(session)
         if cache_defs:
@@ -347,7 +346,6 @@ class EnmasseYAMLExporter:
         elastic_search_defs = self.export_elastic_search(session)
         if elastic_search_defs:
             output_dict['elastic_search'] = elastic_search_defs
-        '''
 
         # Export pub/sub topic definitions
         pubsub_topic_defs = self.export_pubsub_topic(session)

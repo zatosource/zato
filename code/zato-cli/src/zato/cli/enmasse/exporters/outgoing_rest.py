@@ -59,9 +59,6 @@ class OutgoingRESTExporter:
 
         for outgoing_row in db_outgoing:
 
-            if not outgoing_row['name'].startswith('enmasse'):
-                continue
-
             # Create basic connection definition with required fields
             exported_conn: 'anydict' = {
                 'name': outgoing_row['name'],
