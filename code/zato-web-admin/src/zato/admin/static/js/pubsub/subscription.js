@@ -37,8 +37,18 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status) {
 
     console.log('DEBUG populate_sec_def_topics_callback: setting HTML content in multi-select-div');
     console.log('DEBUG populate_sec_def_topics_callback: HTML content being loaded=' + htmlContent);
+
+    // Check current content before setting
+    var beforeContent = $('#multi-select-div').html();
+    console.log('DEBUG populate_sec_def_topics_callback: current content before setting=' + beforeContent);
+
     // Set the HTML content
     $('#multi-select-div').html(htmlContent);
+
+    // Verify content was set
+    var afterContent = $('#multi-select-div').html();
+    console.log('DEBUG populate_sec_def_topics_callback: content after setting=' + afterContent);
+    console.log('DEBUG populate_sec_def_topics_callback: content was changed=' + JSON.stringify(beforeContent !== afterContent));
 
     // Check how many checkboxes were created
     var checkboxCount = $('#multi-select-div input[name="topic_name"]').length;
