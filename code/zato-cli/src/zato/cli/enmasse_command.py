@@ -61,9 +61,6 @@ class Enmasse(ZatoCommand):
 
         # zato enmasse --import --input=/path/to/input-enmasse.yaml   ~/qs-1/server1     --verbose
         # zato enmasse --export --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
-
-        # zato enmasse --export --include-type=cache               --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
-        # zato enmasse --export --include-type=cloud-microsoft-365 --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
     ]
 
     def get_cluster_id(self, args):

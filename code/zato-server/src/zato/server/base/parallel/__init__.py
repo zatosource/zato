@@ -684,7 +684,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'enmasse')
         path = Path(path)
 
-        # enmasse --import --replace-odb-objects --input ./zato-export.yml /path/to/server/
+        # enmasse --import --input ./zato-export.yml /path/to/server/
 
         # .. find all the enmasse files in this directory ..
         for file_path in sorted(path.iterdir()):

@@ -185,7 +185,6 @@ EnmasseApiKey1 = api-key-value-1
             out = command('enmasse', TestConfig.server_location,
                 '--import',
                 '--input', import_path,
-                '--replace',
                 '--verbose',
                 '--env-file', env_path
             ) # type: ignore
