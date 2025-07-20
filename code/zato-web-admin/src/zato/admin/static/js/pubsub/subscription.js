@@ -2,6 +2,9 @@
 
 $.namespace('zato.pubsub.subscription');
 
+// Constants
+var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>';
+
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
         var s = '<PubSubSubscription id:{0} topic_links:{1} sec_name:{2} pattern_matched:{3}>';
@@ -49,7 +52,7 @@ $.fn.zato.pubsub.on_sec_def_changed = function() {
 
 $.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
     // Clear the multi-select div when no security definition is selected
-    $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>');
+    $('#multi-select-div').html(Multi_Select_Empty_Message);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -76,7 +79,7 @@ $(document).ready(function() {
 
         // Clear the multi-select div
         console.log('DEBUG close: Clearing multi-select div');
-        $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>');
+        $('#multi-select-div').html(Multi_Select_Empty_Message);
 
         console.log('DEBUG close: Calling original close function');
         // Call the original close function
@@ -391,7 +394,7 @@ $.fn.zato.pubsub.subscription.create = function() {
 
     // Clear the multi-select div before opening create form
     console.log('DEBUG create: Clearing multi-select div');
-    $('#multi-select-div').html('<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>');
+    $('#multi-select-div').html(Multi_Select_Empty_Message);
 
     // Hide REST endpoint span immediately before form opens
     $('#rest-endpoint-create').hide();
