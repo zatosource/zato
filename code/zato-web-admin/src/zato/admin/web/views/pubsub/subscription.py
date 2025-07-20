@@ -50,6 +50,7 @@ class Index(_Index):
         return item
 
     def handle(self):
+
         create_form = CreateForm(req=self.req)
         edit_form = EditForm(prefix='edit', req=self.req)
         return {
@@ -232,7 +233,6 @@ def get_topics(req):
     logger.info('VIEW get_topics: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
 
     try:
-        # Call the service directly like in other views
         response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
             'cluster_id': cluster_id
         })

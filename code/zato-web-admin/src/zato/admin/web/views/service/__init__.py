@@ -237,7 +237,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         response = req.zato.client.invoke(name, **input_dict) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
-        content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human')
+        content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human') # type: ignore
         data = enriched_exc.args
 
     except Exception as e:
@@ -264,7 +264,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         except Exception:
             data = response.details
 
-    content['data'] = data
+    content['data'] = data # type: ignore
     content = dumps(content)
 
     headers = {'Content-Type': 'application/json'}
@@ -275,5 +275,19 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
     out.headers = headers # type: ignore
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET', 'POST')
+def enmasse_export(req):
+
+    response = req.zato.client.invoke('zato.server.invoker', {
+        'func_name': 'export_enmasse'
+    })
+
+    print()
+    print(111, response)
+    print()
 
 # ################################################################################################################################
