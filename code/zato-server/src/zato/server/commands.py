@@ -365,6 +365,22 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
+    def run_zato_cli_sync(
+        self,
+        command:  'str',
+        callback: 'any_'  = None,
+    ) -> 'CommandResult':
+
+        # This will differ depending on our current OS
+        zato_bin = 'zato.bat' if is_windows else get_zato_command()
+
+        # Build the full command to execute
+        command = f'{zato_bin} {command}'
+
+        return self.invoke(command)
+
+# ################################################################################################################################
+
     def run_zato_cli_async(
         self,
         command:  'str',
@@ -381,7 +397,14 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
-    def run_enmasse_async(self, file_path:'str | Path') -> 'CommandResult':
+    def run_enmasse_sync_export(self) -> 'CommandResult':
+        command = f'enmasse --export --output /tmp/enmasse-export.yaml {self.server.base_dir} --verbose'
+        result = self.run_zato_cli_sync(command)
+        return result
+
+# ################################################################################################################################
+
+    def run_enmasse_async_import(self, file_path:'str | Path') -> 'CommandResult':
         command = f'enmasse --import --input {file_path} {self.server.base_dir} --verbose'
         result = self.run_zato_cli_async(command, callback=self._on_enmasse_completed)
         return result

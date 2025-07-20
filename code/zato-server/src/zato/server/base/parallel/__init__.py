@@ -690,7 +690,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for file_path in sorted(path.iterdir()):
 
             # .. and run enmasse with each of them.
-            _ = commands.run_enmasse_async(file_path)
+            _ = commands.run_enmasse_async_import(file_path)
 
 # ################################################################################################################################
 
@@ -946,6 +946,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.init()
 
         logger.info('⭐ Config loaded OK')
+
+# ################################################################################################################################
+
+    def export_enmasse(self):
+
+        # Zato
+        from zato.server.commands import CommandsFacade
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_export()
+
+        if result.is_ok:
+            with open('/tmp/enmasse-export.yaml') as f:
+                data = f.read()
+            return data
+        else:
+            return result.stderr
 
 # ################################################################################################################################
 

@@ -201,7 +201,8 @@ class ServerInvoker(AdminService):
 
     def handle(self):
         func = getattr(self.server, self.request.raw_request['func_name'])
-        func()
+        response = func()
+        self.response.payload = response
 
 # ################################################################################################################################
 
