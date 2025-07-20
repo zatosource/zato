@@ -165,6 +165,8 @@ class Create(AdminService):
 
                     if not topic:
                         raise Exception('Pub/sub topic with ID `{}` not found in this cluster'.format(topic_name))
+                    else:
+                        topics.append(topic)
 
                 # Create the subscription
                 sub = PubSubSubscription()

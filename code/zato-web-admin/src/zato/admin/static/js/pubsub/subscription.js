@@ -317,6 +317,18 @@ $(document).ready(function() {
     $.fn.zato.data_table.on_submit = function(action) {
         console.log('DEBUG on_submit: Starting form submission, action=' + JSON.stringify(action));
 
+        // Validate that at least one topic is selected
+        var topicDivId = action === 'create' ? '#multi-select-div' : '#id_edit-multi-select-div';
+        var selectedTopics = $(topicDivId + ' input[name="topic_name"]:checked');
+
+        console.log('DEBUG on_submit: checking topics in ' + topicDivId + ', found ' + selectedTopics.length + ' selected');
+
+        if (selectedTopics.length === 0) {
+            console.log('DEBUG on_submit: validation failed - no topics selected');
+            alert('At least one topic is required');
+            return false;
+        }
+
         // Validate push delivery type
         var deliveryTypeId = action === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
         var pushTypeId = action === 'create' ? '#id_push_type' : '#id_edit-push_type';
