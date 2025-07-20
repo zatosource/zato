@@ -63,8 +63,17 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
+
+        print()
+        print(111, return_data)
+        print()
+
+        topic_names = return_data['topic_name_list']
+        return_data['topic_names']= dumps(topic_names)
+
         topic_link_list = return_data['topic_link_list']
         return_data['topic_link_list'] = ', '.join(topic_link_list)
+
         return return_data
 
 # ################################################################################################################################
