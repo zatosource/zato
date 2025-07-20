@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,10 @@ from zato.common.util.api import asbool
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist, stranydict, strlist
+    from zato.common.typing_ import dictlist, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Map of object types to their display names
 type_display_names = {
@@ -48,9 +51,6 @@ class Enmasse(ZatoCommand):
         {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
 
-        {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
-        {'name':'--include-name', 'help':'Only objects containing any of the names provided will be exported', 'action':'store', 'default':'all'},
-
         {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
 
@@ -58,10 +58,6 @@ class Enmasse(ZatoCommand):
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':1},
 
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
-
-        {'name':'--replace', 'help':'Ignored. Kept for backward compatibility', 'action':'store_true'},
-        {'name':'--replace-odb-objects', 'help':'Ignored. Kept for backward compatibility', 'action':'store_true'},
-        {'name':'--export-odb', 'help':'Same as --export. Kept for backward compatibility', 'action':'store_true'},
 
         # zato enmasse --import --input=/path/to/input-enmasse.yaml   ~/qs-1/server1     --verbose
         # zato enmasse --export --output /path/to/output-enmasse.yaml ~/env/qs-1/server1 --verbose
@@ -127,18 +123,6 @@ class Enmasse(ZatoCommand):
                 # Export to dictionary
                 exporter = EnmasseYAMLExporter()
                 data_dict: 'stranydict' = exporter.export_to_dict(session)
-
-                # Filter by type if specified
-                if args.include_type != 'all':
-                    types: 'strlist' = [t.strip() for t in args.include_type.split(',')]
-                    data_dict = {k: v for k, v in data_dict.items() if k in types}
-
-                # Filter by name if specified
-                if args.include_name != 'all':
-                    names: 'strlist' = [n.strip().lower() for n in args.include_name.split(',')]
-                    for key, items in data_dict.items():
-                        data_dict[key] = [item for item in items
-                                         if any(name in str(item.get('name', '')).lower() for name in names)]
 
                 file_writer = FileWriter(args.output)
                 file_writer.write(data_dict)

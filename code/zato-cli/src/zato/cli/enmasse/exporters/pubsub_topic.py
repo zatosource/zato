@@ -52,9 +52,6 @@ class PubSubTopicExporter:
             item = item._asdict()
             item = item['PubSubTopic']
 
-            if not item.name.startswith('enmasse'):
-                continue
-
             # Create basic topic definition with required fields
             exported_topic: 'anydict' = {
                 'name': item.name,

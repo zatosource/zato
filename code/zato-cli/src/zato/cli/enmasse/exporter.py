@@ -347,6 +347,7 @@ class EnmasseYAMLExporter:
         elastic_search_defs = self.export_elastic_search(session)
         if elastic_search_defs:
             output_dict['elastic_search'] = elastic_search_defs
+        '''
 
         # Export pub/sub topic definitions
         pubsub_topic_defs = self.export_pubsub_topic(session)
@@ -357,7 +358,6 @@ class EnmasseYAMLExporter:
         pubsub_permission_defs = self.export_pubsub_permission(session)
         if pubsub_permission_defs:
             output_dict['pubsub_permission'] = pubsub_permission_defs
-        '''
 
         # Export pub/sub subscription definitions
         pubsub_subscription_defs = self.export_pubsub_subscription(session)
