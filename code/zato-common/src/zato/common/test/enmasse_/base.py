@@ -57,7 +57,7 @@ class BaseEnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1, 
+    def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1,
                     is_import:'bool'=True, is_export:'bool'=False, include_type:'str'=None) -> 'RunningCommand':
 
         # Zato
@@ -65,29 +65,24 @@ class BaseEnmasseTestCase(TestCase):
 
         # A shortcut
         command = get_zato_sh_command()
-        
+
         # Prepare arguments
         args = ['enmasse', TestConfig.server_location, '--verbose', '--missing-wait-time', missing_wait_time]
-        
+
         # Handle import operation
         if is_import:
             args.extend([
                 '--import',
                 '--input', config_path,
-                '--replace'
             ])
-        
+
         # Handle export operation
         elif is_export:
             args.extend([
                 '--export',
                 '--output', config_path
             ])
-            
-            # Add include-type if specified
-            if include_type:
-                args.extend(['--include-type', include_type])
-                
+
         # Invoke enmasse ..
         out:'RunningCommand' = command(*args)
 
