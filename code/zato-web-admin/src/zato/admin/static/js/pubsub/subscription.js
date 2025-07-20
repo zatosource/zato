@@ -7,9 +7,9 @@ var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-se
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} topic_links:{1} sec_name:{2} pattern_matched:{3}>';
+        var s = '<PubSubSubscription id:{0} topic_link_list:{1} sec_name:{2} pattern_matched:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.topic_links ? this.topic_links : '(none)',
+                                this.topic_link_list ? this.topic_link_list : '(none)',
                                 this.sec_name ? this.sec_name : '(none)',
                                 this.pattern_matched ? this.pattern_matched : '(none)');
     }
@@ -70,16 +70,16 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
         if (instance_id && $.fn.zato.data_table.data[instance_id]) {
             var instance = $.fn.zato.data_table.data[instance_id];
-            console.log('DEBUG populate_sec_def_topics_callback: found instance data for edit, topic_names=' + JSON.stringify(instance.topic_names));
+            console.log('DEBUG populate_sec_def_topics_callback: found instance data for edit, topic_name_list=' + JSON.stringify(instance.topic_name_list));
 
-            if (instance.topic_names) {
+            if (instance.topic_name_list) {
                 var topicNames = [];
                 try {
-                    topicNames = JSON.parse(instance.topic_names);
+                    topicNames = JSON.parse(instance.topic_name_list);
                     console.log('DEBUG populate_sec_def_topics_callback: parsed topic names=' + JSON.stringify(topicNames) + ', count=' + topicNames.length);
                 } catch (e) {
-                    console.log('DEBUG populate_sec_def_topics_callback: failed to parse topic_names as JSON, error=' + JSON.stringify(e.message) + ', treating as string');
-                    topicNames = [instance.topic_names];
+                    console.log('DEBUG populate_sec_def_topics_callback: failed to parse topic_name_list as JSON, error=' + JSON.stringify(e.message) + ', treating as string');
+                    topicNames = [instance.topic_name_list];
                 }
 
                 console.log('DEBUG populate_sec_def_topics_callback: attempting to check ' + topicNames.length + ' topics');
@@ -101,7 +101,7 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
                 var checkedCount = $('#multi-select-div input[name="topic_name"]:checked').length;
                 console.log('DEBUG populate_sec_def_topics_callback: final state - ' + checkedCount + ' out of ' + checkboxCount + ' checkboxes are checked');
             } else {
-                console.log('DEBUG populate_sec_def_topics_callback: instance has no topic_names data');
+                console.log('DEBUG populate_sec_def_topics_callback: instance has no topic_name_list data');
             }
         } else {
             console.log('DEBUG populate_sec_def_topics_callback: no instance data found for instanceId=' + JSON.stringify(instance_id));
