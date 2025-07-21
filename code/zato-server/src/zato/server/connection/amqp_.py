@@ -126,13 +126,18 @@ class Producer:
                 limit:'int'
             ) -> 'KombuProducerPool':
 
-                result = pools.ProducerPool(connections[connection], limit=limit)
-
                 print()
                 print(111, type(connection))
-                print(222, type(limit))
-                print(333, type(result))
+                print(225, type(limit))
                 print()
+
+                conn_result = connection.connect()
+
+                print()
+                print(333, conn_result)
+                print()
+
+                # result = pools.ProducerPool(connections[connection], limit=limit)
 
                 return result
 
