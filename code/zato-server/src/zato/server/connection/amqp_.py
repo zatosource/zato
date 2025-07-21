@@ -34,10 +34,16 @@ from zato.server.connection.connector import Connector, Inactive
 if 0:
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
+    from kombu.messaging import Producer as KombuProducer
     from zato.common.typing_ import any_, callable_, strdictnone, strtuple, type_
     Bunch = Bunch
 
 # ################################################################################################################################
+
+import logging
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 version = get_version()
 logger = getLogger(__name__)
@@ -118,9 +124,10 @@ class Producer:
 
         self.pool = _Producers(limit=self.config.pool_size)
 
-    def acquire(self, *args, **kwargs):
+    def acquire(self, *args, **kwargs) -> 'KombuProducer':
         producers = self.pool[self.conn]
-        return producers.acquire(*args, **kwargs)
+        producer = producers.acquire(*args, **kwargs)
+        return producer
 
     def stop(self):
         for pool in self.pool.values():

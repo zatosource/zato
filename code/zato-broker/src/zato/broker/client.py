@@ -40,7 +40,7 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
-    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strdictnone, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -145,7 +145,10 @@ class BrokerClient:
             print()
             '''
 
-            client.publish(
+            # Make sure we are connected
+            _ = client.connection.ensure_connection() # type: ignore
+
+            _ = client.publish(
                 msg,
                 exchange=exchange,
                 routing_key=routing_key,
@@ -387,7 +390,7 @@ class BrokerClient:
 
         # Send message with the reply_to and correlation_id properties
         with self.producer.acquire() as client:
-            client.publish(
+            _ = client.publish(
                 msg_str,
                 exchange='components',
                 routing_key='server',
@@ -485,9 +488,9 @@ class BrokerClient:
 
         if not needs_root_elem:
             data = response.data
-            data_keys = list(data.keys())
+            data_keys = list(data.keys()) # type: ignore
             root = data_keys[0]
-            data = data[root]
+            data = data[root] # type: ignore
         else:
             data = response.data
 
@@ -586,8 +589,8 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'Connection | None'=None,
-        queue_arguments: 'stridctnone'=None,
+        conn: 'KombuAMQPConnection | None'=None,
+        queue_arguments: 'strdictnone'=None,
     ) -> 'None':
 
         # Make sure we have a cid
@@ -616,7 +619,10 @@ class BrokerClient:
 
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
-        _ = queue.bind_to(exchange=exchange, routing_key=routing_key)
+        _ = queue.bind_to(
+            exchange=exchange, # type: ignore
+            routing_key=routing_key
+        )
 
         # Close the connection if it was opened by us
         if should_close:
@@ -636,7 +642,7 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'Connection | None'=None,
+        conn: 'KombuAMQPConnection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -665,12 +671,22 @@ class BrokerClient:
         """
         try:
             with self.producer.acquire() as conn:
+
+                print()
+                print(333, type(conn))
+                print(444, dir(conn))
+                print(555, conn.__connection__)
+                print()
+
+                _ = conn.__connection__.ensure_connection() # type: ignore
+
                 channel = conn.channel
                 if channel and channel.is_open:
                     channel.queue_delete(queue=queue_name)
                     logger.debug(f'Deleted queue: {queue_name}')
         except Exception as e:
-            logger.warning(f'Error deleting queue {queue_name}: {str(e)}')
+            logger.warning(f'Error deleting queue `{queue_name}` -> {e}')
+            raise
 
 # ################################################################################################################################
 
@@ -681,7 +697,7 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         new_routing_key_list: 'strlist',
-        conn: 'Connection | None'=None,
+        conn: 'KombuAMQPConnection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -727,7 +743,7 @@ class BrokerClient:
         cid: 'str',
         topic_name: 'str',
         exchange_name: 'str' = 'pubsubapi',
-        conn: 'Connection | None' = None,
+        conn: 'KombuAMQPConnection | None' = None,
     ) -> 'None':
         """ Deletes a topic by removing all bindings with the matching routing key.
         """
@@ -754,7 +770,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def get_bindings_by_queue(self, cid:'str', queue_name:'str', exchange_name:'str') -> 'strlist':
+    def get_bindings_by_queue(self, cid:'str', queue_name:'str', exchange_name:'str') -> 'dictlist':
         """ Returns all bindings that point to the specified queue.
         """
         # Get all bindings for this exchange
@@ -779,7 +795,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def get_bindings_by_routing_key(self, cid:'str', exchange_name:'str', routing_key:'str') -> 'strlist':
+    def get_bindings_by_routing_key(self, cid:'str', exchange_name:'str', routing_key:'str') -> 'dictlist':
         """ Returns all bindings that match the specified routing key.
         """
         # Get all bindings for this exchange
@@ -802,7 +818,7 @@ class BrokerClient:
         old_topic_name: 'str',
         new_topic_name: 'str',
         exchange_name: 'str',
-        conn: 'Connection | None' = None,
+        conn: 'KombuAMQPConnection | None' = None,
     ) -> 'None':
         """ Renames a topic by removing all old bindings and creating new ones with the new name.
         """
