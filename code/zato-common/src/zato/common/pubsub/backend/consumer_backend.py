@@ -184,7 +184,7 @@ class ConsumerBackend(Backend):
         topic_name_list:'strlist' = msg['topic_name_list']
 
         print()
-        print(111, msg)
+        print(111, repr(msg))
         print()
 
         # Do we have such a consumer ..
