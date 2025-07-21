@@ -35,6 +35,7 @@ if 0:
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
     from kombu.messaging import Producer as KombuProducer
+    from kombu.pools import ProducerPool as KombuProducerPool
     from zato.common.typing_ import any_, callable_, strdictnone, strtuple, type_
     Bunch = Bunch
 
@@ -119,8 +120,21 @@ class Producer:
         connections = pools.register_group(pools.Connections(limit=self.config.pool_size))
 
         class _Producers(pools.Producers):
-            def create(self, connection, limit):
-                return pools.ProducerPool(connections[connection], limit=limit)
+            def create(
+                self,
+                connection:'PyAMQPConnection', # This is actually _PyAMQPConnection but we cannot use this type here
+                limit:'int'
+            ) -> 'KombuProducerPool':
+
+                result = pools.ProducerPool(connections[connection], limit=limit)
+
+                print()
+                print(111, type(connection))
+                print(222, type(limit))
+                print(333, type(result))
+                print()
+
+                return result
 
         self.pool = _Producers(limit=self.config.pool_size)
 
