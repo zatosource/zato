@@ -23,7 +23,7 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # orjson
 from orjson import dumps
@@ -32,8 +32,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     SEC_DEF_TYPE, simple_types, \
-     Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -43,7 +42,7 @@ from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
-from zato.common.util.retry import get_sleep_time
+from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -91,6 +90,11 @@ if 0:
 # ################################################################################################################################
 
 _data_format_dict = DATA_FORMAT.DICT
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_pubsub_max_retry_time = PubSub.Max_Retry_Time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -801,6 +805,10 @@ class WorkerStore(_WorkerStoreBase):
             # .. we need to know when the message was published ..
             pub_time = application_headers.get('zato_pub_time')
 
+            # .. make sure we have a timezone available ..
+            if '+' not in pub_time:
+                pub_time += '+00:00'
+
             # .. this may not exist if someone publishes a message directly to a queue ..
             if not pub_time:
                 pub_time = utcnow()
@@ -809,24 +817,24 @@ class WorkerStore(_WorkerStoreBase):
             else:
                 pub_time = parse_datetime(pub_time)
 
+            # .. OK, do we have any time left for retries ..
+            if get_remaining_time(pub_time, _pubsub_max_retry_time):
 
+                # .. if yes, check for how long we should sleep ..
+                sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
 
-            print()
-            print(111, delivery_count, type(delivery_count))
-            print(222, pub_time)
-            print(333, repr(pub_time))
-            print(444, topic_name)
-            print()
+                logger.info(f'Topic: {topic_name}, msg_id:TODO, sleeping for {sleep_time} (attempt={delivery_count}  )')
 
-            # msg.
+                # .. do sleep now ..
+                sleep(sleep_time)
 
-            from traceback import format_exc
-            logger.warning('Caught an exception, sleeping ... %s', format_exc())
-            import time
-            time.sleep(1)
-            msg.reject(requeue=True)
-        else:
-            msg.ack()
+                # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
+                msg.reject(requeue=True)
+
+            # .. if we go here, it means we run out of time, so we need to accept that message ..
+            # .. so it won't be redelivered anymore.
+            else:
+                msg.ack()
 
 # ################################################################################################################################
 
