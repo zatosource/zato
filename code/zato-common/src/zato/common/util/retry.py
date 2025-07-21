@@ -17,6 +17,18 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_remaining_time(start_time:'datetime', max_hours:'int') -> 'float':
+    """ Calculate remaining time in seconds based on start time and maximum duration.
+    """
+    max_duration = timedelta(hours=max_hours)
+    elapsed = utcnow() - start_time
+    remaining = max_duration - elapsed
+
+    return max(0, remaining.total_seconds())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_sleep_time(
     start_time: 'datetime',
     max_hours: 'int',
@@ -27,11 +39,7 @@ def get_sleep_time(
     """
 
     # Calculate remaining time
-    max_duration = timedelta(hours=max_hours)
-    elapsed      = utcnow() - start_time
-    remaining    = max_duration - elapsed
-
-    time_remaining_seconds = max(0, remaining.total_seconds())
+    time_remaining_seconds = get_remaining_time(start_time, max_hours)
 
     # No sleep before first attempt or if time is up
     if attempt_number <= 1 or time_remaining_seconds <= 0:
@@ -105,8 +113,8 @@ if __name__ == '__main__':
        attempt += 1
 
        # Calculate remaining time
-       elapsed = utcnow() - start_time
-       remaining_hours = max(0, (timedelta(hours=max_hours) - elapsed).total_seconds() / 3600)
+       remaining_seconds = get_remaining_time(start_time, max_hours)
+       remaining_hours = remaining_seconds / 3600
 
        print(f'\nAttempt {attempt}:')
        print(f'  Time remaining: {remaining_hours:.1f} hours')
@@ -131,8 +139,9 @@ if __name__ == '__main__':
 
    print(f'\nFinal stats after {attempt} attempts:')
 
-   elapsed_hours = (utcnow() - start_time).total_seconds() / 3600
-   remaining_hours = max(0, max_hours - elapsed_hours)
+   remaining_seconds = get_remaining_time(start_time, max_hours)
+   remaining_hours = remaining_seconds / 3600
+   elapsed_hours = max_hours - remaining_hours
 
    print(f'  Elapsed: {elapsed_hours:.3f} hours')
    print(f'  Remaining: {remaining_hours:.1f} hours')

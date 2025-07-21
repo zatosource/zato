@@ -915,7 +915,10 @@ class Service:
 
 # ################################################################################################################################
 
-    def publish(self, msg:'str', topic:'str') -> 'None':
+    def publish(self, msg:'any_', topic:'str') -> 'None':
+
+        if not isinstance(msg, dict):
+            msg = {'msg': msg}
 
         self.broker_client.publish(
             msg,
