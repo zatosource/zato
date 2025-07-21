@@ -670,20 +670,13 @@ class BrokerClient:
         """ Explicitly deletes a queue from the broker.
         """
         try:
-            with self.producer.acquire() as conn:
 
-                print()
-                print(333, type(conn))
-                print(444, dir(conn))
-                print(555, conn.__connection__)
-                print()
+            conn = self.get_connection()
+            channel = conn.channel()
 
-                _ = conn.__connection__.ensure_connection() # type: ignore
+            channel.queue_delete(queue=queue_name)
+            logger.debug(f'Deleted queue: {queue_name}')
 
-                channel = conn.channel
-                if channel and channel.is_open:
-                    channel.queue_delete(queue=queue_name)
-                    logger.debug(f'Deleted queue: {queue_name}')
         except Exception as e:
             logger.warning(f'Error deleting queue `{queue_name}` -> {e}')
             raise
