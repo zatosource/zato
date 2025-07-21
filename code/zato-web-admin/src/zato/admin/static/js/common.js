@@ -673,10 +673,11 @@ $.fn.zato.data_table.setup_change_password = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow) {
+$.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow, needs_populate) {
 
     // Local variables
     var form_id = String.format('#{0}-form', action)
+    var needs_populate = needs_populate !== false;
 
     // Cleanup comes first
     $.fn.zato.cleanup_form_css_attention(form_id);
@@ -701,7 +702,9 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
         var id_prefix = String.format('#id_{0}', name_prefix);
         var instance = $.fn.zato.data_table.data[id];
 
-        $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
+        if(needs_populate) {
+            $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
+        }
     }
 
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
