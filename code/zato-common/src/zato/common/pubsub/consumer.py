@@ -99,14 +99,14 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
                     break
 
                 # .. sleep for a moment ..
-                logger.info(f'Not connected -> {consumer_config}')
+                logger.debug(f'Not connected -> {consumer_config}')
                 sleep(0.2)
 
     except KeyboardInterrupt:
         consumer.stop()
         logger.info(f'{cid_prefix}Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
     finally:
-        logger.info(f'Connected -> {consumer_config}')
+        logger.debug(f'Connected -> {consumer_config}')
         return consumer
 
 # ################################################################################################################################
