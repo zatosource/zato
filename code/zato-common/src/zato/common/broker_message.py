@@ -49,7 +49,6 @@ TOPICS = {
 KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 
 class SCHEDULER(Constants):
-    code_start = 100000
 
     PAUSE = ValueConstant('')
     RESUME = ValueConstant('')
@@ -63,7 +62,6 @@ class SCHEDULER(Constants):
     SET_SCHEDULER_ADDRESS = ValueConstant('')
 
 class SECURITY(Constants):
-    code_start = 100400
 
     BASIC_AUTH_CREATE = ValueConstant('')
     BASIC_AUTH_EDIT = ValueConstant('')
@@ -86,7 +84,6 @@ class SECURITY(Constants):
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
 class OUTGOING(Constants):
-    code_start = 100800
 
     AMQP_CREATE = ValueConstant('')
     AMQP_EDIT = ValueConstant('')
@@ -117,7 +114,6 @@ class OUTGOING(Constants):
     REST_WRAPPER_CHANGE_PASSWORD = ValueConstant('')
 
 class CHANNEL(Constants):
-    code_start = 101000
 
     AMQP_CREATE = ValueConstant('')
     AMQP_EDIT = ValueConstant('')
@@ -137,7 +133,6 @@ class CHANNEL(Constants):
     FTP_USER_CHANGE_PASSWORD = ValueConstant('')
 
 class SERVICE(Constants):
-    code_start = 101800
 
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -145,14 +140,14 @@ class SERVICE(Constants):
     INVOKE = ValueConstant('')
 
 class HOT_DEPLOY(Constants):
-    code_start = 102200
+
     CREATE_SERVICE = ValueConstant('')
     CREATE_STATIC = ValueConstant('')
     CREATE_USER_CONF = ValueConstant('')
     AFTER_DEPLOY = ValueConstant('')
 
 class SEARCH(Constants):
-    code_start = 104200
+
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -163,7 +158,6 @@ class SEARCH(Constants):
     ES_CHANGE_PASSWORD = ValueConstant('')
 
 class EMAIL(Constants):
-    code_start = 104800
 
     SMTP_CREATE = ValueConstant('')
     SMTP_EDIT = ValueConstant('')
@@ -176,7 +170,6 @@ class EMAIL(Constants):
     IMAP_CHANGE_PASSWORD = ValueConstant('')
 
 class CACHE(Constants):
-    code_start = 106400
 
     BUILTIN_CREATE = ValueConstant('')
     BUILTIN_EDIT = ValueConstant('')
@@ -212,7 +205,6 @@ class CACHE(Constants):
     BUILTIN_STATE_CHANGED_SET_CONTAINS_ANY = ValueConstant('')
 
 class GENERIC(Constants):
-    code_start = 107000
 
     CONNECTION_CREATE = ValueConstant('')
     CONNECTION_EDIT = ValueConstant('')
@@ -220,18 +212,15 @@ class GENERIC(Constants):
     CONNECTION_CHANGE_PASSWORD = ValueConstant('')
 
 class Common(Constants):
-    code_start = 107800
     Sync_Objects = ValueConstant('')
 
 class Groups(Constants):
-    code_start = 108000
 
     Edit = ValueConstant('')
     Edit_Member_List = ValueConstant('')
     Delete = ValueConstant('')
 
 class PUBSUB(Constants):
-    code_start = 108200
 
     TOPIC_CREATE = ValueConstant('')
     TOPIC_EDIT = ValueConstant('')
@@ -254,5 +243,6 @@ _globals = list(iteritems(globals()))
 for item_name, item in _globals:
     if isclass(item) and issubclass(item, Constants) and item is not Constants:
         for idx, (attr, const) in enumerate(item.items()):
-            const.value = str(item.code_start + idx)
-            code_to_name[const.value] = '{}_{}'.format(item_name, attr)
+            _value = '{}_{}'.format(item_name, attr)
+            const.value = _value
+            code_to_name[const.value] = _value
