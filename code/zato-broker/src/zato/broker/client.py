@@ -125,10 +125,11 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
+    def publish(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         """ Publishes a message to the AMQP broker.
         """
-        msg = dumps(msg) # type: ignore
+        if not isinstance(msg, str):
+            msg = dumps(msg)
 
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'

@@ -1190,12 +1190,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def publish(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        # raise Exception('TODO: Implement it using the new pub/sub')
-        pass
-
-# ################################################################################################################################
-
     def invoke_async(self, service:'str', request:'any_', callback:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service in background.
         """
