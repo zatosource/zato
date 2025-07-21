@@ -17,14 +17,14 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_remaining_time(start_time:'datetime', max_seconds:'int') -> 'float':
+def get_remaining_time(start_time:'datetime', max_seconds:'int') -> 'timedelta':
     """ Calculate remaining time in seconds based on start time and maximum duration.
     """
     max_duration = timedelta(seconds=max_seconds)
     elapsed = utcnow() - start_time
     remaining = max_duration - elapsed
 
-    return max(0, remaining.total_seconds())
+    return remaining
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,13 +39,14 @@ def get_sleep_time(
     """
 
     # Calculate remaining time
-    time_remaining_seconds = get_remaining_time(start_time, max_seconds)
+    time_remaining = get_remaining_time(start_time, max_seconds)
+    time_remaining_seconds = max(0, time_remaining.total_seconds())
 
-    # No sleep before first attempt or if time is up
-    if attempt_number <= 1 or time_remaining_seconds <= 0:
+    # No sleep if time is up
+    if time_remaining_seconds <= 0:
         return 0.0
 
-    # Initial attempts get 5 seconds, and later it's 10 seconds.
+    # Initial attempts get fewer seconds
     # We'll add jittter in either case later on.
     if attempt_number <= 12:
          base_sleep = 5.0
