@@ -41,8 +41,9 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, update_apikey_username_to_channel, utcnow, \
-    visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, \
+    update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.common.util.retry import get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -745,18 +746,22 @@ class WorkerStore(_WorkerStoreBase):
 
     def _handle_pubsub_public_message(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
+        '''
         print()
         print(111, repr(body))
         print(222, repr(msg))
-        print(333, repr(name))
-        print(444, repr(config))
+        # print(333, repr(name))
+        # print(444, repr(config))
         print(555, msg.headers)
         print(666, msg.properties)
         print(777, msg.delivery_info)
         print()
+        '''
 
         # Local objects
         service_msg = {}
+
+        zz
 
         # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
         sub_key = config.queue
@@ -783,9 +788,42 @@ class WorkerStore(_WorkerStoreBase):
         try:
             self._handle_pubsub_public_message(body, msg, name, config)
         except Exception as e:
-            logger.warn('Caught an exception, sleeping ...')
+
+            # OK, we have an exception so we will potentially retry the delivery ..
+
+            # Extract our headers ..
+            application_headers = msg.properties['application_headers']
+
+            # .. local aliases ..
+            topic_name = msg.delivery_info['routing_key']
+            delivery_count = application_headers.get('x-delivery-count') or 1
+
+            # .. we need to know when the message was published ..
+            pub_time = application_headers.get('zato_pub_time')
+
+            # .. this may not exist if someone publishes a message directly to a queue ..
+            if not pub_time:
+                pub_time = utcnow()
+
+            # .. otherwse, make use of it ..
+            else:
+                pub_time = parse_datetime(pub_time)
+
+
+
+            print()
+            print(111, delivery_count, type(delivery_count))
+            print(222, pub_time)
+            print(333, repr(pub_time))
+            print(444, topic_name)
+            print()
+
+            # msg.
+
+            from traceback import format_exc
+            logger.warning('Caught an exception, sleeping ... %s', format_exc())
             import time
-            time.sleep(100)
+            time.sleep(1)
             msg.reject(requeue=True)
         else:
             msg.ack()
