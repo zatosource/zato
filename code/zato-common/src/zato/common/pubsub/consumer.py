@@ -81,26 +81,30 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
 
     consumer = Consumer(broker_config, consumer_config.on_msg_callback)
 
-    logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
-
     try:
 
         # .. optionally, start a consumer in a new thread ..
-        _ = spawn(consumer.start)
+        if consumer_config.should_start:
 
-        # .. optionally, wait until it's actually connected ..
-        if consumer_config.wait_for_conection:
+            # .. log what we're doing ..
+            logger.info(f'{cid_prefix}Starting {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
 
-            # .. keep running ..
-            while not consumer.is_connected:
+            # .. do start the consumer in its own greenlet ..
+            _ = spawn(consumer.start)
 
-                # .. but not if the consumer has been told to stop ..
-                if not consumer.keep_running:
-                    break
+            # .. optionally, wait until it's actually connected ..
+            if consumer_config.wait_for_conection:
 
-                # .. sleep for a moment ..
-                logger.debug(f'Not connected -> {consumer_config}')
-                sleep(0.2)
+                # .. keep running ..
+                while not consumer.is_connected:
+
+                    # .. but not if the consumer has been told to stop ..
+                    if not consumer.keep_running:
+                        break
+
+                    # .. sleep for a moment ..
+                    logger.debug(f'Not connected -> {consumer_config}')
+                    sleep(0.2)
 
     except KeyboardInterrupt:
         consumer.stop()

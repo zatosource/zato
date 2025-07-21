@@ -208,6 +208,8 @@ class ConfigDict:
 
                 if hasattr(item, 'name'):
                     item_name = item.name
+                elif hasattr(item, 'topic_name'):
+                    item_name = item.topic_name
                 elif hasattr(item, 'sub_key'):
                     item_name = item.sub_key
                 else:
