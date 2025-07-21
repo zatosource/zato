@@ -76,7 +76,7 @@ class ConsumerBackend(Backend):
 
             if sub_key not in self.consumers:
 
-                logger.info(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
+                logger.debug(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
 
                 # .. create bindings for the topic ..
                 self.broker_client.create_bindings(cid, sub_key, CommonModuleCtx.Exchange_Name, sub_key, topic_name)
@@ -181,11 +181,9 @@ class ConsumerBackend(Backend):
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
         is_active:'bool' = msg['is_active']
-        topic_name_list:'strlist' = msg['topic_name_list']
 
-        print()
-        print(111, repr(msg))
-        print()
+        topic_name_list:'strlist' = msg['topic_name_list']
+        topic_name_list = sorted(topic_name_list)
 
         # Do we have such a consumer ..
         if consumer := self.consumers.get(sub_key):
@@ -199,50 +197,25 @@ class ConsumerBackend(Backend):
             # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
 
             if is_active:
-                print()
-                print(222)
-                print()
                 if consumer.is_stopped:
-                    print()
-                    print(333)
-                    print()
-                    consumer.keep_running = True
-                    print()
-                    print(444)
-                    print()
-                    # .. if its start method has been called it means it's already running in a new thread ..
-                    if consumer.start_called:
-                        print()
-                        print(555)
-                        print()
-                        logger.info(f'[{cid}] Starting consumer for sub_key: {sub_key} -> {msg} (1)')
-                        consumer.start()
 
-                    # .. otherwise, we start it in a new thread now ..
-                    else:
-                        print()
-                        print(666)
-                        print()
-                        logger.info(f'[{cid}] Starting consumer for sub_key: {sub_key} -> {msg} (2)')
-                        _ = spawn_greenlet(consumer.start)
+                    # .. tell it should keep running - this is used in its .start methodd ..
+                    consumer.keep_running = True
+
+                    # .. log what we're about to do ..
+                    logger.info(f'[{cid}] Starting consumer for sub_key: {sub_key} -> {topic_name_list}')
+
+                    # .. do run it ..
+                    _ = spawn_greenlet(consumer.start)
+
             else:
-                print()
-                print(777)
-                print()
                 if not consumer.is_stopped:
-                    print()
-                    print(888)
-                    print()
-                    logger.info(f'[{cid}] Stopping consumer for sub_key: {sub_key} -> {msg}')
+                    logger.info(f'[{cid}] Stopping consumer for sub_key: {sub_key} -> {topic_name_list}')
                     consumer.stop()
-                else:
-                    print()
-                    print(999)
-                    print()
 
         # .. no consumer = we cannot continue.
         else:
-            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {msg}')
+            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {topic_name_list}')
 
 # ################################################################################################################################
 
