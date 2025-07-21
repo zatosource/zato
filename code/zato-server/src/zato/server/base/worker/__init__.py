@@ -823,7 +823,7 @@ class WorkerStore(_WorkerStoreBase):
                 # .. if yes, check for how long we should sleep ..
                 sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
 
-                logger.info(f'Topic: {topic_name}, msg_id:TODO, sleeping for {sleep_time} (attempt={delivery_count}  )')
+                logger.info(f'Topic: {topic_name}, msg_id:TODO, sleeping for {sleep_time:.1f}s (attempt={delivery_count})')
 
                 # .. do sleep now ..
                 sleep(sleep_time)
