@@ -144,7 +144,7 @@ class BrokerClient:
             print()
 
             # Make sure we are connected
-            _ = client.connection.ensure_connection() # type: ignore
+            # _ = client.connection.ensure_connection() # type: ignore
 
             _ = client.publish(
                 msg,
