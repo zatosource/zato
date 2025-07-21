@@ -798,24 +798,37 @@ class WorkerStore(_WorkerStoreBase):
             # Extract our headers ..
             application_headers = msg.properties['application_headers']
 
-            # .. local aliases ..
+            # .. topic name is the same as the routing key for this message ..
             topic_name = msg.delivery_info['routing_key']
+
+            # .. we can extract our consumer from its consumer tag ..
+            subscriber = msg.delivery_info['consumer_tag']
+            subscriber = subscriber.split('/')
+            subscriber = subscriber[0]
+            subscriber = subscriber.split('.')
+            subscriber = subscriber[0]
+
+            # .. this will be increasing ..
             delivery_count = application_headers.get('x-delivery-count') or 1
 
-            # .. we need to know when the message was published ..
-            pub_time = application_headers.get('zato_pub_time')
+            # .. this may be missing in case someone sent a message manually ..
+            msg_id = application_headers.get('zato_msg_id') or 'zpsm.NotGiven'
 
-            # .. make sure we have a timezone available ..
-            if '+' not in pub_time:
-                pub_time += '+00:00'
+            # .. we need to know when the message was published ..
+            pub_time = application_headers.get('zato_pub_time') or ''
 
             # .. this may not exist if someone publishes a message directly to a queue ..
             if not pub_time:
                 pub_time = utcnow()
 
-            # .. otherwse, make use of it ..
             else:
-                pub_time = parse_datetime(pub_time)
+                # .. make sure we have a timezone available ..
+                if '+' not in pub_time:
+                    pub_time += '+00:00'
+
+                # .. otherwse, make use of it ..
+                else:
+                    pub_time = parse_datetime(pub_time)
 
             # .. OK, do we have any time left for retries ..
             if get_remaining_time(pub_time, _pubsub_max_retry_time):
@@ -823,7 +836,7 @@ class WorkerStore(_WorkerStoreBase):
                 # .. if yes, check for how long we should sleep ..
                 sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
 
-                logger.info(f'Topic: {topic_name}, msg_id:TODO, sleeping for {sleep_time:.1f}s (attempt={delivery_count})')
+                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> sleeping for {sleep_time:.1f}s (attempt={delivery_count})')
 
                 # .. do sleep now ..
                 sleep(sleep_time)
