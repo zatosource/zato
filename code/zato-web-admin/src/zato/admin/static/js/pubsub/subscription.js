@@ -628,8 +628,13 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     console.log('DEBUG edit: instance data=' + JSON.stringify(instance));
     var form = $('#edit-form');
 
+    let is_active = $.fn.zato.like_bool(instance.is_active)
+
+    // alert(is_active);
+    // alert(instance.is_active);
+
     form.find('#id_edit-sub_key').val(instance.sub_key);
-    form.find('#id_edit-is_active').prop('checked', $.fn.zato.like_bool(instance.is_active) == true);
+    form.find('#id_edit-is_active').prop('checked',  is_active);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
