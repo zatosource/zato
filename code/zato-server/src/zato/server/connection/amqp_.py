@@ -146,7 +146,7 @@ class Consumer:
         self.queue = [queue]
         self.on_amqp_message = on_amqp_message
         self.keep_running = True
-        self.is_stopped = False
+        self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
         self.timeout = 5
 
@@ -208,6 +208,7 @@ class Consumer:
 
         # Indicate that we have been called
         self.start_called = True
+        self.is_stopped = False
 
         try:
 

@@ -135,6 +135,16 @@ class BrokerClient:
         routing_key = kwargs.get('routing_key') or 'server'
 
         with self.producer.acquire() as client:
+
+            '''
+            print()
+            print('QQQ-1', client)
+            print('QQQ-2', msg)
+            print('QQQ-3', exchange)
+            print('QQQ-4', routing_key)
+            print()
+            '''
+
             client.publish(
                 msg,
                 exchange=exchange,
@@ -516,7 +526,7 @@ class BrokerClient:
     ) -> 'dictlist':
 
         # Get binding information
-        logger.info(f'[{cid}] Getting bindings for exchange={exchange_name}')
+        logger.debug(f'[{cid}] Getting bindings for exchange={exchange_name}')
 
         # We'll store binding information here
         binding_info = []
@@ -541,7 +551,7 @@ class BrokerClient:
             api_url,
             auth=HTTPBasicAuth(broker_config.username, broker_config.password),
             headers={'Content-Type': 'application/json'},
-            timeout=5
+            timeout=20
         )
 
         if not response.status_code == OK:
@@ -602,7 +612,7 @@ class BrokerClient:
         queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True, queue_arguments=queue_arguments)
 
         # Bind the queue to the exchange with the topic name as the routing key
-        logger.info(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
+        logger.debug(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         _ = queue.maybe_bind(conn)
         _ = queue.declare()
@@ -690,7 +700,7 @@ class BrokerClient:
 
         # If sets are identical, do nothing
         if current_keys_set == new_keys_set:
-            logger.info(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
+            logger.debug(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
             return
 
         logger.info(f'[{cid}] [{sub_key}] Current routing keys: {current_routing_keys}')
