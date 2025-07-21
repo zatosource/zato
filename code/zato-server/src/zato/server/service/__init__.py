@@ -915,8 +915,13 @@ class Service:
 
 # ################################################################################################################################
 
-    def translate(self, *args:'any_', **kwargs:'any_') -> 'str':
-        raise NotImplementedError('An initializer should override this method')
+    def publish(self, msg:'str', topic:'str') -> 'None':
+
+        self.broker_client.publish(
+            msg,
+            exchange='pubsubapi',
+            routing_key=topic,
+        )
 
 # ################################################################################################################################
 
@@ -1037,45 +1042,6 @@ class Service:
         """ Lets services compute an incoming request's hash to decide whether i is already kept in cache,
         if one is configured for this request's channel.
         """
-
-# ################################################################################################################################
-
-    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'strdict':
-
-        suppress_keys = suppress_keys or []
-        suppressed_msg = '(suppressed)'
-        container = 'response' if is_response else 'request'
-        payload_key = '{}.payload'.format(container)
-        user_msg = '{} '.format(user_msg) if user_msg else user_msg
-
-        msg = {}
-        if payload_key not in suppress_keys:
-            msg[payload_key] = getattr(self, container).payload
-        else:
-            msg[payload_key] = suppressed_msg
-
-        attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name',
-                 'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
-
-        if is_response:
-            attrs += ('handle_return_time', 'processing_time', 'processing_time_raw',
-                      'zato.http.response.headers')
-
-        for attr in attrs:
-            if attr not in suppress_keys:
-                msg[attr] = self.channel.type if attr == 'channel' else getattr(self, attr, '(None)')
-            else:
-                msg[attr] = suppressed_msg
-
-        self.logger.log(level, '{}{}'.format(user_msg, msg))
-
-        return msg
-
-    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'strdict':
-        return self._log_input_output(user_msg, level, suppress_keys, False)
-
-    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'strdict':
-        return self._log_input_output(user_msg, level, suppress_keys, True)
 
 # ################################################################################################################################
 
