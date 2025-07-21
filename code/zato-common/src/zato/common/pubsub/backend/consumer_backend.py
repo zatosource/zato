@@ -98,7 +98,7 @@ class ConsumerBackend(Backend):
                 self.consumers[sub_key] = consumer
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}`')
+        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}` (running={is_active})')
 
 # ################################################################################################################################
 
