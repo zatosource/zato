@@ -601,6 +601,23 @@ $.fn.zato.pubsub.subscription.create = function() {
     console.log('DEBUG create: Clearing multi-select div');
     $('#multi-select-div').html(Multi_Select_Empty_Message);
 
+    // Log security definitions in the create form select
+    var $secSelect = $('#id_sec_base_id');
+    if ($secSelect.length > 0) {
+        console.log('DEBUG create: security definition select found');
+        var secOptions = [];
+        $secSelect.find('option').each(function() {
+            var $option = $(this);
+            secOptions.push({
+                value: $option.val(),
+                text: $option.text()
+            });
+        });
+        console.log('DEBUG create: security definitions in select=' + JSON.stringify(secOptions));
+    } else {
+        console.log('DEBUG create: security definition select not found');
+    }
+
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
 }
 
