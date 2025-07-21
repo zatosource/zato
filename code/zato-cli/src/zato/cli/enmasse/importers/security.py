@@ -227,10 +227,6 @@ class SecurityImporter:
 
     def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
 
-        print()
-        print(111, security_def)
-        print()
-
         for key, value in security_def.items():
             if key in ('type', 'name', 'id'):
                 continue

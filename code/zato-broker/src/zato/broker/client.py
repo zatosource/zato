@@ -31,7 +31,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 
@@ -140,7 +140,8 @@ class BrokerClient:
                 exchange=exchange,
                 routing_key=routing_key,
                 content_type='application/json',
-                delivery_mode=PERSISTENT_DELIVERY_MODE
+                delivery_mode=PERSISTENT_DELIVERY_MODE,
+                headers={'zato_pub_time': utcnow().isoformat()}
             )
 
     invoke_async = publish
@@ -162,6 +163,7 @@ class BrokerClient:
             'routing_key': queue_name,  # Queue name as routing key
             'content_type': 'application/json',
             'delivery_mode': PERSISTENT_DELIVERY_MODE,
+            'headers': {'zato_pub_time': utcnow().isoformat()}
         }
 
         # Add correlation ID if provided

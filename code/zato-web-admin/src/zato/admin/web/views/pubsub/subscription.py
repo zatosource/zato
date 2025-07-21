@@ -66,10 +66,6 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        print()
-        print(111, return_data)
-        print()
-
         topic_name_list = return_data.get('topic_name_list', [])
         return_data['topic_name_list'] = dumps(topic_name_list)
 
