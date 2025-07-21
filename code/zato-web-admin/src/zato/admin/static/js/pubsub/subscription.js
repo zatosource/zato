@@ -699,10 +699,30 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
     var descriptor = 'Security: ' + instance.sec_name + '\nDelivery: ' + instance.delivery_type;
 
+    // Define callback to log security definitions after delete completes
+    var afterDeleteCallback = function() {
+        console.log('DEBUG delete_: delete completed, logging security definitions');
+        var $secSelect = $('#id_sec_base_id');
+        if ($secSelect.length > 0) {
+            console.log('DEBUG delete_: security definition select found');
+            var secOptions = [];
+            $secSelect.find('option').each(function() {
+                var $option = $(this);
+                secOptions.push({
+                    value: $option.val(),
+                    text: $option.text()
+                });
+            });
+            console.log('DEBUG delete_: security definitions in select after delete=' + JSON.stringify(secOptions));
+        } else {
+            console.log('DEBUG delete_: security definition select not found after delete');
+        }
+    };
+
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
         'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor,
-        true);
+        true, null, null, null, null, afterDeleteCallback);
 }
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, instance_id) {
