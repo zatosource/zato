@@ -94,7 +94,7 @@ _data_format_dict = DATA_FORMAT.DICT
 # ################################################################################################################################
 # ################################################################################################################################
 
-_pubsub_max_retry_time = PubSub.Max_Retry_Time
+_pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -809,7 +809,10 @@ class WorkerStore(_WorkerStoreBase):
             subscriber = subscriber[0]
 
             # .. this will be increasing ..
-            delivery_count = application_headers.get('x-delivery-count') or 1
+            delivery_count = application_headers.get('x-delivery-count') or 0
+
+            # .. but we count from 0 so we need to add 1 to get a human-friendly number ..
+            delivery_count += 1
 
             # .. this may be missing in case someone sent a message manually ..
             msg_id = application_headers.get('zato_msg_id') or 'zpsm.NotGiven'
@@ -831,12 +834,17 @@ class WorkerStore(_WorkerStoreBase):
                     pub_time = parse_datetime(pub_time)
 
             # .. OK, do we have any time left for retries ..
-            if get_remaining_time(pub_time, _pubsub_max_retry_time):
+            remaining_time = get_remaining_time(pub_time, _pubsub_max_retry_time)
 
-                # .. if yes, check for how long we should sleep ..
-                sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
+            # .. if yes, check for how long we should sleep ..
+            sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
 
-                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> sleeping for {sleep_time:.1f}s (attempt={delivery_count})')
+            has_time_left = remaining_time.total_seconds() > 0
+            has_sleep_time = sleep_time > 0
+
+            if has_time_left and has_sleep_time:
+
+                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> sleeping for {sleep_time:.1f}s (attempt={delivery_count} -> remaining={remaining_time})')
 
                 # .. do sleep now ..
                 sleep(sleep_time)
@@ -847,6 +855,7 @@ class WorkerStore(_WorkerStoreBase):
             # .. if we go here, it means we run out of time, so we need to accept that message ..
             # .. so it won't be redelivered anymore.
             else:
+                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> Max retries reached (attempts={delivery_count})')
                 msg.ack()
 
 # ################################################################################################################################
