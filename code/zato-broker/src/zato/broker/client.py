@@ -136,14 +136,12 @@ class BrokerClient:
 
         with self.producer.acquire() as client:
 
-            '''
             print()
             print('QQQ-1', client)
             print('QQQ-2', msg)
             print('QQQ-3', exchange)
             print('QQQ-4', routing_key)
             print()
-            '''
 
             # Make sure we are connected
             _ = client.connection.ensure_connection() # type: ignore
@@ -860,6 +858,22 @@ class BrokerClient:
             )
 
         logger.info(f'[{cid}] Successfully renamed topic `{old_topic_name}` to `{new_topic_name}`')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
+
+    msg = '123'
+
+    client = BrokerClient()
+    client.publish(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
