@@ -629,9 +629,11 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     var form = $('#edit-form');
 
     let is_active = $.fn.zato.like_bool(instance.is_active)
+    form.find('#id_edit-is_active').prop('checked',  "HERE");
 
     // alert(is_active);
     // alert(instance.is_active);
+
 
     form.find('#id_edit-sub_key').val(instance.sub_key);
     form.find('#id_edit-is_active').prop('checked',  is_active);
@@ -675,7 +677,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     // Store the instance_id for the dialog open callback
     $.fn.zato.pubsub.subscription._current_edit_instance_id = instance_id;
 
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id, false, false);
 }
 
 $.fn.zato.pubsub.subscription.stripHtml = function(html) {
