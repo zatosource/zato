@@ -17,10 +17,10 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_remaining_time(start_time:'datetime', max_hours:'int') -> 'float':
+def get_remaining_time(start_time:'datetime', max_seconds:'int') -> 'float':
     """ Calculate remaining time in seconds based on start time and maximum duration.
     """
-    max_duration = timedelta(hours=max_hours)
+    max_duration = timedelta(seconds=max_seconds)
     elapsed = utcnow() - start_time
     remaining = max_duration - elapsed
 
@@ -31,7 +31,7 @@ def get_remaining_time(start_time:'datetime', max_hours:'int') -> 'float':
 
 def get_sleep_time(
     start_time: 'datetime',
-    max_hours: 'int',
+    max_seconds: 'int',
     attempt_number: 'int',
     jitter_range: 'float' = 2.0
 ) -> 'float':
@@ -39,7 +39,7 @@ def get_sleep_time(
     """
 
     # Calculate remaining time
-    time_remaining_seconds = get_remaining_time(start_time, max_hours)
+    time_remaining_seconds = get_remaining_time(start_time, max_seconds)
 
     # No sleep before first attempt or if time is up
     if attempt_number <= 1 or time_remaining_seconds <= 0:
@@ -79,7 +79,7 @@ def simulate_sleep_times() -> 'None':
    dummy_start = utcnow()
 
    for attempt in key_attempts:
-       sleep_time = get_sleep_time(dummy_start, 48, attempt, jitter_range=0.0)  # No jitter for preview
+       sleep_time = get_sleep_time(dummy_start, 48*3600, attempt, jitter_range=0.0)  # No jitter for preview
 
        # Determine which range this falls into
        if attempt <= 1:
@@ -100,12 +100,12 @@ if __name__ == '__main__':
    simulate_sleep_times()
 
    print('\n' + '='*50)
-   print('SIMULATION: First 15 attempts over 48 hours')
+   print('SIMULATION: First 15 attempts over 48 seconds')
    print('='*50)
 
    # Start the timer
    start_time = utcnow()
-   max_hours = 48
+   max_seconds = 48*3600
    attempt = 0
 
    # Simulate first 15 API calls
@@ -113,7 +113,7 @@ if __name__ == '__main__':
        attempt += 1
 
        # Calculate remaining time
-       remaining_seconds = get_remaining_time(start_time, max_hours)
+       remaining_seconds = get_remaining_time(start_time, max_seconds)
        remaining_hours = remaining_seconds / 3600
 
        print(f'\nAttempt {attempt}:')
@@ -124,11 +124,11 @@ if __name__ == '__main__':
 
         # Don't sleep after the last demo attempt
        if idx < 14:
-           sleep_time = get_sleep_time(start_time, max_hours, attempt + 1)
+           sleep_time = get_sleep_time(start_time, max_seconds, attempt + 1)
 
            if sleep_time == 0:
                elapsed = utcnow() - start_time
-               if elapsed >= timedelta(hours=max_hours):
+               if elapsed >= timedelta(seconds=max_seconds):
                    print('  Time limit reached!')
                    break
                else:
@@ -139,9 +139,9 @@ if __name__ == '__main__':
 
    print(f'\nFinal stats after {attempt} attempts:')
 
-   remaining_seconds = get_remaining_time(start_time, max_hours)
+   remaining_seconds = get_remaining_time(start_time, max_seconds)
    remaining_hours = remaining_seconds / 3600
-   elapsed_hours = max_hours - remaining_hours
+   elapsed_hours = max_seconds / 3600 - remaining_hours
 
    print(f'  Elapsed: {elapsed_hours:.3f} hours')
    print(f'  Remaining: {remaining_hours:.1f} hours')

@@ -1137,6 +1137,9 @@ class PubSub:
     # About 3 years if we repeat delivery attempts once per second
     Max_Repeats = 100_000_000
 
+    # 90 days in seconds
+    Max_Retry_Time = 90 * 24 * 3600
+
     class API_Client:
         Publisher = 'publisher'
         Subscriber = 'subscriber'
