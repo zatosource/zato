@@ -161,7 +161,7 @@ class Consumer:
         self.keep_running = True
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 5
+        self.timeout = 1
 
         # This is set to True the first time self.start is called.
         self.start_called = False
@@ -186,14 +186,21 @@ class Consumer:
 
         while not consumer:
             if not self.keep_running:
+                # logger.warning('NOT KEEP RUNNING %s', self)
                 break
 
             try:
                 conn = self.config.conn_class(self.config.conn_url)
 
-                consumer = KombuConsumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
-                    no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
-                        self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
+                tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer'))
+
+                consumer = KombuConsumer(
+                    conn,
+                    queues=self.queue,
+                    callbacks=[self._on_amqp_message],
+                    no_ack=_no_ack[self.config.ack_mode],
+                    tag_prefix=tag_prefix
+                )
                 _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
             except Exception:
@@ -238,16 +245,25 @@ class Consumer:
             log_every = 20
 
             while self.keep_running:
+
+                # logger.warning('-' * 50)
+                # logger.warning('Keep Running')
+
                 try:
 
                     connection = cast_('KombuAMQPConnection', consumer.connection)
 
-                    # Do not assume the consumer still has the connection, it may have been already closed, we don't know.
+                    # Do not assume the consumer still has the connection, it may have been already closed - we just don't know.
                     # Unfortunately, the only way to check it is to invoke the method and catch AttributeError
-                    # if connection is already None.
+                    # if the connection is already None.
                     try:
+                        # logger.warning('Before Drain Events')
                         connection.drain_events(timeout=timeout)
+                        # logger.warning('After Drain Events')
+                    except TimeoutError as e:
+                        logger.warning('Ignoring a timeout error')
                     except AttributeError:
+                        logger.warning('After Attribute Error')
                         consumer = self._get_consumer()
 
                 # Special-case AMQP-level connection errors and recreate the connection if any is caught.
@@ -259,9 +275,30 @@ class Consumer:
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
                 # as an opportunity to perform the heartbeat.
-                except conn_errors:
+                except conn_errors as e:
                     try:
+
+                        logger.warning('Conn error: %s', type(e))
+
+                        if connection:
+                            _ = connection.close()
+                        consumer = self._get_consumer()
+
+                        '''
+                        logger.warning('Before HB Check %s', repr(e))
                         connection.heartbeat_check()
+
+                        if consumer:
+                            logger.warning('Consumer 1')
+                            #_ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
+                            connection.drain_events(timeout=timeout)
+                            #logger.warning('Consumer 2')
+                            #consumer.consume()
+                            #logger.warning('Consumer 3')
+
+                        logger.warning('After HB Check 1 %s', repr(e))
+                        '''
+
                     except Exception:
                         hb_errors_so_far += 1
                         if hb_errors_so_far % log_every == 0:
@@ -282,12 +319,16 @@ class Consumer:
                         # But, we do it only if we are still told to keep running.
                         if self.keep_running:
                             if not self.is_connected:
+                                logger.warning('Before HB Reset')
                                 consumer = self._get_consumer()
+                                logger.warning('After HB Reset')
                                 self.is_connected = True
 
             if connection:
-                logger.debug('Closing connection for `%s`', consumer)
+                logger.warning('Closing connection for `%s`', consumer)
                 connection.close()
+            else:
+                logger.warning('NO CONNECTION for `%s`', self)
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
