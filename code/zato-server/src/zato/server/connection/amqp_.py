@@ -203,11 +203,11 @@ class Consumer:
                 )
                 _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
-            except Exception:
+            except Exception as e:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far), e:`%s`',
-                    self.name, err_conn_attempts, noun, format_exc())
+                    self.name, err_conn_attempts, noun, e)
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
                 # to the server at all, which will likely mean that it is down,
