@@ -20,7 +20,7 @@ from bunch import bunchify
 from gevent import sleep, spawn
 
 # Kombu
-from kombu.connection import Connection as KombuAMQPConnection
+from kombu.connection import Connection as KombuConnection
 from kombu.entity import PERSISTENT_DELIVERY_MODE, Exchange, Queue
 
 # requests
@@ -47,6 +47,16 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BrokerConnection(KombuConnection):
+
+    def ensure_connection(self, *args, **kwargs):
+        kwargs['timeout'] = None
+        self._ensure_connection(*args, **kwargs)
+        return self
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,7 +124,7 @@ class BrokerClient:
             'consumer_tag_prefix': 'zato-broker',
             'ack_mode': AMQP.ACK_MODE.ACK.id,
             'prefetch_count': 1,
-            'conn_class': KombuAMQPConnection,
+            'conn_class': BrokerConnection,
         }))
 
         self.consumer_config = consumer_config
@@ -500,7 +510,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def get_connection(self) -> 'KombuAMQPConnection':
+    def get_connection(self) -> 'BrokerConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
         """
         # Get broker configuration
@@ -511,7 +521,7 @@ class BrokerClient:
         port = int(port)
 
         # Create and return a new connection
-        conn = KombuAMQPConnection(
+        conn = BrokerConnection(
             hostname=host,
             port=port,
             userid=broker_config.username,
@@ -519,6 +529,9 @@ class BrokerClient:
             virtual_host=broker_config.vhost,
             transport=broker_config.protocol,
         )
+
+        # Make sure we are connected
+        conn.ensure_connection()
 
         return conn
 
@@ -591,7 +604,7 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'KombuAMQPConnection | None'=None,
+        conn: 'BrokerConnection | None'=None,
         queue_arguments: 'strdictnone'=None,
     ) -> 'None':
 
@@ -644,7 +657,7 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         routing_key: 'str',
-        conn: 'KombuAMQPConnection | None'=None,
+        conn: 'BrokerConnection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -692,7 +705,7 @@ class BrokerClient:
         exchange_name: 'str',
         queue_name: 'str',
         new_routing_key_list: 'strlist',
-        conn: 'KombuAMQPConnection | None'=None,
+        conn: 'BrokerConnection | None'=None,
     ) -> 'None':
 
         # Get broker connection from input or build a new one
@@ -738,7 +751,7 @@ class BrokerClient:
         cid: 'str',
         topic_name: 'str',
         exchange_name: 'str' = 'pubsubapi',
-        conn: 'KombuAMQPConnection | None' = None,
+        conn: 'BrokerConnection | None' = None,
     ) -> 'None':
         """ Deletes a topic by removing all bindings with the matching routing key.
         """
@@ -814,7 +827,7 @@ class BrokerClient:
         old_topic_name: 'str',
         new_topic_name: 'str',
         exchange_name: 'str',
-        conn: 'KombuAMQPConnection | None' = None,
+        conn: 'BrokerConnection | None' = None,
     ) -> 'None':
         """ Renames a topic by removing all old bindings and creating new ones with the new name.
         """
