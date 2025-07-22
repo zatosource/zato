@@ -103,12 +103,18 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
                         break
 
                     # .. sleep for a moment ..
-                    logger.debug(f'Not connected -> {consumer_config}')
+                    # logger.warning(f'Not connected -> {consumer_config}')
                     sleep(0.2)
+
+                # logger.warning(f'Connected -> {consumer_config}')
 
     except KeyboardInterrupt:
         consumer.stop()
         logger.info(f'{cid_prefix}Stopped {visibility} consumer for queue={consumer_config.queue_name} -> {conn_url_no_password}')
+
+    except Exception as e:
+        logger.warning(f'{cid_prefix} CONSUMER {e}')
+
     finally:
         logger.debug(f'Connected -> {consumer_config}')
         return consumer
@@ -133,7 +139,7 @@ def start_internal_consumer(
     config.prefetch_count = prefetch_count
     config.consumer_tag_prefix = consumer_tag_prefix
     config.on_msg_callback = on_msg_callback
-    config.wait_for_conection = False
+    config.wait_for_conection = True
     config.should_start = True
 
     consumer = start_consumer(config)

@@ -128,6 +128,7 @@ class BrokerClient:
     def publish(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         """ Publishes a message to the AMQP broker.
         """
+
         if not isinstance(msg, str):
             msg = dumps(msg)
 
@@ -136,12 +137,14 @@ class BrokerClient:
 
         with self.producer.acquire() as client:
 
+            '''
             print()
             print('QQQ-1', client)
             print('QQQ-2', msg)
             print('QQQ-3', exchange)
             print('QQQ-4', routing_key)
             print()
+            '''
 
             # Make sure we are connected
             # _ = client.connection.ensure_connection() # type: ignore
@@ -738,6 +741,7 @@ class BrokerClient:
     ) -> 'None':
         """ Deletes a topic by removing all bindings with the matching routing key.
         """
+
         # Get broker connection from input or build a new one
         conn = conn or self.get_connection()
 
