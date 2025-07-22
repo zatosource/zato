@@ -155,6 +155,7 @@ class BrokerClient:
                 routing_key=routing_key,
                 content_type='application/json',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
+                retry=True,
                 headers={
                     'zato_msg_id': new_msg_id(),
                     'zato_pub_time': utcnow().isoformat()

@@ -765,7 +765,7 @@ class WorkerStore(_WorkerStoreBase):
         # Local objects
         service_msg = {}
 
-        zz
+        # zz
 
         # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
         sub_key = config.queue
@@ -791,6 +791,7 @@ class WorkerStore(_WorkerStoreBase):
 
         try:
             self._handle_pubsub_public_message(body, msg, name, config)
+            msg.ack()
         except Exception as e:
 
             # OK, we have an exception so we will potentially retry the delivery ..
