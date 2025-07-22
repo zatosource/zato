@@ -19,7 +19,7 @@ from amqp.exceptions import ConnectionError as AMQPConnectionError
 from gevent import sleep, spawn
 
 # Kombu
-from kombu import Connection, Consumer as _Consumer, pools, Queue
+from kombu import Connection, Consumer as KombuConsumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Zato
@@ -125,20 +125,7 @@ class Producer:
                 connection:'PyAMQPConnection', # This is actually _PyAMQPConnection but we cannot use this type here
                 limit:'int'
             ) -> 'KombuProducerPool':
-
-                print()
-                print(111, type(connection))
-                print(225, type(limit))
-                print()
-
-                conn_result = connection.connect()
-
-                print()
-                print(333, conn_result)
-                print()
-
-                # result = pools.ProducerPool(connections[connection], limit=limit)
-
+                result = pools.ProducerPool(connections[connection], limit=limit)
                 return result
 
         self.pool = _Producers(limit=self.config.pool_size)
@@ -204,7 +191,7 @@ class Consumer:
             try:
                 conn = self.config.conn_class(self.config.conn_url)
 
-                consumer = _Consumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
+                consumer = KombuConsumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
                     no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
                 _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
