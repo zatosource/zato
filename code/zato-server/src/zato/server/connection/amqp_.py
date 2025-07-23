@@ -41,7 +41,7 @@ if 0:
 import logging
 
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=log_format)
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 version = get_version()
 logger = getLogger(__name__)
@@ -172,7 +172,6 @@ class Consumer:
 
     @keep_running.setter
     def keep_running(self, value:'bool') -> 'None':
-        logger.warn('RRR-1 -> %s -> %s', self._keep_running, value)
         self._keep_running = value
 
 # ################################################################################################################################
@@ -199,7 +198,6 @@ class Consumer:
 
         while not consumer:
             if not self.keep_running:
-                logger.warning('NOT KEEP RUNNING %s', self)
                 break
 
             try:
@@ -267,16 +265,12 @@ class Consumer:
 
                     # .. keep consuming the events from our queue ..
                     while self.keep_running:
-                        logger.warning('CCC-4-A-1 KEEP %s %s', self.keep_running, self)
                         try:
-                            connection.drain_events(timeout=3)
+                            connection.drain_events(timeout=2)
                         except TimeoutError:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
-                            logger.warning('CCC-4-A-2 KEEP %s %s', self.keep_running, self)
-
-                    # .. if we're here, it means we were told to stop running
-                    logger.warning('CCC-4 KEEP RUNNING %s %s', self.keep_running, self)
+                            pass
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
                 except Exception as e:
@@ -356,12 +350,8 @@ class Consumer:
         """
         self.keep_running = False
 
-        logger.warn('CCC-1 %s %s', self.keep_running, self)
-
         # Wait until actually stopped.
         if not self.is_stopped:
-
-            logger.warn('CCC-2 %s', self.is_stopped)
 
             # self.timeout is multiplied by 2 because it's used twice in the main loop in self.start
             # plus a bit of additional time is added.
@@ -370,7 +360,6 @@ class Consumer:
             until = now + timedelta(seconds=delta)
 
             while now < until:
-                logger.warn('CCC-3 %s', self.is_stopped)
                 sleep(0.1) # type: ignore
                 now = utcnow()
                 if self.is_stopped:
