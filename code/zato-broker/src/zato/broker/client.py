@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import timedelta
 from http.client import OK
 from json import dumps, loads
 from logging import getLogger
@@ -148,17 +149,8 @@ class BrokerClient:
 
         with self.producer.acquire() as client:
 
-            '''
-            print()
-            print('QQQ-1', client)
-            print('QQQ-2', msg)
-            print('QQQ-3', exchange)
-            print('QQQ-4', routing_key)
-            print()
-            '''
-
             # Make sure we are connected
-            # _ = client.connection.ensure_connection() # type: ignore
+            _ = client.connection.ensure_connection() # type: ignore
 
             _ = client.publish(
                 msg,
@@ -426,6 +418,9 @@ class BrokerClient:
         """ Synchronously invokes a service via the broker and waits for the response.
         """
 
+        # For later use
+        sleep_time = 0.05
+
         # Create response holder class without nonlocal keyword
         class ResponseHolder:
             def __init__(self):
@@ -473,10 +468,8 @@ class BrokerClient:
         logger.info(f'Req 🠊 {cid} - `{service}` with `{request}`{reply_queue_info}`')
 
         # Wait for the response
-        wait_count = 0
-        sleep_time = 0.01
-        while not response.ready and wait_count < timeout:
-            wait_count += sleep_time
+        end_time = utcnow() + timedelta(seconds=timeout)
+        while not response.ready and utcnow() < end_time:
             sleep(sleep_time)
 
         # Handle timeout
@@ -551,7 +544,7 @@ class BrokerClient:
         )
 
         # Make sure we are connected
-        _ = conn.ensure_connection()
+        _ = conn.ensure_connection(timeout=1)
 
         return conn
 
