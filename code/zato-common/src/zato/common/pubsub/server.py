@@ -176,7 +176,7 @@ class PubSubRESTServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.publish_to_service(
+        response = self.backend.invoke_service_with_pubsub(
             service,
             request,
             timeout=10

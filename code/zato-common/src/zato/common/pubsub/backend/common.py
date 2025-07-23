@@ -173,11 +173,11 @@ class Backend:
 
 # ################################################################################################################################
 
-    def publish_to_service(
+    def invoke_service_with_pubsub(
         self,
         service:'str',
         request:'anydictnone'=None,
-        timeout:'int'=2,
+        timeout:'int'=20,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
         response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
