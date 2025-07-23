@@ -12,9 +12,6 @@ from logging import getLogger
 from socket import error as socket_error
 from traceback import format_exc
 
-# amqp
-from amqp.exceptions import ConnectionError as AMQPConnectionError
-
 # gevent
 from gevent import sleep, spawn
 
