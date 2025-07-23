@@ -155,13 +155,27 @@ class Consumer:
         self.name = self.config.name
         self.queue = [queue]
         self.on_amqp_message = on_amqp_message
-        self.keep_running = True
+        self._keep_running = True
+
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
         self.timeout = 10
 
         # This is set to True the first time self.start is called.
         self.start_called = False
+
+# ################################################################################################################################
+
+    @property
+    def keep_running(self) -> 'bool':
+        return self._keep_running
+
+    @keep_running.setter
+    def keep_running(self, value:'bool') -> 'None':
+        logger.warn('RRR-1 -> %s -> %s', self._keep_running, value)
+        self._keep_running = value
+
+# ################################################################################################################################
 
     def _on_amqp_message(self, body, msg):
         try:
@@ -183,7 +197,7 @@ class Consumer:
 
         while not consumer:
             if not self.keep_running:
-                # logger.warning('NOT KEEP RUNNING %s', self)
+                logger.warning('NOT KEEP RUNNING %s', self)
                 break
 
             try:
@@ -253,7 +267,7 @@ class Consumer:
                     while self.keep_running:
                         logger.warning('CCC-4-A-1 KEEP %s %s', self.keep_running, self)
                         try:
-                            connection.drain_events(timeout=5)
+                            connection.drain_events(timeout=3)
                         except TimeoutError:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
