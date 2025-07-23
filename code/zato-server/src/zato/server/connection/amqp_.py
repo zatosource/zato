@@ -161,7 +161,7 @@ class Consumer:
         self.keep_running = True
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 1
+        self.timeout = 90
 
         # This is set to True the first time self.start is called.
         self.start_called = False
@@ -237,7 +237,11 @@ class Consumer:
             self.is_connected = True
 
             # Local aliases.
-            timeout = 10 # self.timeout
+            timeout = self.timeout
+
+            print()
+            print(111, timeout)
+            print()
 
             while self.keep_running:
 
@@ -258,7 +262,7 @@ class Consumer:
                     try:
 
                         if connection:
-                            logger.warning('Closing a lost connect to %s (1)', connection)
+                            logger.warning('Closing a lost connection to %s (1)', connection)
                             _ = connection.close()
 
                         logger.warning('Reconnecting to %s (1)', self.config)
