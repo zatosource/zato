@@ -190,7 +190,6 @@ class Ping(AdminService):
     name = 'demo.ping'
 
     def handle(self):
-        conn = self.out.amqp.publish('123', 'AAA', 'demo')
         self.response.payload = '{"pong":"zato"}'
 
 # ################################################################################################################################
