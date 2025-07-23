@@ -237,40 +237,19 @@ class Consumer:
             self.is_connected = True
 
             # Local aliases.
-            timeout = self.timeout
-
-            # Since heartbeats run frequently (self.timeout may be a fraction of a second), we don't want to log each
-            # and every error. Instead we log errors each log_every times.
-            hb_errors_so_far = 0
-            log_every = 20
+            timeout = 10 # self.timeout
 
             while self.keep_running:
-
-                # logger.warning('-' * 50)
-                # logger.warning('Keep Running')
 
                 try:
 
                     connection = cast_('KombuAMQPConnection', consumer.connection)
 
                     # Do not assume the consumer still has the connection, it may have been already closed - we just don't know.
-                    # Unfortunately, the only way to check it is to invoke the method and catch AttributeError
-                    # if the connection is already None.
+                    # The only way to check it is to invoke the method and catch AttributeError if the connection is already None.
                     try:
-                        # logger.warning('Before Drain Events')
                         connection.drain_events(timeout=timeout)
-                        # logger.warning('After Drain Events')
-                    except TimeoutError as e:
-                        logger.warning('Ignoring a timeout error')
                     except AttributeError:
-                        logger.warning('After Attribute Error')
-                        consumer = self._get_consumer()
-
-                # Special-case AMQP-level connection errors and recreate the connection if any is caught.
-                except AMQPConnectionError:
-                    logger.warning('Caught AMQP connection error in mainloop e:`%s`', format_exc())
-                    if connection:
-                        _ = connection.close()
                         consumer = self._get_consumer()
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
@@ -278,31 +257,14 @@ class Consumer:
                 except conn_errors as e:
                     try:
 
-                        logger.warning('Conn error: %s', type(e))
-
                         if connection:
+                            logger.warning('Closing a lost connect to %s (1)', connection)
                             _ = connection.close()
+
+                        logger.warning('Reconnecting to %s (1)', self.config)
                         consumer = self._get_consumer()
 
-                        '''
-                        logger.warning('Before HB Check %s', repr(e))
-                        connection.heartbeat_check()
-
-                        if consumer:
-                            logger.warning('Consumer 1')
-                            #_ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
-                            connection.drain_events(timeout=timeout)
-                            #logger.warning('Consumer 2')
-                            #consumer.consume()
-                            #logger.warning('Consumer 3')
-
-                        logger.warning('After HB Check 1 %s', repr(e))
-                        '''
-
                     except Exception:
-                        hb_errors_so_far += 1
-                        if hb_errors_so_far % log_every == 0:
-                            logger.warning('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc())
 
                         # Ok, we've lost the connection, set the flag to False and sleep for some time then.
                         if not connection:
@@ -311,8 +273,6 @@ class Consumer:
                         if self.keep_running:
                             _gevent_sleep(timeout) # type: ignore
                     else:
-                        # Reset heartbeat errors counter since we have apparently succeeded.
-                        hb_errors_so_far = 0
 
                         # If there was not any exception but we did not have a previous connection it means that a previously
                         # established connection was broken so we need to recreate it.
@@ -325,10 +285,8 @@ class Consumer:
                                 self.is_connected = True
 
             if connection:
-                logger.warning('Closing connection for `%s`', consumer)
+                logger.info('Closing connection for `%s`', consumer)
                 connection.close()
-            else:
-                logger.warning('NO CONNECTION for `%s`', self)
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
