@@ -58,6 +58,12 @@ _one_year_in_seconds = 31_536_000 # 365 days * 24 days * 3600 seconds in an hour
 # ################################################################################################################################
 # ################################################################################################################################
 
+class InvocationTimeout(Exception):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BrokerConnection(KombuConnection):
 
     def ensure_connection(self, *args, **kwargs):
@@ -276,16 +282,13 @@ class BrokerClient:
         Explicitly deletes the queue after stopping the consumer.
         """
         try:
-            logger.warning('AAA-1 %s', queue_name)
             # First, get the consumer (don't remove it yet to avoid race conditions)
             with self.lock:
-                logger.warning('AAA-2 %s', queue_name)
                 consumer = self.reply_consumers.get(queue_name)
 
             # If we have a consumer, properly disconnect it before deleting the queue
             if consumer:
                 try:
-                    logger.warning('AAA-3 %s -> %s', queue_name, consumer)
                     # Stop the consumer's main loop first
                     consumer.stop()
                     logger.warning(f'Stopped consumer for {queue_name}')
@@ -293,16 +296,13 @@ class BrokerClient:
                     logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
 
                 # Wait a brief moment to ensure consumer loop has exited
-                logger.warning('AAA-4 %s', queue_name)
                 sleep(0.1) # type: ignore
 
                 # Now remove it from the dictionary to avoid further references
                 with self.lock:
-                    logger.warning('AAA-5 %s', queue_name)
                     _ = self.reply_consumers.pop(queue_name, None)
 
             # Delete the queue
-            logger.warning('AAA-6 %s', queue_name)
             self.delete_queue(queue_name)
 
             logger.warning(f'Completed cleanup for queue: {queue_name}')
@@ -502,7 +502,7 @@ class BrokerClient:
                         _ = self.correlation_to_queue_map.pop(correlation_id, None)
 
             exc_msg = f'Timeout waiting for response from service `{service}` after {timeout} second{"" if timeout == 1 else "s"}'
-            raise Exception(exc_msg)
+            raise InvocationTimeout(exc_msg)
 
         if not needs_root_elem:
             data = response.data
@@ -518,9 +518,15 @@ class BrokerClient:
 
     def invoke_sync(self, *args:'any_', **kwargs:'any_') -> 'any_':
 
+        # We'll keep pinging until we have this set
+        response = None
+
         # First, ping the server to confirm it's up and running ..
-        while True:
-            _ = self._invoke_sync('demo.ping', timeout=1)
+        while not response:
+            try:
+                response = self._invoke_sync('demo.ping', timeout=5)
+            except InvocationTimeout as e:
+                logger.info('Timeout: %s', e)
 
         # .. now, we can invoke the actual service.
         return self._invoke_sync(*args, **kwargs)
@@ -721,8 +727,6 @@ class BrokerClient:
         """ Explicitly deletes a queue from the broker.
         """
         try:
-
-            logger.warning('BBB-1 %s', queue_name)
 
             conn = self.get_connection()
             channel = conn.channel()
