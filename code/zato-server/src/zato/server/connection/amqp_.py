@@ -270,7 +270,7 @@ class Consumer:
 
                             # .. if yes, first log what'we doing ..
                             logger.info(
-                                'Closing and reconnecting a lost connection for queue=%s (%s) to %s',
+                                'Closing and reconnecting a lost connection for queue=%s -> `%s` -> %s',
                                 self.config.queue,
                                 e,
                                 connection.as_uri(),
@@ -285,7 +285,7 @@ class Consumer:
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
                             logger.info(
-                                'Reconnecting to queue=%s (%s) -> %s',
+                                'Reconnecting to queue=%s -> `%s` -> %s',
                                 self.config.queue,
                                 format_exc(),
                                 connection.as_uri(),
