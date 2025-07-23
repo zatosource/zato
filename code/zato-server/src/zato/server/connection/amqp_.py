@@ -189,6 +189,8 @@ class Consumer:
         """ Creates a new connection and consumer to an AMQP broker.
         """
 
+        logger.info('CREATING A NEW CONSUMER')
+
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
         # because we run in our own greenlet.
