@@ -229,6 +229,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # As above, but as a regular expression pattern
         self.http_methods_allowed_re = ''
 
+        # A list of all the pub/sub hook services that will be invoked (alphabetically)
+        # for any pub/sub message before it's delivered.
+        self.pubsub_hooks:'strlist' = []
+
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
