@@ -55,7 +55,7 @@ class BrokerConnection(KombuConnection):
 
     def ensure_connection(self, *args, **kwargs):
         kwargs['timeout'] = None
-        self._ensure_connection(*args, **kwargs)
+        _ = self._ensure_connection(*args, **kwargs)
         return self
 
 # ################################################################################################################################
@@ -531,7 +531,7 @@ class BrokerClient:
         )
 
         # Make sure we are connected
-        conn.ensure_connection()
+        _ = conn.ensure_connection()
 
         return conn
 
