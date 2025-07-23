@@ -129,6 +129,7 @@ class PubSubRESTServer:
 
         # Build our broker client
         self.broker_client = BrokerClient()
+        self.broker_client.ping_connection()
 
         # Initialize the backend
         self.backend = RESTBackend(self, self.broker_client)

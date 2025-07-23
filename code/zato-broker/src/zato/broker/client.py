@@ -40,6 +40,7 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
+    from zato.common.pubsub.common import BrokerConfig
     from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strdictnone, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
@@ -510,7 +511,26 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def get_connection(self) -> 'BrokerConnection':
+    def ping_connection(self) -> 'None':
+
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # .. extract its URL ..
+        broker_url = broker_config.to_url()
+
+        # .. log what we're doing ..
+        logger.warning('Broker connection pinging: %s', broker_url)
+
+        # .. build a new connection and ensure it exists ..
+        _ = self.get_connection(broker_config, True)
+
+        # .. if we're here, it means the connection is fine ..
+        logger.warning('Broker connection pinged OK: %s', broker_url)
+
+# ################################################################################################################################
+
+    def get_connection(self, broker_config:'BrokerConfig | None'=None, needs_ensure:'bool'=True) -> 'BrokerConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
         """
         # Get broker configuration
