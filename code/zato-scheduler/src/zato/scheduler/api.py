@@ -74,7 +74,7 @@ class SchedulerAPI:
     def serve_forever(self):
         try:
             try:
-                spawn_greenlet(self.scheduler.run)
+                _ = spawn_greenlet(self.scheduler.run)
             except Exception:
                 logger.warning(format_exc())
 
@@ -87,7 +87,7 @@ class SchedulerAPI:
 # ################################################################################################################################
 
     def invoke_service(self, name:'str', request:'strdictnone'=None, timeout:'int'=600) -> 'strdict':
-        """ Invokes a service synchronously using the broker client's invoke_sync method.
+        """ Invokes a service synchronously.
         """
         # Add cluster_id to the request
         request = request or {}
@@ -171,7 +171,7 @@ class SchedulerAPI:
         interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
-            is_active=is_active, service=service, extra=extra, old_name=old_name)
+            is_active=is_active, service=service, extra=extra, old_name=old_name) # type: ignore
 
         func = self.scheduler.create if is_create else self.scheduler.edit
         func(job, **kwargs)
@@ -218,7 +218,7 @@ class SchedulerAPI:
         max_repeats = int(max_repeats) if max_repeats is not None else max_repeats
 
         self.create_edit_job(job_data.id, job_data.name, job_data.get('old_name'), start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-            job_data.service, is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra,
+            job_data.service, is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, # type: ignore
             is_active=job_data.is_active, **kwargs)
 
     def create_interval_based(self, job_data, **kwargs):
