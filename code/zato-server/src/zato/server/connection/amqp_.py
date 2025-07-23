@@ -161,7 +161,7 @@ class Consumer:
         self.keep_running = True
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 90
+        self.timeout = 10
 
         # This is set to True the first time self.start is called.
         self.start_called = False
@@ -226,56 +226,88 @@ class Consumer:
         """ Runs the AMQP consumer's mainloop.
         """
 
-        # Indicate that we have been called
+        # Local aliases.
+        timeout = self.timeout
+
+        # Indicate that we have been called ..
         self.start_called = True
         self.is_stopped = False
 
         try:
 
+            # For type hints
             connection = cast_('KombuAMQPConnection', None)
+
+            # .. try to connection initially ..
             consumer = self._get_consumer()
+
+            # .. if we're here, it means we have connected ..
             self.is_connected = True
 
-            # Local aliases.
-            timeout = self.timeout
-
-            print()
-            print(111, timeout)
-            print()
-
+            # .. keep running until told not to ..
             while self.keep_running:
 
                 try:
 
-                    connection = cast_('KombuAMQPConnection', consumer.connection)
+                    # .. we have a consumer so we can get its connection too ..
+                    connection = cast_('KombuAMQPConnection', consumer.connection) # type: ignore
 
-                    # Do not assume the consumer still has the connection, it may have been already closed - we just don't know.
-                    # The only way to check it is to invoke the method and catch AttributeError if the connection is already None.
+                    # .. keep consuming the events from our queue ..
+                    while True:
+                        try:
+                            connection.drain_events(timeout=timeout)
+                        except TimeoutError:
+                            # .. this is as expected and we can ignore it, because we just haven't received anything
+                            # .. from the underlying TCP socket within timeout seconds ..
+                            pass
+
+                # .. we are here on exception other than timeouts, in which case we need to reconnect ..
+                except Exception as e:
                     try:
-                        connection.drain_events(timeout=timeout)
-                    except AttributeError:
-                        consumer = self._get_consumer()
 
-                # Regular network-level errors - assume the AMQP connection is still fine and treat it
-                # as an opportunity to perform the heartbeat.
-                except conn_errors as e:
-                    try:
+                        # .. this flag is to ensure we don't log too much ..
+                        had_log = False
 
+                        # .. do we still have a connection object ..
                         if connection:
-                            logger.warning('Closing a lost connection to %s (1)', connection)
+
+                            # .. if yes, first log what'we doing ..
+                            logger.info(
+                                'Closing and reconnecting a lost connection for queue=%s (%s) to %s',
+                                self.config.queue,
+                                e,
+                                connection.as_uri(),
+                            )
+
+                            # .. indicate we've already logged a message about ..
+                            had_log = True
+
+                            # .. now close it ..
                             _ = connection.close()
 
-                        logger.warning('Reconnecting to %s (1)', self.config)
+                        # .. log what we're about to do but only if we haven't logged anything earlier ..
+                        if not had_log:
+                            logger.info(
+                                'Reconnecting to queue=%s (%s) -> %s',
+                                self.config.queue,
+                                format_exc(),
+                                connection.as_uri(),
+                            )
+
+                        # .. and connect again ..
                         consumer = self._get_consumer()
 
                     except Exception:
 
-                        # Ok, we've lost the connection, set the flag to False and sleep for some time then.
+                        # .. OK, we've lost the connection, set the flag to False and sleep for some time then ..
                         if not connection:
                             self.is_connected = False
 
+                        # .. do sleep for a moment before reconnecting (remember, we are under a while self.keep_running loop)
                         if self.keep_running:
                             _gevent_sleep(timeout) # type: ignore
+
+                    # .. we go here if we did reconnect ..
                     else:
 
                         # If there was not any exception but we did not have a previous connection it means that a previously
@@ -283,13 +315,16 @@ class Consumer:
                         # But, we do it only if we are still told to keep running.
                         if self.keep_running:
                             if not self.is_connected:
-                                logger.warning('Before HB Reset')
                                 consumer = self._get_consumer()
-                                logger.warning('After HB Reset')
                                 self.is_connected = True
 
+            # .. we go here when the main while self.keep_running loop finishes ..
             if connection:
+
+                # .. log what we're about to do ..
                 logger.info('Closing connection for `%s`', consumer)
+
+                # .. and do close it ..
                 connection.close()
 
             self.is_stopped = True # Set to True if we break out of the main loop.
