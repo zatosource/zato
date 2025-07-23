@@ -250,13 +250,17 @@ class Consumer:
                     connection = cast_('KombuAMQPConnection', consumer.connection) # type: ignore
 
                     # .. keep consuming the events from our queue ..
-                    while True:
+                    while self.keep_running:
+                        logger.warning('CCC-4-A-1 KEEP %s %s', self.keep_running, self)
                         try:
-                            connection.drain_events(timeout=timeout)
+                            connection.drain_events(timeout=5)
                         except TimeoutError:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
-                            pass
+                            logger.warning('CCC-4-A-2 KEEP %s %s', self.keep_running, self)
+
+                    # .. if we're here, it means we were told to stop running
+                    logger.warning('CCC-4 KEEP RUNNING %s %s', self.keep_running, self)
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
                 except Exception as e:
@@ -336,8 +340,12 @@ class Consumer:
         """
         self.keep_running = False
 
+        logger.warn('CCC-1 %s %s', self.keep_running, self)
+
         # Wait until actually stopped.
         if not self.is_stopped:
+
+            logger.warn('CCC-2 %s', self.is_stopped)
 
             # self.timeout is multiplied by 2 because it's used twice in the main loop in self.start
             # plus a bit of additional time is added.
@@ -346,6 +354,7 @@ class Consumer:
             until = now + timedelta(seconds=delta)
 
             while now < until:
+                logger.warn('CCC-3 %s', self.is_stopped)
                 sleep(0.1) # type: ignore
                 now = utcnow()
                 if self.is_stopped:
