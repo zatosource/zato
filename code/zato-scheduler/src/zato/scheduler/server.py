@@ -49,7 +49,7 @@ class SchedulerServerConfig(AuxServerConfig):
         super().__init__()
 
         self.startup_jobs = []
-        self.on_job_executed_cb = cast_('callable', None)
+        self.on_job_executed_cb = cast_('callable_', None)
         self.job_log_level = 'debug'
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
@@ -82,6 +82,7 @@ class SchedulerServer(AuxServer):
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
         self.scheduler_api.broker_client = BrokerClient(queue_name='scheduler', context=self.scheduler_api)
+        self.scheduler_api.broker_client.ping_connection()
         self.scheduler_api.broker_client.start_consumer()
 
 # ################################################################################################################################

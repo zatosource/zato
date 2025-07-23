@@ -874,6 +874,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Set up the broker client
         self.broker_client = BrokerClient(server=self)
+        self.broker_client.ping_connection()
 
         # Delete the queue to remove any message we don't want to read since they were published when we were not running,
         # and then create it all again so we have a fresh start.

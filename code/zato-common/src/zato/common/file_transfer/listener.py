@@ -238,6 +238,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         # Initialize broker client for publishing events
         self.broker_client = BrokerClient()
+        self.broker_client.ping_connection()
         super().__init__()
 
 # ################################################################################################################################
