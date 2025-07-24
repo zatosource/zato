@@ -20,7 +20,7 @@ from kombu import Connection, Consumer as KombuConsumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Zato
-from zato.common.api import AMQP, CHANNEL, SECRET_SHADOW
+from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
 from zato.common.version import get_version
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.typing_ import cast_
@@ -159,7 +159,7 @@ class Consumer:
 
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 5
+        self.timeout = PubSub.Timeout.Consumer
 
         # This is set to True the first time self.start is called.
         self.start_called = False
