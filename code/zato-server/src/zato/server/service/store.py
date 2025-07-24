@@ -48,7 +48,7 @@ from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
-from zato.server.service import SchedulerFacade, Service
+from zato.server.service import PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -1493,7 +1493,17 @@ class ServiceStore:
         name = class_.get_name()
         impl_name = class_.get_impl_name()
 
+        # Assign all the required attributes to this class
         self.set_up_class_attributes(class_, self)
+
+        # Handle pub/sub hooks ..
+        if issubclass(class_, PubSubHook):
+
+            # .. append the hook's name itself ..
+            self.server.pubsub_hooks.append(name)
+
+            # .. and keep the list sorted.
+            self.server.pubsub_hooks.sort()
 
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.
