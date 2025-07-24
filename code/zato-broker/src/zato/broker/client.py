@@ -423,7 +423,7 @@ class BrokerClient:
         self,
         service:'str',
         request:'anydictnone'=None,
-        timeout:'int'=10,
+        timeout:'int'=PubSub.Timeout.Invoke_Sync,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
@@ -615,7 +615,8 @@ class BrokerClient:
         )
 
         if not response.status_code == OK:
-            logger.warning(f'[{cid}] Failed to get bindings: API returned: {response.text}')
+            msg = f'[{cid}] Failed to get bindings: API returned: {response.text}'
+            raise Exception(msg)
 
         else:
 
