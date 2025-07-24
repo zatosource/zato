@@ -96,6 +96,10 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = connections_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
                                     help='Path to YAML configuration file with users, topics, and subscriptions')
 
+    # Enmasse command
+    enmasse_parser = subparsers.add_parser('enmasse', help='Run enmasse import with demo configuration')
+    _ = enmasse_parser.add_argument('--has_debug', action='store_true', help='Enable debug mode')
+
     return parser
 
 # ################################################################################################################################
@@ -342,6 +346,10 @@ def main() -> 'int':
     elif args.command == 'list-connections':
         result = list_connections(args)
         return 0 if result.is_ok else 1
+
+    elif args.command == 'enmasse':
+        from zato.common.pubsub.cli_enmasse import run_enmasse_command
+        return run_enmasse_command(args)
 
     else:
         parser.print_help()
