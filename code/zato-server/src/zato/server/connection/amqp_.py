@@ -188,7 +188,7 @@ class Consumer:
         """ Creates a new connection and consumer to an AMQP broker.
         """
 
-        logger.info('CREATING A NEW CONSUMER')
+        logger.debug('Creating a new consumer -> %s', self.config.conn_url)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
@@ -333,7 +333,7 @@ class Consumer:
             if connection:
 
                 # .. log what we're about to do ..
-                logger.info('Closing connection for `%s`', consumer)
+                logger.debug('Closing connection for `%s`', consumer)
 
                 # .. and do close it ..
                 connection.close()
