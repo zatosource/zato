@@ -423,7 +423,7 @@ class BrokerClient:
         self,
         service:'str',
         request:'anydictnone'=None,
-        timeout:'int'=2,
+        timeout:'int'=10,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
@@ -524,7 +524,7 @@ class BrokerClient:
         # First, ping the server to confirm it's up and running ..
         while not response:
             try:
-                response = self._invoke_sync('demo.ping', timeout=5)
+                response = self._invoke_sync('demo.ping')
             except InvocationTimeout as e:
                 logger.info('Timeout: %s', e)
 

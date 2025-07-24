@@ -176,11 +176,7 @@ class PubSubRESTServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.invoke_service_with_pubsub(
-            service,
-            request,
-            timeout=10
-        )
+        response = self.backend.invoke_service_with_pubsub(service, request)
 
         # .. log what we've received ..
         len_response = len(response)
