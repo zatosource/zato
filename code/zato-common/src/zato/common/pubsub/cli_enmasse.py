@@ -63,6 +63,14 @@ pubsub_permission:
       - demo.*
     sub:
       - demo.*
+
+pubsub_subscription:
+  - security: demo
+    delivery_type: pull
+    topic_list:
+      - demo.1
+      - demo.2
+      - demo.3
 """
 
 # ################################################################################################################################
