@@ -159,7 +159,7 @@ class Consumer:
 
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = 10
+        self.timeout = 5
 
         # This is set to True the first time self.start is called.
         self.start_called = False
@@ -266,7 +266,7 @@ class Consumer:
                     # .. keep consuming the events from our queue ..
                     while self.keep_running:
                         try:
-                            connection.drain_events(timeout=2)
+                            connection.drain_events(timeout=self.timeout)
                         except TimeoutError:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
