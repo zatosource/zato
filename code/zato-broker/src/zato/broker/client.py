@@ -291,7 +291,7 @@ class BrokerClient:
                 try:
                     # Stop the consumer's main loop first
                     consumer.stop()
-                    logger.warning(f'Stopped consumer for {queue_name}')
+                    logger.debug(f'Stopped consumer for {queue_name}')
                 except Exception as e:
                     logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
 
@@ -305,7 +305,7 @@ class BrokerClient:
             # Delete the queue
             self.delete_queue(queue_name)
 
-            logger.warning(f'Completed cleanup for queue: {queue_name}')
+            logger.debug(f'Completed cleanup for queue: {queue_name}')
         except Exception as e:
             logger.warning(f'Error during cleanup for {queue_name}: {str(e)}')
 
@@ -489,7 +489,7 @@ class BrokerClient:
             # If timed out and we know the queue name, clean it up
             if response.reply_queue_name:
 
-                logger.warning(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
+                logger.debug(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
                 self._cleanup_reply_consumer(response.reply_queue_name)
 
                 # Also clean up the callback registration

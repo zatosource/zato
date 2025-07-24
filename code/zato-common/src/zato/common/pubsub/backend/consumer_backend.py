@@ -112,7 +112,7 @@ class ConsumerBackend(Backend):
             _ = self.consumers.pop(sub_key)
 
             # .. now, log success.
-            logger.info(f'[{cid}] Stopped consumer for `{sub_key}`')
+            logger.debug(f'[{cid}] Stopped consumer for `{sub_key}`')
 
 # ################################################################################################################################
 
