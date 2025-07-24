@@ -1183,9 +1183,6 @@ $.fn.zato.to_bool = function(item) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.like_bool = function(item) {
-    if (_.isBoolean(item)) {
-        return item;
-    }
     var s = new String(item).toLowerCase();
     if (s == "true" || s == "on") {
         return true;
@@ -1193,7 +1190,7 @@ $.fn.zato.like_bool = function(item) {
     if (s == "false") {
         return false;
     }
-    return item;
+    return _.isBoolean(item);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
