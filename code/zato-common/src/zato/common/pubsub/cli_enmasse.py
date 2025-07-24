@@ -126,20 +126,20 @@ def run_enmasse_command(args:'argparse.Namespace') -> 'int':
     try:
         if args.has_debug:
             logging.getLogger().setLevel(logging.DEBUG)
-
+            
         logger.info('Starting enmasse import with demo configuration')
-
+        
         # Create CLI instance and run enmasse
         cli = EnmasseCLI()
         success = cli.run_enmasse_import(ENMASSE_YAML_CONFIG)
-
+        
         if success:
             logger.info('Enmasse import completed successfully')
             return 0
         else:
             logger.error('Enmasse import failed')
             return 1
-
+            
     except Exception as e:
         logger.error(f'Error in enmasse command: {e}')
         logger.error(format_exc())
