@@ -401,7 +401,7 @@ class Subscribe(AdminService):
     """ Subscribes security definition to one or more topics.
     """
     class SimpleIO(AdminSIO):
-        input_required = AsIs('topic_name_list'), 'username'
+        input_required = 'username', AsIs('topic_name_list')
         input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = AsIs('topic_name_list')
 

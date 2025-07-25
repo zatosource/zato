@@ -310,8 +310,14 @@ class Backend:
         # Log what we're doing ..
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
+        # .. prepare the request ..
+        request = {
+            'username': username,
+            'topic_name_list': [topic_name],
+        }
+
         # .. invoke our service ..
-        self.invoke_service_with_pubsub('zato.pubsub.subscription')
+        self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request)
 
         # .. log what happened ..
         logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
