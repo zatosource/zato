@@ -331,13 +331,14 @@ class Edit(AdminService):
                 topic_name_list = []
                 for topic in topics:
                     topic_name_list.append(topic.name)
+
                 topic_name_list.sort()
 
                 # Notify broker about the update
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
-                pubsub_msg.is_active = input.is_active
+                pubsub_msg.is_active = sec_def.is_active
                 pubsub_msg.sec_name = sec_def.name
                 pubsub_msg.username = sec_def.username
                 pubsub_msg.topic_name_list = topic_name_list
@@ -398,7 +399,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _BaseSubUnsub(AdminService):
+class _BaseModifyTopicList(AdminService):
     """ Base class for Subscribe/Unsubscribe operations.
     """
     class SimpleIO(AdminSIO):
@@ -487,6 +488,10 @@ class _BaseSubUnsub(AdminService):
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
                 request.delivery_type = current_sub.delivery_type
+                request.is_active = current_sub.is_active
+                request.push_service_name = current_sub.push_service_name
+                request.push_type = current_sub.push_type
+                request.rest_push_endpoint_id = current_sub.rest_push_endpoint_id
 
                 # Update the subscription
                 _ = self.invoke('zato.pubsub.subscription.edit', request)
@@ -501,7 +506,7 @@ class _BaseSubUnsub(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Subscribe(_BaseSubUnsub):
+class Subscribe(_BaseModifyTopicList):
     """ Subscribes security definition to one or more topics.
     """
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
@@ -519,7 +524,7 @@ class Subscribe(_BaseSubUnsub):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Unsubscribe(_BaseSubUnsub):
+class Unsubscribe(_BaseModifyTopicList):
     """ Unsubscribes security definition from one or more topics.
     """
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
