@@ -397,6 +397,128 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Subscribe(AdminService):
+    """ Subscribes security definition to one or more topics.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_subscription_subscribe_request'
+        response_elem = 'zato_pubsub_subscription_subscribe_response'
+        input_required = 'cluster_id', AsIs('topic_name_list'), 'username'
+        input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = AsIs('topic_name_list')
+
+    def handle(self):
+        input = self.request.input
+        cluster_id = self.server.cluster_id
+
+        # Get security definition by username
+        with closing(self.odb.session()) as session:
+            try:
+                # Find security definition by username
+                sec_def = session.query(SecurityBase).\
+                    filter(SecurityBase.cluster_id==cluster_id).\
+                    filter(SecurityBase.username==input.username).\
+                    first()
+
+                if not sec_def:
+                    raise Exception(f"Security definition not found for username '{input.username}'")
+
+                sec_base_id = sec_def.id
+
+                # Find any existing subscriptions using GetList service
+                get_list_request = {
+                    'cluster_id': cluster_id,
+                    'sec_base_id': sec_base_id
+                }
+
+                get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request)
+
+                # Extract subscriptions for this security definition
+                current_subs = []
+                for item in get_list_response:
+                    if item.sec_base_id == sec_base_id:
+                        current_subs.append(item)
+
+                # Find topics and check permissions
+                all_topic_names = set()
+                new_topic_names = []
+
+                for topic_name in input.topic_name_list:
+                    # Check if the topic exists
+                    topic = session.query(PubSubTopic).\
+                        filter(PubSubTopic.cluster_id==cluster_id).\
+                        filter(PubSubTopic.name==topic_name).\
+                        first()
+
+                    if not topic:
+                        raise Exception(f"Topic '{topic_name}' not found")
+
+                    # Check if the security definition has permission to subscribe to this topic
+                    pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
+                    if not pattern_matched:
+                        raise Exception(f"Security definition '{input.username}' does not have permission to subscribe to topic '{topic_name}'")
+
+                    new_topic_names.append(topic_name)
+
+                # If we have existing subscriptions, collect the current topic names
+                existing_topic_names = []
+                sub_key = None
+                sub = None
+                if current_subs:
+                    sub = current_subs[0]  # Use the first subscription's sub_key
+                    sub_key = sub.sub_key
+
+                    # Topics are already available in the response
+                    if hasattr(sub, 'topic_name_list') and sub.topic_name_list:
+                        existing_topic_names = sub.topic_name_list
+                    else:
+                        existing_topic_names = []
+
+                # Combine existing and new topics, removing duplicates
+                all_topic_names = set(existing_topic_names) | set(new_topic_names)
+                all_topic_names = sorted(list(all_topic_names))
+
+                # Verify that a subscription exists
+                if not current_subs:
+                    raise Exception(f"No existing subscription found for username '{input.username}'")
+
+                # Update existing subscription with the combined topics
+                request = Bunch()
+                request.sub_key = sub_key
+                request.cluster_id = cluster_id
+                request.topic_name_list = all_topic_names
+                request.sec_base_id = sec_base_id
+                request.is_active = input.get('is_active', sub.is_active)
+                request.delivery_type = input.get('delivery_type', sub.delivery_type)
+
+                if input.get('push_type'):
+                    request.push_type = input.push_type
+                elif sub.push_type:
+                    request.push_type = sub.push_type
+
+                if input.get('rest_push_endpoint_id'):
+                    request.rest_push_endpoint_id = input.rest_push_endpoint_id
+                elif sub.rest_push_endpoint_id:
+                    request.rest_push_endpoint_id = sub.rest_push_endpoint_id
+
+                if input.get('push_service_name'):
+                    request.push_service_name = input.push_service_name
+                elif sub.push_service_name:
+                    request.push_service_name = sub.push_service_name
+
+                # Update the subscription
+                response = self.invoke('zato.pubsub.subscription.edit', request)
+
+                # Set response with sorted topic list
+                self.response.payload.topic_name_list = sorted(all_topic_names)
+
+            except Exception:
+                session.rollback()
+                raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HandleDelivery(Service):
 
     def build_business_message(self, input:'Bunch') -> 'PubSubMessage':
