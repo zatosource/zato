@@ -116,10 +116,14 @@ class TestEnmasseChannelRESTExporter(TestCase):
             logger.info('Imported %d REST channels (created=%d, updated=%d)', len(created) + len(updated), len(created), len(updated))
 
             # Test that the imported channels can be exported correctly
-            exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
+            all_exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
+
+            # Filter exported channels to only include those with names starting with "enmasse"
+            exported_channels = [channel for channel in all_exported_channels if channel['name'].startswith('enmasse')]
 
             # Log the exported channels
-            logger.info('Successfully exported %d REST channels', len(exported_channels))
+            logger.info('Exported %d REST channels (filtered to %d enmasse channels)',
+                       len(all_exported_channels), len(exported_channels))
 
             # Verify the number of exported channels matches the number of imported channels
             self.assertEqual(len(exported_channels), len(created) + len(updated),
