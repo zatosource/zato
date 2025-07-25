@@ -142,6 +142,105 @@ class PubSubRESTServer(BaseServer):
             return username
 
 # ################################################################################################################################
+
+    def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
+        """ Parse JSON from request.
+        """
+        # Initialize raw_data to avoid unbound variable in exception handler
+        raw_data = None
+
+        try:
+            # Get raw data from environ['wsgi.input']
+            raw_data = request.get_data()
+
+            if raw_data:
+                # Decode and parse
+                text_data = raw_data.decode('utf-8')
+                data = loads(text_data)
+                return data
+            else:
+                logger.warning('[{cid}] No request data provided')
+                return {}
+
+        except Exception as e:
+            logger.error(f'[{cid}] Error parsing JSON: {e}, raw data: {raw_data}')
+            raise
+
+# ################################################################################################################################
+
+    def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
+        """ Return a JSON response.
+        """
+        response_data = asdict(data)
+
+        if not response_data.get('details'):
+            del response_data['details']
+
+        json_data = dumps(response_data).encode('utf-8')
+
+        headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
+        start_response(data.status, headers)
+
+        return [json_data]
+
+# ################################################################################################################################
+
+    def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
+        """
+        # We always need our own new Correlation ID ..
+        cid = new_cid()
+
+        # .. log what we're doing ..
+        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
+
+        # Bind the URL map to the current request
+        urls = self.url_map.bind_to_environ(environ)
+
+        try:
+            # Match the path to a registered endpoint
+            endpoint, args = urls.match()
+
+            # Dynamic dispatch - call the method named by the endpoint
+            if hasattr(self, endpoint):
+
+                # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
+                handler = getattr(self, endpoint)
+                handler_response = handler(cid, environ, start_response, **args)
+                response_bytes = self._json_response(start_response, handler_response)
+                return response_bytes
+            else:
+                logger.warning(f'No handler for endpoint: {endpoint}')
+                response = NotImplementedResponse()
+                response.cid = cid
+                return self._json_response(start_response, response)
+
+        except UnauthorizedException:
+            response = UnauthorizedResponse()
+            response.cid = cid
+            return self._json_response(start_response, response)
+
+        except BadRequestException as e:
+            logger.warning(f'[{cid}] {e.message}')
+            response = BadRequestResponse()
+            response.cid = cid
+            return self._json_response(start_response, response)
+
+        except MethodNotAllowed as e:
+            logger.warning(f'[{cid}] Method not allowed')
+            response = BadRequestResponse()
+            response.cid = cid
+            response.details = 'Method not allowed'
+            return self._json_response(start_response, response)
+
+        except NotFound:
+            logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
+            response = BadRequestResponse()
+            response.cid = cid
+            response.details = 'URL not found'
+            return self._json_response(start_response, response)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 #
@@ -199,98 +298,6 @@ class PubSubRESTServer(BaseServer):
         response.cid = cid
 
         # .. and return it to the caller.
-        return response
-
-# ################################################################################################################################
-
-    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
-        """ Handle subscription request.
-        """
-        # Log what we're doing ..
-        logger.info(f'[{cid}] Processing subscribe request')
-
-        # .. make sure the client is allowed to carry out this action ..
-        username = self._ensure_authenticated(cid, environ)
-
-        # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username)
-
-        response = APIResponse()
-        response.is_ok = result.is_ok
-        response.cid = cid
-
-        return response
-
-# ################################################################################################################################
-
-    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
-        """ Handle unsubscribe request.
-        """
-        # Log what we're doing ..
-        logger.info(f'[{cid}] Processing unsubscribe request')
-
-        # .. make sure the client is allowed to carry out this action ..
-        username = self._ensure_authenticated(cid, environ)
-
-        # Unsubscribe from topic using backend
-        result = self.backend.unregister_subscription(cid, topic_name, username)
-
-        response = APIResponse()
-        response.is_ok = result.is_ok
-        response.cid = cid
-
-        return response
-
-# ################################################################################################################################
-
-    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
-        """ Health check endpoint.
-        """
-        response = HealthCheckResponse()
-        response.is_ok = True
-        response.cid = new_cid()
-
-        return response
-
-# ################################################################################################################################
-
-    def on_admin_diagnostics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
-        """ Admin diagnostics endpoint - dumps topics, users, subscriptions, etc. to logs in YAML format.
-        """
-        # Ensure the request is authenticated
-        _ = self._ensure_authenticated(cid, environ)
-
-        # Collect data for diagnostics
-        diagnostics = {
-            'topics': {},
-            'users': self.users,
-            'subscriptions': {}
-        }
-
-        # Extract topic information
-        for topic_name, topic in self.backend.topics.items():
-            diagnostics['topics'][topic_name] = {
-                'name': topic.name
-            }
-
-        # Extract subscription information
-        for topic_name, subs_by_username in self.backend.subs_by_topic.items():
-            diagnostics['subscriptions'][topic_name] = {}
-            for username, subscription in subs_by_username.items():
-                diagnostics['subscriptions'][topic_name][username] = {
-                    'sub_key': subscription.sub_key
-                }
-
-        # Dump to logs in YAML format
-        yaml_output = yaml_dump(diagnostics, default_flow_style=False)
-        logger.info(f'[{cid}] Admin diagnostics: \n{yaml_output}')
-
-        # Return a simple success response (not exposing the data)
-        response = APIResponse()
-        response.is_ok = True
-        response.cid = cid
-        response.details = 'Diagnostics logged successfully'
-
         return response
 
 # ################################################################################################################################
@@ -405,102 +412,95 @@ class PubSubRESTServer(BaseServer):
 
 # ################################################################################################################################
 
-    def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
-        """ Parse JSON from request.
+    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
+        """ Handle subscription request.
         """
-        # Initialize raw_data to avoid unbound variable in exception handler
-        raw_data = None
+        # Log what we're doing ..
+        logger.info(f'[{cid}] Processing subscribe request')
 
-        try:
-            # Get raw data from environ['wsgi.input']
-            raw_data = request.get_data()
+        # .. make sure the client is allowed to carry out this action ..
+        username = self._ensure_authenticated(cid, environ)
 
-            if raw_data:
-                # Decode and parse
-                text_data = raw_data.decode('utf-8')
-                data = loads(text_data)
-                return data
-            else:
-                logger.warning('[{cid}] No request data provided')
-                return {}
+        # Subscribe to topic using backend
+        result = self.backend.register_subscription(cid, topic_name, username)
 
-        except Exception as e:
-            logger.error(f'[{cid}] Error parsing JSON: {e}, raw data: {raw_data}')
-            raise
+        response = APIResponse()
+        response.is_ok = result.is_ok
+        response.cid = cid
+
+        return response
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
-        """ Return a JSON response.
+    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
+        """ Handle unsubscribe request.
         """
-        response_data = asdict(data)
+        # Log what we're doing ..
+        logger.info(f'[{cid}] Processing unsubscribe request')
 
-        if not response_data.get('details'):
-            del response_data['details']
+        # .. make sure the client is allowed to carry out this action ..
+        username = self._ensure_authenticated(cid, environ)
 
-        json_data = dumps(response_data).encode('utf-8')
+        # Unsubscribe from topic using backend
+        result = self.backend.unregister_subscription(cid, topic_name, username)
 
-        headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
-        start_response(data.status, headers)
+        response = APIResponse()
+        response.is_ok = result.is_ok
+        response.cid = cid
 
-        return [json_data]
+        return response
 
 # ################################################################################################################################
 
-    def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
-        """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
+    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
+        """ Health check endpoint.
         """
-        # We always need our own new Correlation ID ..
-        cid = new_cid()
+        response = HealthCheckResponse()
+        response.is_ok = True
+        response.cid = new_cid()
 
-        # .. log what we're doing ..
-        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
+        return response
 
-        # Bind the URL map to the current request
-        urls = self.url_map.bind_to_environ(environ)
+# ################################################################################################################################
 
-        try:
-            # Match the path to a registered endpoint
-            endpoint, args = urls.match()
+    def on_admin_diagnostics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
+        """ Admin diagnostics endpoint - dumps topics, users, subscriptions, etc. to logs in YAML format.
+        """
+        # Ensure the request is authenticated
+        _ = self._ensure_authenticated(cid, environ)
 
-            # Dynamic dispatch - call the method named by the endpoint
-            if hasattr(self, endpoint):
+        # Collect data for diagnostics
+        diagnostics = {
+            'topics': {},
+            'users': self.users,
+            'subscriptions': {}
+        }
 
-                # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
-                handler = getattr(self, endpoint)
-                handler_response = handler(cid, environ, start_response, **args)
-                response_bytes = self._json_response(start_response, handler_response)
-                return response_bytes
-            else:
-                logger.warning(f'No handler for endpoint: {endpoint}')
-                response = NotImplementedResponse()
-                response.cid = cid
-                return self._json_response(start_response, response)
+        # Extract topic information
+        for topic_name, topic in self.backend.topics.items():
+            diagnostics['topics'][topic_name] = {
+                'name': topic.name
+            }
 
-        except UnauthorizedException:
-            response = UnauthorizedResponse()
-            response.cid = cid
-            return self._json_response(start_response, response)
+        # Extract subscription information
+        for topic_name, subs_by_username in self.backend.subs_by_topic.items():
+            diagnostics['subscriptions'][topic_name] = {}
+            for username, subscription in subs_by_username.items():
+                diagnostics['subscriptions'][topic_name][username] = {
+                    'sub_key': subscription.sub_key
+                }
 
-        except BadRequestException as e:
-            logger.warning(f'[{cid}] {e.message}')
-            response = BadRequestResponse()
-            response.cid = cid
-            return self._json_response(start_response, response)
+        # Dump to logs in YAML format
+        yaml_output = yaml_dump(diagnostics, default_flow_style=False)
+        logger.info(f'[{cid}] Admin diagnostics: \n{yaml_output}')
 
-        except MethodNotAllowed as e:
-            logger.warning(f'[{cid}] Method not allowed')
-            response = BadRequestResponse()
-            response.cid = cid
-            response.details = 'Method not allowed'
-            return self._json_response(start_response, response)
+        # Return a simple success response (not exposing the data)
+        response = APIResponse()
+        response.is_ok = True
+        response.cid = cid
+        response.details = 'Diagnostics logged successfully'
 
-        except NotFound:
-            logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
-            response = BadRequestResponse()
-            response.cid = cid
-            response.details = 'URL not found'
-            return self._json_response(start_response, response)
+        return response
 
 # ################################################################################################################################
 
@@ -584,6 +584,8 @@ class PubSubRESTServer(BaseServer):
             'consumers_per_queue': consumers_per_queue,
             'backend_sub_keys': sub_keys
         }
+
+# ################################################################################################################################
 
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
