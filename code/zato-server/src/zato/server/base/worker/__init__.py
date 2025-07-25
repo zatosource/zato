@@ -765,8 +765,6 @@ class WorkerStore(_WorkerStoreBase):
         # Local objects
         service_msg = {}
 
-        # zz
-
         # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
         sub_key = config.queue
 
@@ -1479,7 +1477,9 @@ class WorkerStore(_WorkerStoreBase):
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
         except Exception:
-            return {'error': format_exc()}
+            exc = format_exc()
+            logger.warning(exc)
+            return {'error': exc}
         else:
             return response
 

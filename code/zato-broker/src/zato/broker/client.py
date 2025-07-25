@@ -544,13 +544,13 @@ class BrokerClient:
         broker_url = broker_config.to_url()
 
         # .. log what we're doing ..
-        logger.warning('Broker connection pinging: %s', broker_url)
+        logger.info('Broker connection ping: %s', broker_url)
 
         # .. build a new connection and ensure it exists ..
         _ = self.get_connection(broker_config, True)
 
         # .. if we're here, it means the connection is fine ..
-        logger.warning('Broker connection pinged OK: %s', broker_url)
+        logger.info('Broker connection pinged OK: %s', broker_url)
 
 # ################################################################################################################################
 
