@@ -63,6 +63,8 @@ logger = getLogger(__name__)
 
 _default_priority = PubSub.Message.Default_Priority
 _default_expiration = PubSub.Message.Default_Expiration
+_max_messages_limit = 1000
+_max_len_limit = 5_000_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -280,6 +282,105 @@ class PubSubRESTServer(BaseServer):
         response.details = 'Diagnostics logged successfully'
 
         return response
+
+# ################################################################################################################################
+
+    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
+        """ Get messages from the user's queue.
+        """
+        # Authenticate the user
+        username = self._ensure_authenticated(cid, environ)
+
+        # Parse request data
+        request = Request(environ)
+        data = self._parse_json(cid, request)
+
+        # Extract and validate parameters
+        max_len = data.get('max_len', _max_len_limit)
+        max_messages = data.get('max_messages', 1)
+
+        # Enforce limits
+        max_len = min(max_len, _max_len_limit)
+        max_messages = min(max_messages, _max_messages_limit)
+
+        # Find the user's subscription to get their sub_key (queue name)
+        sub_key = None
+        for subs_by_sec_name in self.subs_by_topic.values():
+            if username in subs_by_sec_name:
+                subscription = subs_by_sec_name[username]
+                sub_key = subscription.sub_key
+                break
+
+        if not sub_key:
+            logger.warning(f'[{cid}] No subscription found for user `{username}`')
+            response = BadRequestResponse()
+            response.cid = cid
+            response.details = 'No subscription found for user'
+            return response
+
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # Build RabbitMQ Management API URL
+        api_url = f'{broker_config.protocol}://{broker_config.address}:15672/api/queues/{broker_config.vhost}/{sub_key}/get'
+
+        # Prepare request payload for RabbitMQ
+        rabbitmq_payload = {
+            'count': max_messages,
+            'ackmode': 'ack_requeue_false',  # Acknowledge and delete messages
+            'encoding': 'auto',
+            'truncate': max_len
+        }
+
+        try:
+            # Make request to RabbitMQ Management API
+            auth = HTTPBasicAuth(broker_config.username, broker_config.password)
+            rabbitmq_response = requests.post(api_url, json=rabbitmq_payload, auth=auth)
+
+            if rabbitmq_response.status_code != OK:
+                logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
+                response = BadRequestResponse()
+                response.cid = cid
+                response.details = 'Failed to retrieve messages from queue'
+                return response
+
+            # Parse RabbitMQ response
+            messages_data = rabbitmq_response.json()
+
+            # Transform messages to our API format
+            messages = []
+            for msg in messages_data:
+                # Extract message properties
+                properties = msg.get('properties', {})
+                payload_data = msg.get('payload', '')
+
+                # Build our message format
+                message = {
+                    'msg_id': properties.get('message_id', ''),
+                    'data': payload_data,
+                    'priority': properties.get('priority', _default_priority),
+                    'expiration': properties.get('expiration', _default_expiration),
+                    'delivery_count': msg.get('redelivered', False) and 1 or 0,
+                    'size': len(payload_data.encode('utf-8')) if isinstance(payload_data, str) else len(payload_data)
+                }
+                messages.append(message)
+
+            logger.info(f'[{cid}] Retrieved {len(messages)} messages for user `{username}` from queue `{sub_key}`')
+
+            # Build success response
+            response = APIResponse()
+            response.is_ok = True
+            response.cid = cid
+            response.data = {'messages': messages, 'count': len(messages)}
+
+            return response
+
+        except Exception as e:
+            logger.error(f'[{cid}] Error retrieving messages: {e}')
+            response = BadRequestResponse()
+            response.cid = cid
+            response.details = 'Internal error retrieving messages'
+            return response
 
 # ################################################################################################################################
 
