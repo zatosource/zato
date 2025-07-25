@@ -159,7 +159,7 @@ class Consumer:
 
         self.is_stopped = True
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
-        self.timeout = PubSub.Timeout.Consumer
+        self.timeout = config.get('consumer_drain_events_timeout') or PubSub.Timeout.Consumer
 
         # This is set to True the first time self.start is called.
         self.start_called = False

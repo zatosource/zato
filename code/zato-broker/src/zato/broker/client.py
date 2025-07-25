@@ -85,6 +85,7 @@ class BrokerClient:
         self.reply_consumers = {}  # Maps reply queue names to consumers
         self.reply_consumer_started = False
         self.consumer = None
+        self.consumer_drain_events_timeout = kwargs.get('consumer_drain_events_timeout')
 
         # This is the object whose on_broker_msg_ methods will be invoked for any messages taken off a queue
         self.context = kwargs.get('context') or self
@@ -138,6 +139,7 @@ class BrokerClient:
             'ack_mode': AMQP.ACK_MODE.ACK.id,
             'prefetch_count': 1,
             'conn_class': BrokerConnection,
+            'consumer_drain_events_timeout': self.consumer_drain_events_timeout,
         }))
 
         self.consumer_config = consumer_config
@@ -183,7 +185,7 @@ class BrokerClient:
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
         """ Publishes a message directly to a specific queue.
         """
-        logger.info(f'Publishing to queue `{queue_name}`, correlation_id:`{correlation_id}`')
+        logger.info(f'Pub to queue -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg:`{msg}`')
 
         if not isinstance(msg, str):
             msg = dumps(msg)
@@ -282,30 +284,29 @@ class BrokerClient:
         Explicitly deletes the queue after stopping the consumer.
         """
         try:
-            # First, get the consumer (don't remove it yet to avoid race conditions)
             with self.lock:
+                # First, get the consumer (don't remove it yet to avoid race conditions)
                 consumer = self.reply_consumers.get(queue_name)
 
-            # If we have a consumer, properly disconnect it before deleting the queue
-            if consumer:
-                try:
-                    # Stop the consumer's main loop first
-                    consumer.stop()
-                    logger.debug(f'Stopped consumer for {queue_name}')
-                except Exception as e:
-                    logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
+                # If we have a consumer, properly disconnect it before deleting the queue
+                if consumer:
+                    try:
+                        # Stop the consumer's main loop first
+                        consumer.stop()
+                        logger.debug(f'Stopped consumer for {queue_name}')
+                    except Exception as e:
+                        logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
 
-                # Wait a brief moment to ensure consumer loop has exited
-                sleep(0.1) # type: ignore
+                    # Wait a brief moment to ensure consumer loop has exited
+                    sleep(0.1) # type: ignore
 
-                # Now remove it from the dictionary to avoid further references
-                with self.lock:
+                    # Now remove it from the dictionary to avoid further references
                     _ = self.reply_consumers.pop(queue_name, None)
 
-            # Delete the queue
-            self.delete_queue(queue_name)
+                # Delete the queue
+                self.delete_queue(queue_name)
 
-            logger.debug(f'Completed cleanup for queue: {queue_name}')
+                logger.debug(f'Completed cleanup for queue: {queue_name}')
         except Exception as e:
             logger.warning(f'Error during cleanup for {queue_name}: {str(e)}')
 
@@ -445,7 +446,8 @@ class BrokerClient:
             def set_response(self, response):
                 self.data = response
                 self.ready = True
-                logger.info(f'Rsp 🠈 {cid} - `{response}` from service `{self.service}``')
+                reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
+                logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
 
         # Initialize response holder
         response = ResponseHolder()
@@ -467,16 +469,16 @@ class BrokerClient:
         }
 
         # Get correlation ID and create reply queue via _invoke_with_callback
-        correlation_id = self._invoke_with_callback(msg, response.set_response)
+        cid = self._invoke_with_callback(msg, response.set_response)
 
         # Store the reply queue name for possible cleanup in case of timeout
         with self.lock:
-            if correlation_id in self.correlation_to_queue_map:
-                response.reply_queue_name = self.correlation_to_queue_map.get(correlation_id)
+            if cid in self.correlation_to_queue_map:
+                response.reply_queue_name = self.correlation_to_queue_map.get(cid)
 
         # Log service invocation with reply queue and CID in the same line
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
-        logger.info(f'Req 🠊 {cid} - `{service}` with `{request}`{reply_queue_info}`')
+        logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
 
         # Wait for the response
         end_time = utcnow() + timedelta(seconds=timeout)
@@ -495,11 +497,11 @@ class BrokerClient:
                 # Also clean up the callback registration
                 with self.lock:
 
-                    if correlation_id in self._callbacks:
-                        _ = self._callbacks.pop(correlation_id, None) # type: ignore
+                    if cid in self._callbacks:
+                        _ = self._callbacks.pop(cid, None) # type: ignore
 
-                    if correlation_id in self.correlation_to_queue_map:
-                        _ = self.correlation_to_queue_map.pop(correlation_id, None)
+                    if cid in self.correlation_to_queue_map:
+                        _ = self.correlation_to_queue_map.pop(cid, None)
 
             exc_msg = f'Timeout waiting for response from service `{service}` after {timeout} second{"" if timeout == 1 else "s"}'
             raise InvocationTimeout(exc_msg)

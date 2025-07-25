@@ -105,7 +105,7 @@ class BaseServer:
             self.yaml_config = load_yaml_config(yaml_config_file)
 
         # Build our broker client
-        self.broker_client = BrokerClient()
+        self.broker_client = BrokerClient(consumer_drain_events_timeout=0.1)
         self.broker_client.ping_connection()
 
         # Initialize the backend
