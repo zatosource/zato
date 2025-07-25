@@ -180,6 +180,7 @@ class Backend:
         timeout:'int'=20,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
+        #request = request or {}
         response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
         return response
 
@@ -304,18 +305,22 @@ class Backend:
         cid: 'str',
         topic_name:'str',
         username:'str',
-        *,
-        sub_key:'strnone'=None,
         ) -> 'StatusResponse':
 
-        # Log what we're doing
+        # Log what we're doing ..
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
+        # .. invoke our service ..
+        self.invoke_service_with_pubsub('demo.ping')
+
+        # .. log what happened ..
         logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
 
+        # .. build are OK response ..
         response = StatusResponse()
         response.is_ok = True
 
+        # .. and return it to the caller.
         return response
 
 # ################################################################################################################################
