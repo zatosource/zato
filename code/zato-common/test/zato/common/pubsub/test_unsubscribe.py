@@ -29,7 +29,7 @@ class TestUnsubscribe(TestCase):
 
     def test_unsubscribe_success(self):
 
-        topic_name = 'demo.1'
+        topic_name = 'demo.21'
 
         url = f'http://localhost:{PubSub.REST_Server.Default_Port}/pubsub/unsubscribe/topic/{topic_name}'
         auth = ('demo', 'demo')
