@@ -397,8 +397,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Subscribe(AdminService):
-    """ Subscribes security definition to one or more topics.
+class Unsubscribe(AdminService):
+    """ Unsubscribes security definition from one or more topics.
     """
     class SimpleIO(AdminSIO):
         input_required = 'username', AsIs('topic_name_list')
@@ -445,7 +445,6 @@ class Subscribe(AdminService):
                     raise Exception(f'Could not find subscription for `{input.username}`')
 
                 # Find topics and check permissions
-                all_topic_names = set()
                 new_topic_names = []
 
                 for topic_name in input.topic_name_list:
@@ -462,7 +461,8 @@ class Subscribe(AdminService):
                     # Check if the security definition has permission to subscribe to this topic
                     pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
                     if not pattern_matched:
-                        raise Exception(f'Security definition `{input.username}` does not have permission to subscribe to topic `{topic_name}`')
+                        msg = f'Sec def `{input.username}` does not have permission to subscribe to topic `{topic_name}`'
+                        raise Exception(msg)
 
                     new_topic_names.append(topic_name)
 
@@ -470,9 +470,16 @@ class Subscribe(AdminService):
                 sub_key = current_sub.sub_key
                 existing_topic_names = current_sub.topic_name_list
 
-                # Combine existing and new topics, removing duplicates
-                all_topic_names = set(existing_topic_names) ^ set(new_topic_names)
-                all_topic_names = sorted(all_topic_names)
+                # Start with existing topics
+                all_topic_names = existing_topic_names[:]
+
+                # Add new topics that are not already in the list
+                for new_topic_name in new_topic_names:
+                    if new_topic_name not in all_topic_names:
+                        all_topic_names.append(new_topic_name)
+
+                # Sort the final list
+                all_topic_names.sort()
 
                 # Update existing subscription with the combined topics
                 request = Bunch()
