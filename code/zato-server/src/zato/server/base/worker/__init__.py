@@ -1476,8 +1476,12 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'None':
-        response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
-        return response
+        try:
+            response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
+        except Exception:
+            return {'error': format_exc()}
+        else:
+            return response
 
 # ################################################################################################################################
 
