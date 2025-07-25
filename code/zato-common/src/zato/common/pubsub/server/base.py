@@ -125,6 +125,7 @@ class BaseServer:
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_subscribe', methods=['POST']),
             Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
+            Rule('/pubsub/messages/get', endpoint='on_messages_get', methods=['POST']),
         ])
 
 # ################################################################################################################################
