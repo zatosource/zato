@@ -434,17 +434,22 @@ class Subscribe(AdminService):
                 get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
 
                 # Extract subscriptions for this security definition
-                current_subs = []
+                current_sub = None
+
                 for item in get_list_response:
                     item = bunchify(item)
                     if item.sec_base_id == sec_base_id:
-                        current_subs.append(item)
+                        current_sub = item
+                        break
+                else:
+                    raise Exception(f'Could not find subscription for `{input.username}`')
 
                 # Find topics and check permissions
                 all_topic_names = set()
                 new_topic_names = []
 
                 for topic_name in input.topic_name_list:
+
                     # Check if the topic exists
                     topic = session.query(PubSubTopic).\
                         filter(PubSubTopic.cluster_id==cluster_id).\
@@ -462,13 +467,12 @@ class Subscribe(AdminService):
                     new_topic_names.append(topic_name)
 
                 # Get current subscription and topic names
-                sub = current_subs[0]  # Use the first subscription
-                sub_key = sub.sub_key
-                existing_topic_names = sub.topic_name_list
+                sub_key = current_sub.sub_key
+                existing_topic_names = current_sub.topic_name_list
 
                 # Combine existing and new topics, removing duplicates
-                all_topic_names = set(existing_topic_names) | set(new_topic_names)
-                all_topic_names = sorted(list(all_topic_names))
+                all_topic_names = set(existing_topic_names) ^ set(new_topic_names)
+                all_topic_names = sorted(all_topic_names)
 
                 # Update existing subscription with the combined topics
                 request = Bunch()
@@ -476,13 +480,13 @@ class Subscribe(AdminService):
                 request.cluster_id = cluster_id
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
-                request.delivery_type = sub.delivery_type
+                request.delivery_type = current_sub.delivery_type
 
                 # Update the subscription
                 _ = self.invoke('zato.pubsub.subscription.edit', request)
 
                 # Set response with sorted topic list
-                self.response.payload.topic_name_list = all_topic_names or [123]
+                self.response.payload.topic_name_list = all_topic_names
 
             except Exception:
                 session.rollback()
