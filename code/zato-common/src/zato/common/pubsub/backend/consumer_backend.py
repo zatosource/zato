@@ -215,7 +215,7 @@ class ConsumerBackend(Backend):
 
         # .. no consumer = we cannot continue.
         else:
-            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {topic_name_list}')
+            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}')
 
 # ################################################################################################################################
 
