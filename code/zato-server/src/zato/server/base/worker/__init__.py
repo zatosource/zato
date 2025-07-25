@@ -1476,10 +1476,10 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'None':
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
-        except Exception:
+        except Exception as e:
             exc = format_exc()
             logger.warning(exc)
-            return {'error': exc}
+            return {'error': str(e)}
         else:
             return response
 
