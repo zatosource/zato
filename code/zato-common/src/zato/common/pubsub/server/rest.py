@@ -618,8 +618,7 @@ class PubSubRESTServer:
 # ################################################################################################################################
 
     def list_connections(self, cid:'str', management_port:'int'=15672) -> 'dict_':
-        """ Lists and analyzes RabbitMQ connections to help troubleshoot connection issues.
-        """
+
         logger.info(f'[{cid}] Listing RabbitMQ connections via management API')
 
         # Get broker configuration to access the management API
