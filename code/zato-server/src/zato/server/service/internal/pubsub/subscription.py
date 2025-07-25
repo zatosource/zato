@@ -266,11 +266,11 @@ class Edit(AdminService):
 
                 sub.sec_base_id = input.sec_base_id
                 sub.delivery_type = input.delivery_type
-                sub.is_active = input.is_active
 
-                sub.push_type = input.push_type
-                sub.rest_push_endpoint_id = input.rest_push_endpoint_id
-                sub.push_service_name = input.push_service_name
+                for key in self.SimpleIO.input_optional:
+                    if key in input:
+                        value = input[key]
+                        setattr(sub, key, value)
 
                 # Get the security definition
                 sec_def = session.query(SecurityBase).\
