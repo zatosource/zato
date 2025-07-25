@@ -139,7 +139,7 @@ class BaseServer:
             #
             # Unsubscribe
             #
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
+            Rule('/pubsub/unsubscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['POST']),
 
             #
             # Ping endpoint
