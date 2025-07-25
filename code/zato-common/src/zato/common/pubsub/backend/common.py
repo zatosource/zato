@@ -311,7 +311,7 @@ class Backend:
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
         # .. invoke our service ..
-        self.invoke_service_with_pubsub('demo.ping')
+        self.invoke_service_with_pubsub('zato.pubsub.subscription')
 
         # .. log what happened ..
         logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
