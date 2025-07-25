@@ -299,36 +299,19 @@ class Backend:
 
 # ################################################################################################################################
 
-    #
-    # TODO: Move it to rest_backend.py
-    #
     def unregister_subscription(
         self,
         cid: 'str',
         topic_name:'str',
-        sec_name:'str',
+        username:'str',
         *,
         sub_key:'strnone'=None,
         ) -> 'StatusResponse':
 
         # Log what we're doing
-        logger.info(f'[{cid}] Unsubscribing {sub_key} from topic {topic_name} ({sec_name})')
+        logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
 
-        # Local aliases
-        subs_by_sec_name = self.subs_by_topic[topic_name]
-
-        # Remove the subscription from our metadata ..
-        sub:'Subscription' = subs_by_sec_name.pop(sec_name)
-
-        # .. but use its sub_key in case we don't have it on input ..
-        sub_key = sub.sub_key
-
-        #
-        # TODO: Send a message to the parallel server to call its backend's stop_public_queue_consumer
-        # TODO: Clean up all the internal structures
-        #
-
-        logger.info(f'[{cid}] Successfully unsubscribed {sub_key} from {topic_name} ({sec_name})')
+        logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
 
         response = StatusResponse()
         response.is_ok = True
