@@ -401,15 +401,14 @@ class Subscribe(AdminService):
     """ Subscribes security definition to one or more topics.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_subscription_subscribe_request'
-        response_elem = 'zato_pubsub_subscription_subscribe_response'
-        input_required = 'cluster_id', AsIs('topic_name_list'), 'username'
+        input_required = AsIs('topic_name_list'), 'username'
         input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = AsIs('topic_name_list')
 
     def handle(self):
+
         input = self.request.input
-        cluster_id = self.server.cluster_id
+        cluster_id = 1
 
         # Get security definition by username
         with closing(self.odb.session()) as session:
@@ -421,7 +420,7 @@ class Subscribe(AdminService):
                     first()
 
                 if not sec_def:
-                    raise Exception(f"Security definition not found for username '{input.username}'")
+                    raise Exception(f'Security definition not found for username `{input.username}`')
 
                 sec_base_id = sec_def.id
 
@@ -451,12 +450,12 @@ class Subscribe(AdminService):
                         first()
 
                     if not topic:
-                        raise Exception(f"Topic '{topic_name}' not found")
+                        raise Exception(f'Topic `{topic_name}` not found')
 
                     # Check if the security definition has permission to subscribe to this topic
                     pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
                     if not pattern_matched:
-                        raise Exception(f"Security definition '{input.username}' does not have permission to subscribe to topic '{topic_name}'")
+                        raise Exception(f'Security definition `{input.username}` does not have permission to subscribe to topic `{topic_name}`')
 
                     new_topic_names.append(topic_name)
 
@@ -475,17 +474,7 @@ class Subscribe(AdminService):
                 request.cluster_id = cluster_id
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
-                request.is_active = sub.is_active
                 request.delivery_type = sub.delivery_type
-
-                if sub.push_type:
-                    request.push_type = sub.push_type
-
-                if sub.rest_push_endpoint_id:
-                    request.rest_push_endpoint_id = sub.rest_push_endpoint_id
-
-                if sub.push_service_name:
-                    request.push_service_name = sub.push_service_name
 
                 # Update the subscription
                 _ = self.invoke('zato.pubsub.subscription.edit', request)
