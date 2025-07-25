@@ -473,10 +473,10 @@ class Unsubscribe(AdminService):
                 # Start with existing topics
                 all_topic_names = existing_topic_names[:]
 
-                # Add new topics that are not already in the list
-                for new_topic_name in new_topic_names:
-                    if new_topic_name not in all_topic_names:
-                        all_topic_names.append(new_topic_name)
+                # Remove topics that are in the new list
+                for topic_to_remove in new_topic_names:
+                    if topic_to_remove in all_topic_names:
+                        all_topic_names.remove(topic_to_remove)
 
                 # Sort the final list
                 all_topic_names.sort()
