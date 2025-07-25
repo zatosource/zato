@@ -120,12 +120,36 @@ class BaseServer:
 
         # URL routing configuration
         self.url_map = Map([
-            Rule('/pubsub/health', endpoint='on_health_check', methods=['GET']),
-            Rule('/pubsub/topic/<topic_name>', endpoint='on_publish', methods=['POST']),
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_subscribe', methods=['POST']),
-            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
-            Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
+
+            #
+            # Get messages for username
+            #
             Rule('/pubsub/messages/get', endpoint='on_messages_get', methods=['POST']),
+
+            #
+            # Publish to topic
+            #
+            Rule('/pubsub/topic/<topic_name>', endpoint='on_publish', methods=['POST']),
+
+            #
+            # Subscribe
+            #
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_subscribe', methods=['POST']),
+
+            #
+            # Unsubscribe
+            #
+            Rule('/pubsub/subscribe/topic/<topic_name>', endpoint='on_unsubscribe', methods=['DELETE']),
+
+            #
+            # Ping endpoint
+            #
+            Rule('/pubsub/health', endpoint='on_health_check', methods=['GET']),
+
+            #
+            # Internal details
+            #
+            Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
         ])
 
 # ################################################################################################################################
