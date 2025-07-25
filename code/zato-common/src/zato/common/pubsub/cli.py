@@ -23,7 +23,7 @@ from traceback import format_exc
 from urllib.parse import quote
 
 # Zato
-from zato.common.pubsub.server import PubSubRESTServer, GunicornApplication
+from zato.common.pubsub.server.rest import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid
 
