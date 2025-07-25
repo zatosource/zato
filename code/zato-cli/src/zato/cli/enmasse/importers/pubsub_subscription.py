@@ -196,7 +196,8 @@ class PubSubSubscriptionImporter:
         # Compare is_active
         yaml_is_active = yaml_def.get('is_active', True)
         db_is_active = db_def.get('is_active', True)
-        if yaml_is_active != db_is_active:
+
+        if yaml_is_active is not db_is_active:
             logger.info('is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
             return True
 
