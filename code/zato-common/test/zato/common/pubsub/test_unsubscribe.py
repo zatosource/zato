@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from logging import getLogger
+from traceback import format_exc
 from unittest import main, TestCase
 
 # requests
@@ -14,6 +16,11 @@ import requests
 
 # Zato
 from zato.common.api import PubSub
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,10 +36,14 @@ class TestUnsubscribe(TestCase):
 
         response = requests.post(url, auth=auth)
 
-        self.assertEqual(response.status_code, 200)
+        try:
+            response_data = response.json()
+        except Exception:
+            logger.warning(f'Could not load response from `{response.text}`: {format_exc()}')
+            raise
 
-        response_data = response.json()
-        self.assertEqual(response_data['status'], 'success')
+        self.assertEqual(response.status_code, 200, f'Full response: {response_data}')
+        self.assertEqual(response_data['status'], 'success', f'Full response: {response_data}')
 
 # ################################################################################################################################
 # ################################################################################################################################
