@@ -90,6 +90,16 @@ class PubSubRESTServer(BaseServer):
     """ A REST server for pub/sub operations.
     """
 
+    def __init__(self, host:'str', port:'int', yaml_config_file:'any_'=None) -> 'None':
+        super().__init__(host, port, yaml_config_file)
+
+        # Initialize broker configuration for reuse
+        self._broker_config = get_broker_config()
+        self._broker_auth = HTTPBasicAuth(self._broker_config.username, self._broker_config.password)
+        self._broker_api_base_url = f'{self._broker_config.protocol}://{self._broker_config.address}:15672/api'
+
+# ################################################################################################################################
+
     def authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
@@ -318,11 +328,8 @@ class PubSubRESTServer(BaseServer):
             response.details = 'No subscription found for user'
             return response
 
-        # Get broker configuration
-        broker_config = get_broker_config()
-
-        # Build RabbitMQ Management API URL
-        api_url = f'{broker_config.protocol}://{broker_config.address}:15672/api/queues/{broker_config.vhost}/{sub_key}/get'
+        # Build RabbitMQ API URL
+        api_url = f'{self._broker_api_base_url}/queues/{self._broker_config.vhost}/{sub_key}/get'
 
         # Prepare request payload for RabbitMQ
         rabbitmq_payload = {
@@ -333,9 +340,8 @@ class PubSubRESTServer(BaseServer):
         }
 
         try:
-            # Make request to RabbitMQ Management API
-            auth = HTTPBasicAuth(broker_config.username, broker_config.password)
-            rabbitmq_response = requests.post(api_url, json=rabbitmq_payload, auth=auth)
+            # Make request to RabbitMQ
+            rabbitmq_response = requests.post(api_url, json=rabbitmq_payload, auth=self._broker_auth)
 
             if rabbitmq_response.status_code != OK:
                 logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
@@ -487,17 +493,15 @@ class PubSubRESTServer(BaseServer):
 
         logger.info(f'[{cid}] Listing RabbitMQ connections via management API')
 
-        # Get broker configuration to access the management API
-        broker_config = get_broker_config()
-        host = broker_config.address.split(':')[0]
-        auth = HTTPBasicAuth(broker_config.username, broker_config.password)
+        # Use instance variables for broker configuration
+        host = self._broker_config.address.split(':')[0]
 
         # Base URL for the management API
         api_base_url = f'http://{host}:{management_port}/api'
 
         # Get all connections
         connections_url = f'{api_base_url}/connections'
-        response = requests.get(connections_url, auth=auth)
+        response = requests.get(connections_url, auth=self._broker_auth)
 
         if response.status_code != OK:
             logger.error(f'Failed to list connections: {response.status_code}, {response.text}')
@@ -540,7 +544,7 @@ class PubSubRESTServer(BaseServer):
 
         # Check consumers
         channels_url = f'{api_base_url}/channels'
-        response = requests.get(channels_url, auth=auth)
+        response = requests.get(channels_url, auth=self._broker_auth)
 
         consumers_per_queue = {}
         if response.status_code == OK:
