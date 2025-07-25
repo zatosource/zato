@@ -358,16 +358,31 @@ class PubSubRESTServer(BaseServer):
             for msg in messages_data:
                 # Extract message properties
                 properties = msg.get('properties', {})
+                headers = properties.get('headers', {})
                 payload_data = msg.get('payload', '')
 
-                # Build our message format
+                # Calculate size
+                if isinstance(payload_data, str):
+                    size = len(payload_data.encode('utf-8'))
+                else:
+                    size = len(payload_data)
+
+                # Build our message format according to Zato spec
                 message = {
-                    'msg_id': properties.get('message_id', ''),
                     'data': payload_data,
+                    'msg_id': properties.get('message_id', ''),
+                    'correl_id': properties.get('correlation_id', ''),
                     'priority': properties.get('priority', _default_priority),
+                    'mime_type': properties.get('content_type', 'application/json'),
+                    'pub_time_iso': properties.get('timestamp', ''),
+                    'recv_time_iso': properties.get('timestamp', ''),
                     'expiration': properties.get('expiration', _default_expiration),
-                    'delivery_count': msg.get('redelivered', False) and 1 or 0,
-                    'size': len(payload_data.encode('utf-8')) if isinstance(payload_data, str) else len(payload_data)
+                    'topic_name': headers.get('topic_name', ''),
+                    'ext_client_id': headers.get('ext_client_id', ''),
+                    'ext_pub_time_iso': headers.get('ext_pub_time_iso', ''),
+                    'in_reply_to': '',
+                    'expiration_time_iso': '',
+                    'size': size,
                 }
                 messages.append(message)
 
@@ -378,7 +393,7 @@ class PubSubRESTServer(BaseServer):
             response.is_ok = True
             response.cid = cid
             response.data = messages
-            
+
             return response
 
         except Exception as e:
