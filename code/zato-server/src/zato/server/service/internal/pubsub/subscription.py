@@ -460,27 +460,14 @@ class Subscribe(AdminService):
 
                     new_topic_names.append(topic_name)
 
-                # If we have existing subscriptions, collect the current topic names
-                existing_topic_names = []
-                sub_key = None
-                sub = None
-                if current_subs:
-                    sub = current_subs[0]  # Use the first subscription's sub_key
-                    sub_key = sub.sub_key
-
-                    # Topics are already available in the response
-                    if hasattr(sub, 'topic_name_list') and sub.topic_name_list:
-                        existing_topic_names = sub.topic_name_list
-                    else:
-                        existing_topic_names = []
+                # Get current subscription and topic names
+                sub = current_subs[0]  # Use the first subscription
+                sub_key = sub.sub_key
+                existing_topic_names = sub.topic_name_list
 
                 # Combine existing and new topics, removing duplicates
                 all_topic_names = set(existing_topic_names) | set(new_topic_names)
                 all_topic_names = sorted(list(all_topic_names))
-
-                # Verify that a subscription exists
-                if not current_subs:
-                    raise Exception(f"No existing subscription found for username '{input.username}'")
 
                 # Update existing subscription with the combined topics
                 request = Bunch()
@@ -488,29 +475,23 @@ class Subscribe(AdminService):
                 request.cluster_id = cluster_id
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
-                request.is_active = input.get('is_active', sub.is_active)
-                request.delivery_type = input.get('delivery_type', sub.delivery_type)
+                request.is_active = sub.is_active
+                request.delivery_type = sub.delivery_type
 
-                if input.get('push_type'):
-                    request.push_type = input.push_type
-                elif sub.push_type:
+                if sub.push_type:
                     request.push_type = sub.push_type
 
-                if input.get('rest_push_endpoint_id'):
-                    request.rest_push_endpoint_id = input.rest_push_endpoint_id
-                elif sub.rest_push_endpoint_id:
+                if sub.rest_push_endpoint_id:
                     request.rest_push_endpoint_id = sub.rest_push_endpoint_id
 
-                if input.get('push_service_name'):
-                    request.push_service_name = input.push_service_name
-                elif sub.push_service_name:
+                if sub.push_service_name:
                     request.push_service_name = sub.push_service_name
 
                 # Update the subscription
-                response = self.invoke('zato.pubsub.subscription.edit', request)
+                _ = self.invoke('zato.pubsub.subscription.edit', request)
 
                 # Set response with sorted topic list
-                self.response.payload.topic_name_list = sorted(all_topic_names)
+                self.response.payload.topic_name_list = all_topic_names
 
             except Exception:
                 session.rollback()
