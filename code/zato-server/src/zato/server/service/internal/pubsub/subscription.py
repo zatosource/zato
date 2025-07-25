@@ -12,7 +12,7 @@ from traceback import format_exc
 from urllib.parse import quote
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # Zato
 from zato.common.broker_message import PUBSUB
@@ -403,7 +403,8 @@ class Subscribe(AdminService):
     class SimpleIO(AdminSIO):
         input_required = 'username', AsIs('topic_name_list')
         input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = AsIs('topic_name_list')
+        output_optional = AsIs('topic_name_list')
+        response_elem = None
 
     def handle(self):
 
@@ -430,11 +431,12 @@ class Subscribe(AdminService):
                     'sec_base_id': sec_base_id
                 }
 
-                get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request)
+                get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
 
                 # Extract subscriptions for this security definition
                 current_subs = []
                 for item in get_list_response:
+                    item = bunchify(item)
                     if item.sec_base_id == sec_base_id:
                         current_subs.append(item)
 
@@ -480,7 +482,7 @@ class Subscribe(AdminService):
                 _ = self.invoke('zato.pubsub.subscription.edit', request)
 
                 # Set response with sorted topic list
-                self.response.payload.topic_name_list = all_topic_names
+                self.response.payload.topic_name_list = all_topic_names or [123]
 
             except Exception:
                 session.rollback()
