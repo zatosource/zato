@@ -377,8 +377,8 @@ class PubSubRESTServer(BaseServer):
             response = APIResponse()
             response.is_ok = True
             response.cid = cid
-            response.data = {'messages': messages, 'count': len(messages)}
-
+            response.data = messages
+            
             return response
 
         except Exception as e:
