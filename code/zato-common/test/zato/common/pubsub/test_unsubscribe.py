@@ -43,7 +43,8 @@ class TestUnsubscribe(TestCase):
             raise
 
         self.assertEqual(response.status_code, 200, f'Full response: {response_data}')
-        self.assertEqual(response_data['status'], 'success', f'Full response: {response_data}')
+        self.assertEqual(response_data['status'], '200 OK', f'Full response: {response_data}')
+        self.assertTrue(response_data['is_ok'], f'Full response: {response_data}')
 
 # ################################################################################################################################
 # ################################################################################################################################
