@@ -30,7 +30,8 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import strdict, strlist
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -397,14 +398,17 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Unsubscribe(AdminService):
-    """ Unsubscribes security definition from one or more topics.
+class _BaseSubUnsub(AdminService):
+    """ Base class for Subscribe/Unsubscribe operations.
     """
     class SimpleIO(AdminSIO):
         input_required = 'username', AsIs('topic_name_list')
         input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = AsIs('topic_name_list')
         response_elem = None
+
+    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+        raise NotImplementedError('Subclasses must implement _modify_topic_list')
 
     def handle(self):
 
@@ -470,13 +474,8 @@ class Unsubscribe(AdminService):
                 sub_key = current_sub.sub_key
                 existing_topic_names = current_sub.topic_name_list
 
-                # Start with existing topics
-                all_topic_names = existing_topic_names[:]
-
-                # Remove topics that are in the new list
-                for topic_to_remove in new_topic_names:
-                    if topic_to_remove in all_topic_names:
-                        all_topic_names.remove(topic_to_remove)
+                # Apply subclass-specific modification logic
+                all_topic_names = self._modify_topic_list(existing_topic_names, new_topic_names)
 
                 # Sort the final list
                 all_topic_names.sort()
@@ -498,6 +497,42 @@ class Unsubscribe(AdminService):
             except Exception:
                 session.rollback()
                 raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Subscribe(_BaseSubUnsub):
+    """ Subscribes security definition to one or more topics.
+    """
+    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+
+        # Start with existing topics
+        all_topic_names = existing_topic_names[:]
+
+        # Add new topics that are not already in the list
+        for new_topic_name in new_topic_names:
+            if new_topic_name not in all_topic_names:
+                all_topic_names.append(new_topic_name)
+
+        return all_topic_names
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Unsubscribe(_BaseSubUnsub):
+    """ Unsubscribes security definition from one or more topics.
+    """
+    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+
+        # Start with existing topics
+        all_topic_names = existing_topic_names[:]
+
+        # Remove topics that are in the new list
+        for topic_to_remove in new_topic_names:
+            if topic_to_remove in all_topic_names:
+                all_topic_names.remove(topic_to_remove)
+
+        return all_topic_names
 
 # ################################################################################################################################
 # ################################################################################################################################
