@@ -34,16 +34,21 @@ class RESTBackendTestCase(TestCase):
 
         topic = Topic()
         topic.name = old_topic_name
+        topic.creation_time = None
         self.backend.topics[old_topic_name] = topic
 
         # Create subscriptions for the old topic
         sub1 = Subscription()
         sub1.topic_name = old_topic_name
-        sub1.sec_name = 'user1'
+        sub1.username = 'user1'
+        sub1.sub_key = 'sub1_key'
+        sub1.creation_time = None
 
         sub2 = Subscription()
         sub2.topic_name = old_topic_name
-        sub2.sec_name = 'user2'
+        sub2.username = 'user2'
+        sub2.sub_key = 'sub2_key'
+        sub2.creation_time = None
 
         self.backend.subs_by_topic[old_topic_name] = {
             'user1': sub1,
@@ -104,6 +109,7 @@ class RESTBackendTestCase(TestCase):
 
         topic = Topic()
         topic.name = old_topic_name
+        topic.creation_time = None
         self.backend.topics[old_topic_name] = topic
 
         # Create the broker message
