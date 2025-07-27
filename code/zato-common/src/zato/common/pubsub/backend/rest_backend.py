@@ -75,6 +75,10 @@ class RESTBackend(Backend):
             for sub in subs.values():
                 sub.topic_name = new_topic_name
 
+        # Update permissions for all users in pattern matcher
+        for username in self.rest_server.users:
+            self.pattern_matcher.rename_topic(username, old_topic_name, new_topic_name)
+
         logger.info('Topic updated -> msg: %s', msg)
 
 # ################################################################################################################################

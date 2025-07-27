@@ -133,4 +133,45 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         self.assertEqual(subs_count, 0)
 
 # ################################################################################################################################
+
+    def test_on_broker_msg_PUBSUB_TOPIC_DELETE_removes_permissions(self):
+
+        # Create a topic
+        topic_name = 'test.topic.name'
+
+        topic = Topic()
+        topic.name = topic_name
+        topic.creation_time = None
+        self.backend._add_topic(topic_name, topic)
+
+        # Add some permissions to the pattern matcher
+        username = 'test_user'
+        permissions = [{'pattern': topic_name, 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(username, permissions)
+
+        # Verify permissions exist for the topic
+        result_before = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
+        self.assertTrue(result_before.is_ok)
+
+        # Mock the unregister_subscription method to avoid service calls
+        self.backend.unregister_subscription = Mock()
+
+        # Create the broker message
+        msg = {
+            'cid': 'test-cid',
+            'topic_name': topic_name
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
+
+        # Assert topic was removed
+        self.assertFalse(self.backend._has_topic(topic_name))
+
+        # Assert permissions are removed correctly
+        # User should no longer have permission for the deleted topic
+        result_after = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
+        self.assertFalse(result_after.is_ok)  # Permission no longer exists
+
+# ################################################################################################################################
 # ################################################################################################################################
