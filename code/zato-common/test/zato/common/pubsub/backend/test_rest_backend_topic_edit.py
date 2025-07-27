@@ -7,17 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import main, TestCase
 from unittest.mock import Mock
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import Topic, Subscription
+from zato.common.test import TestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTBackendTestCase(TestCase):
+class RESTBackendTopicEditTestCase(TestCase):
 
     def setUp(self):
         self.rest_server = Mock()
@@ -139,12 +139,6 @@ class RESTBackendTestCase(TestCase):
         # Assert no subscriptions were affected
         subs_count = len(self.backend.subs_by_topic)
         self.assertEqual(subs_count, 0)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################
