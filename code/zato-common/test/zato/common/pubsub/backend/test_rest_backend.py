@@ -35,7 +35,7 @@ class RESTBackendTestCase(TestCase):
         topic = Topic()
         topic.name = old_topic_name
         topic.creation_time = None
-        self.backend.topics[old_topic_name] = topic
+        self.backend._add_topic(old_topic_name, topic)
 
         # Create subscriptions for the old topic
         sub1 = Subscription()
@@ -65,9 +65,11 @@ class RESTBackendTestCase(TestCase):
         self.backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
 
         # Assert topic was moved to new name
-        self.assertNotIn(old_topic_name, self.backend.topics)
-        self.assertIn(new_topic_name, self.backend.topics)
-        self.assertEqual(self.backend.topics[new_topic_name], topic)
+        self.assertFalse(self.backend._has_topic(old_topic_name))
+        self.assertTrue(self.backend._has_topic(new_topic_name))
+
+        retrieved_topic = self.backend.topics[new_topic_name]
+        self.assertEqual(retrieved_topic, topic)
 
         # Assert subscriptions were moved to new topic name
         self.assertNotIn(old_topic_name, self.backend.subs_by_topic)
@@ -75,12 +77,15 @@ class RESTBackendTestCase(TestCase):
 
         # Assert subscription objects were updated with new topic name
         updated_subs = self.backend.subs_by_topic[new_topic_name]
-        self.assertEqual(updated_subs['user1'].topic_name, new_topic_name)
-        self.assertEqual(updated_subs['user2'].topic_name, new_topic_name)
+        user1_sub = updated_subs['user1']
+        user2_sub = updated_subs['user2']
+
+        self.assertEqual(user1_sub.topic_name, new_topic_name)
+        self.assertEqual(user2_sub.topic_name, new_topic_name)
 
         # Assert the same subscription objects are still there
-        self.assertEqual(updated_subs['user1'], sub1)
-        self.assertEqual(updated_subs['user2'], sub2)
+        self.assertEqual(user1_sub, sub1)
+        self.assertEqual(user2_sub, sub2)
 
 # ################################################################################################################################
 
@@ -96,8 +101,11 @@ class RESTBackendTestCase(TestCase):
         self.backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
 
         # Assert no topics were created or modified
-        self.assertEqual(len(self.backend.topics), 0)
-        self.assertEqual(len(self.backend.subs_by_topic), 0)
+        topics_count = len(self.backend.topics)
+        subs_count = len(self.backend.subs_by_topic)
+
+        self.assertEqual(topics_count, 0)
+        self.assertEqual(subs_count, 0)
 
 # ################################################################################################################################
 
@@ -110,7 +118,7 @@ class RESTBackendTestCase(TestCase):
         topic = Topic()
         topic.name = old_topic_name
         topic.creation_time = None
-        self.backend.topics[old_topic_name] = topic
+        self.backend._add_topic(old_topic_name, topic)
 
         # Create the broker message
         msg = {
@@ -122,12 +130,15 @@ class RESTBackendTestCase(TestCase):
         self.backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
 
         # Assert topic was moved to new name
-        self.assertNotIn(old_topic_name, self.backend.topics)
-        self.assertIn(new_topic_name, self.backend.topics)
-        self.assertEqual(self.backend.topics[new_topic_name], topic)
+        self.assertFalse(self.backend._has_topic(old_topic_name))
+        self.assertTrue(self.backend._has_topic(new_topic_name))
+
+        retrieved_topic = self.backend.topics[new_topic_name]
+        self.assertEqual(retrieved_topic, topic)
 
         # Assert no subscriptions were affected
-        self.assertEqual(len(self.backend.subs_by_topic), 0)
+        subs_count = len(self.backend.subs_by_topic)
+        self.assertEqual(subs_count, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
