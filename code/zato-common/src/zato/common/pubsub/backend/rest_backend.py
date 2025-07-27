@@ -172,10 +172,10 @@ class RESTBackend(Backend):
         access_type = msg['access_type']
 
         # Parse patterns (they can be multi-line)
-        patterns = [p.strip() for p in pattern.splitlines() if p.strip()]
+        patterns = [elem.strip() for elem in pattern.splitlines() if elem.strip()]
 
         # Create permission list
-        permissions = [{'pattern': p, 'access_type': access_type} for p in patterns]
+        permissions = [{'pattern': elem, 'access_type': access_type} for elem in patterns]
 
         # Apply permissions to all existing users
         for username in self.rest_server.users:
@@ -194,10 +194,10 @@ class RESTBackend(Backend):
         access_type = msg['access_type']
 
         # Parse patterns
-        patterns = [p.strip() for p in pattern.splitlines() if p.strip()]
+        patterns = [elem.strip() for elem in pattern.splitlines() if elem.strip()]
 
         # Create permission list
-        permissions = [{'pattern': p, 'access_type': access_type} for p in patterns]
+        permissions = [{'pattern': elem, 'access_type': access_type} for elem in patterns]
 
         # Update permissions for all existing users
         for username in self.rest_server.users:
