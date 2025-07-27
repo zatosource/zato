@@ -109,15 +109,18 @@ class Create(AdminService):
                 session.rollback()
                 raise
             else:
+                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).one()
+
                 input.id = permission.id
+                input.sec_name = sec_base.name
+
                 input.action = PUBSUB.PERMISSION_CREATE.value
-                self.broker_client.publish(input)
 
                 self.response.payload.id = permission.id
-
-                # Get the security definition name for the response
-                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).one()
                 self.response.payload.name = sec_base.name
+
+                self.broker_client.publish(input)
+                self.broker_client.publish(input, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,11 +164,16 @@ class Edit(AdminService):
                 session.rollback()
                 raise
             else:
+                input.id = permission.id
+                input.sec_name = permission.sec_base.name
+
                 input.action = PUBSUB.PERMISSION_EDIT.value
-                self.broker_client.publish(input)
 
                 self.response.payload.id = permission.id
                 self.response.payload.name = permission.sec_base.name
+
+                self.broker_client.publish(input)
+                self.broker_client.publish(input, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,6 +193,11 @@ class Delete(AdminService):
                     filter(PubSubPermission.id==self.request.input.id).\
                     one()
 
+                # Store permission details before deletion
+                self.request.input.sec_base_id = permission.sec_base_id
+                self.request.input.pattern = permission.pattern
+                self.request.input.access_type = permission.access_type
+
                 session.delete(permission)
                 session.commit()
             except Exception:
@@ -193,6 +206,7 @@ class Delete(AdminService):
             else:
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
                 self.broker_client.publish(self.request.input)
+                self.broker_client.publish(self.request.input, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
