@@ -78,6 +78,27 @@ class Backend:
 
 # ################################################################################################################################
 
+    def _add_topic(self, topic_name:'str', topic:'Topic') -> 'None':
+        """ Add a topic to the backend.
+        """
+        self.topics[topic_name] = topic
+
+# ################################################################################################################################
+
+    def _delete_topic(self, topic_name:'str') -> 'Topic':
+        """ Delete a topic from the backend and return it.
+        """
+        return self.topics.pop(topic_name)
+
+# ################################################################################################################################
+
+    def _has_topic(self, topic_name:'str') -> 'bool':
+        """ Check if a topic exists in the backend.
+        """
+        return topic_name in self.topics
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'strdict') -> 'None':
 
         # Local aliases
@@ -106,7 +127,7 @@ class Backend:
         logger.info(f'[{cid}] Deleting topic {topic_name}')
 
         # Check if topic exists
-        if topic_name not in self.topics:
+        if not self._has_topic(topic_name):
             logger.warning(f'[{cid}] Topic {topic_name} not found, cannot delete')
             return
 
@@ -125,7 +146,7 @@ class Backend:
                 _ = self.unregister_subscription(cid, topic_name, sec_name=sec_name)
 
         # Remove the topic from our mappings
-        _ = self.topics.pop(topic_name)
+        _ = self._delete_topic(topic_name)
         _ = self.subs_by_topic.pop(topic_name, None)
 
         logger.info(f'[{cid}] Successfully deleted topic {topic_name}')
@@ -191,7 +212,7 @@ class Backend:
         topic = Topic()
         topic.name = topic_name
 
-        self.topics[topic_name] = topic
+        self._add_topic(topic_name, topic)
         self.subs_by_topic[topic_name] = {}
 
         logger.info(f'[{cid}] Created new topic: {topic_name} ({source})')
@@ -211,7 +232,7 @@ class Backend:
         logger.info(f'[{cid}] Publishing message to topic {topic_name} from {sec_name}')
 
         # Create topic if it doesn't exist
-        if topic_name not in self.topics:
+        if not self._has_topic(topic_name):
             self.create_topic(cid, 'publish', topic_name)
 
         # Generate message ID and calculate size
@@ -275,7 +296,7 @@ class Backend:
 
         # Create topic if it doesn't exist ..
         with self._main_lock:
-            if topic_name not in self.topics:
+            if not self._has_topic(topic_name):
                 self.create_topic(cid, 'subscribe', topic_name)
 
         # .. create a new subscription ..
