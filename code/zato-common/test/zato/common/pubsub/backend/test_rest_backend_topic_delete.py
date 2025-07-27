@@ -54,9 +54,6 @@ class RESTBackendTopicDeleteTestCase(TestCase):
             'user2': sub2
         }
 
-        # Mock the unregister_subscription method
-        self.backend.unregister_subscription = Mock()
-
         # Create the broker message
         msg = {
             'cid': 'test-cid',
@@ -152,9 +149,6 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # Verify permissions exist for the topic
         result_before = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
         self.assertTrue(result_before.is_ok)
-
-        # Mock the unregister_subscription method to avoid service calls
-        self.backend.unregister_subscription = Mock()
 
         # Create the broker message
         msg = {
