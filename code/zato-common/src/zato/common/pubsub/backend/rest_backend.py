@@ -12,6 +12,7 @@ from logging import getLogger
 # Zato
 from zato.common.pubsub.backend.common import Backend
 from zato.common.pubsub.consumer import start_internal_consumer
+from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.util.api import replace_secrets, spawn_greenlet
 
 # ################################################################################################################################
@@ -38,6 +39,8 @@ class RESTBackend(Backend):
 
         self.rest_server = rest_server
         super().__init__(broker_client)
+
+        self.pattern_matcher = PatternMatcher()
 
 # ################################################################################################################################
 
@@ -158,6 +161,64 @@ class RESTBackend(Backend):
             logger.info(f'[{cid}] User not found for password change: `{username}`')
 
         logger.info('HTTP Basic Auth password changed -> msg: %s', replace_secrets(msg))
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        pattern = msg['pattern']
+        access_type = msg['access_type']
+
+        # Parse patterns (they can be multi-line)
+        patterns = [p.strip() for p in pattern.splitlines() if p.strip()]
+
+        # Create permission list
+        permissions = [{'pattern': p, 'access_type': access_type} for p in patterns]
+
+        # Apply permissions to all existing users
+        for username in self.rest_server.users:
+            self.pattern_matcher.add_client(username, permissions)
+            logger.info(f'[{cid}] Added {len(permissions)} permissions for {username}')
+
+        logger.info('PubSub permission created -> msg: %s', msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_PERMISSION_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        pattern = msg['pattern']
+        access_type = msg['access_type']
+
+        # Parse patterns
+        patterns = [p.strip() for p in pattern.splitlines() if p.strip()]
+
+        # Create permission list
+        permissions = [{'pattern': p, 'access_type': access_type} for p in patterns]
+
+        # Update permissions for all existing users
+        for username in self.rest_server.users:
+            self.pattern_matcher.set_permissions(username, permissions)
+            logger.info(f'[{cid}] Set {len(permissions)} permissions for {username}')
+
+        logger.info('PubSub permission edited -> msg: %s', msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_PERMISSION_DELETE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+
+        # Remove permissions for all existing users
+        for username in self.rest_server.users:
+            self.pattern_matcher.remove_client(username)
+            logger.info(f'[{cid}] Removed all permissions for {username}')
+
+        logger.info('PubSub permission deleted -> msg: %s', msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
