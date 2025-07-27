@@ -122,7 +122,7 @@ class Backend:
 
             # Unsubscribe each user
             for sec_name in sec_names:
-                _ = self.unregister_subscription(cid, topic_name, sec_name)
+                _ = self.unregister_subscription(cid, topic_name, sec_name=sec_name)
 
         # Remove the topic from our mappings
         _ = self.topics.pop(topic_name)
@@ -156,7 +156,7 @@ class Backend:
 
         # Unsubscribe from each topic
         for topic_name in topics_to_unsubscribe:
-            _ = self.unregister_subscription(cid, topic_name, sec_name, sub_key=sub_key)
+            _ = self.unregister_subscription(cid, topic_name, sec_name=sec_name)
 
 # ################################################################################################################################
 
@@ -304,7 +304,9 @@ class Backend:
         self,
         cid: 'str',
         topic_name:'str',
-        username:'str',
+        *,
+        sec_name:'str' = '',
+        username:'str' = '',
         ) -> 'StatusResponse':
 
         # Log what we're doing ..
@@ -312,6 +314,7 @@ class Backend:
 
         # .. prepare the request ..
         request = {
+            'sec_name': sec_name,
             'username': username,
             'topic_name_list': [topic_name],
         }
