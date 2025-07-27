@@ -260,7 +260,7 @@ class PubSubRESTServer(BaseRESTServer):
         username = self._ensure_authenticated(cid, environ)
 
         # Unsubscribe from topic using backend
-        result = self.backend.unregister_subscription(cid, topic_name, username)
+        result = self.backend.unregister_subscription(cid, topic_name, username=username)
 
         response = APIResponse()
         response.is_ok = result.is_ok
