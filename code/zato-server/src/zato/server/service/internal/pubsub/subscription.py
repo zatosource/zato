@@ -427,7 +427,7 @@ class _BaseModifyTopicList(AdminService):
                     first()
 
                 if not sec_def:
-                    raise Exception(f'Security definition not found for username `{input.username}`')
+                    raise Exception(f'Security definition not found for input `{input}`')
 
                 sec_base_id = sec_def.id
 
@@ -448,7 +448,7 @@ class _BaseModifyTopicList(AdminService):
                         current_sub = item
                         break
                 else:
-                    raise Exception(f'Could not find subscription for `{input.username}`')
+                    raise Exception(f'Could not find subscription for input `{input}`')
 
                 # Find topics and check permissions
                 new_topic_names = []
@@ -467,7 +467,7 @@ class _BaseModifyTopicList(AdminService):
                     # Check if the security definition has permission to subscribe to this topic
                     pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
                     if not pattern_matched:
-                        msg = f'Sec def `{input.username}` does not have permission to subscribe to topic `{topic_name}`'
+                        msg = f'User `{sec_def.username}` does not have permission to subscribe to topic `{topic_name}`'
                         raise Exception(msg)
 
                     new_topic_names.append(topic_name)
