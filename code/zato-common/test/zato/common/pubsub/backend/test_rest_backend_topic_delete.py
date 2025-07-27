@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from unittest import main, TestCase
 from unittest.mock import Mock
 
 # Zato
@@ -21,6 +22,7 @@ class RESTBackendTopicDeleteTestCase(TestCase):
 
     def setUp(self):
         self.rest_server = Mock()
+        self.rest_server.users = []
         self.broker_client = Mock()
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
@@ -53,6 +55,9 @@ class RESTBackendTopicDeleteTestCase(TestCase):
             'user1': sub1,
             'user2': sub2
         }
+
+        # Mock the unregister_subscription method
+        self.backend.unregister_subscription = Mock()
 
         # Create the broker message
         msg = {
@@ -143,6 +148,7 @@ class RESTBackendTopicDeleteTestCase(TestCase):
 
         # Add some permissions to the pattern matcher
         username = 'test_user'
+        self.rest_server.users = [username]
         permissions = [{'pattern': topic_name, 'access_type': 'publisher'}]
         self.backend.pattern_matcher.add_client(username, permissions)
 
@@ -166,6 +172,12 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # User should no longer have permission for the deleted topic
         result_after = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
         self.assertFalse(result_after.is_ok)  # Permission no longer exists
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################
