@@ -141,4 +141,47 @@ class RESTBackendTopicEditTestCase(TestCase):
         self.assertEqual(subs_count, 0)
 
 # ################################################################################################################################
+
+    def test_on_broker_msg_PUBSUB_TOPIC_EDIT_updates_permissions(self):
+
+        # Create a topic with the old name
+        old_topic_name = 'old.topic.name'
+        new_topic_name = 'new.topic.name'
+
+        topic = Topic()
+        topic.name = old_topic_name
+        topic.creation_time = None
+        self.backend._add_topic(old_topic_name, topic)
+
+        # Add some permissions to the pattern matcher
+        username = 'test_user'
+        permissions = [{'pattern': old_topic_name, 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(username, permissions)
+
+        # Verify permissions exist for old topic name
+        result_old = self.backend.pattern_matcher.evaluate(username, old_topic_name, 'publish')
+        self.assertTrue(result_old.is_ok)
+
+        # Create the broker message
+        msg = {
+            'new_topic_name': new_topic_name,
+            'old_topic_name': old_topic_name
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
+
+        # Assert topic was moved to new name
+        self.assertFalse(self.backend._has_topic(old_topic_name))
+        self.assertTrue(self.backend._has_topic(new_topic_name))
+
+        # Assert permissions are updated correctly
+        # User should now have permission for new topic name but not old one
+        result_old_after = self.backend.pattern_matcher.evaluate(username, old_topic_name, 'publish')
+        result_new_after = self.backend.pattern_matcher.evaluate(username, new_topic_name, 'publish')
+
+        self.assertFalse(result_old_after.is_ok)  # Old permission no longer exists
+        self.assertTrue(result_new_after.is_ok)  # New topic has permission
+
+# ################################################################################################################################
 # ################################################################################################################################

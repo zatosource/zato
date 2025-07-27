@@ -1,9 +1,6 @@
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-common
 
-rules-tests:
-	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning
-
 rules-perf-tests:
 	cd $(CURDIR) && PYTHONPATH=$(CURDIR)/.. python test/zato/common/rules/test_perf.py
 
@@ -16,4 +13,4 @@ static-check:
 	$(MAKE) flake8
 
 run-tests:
-	$(MAKE) rules-tests
+	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning
