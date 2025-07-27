@@ -28,6 +28,7 @@ from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.matcher import PatternMatcher
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +114,9 @@ class BaseServer:
 
         # Do start the broker client now
         self._init_broker_client()
+
+        # Initialize pattern matcher for permissions
+        self.pattern_matcher = PatternMatcher()
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
@@ -293,6 +297,44 @@ class BaseServer:
         del self.users[old_username]
 
         logger.info(f'[{cid}] Changed username from `{old_username}` to `{new_username}`')
+
+# ################################################################################################################################
+
+    def add_user_permissions(self, cid:'str', username:'str', permissions:'list') -> 'None':
+        """ Add permissions for a user.
+        """
+        self.pattern_matcher.add_client(username, permissions)
+        logger.info(f'[{cid}] Added {len(permissions)} permissions for {username}')
+
+# ################################################################################################################################
+
+    def remove_user_permissions(self, cid:'str', username:'str') -> 'None':
+        """ Remove all permissions for a user.
+        """
+        self.pattern_matcher.remove_client(username)
+        logger.info(f'[{cid}] Removed all permissions for {username}')
+
+# ################################################################################################################################
+
+    def set_user_permissions(self, cid:'str', username:'str', permissions:'list') -> 'None':
+        """ Set all permissions for a user.
+        """
+        self.pattern_matcher.set_permissions(username, permissions)
+        logger.info(f'[{cid}] Set {len(permissions)} permissions for {username}')
+
+# ################################################################################################################################
+
+    def check_access(self, cid:'str', username:'str', topic_name:'str', operation:'str') -> 'bool':
+        """ Check if a user can perform an operation on a topic.
+        """
+        result = self.pattern_matcher.evaluate(username, topic_name, operation)
+
+        if not result.is_ok:
+            logger.warning(f'[{cid}] Access denied for {username} on {topic_name} ({operation}): {result.reason}')
+            return False
+
+        logger.debug(f'[{cid}] Access granted for {username} on {topic_name} ({operation}), matched: {result.matched_pattern}')
+        return True
 
 # ################################################################################################################################
 
