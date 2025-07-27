@@ -420,14 +420,26 @@ class _BaseModifyTopicList(AdminService):
         # Get security definition by username
         with closing(self.odb.session()) as session:
             try:
-                # Find security definition by username
-                sec_def = session.query(SecurityBase).\
-                    filter(SecurityBase.cluster_id==cluster_id).\
-                    filter(SecurityBase.username==input.username).\
-                    first()
+                # Find security definition by username or sec_name
+                if input.username:
+                    sec_def = session.query(SecurityBase).\
+                        filter(SecurityBase.cluster_id==cluster_id).\
+                        filter(SecurityBase.username==input.username).\
+                        first()
+                    lookup_field = 'username'
+                    lookup_value = input.username
+                elif input.sec_name:
+                    sec_def = session.query(SecurityBase).\
+                        filter(SecurityBase.cluster_id==cluster_id).\
+                        filter(SecurityBase.name==input.sec_name).\
+                        first()
+                    lookup_field = 'sec_name'
+                    lookup_value = input.sec_name
+                else:
+                    raise Exception('Either username or sec_name must be provided')
 
                 if not sec_def:
-                    raise Exception(f'Security definition not found for input `{input}`')
+                    raise Exception(f'Security definition not found for {lookup_field} `{lookup_value}`')
 
                 sec_base_id = sec_def.id
 
@@ -448,7 +460,7 @@ class _BaseModifyTopicList(AdminService):
                         current_sub = item
                         break
                 else:
-                    raise Exception(f'Could not find subscription for input `{input}`')
+                    raise Exception(f'Could not find subscription for input {lookup_field} `{lookup_value}`')
 
                 # Find topics and check permissions
                 new_topic_names = []
