@@ -7,12 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from unittest import main, TestCase
 from unittest.mock import Mock
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import Topic, Subscription
-from zato.common.test import TestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,6 +21,7 @@ class RESTBackendTopicEditTestCase(TestCase):
 
     def setUp(self):
         self.rest_server = Mock()
+        self.rest_server.users = []
         self.broker_client = Mock()
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
@@ -155,6 +156,7 @@ class RESTBackendTopicEditTestCase(TestCase):
 
         # Add some permissions to the pattern matcher
         username = 'test_user'
+        self.rest_server.users = [username]
         permissions = [{'pattern': old_topic_name, 'access_type': 'publisher'}]
         self.backend.pattern_matcher.add_client(username, permissions)
 
@@ -182,6 +184,12 @@ class RESTBackendTopicEditTestCase(TestCase):
 
         self.assertFalse(result_old_after.is_ok)  # Old permission no longer exists
         self.assertTrue(result_new_after.is_ok)  # New topic has permission
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################
