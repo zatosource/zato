@@ -403,8 +403,9 @@ class _BaseModifyTopicList(AdminService):
     """ Base class for Subscribe/Unsubscribe operations.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'username', AsIs('topic_name_list')
-        input_optional = 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        input_required = AsIs('topic_name_list')
+        input_optional = 'username', 'sec_name', 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', \
+            'push_service_name'
         output_optional = AsIs('topic_name_list')
         response_elem = None
 
