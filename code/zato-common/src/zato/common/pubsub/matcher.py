@@ -417,4 +417,51 @@ class PatternMatcher:
                     pattern_info.compiled_regex = self._compile_pattern(pattern_info.pattern)
 
 # ################################################################################################################################
+
+    def rename_topic(self, client_id:'str', old_topic_name:'str', new_topic_name:'str') -> 'None':
+
+        with self._lock:
+            client_permissions = self._clients.get(client_id)
+            if not client_permissions:
+                return
+
+            # Update publisher patterns
+            for pattern_info in client_permissions.pub_patterns:
+                if pattern_info.pattern == old_topic_name and not pattern_info.has_wildcards:
+                    pattern_info.pattern = new_topic_name
+                    pattern_info.compiled_regex = self._compile_pattern(new_topic_name)
+
+            # Update subscriber patterns
+            for pattern_info in client_permissions.sub_patterns:
+                if pattern_info.pattern == old_topic_name and not pattern_info.has_wildcards:
+                    pattern_info.pattern = new_topic_name
+                    pattern_info.compiled_regex = self._compile_pattern(new_topic_name)
+
+            self._clear_evaluation_cache()
+
+# ################################################################################################################################
+
+    def delete_topic(self, client_id:'str', topic_name:'str') -> 'None':
+        """ Remove exact pattern matches for a deleted topic.
+        """
+        with self._lock:
+            client_permissions = self._clients.get(client_id)
+            if not client_permissions:
+                return
+
+            # Remove exact publisher patterns
+            client_permissions.pub_patterns = [
+                pattern_info for pattern_info in client_permissions.pub_patterns
+                if not (pattern_info.pattern == topic_name and not pattern_info.has_wildcards)
+            ]
+
+            # Remove exact subscriber patterns
+            client_permissions.sub_patterns = [
+                pattern_info for pattern_info in client_permissions.sub_patterns
+                if not (pattern_info.pattern == topic_name and not pattern_info.has_wildcards)
+            ]
+
+            self._clear_evaluation_cache()
+
+# ################################################################################################################################
 # ################################################################################################################################

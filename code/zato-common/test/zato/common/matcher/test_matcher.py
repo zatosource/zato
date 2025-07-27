@@ -317,6 +317,89 @@ class PatternMatcherTestCase(TestCase):
         self.assertEqual(result.reason, 'No matching pattern found')
 
 # ################################################################################################################################
+
+    def test_rename_topic(self):
+        permissions = [{'pattern': 'old.topic.name', 'access_type': PubSub.API_Client.Publisher}]
+        self.matcher.add_client(self.client_id, permissions)
+
+        # Verify original pattern works
+        result = self.matcher.evaluate(self.client_id, 'old.topic.name', 'publish')
+        self.assertTrue(result.is_ok)
+
+        # Update pattern
+        self.matcher.rename_topic(self.client_id, 'old.topic.name', 'new.topic.name')
+
+        # Verify old pattern no longer works
+        result = self.matcher.evaluate(self.client_id, 'old.topic.name', 'publish')
+        self.assertFalse(result.is_ok)
+
+        # Verify new pattern works
+        result = self.matcher.evaluate(self.client_id, 'new.topic.name', 'publish')
+        self.assertTrue(result.is_ok)
+
+# ################################################################################################################################
+
+    def test_rename_topic_wildcard_patterns_unchanged(self):
+        permissions = [
+            {'pattern': 'exact.topic', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'wildcard.*', 'access_type': PubSub.API_Client.Publisher}
+        ]
+        self.matcher.add_client(self.client_id, permissions)
+
+        # Update only affects exact patterns
+        self.matcher.rename_topic(self.client_id, 'exact.topic', 'renamed.topic')
+
+        # Wildcard pattern should still work
+        result = self.matcher.evaluate(self.client_id, 'wildcard.test', 'publish')
+        self.assertTrue(result.is_ok)
+
+        # Old exact pattern should not work
+        result = self.matcher.evaluate(self.client_id, 'exact.topic', 'publish')
+        self.assertFalse(result.is_ok)
+
+        # New exact pattern should work
+        result = self.matcher.evaluate(self.client_id, 'renamed.topic', 'publish')
+        self.assertTrue(result.is_ok)
+
+# ################################################################################################################################
+
+    def test_delete_topic(self):
+        permissions = [{'pattern': 'topic.to.remove', 'access_type': PubSub.API_Client.Publisher}]
+        self.matcher.add_client(self.client_id, permissions)
+
+        # Verify pattern works initially
+        result = self.matcher.evaluate(self.client_id, 'topic.to.remove', 'publish')
+        self.assertTrue(result.is_ok)
+
+        # Remove pattern
+        self.matcher.delete_topic(self.client_id, 'topic.to.remove')
+
+        # Verify pattern no longer works
+        result = self.matcher.evaluate(self.client_id, 'topic.to.remove', 'publish')
+        self.assertFalse(result.is_ok)
+        self.assertEqual(result.reason, 'No matching pattern found')
+
+# ################################################################################################################################
+
+    def test_delete_topic_wildcard_patterns_unchanged(self):
+        permissions = [
+            {'pattern': 'exact.topic', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'wildcard.*', 'access_type': PubSub.API_Client.Publisher}
+        ]
+        self.matcher.add_client(self.client_id, permissions)
+
+        # Remove only affects exact patterns
+        self.matcher.delete_topic(self.client_id, 'exact.topic')
+
+        # Wildcard pattern should still work
+        result = self.matcher.evaluate(self.client_id, 'wildcard.test', 'publish')
+        self.assertTrue(result.is_ok)
+
+        # Exact pattern should not work
+        result = self.matcher.evaluate(self.client_id, 'exact.topic', 'publish')
+        self.assertFalse(result.is_ok)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

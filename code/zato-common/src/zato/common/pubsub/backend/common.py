@@ -149,6 +149,11 @@ class Backend:
         _ = self._delete_topic(topic_name)
         _ = self.subs_by_topic.pop(topic_name, None)
 
+        # Remove permissions for this topic from pattern matcher (if this is a REST backend)
+        if hasattr(self, 'pattern_matcher') and hasattr(self, 'rest_server'):
+            for username in self.rest_server.users:
+                self.pattern_matcher.delete_topic(username, topic_name)
+
         logger.info(f'[{cid}] Successfully deleted topic {topic_name}')
 
 # ################################################################################################################################
