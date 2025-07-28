@@ -1856,7 +1856,7 @@ $.fn.zato.service.export_config = function() {
             var url = window.URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = 'enmasse.yaml';
+            a.download = 'config.yaml';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

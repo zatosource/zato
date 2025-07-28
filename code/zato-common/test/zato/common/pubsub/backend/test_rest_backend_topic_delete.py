@@ -136,7 +136,7 @@ class RESTBackendTopicDeleteTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_on_broker_msg_PUBSUB_TOPIC_DELETE_removes_permissions(self):
+    def test_on_broker_msg_PUBSUB_TOPIC_DELETE_removes_publisher_permissions_two_users(self):
 
         # Create a topic
         topic_name = 'test.topic.name'
@@ -146,15 +146,24 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         topic.creation_time = None
         self.backend._add_topic(topic_name, topic)
 
-        # Add some permissions to the pattern matcher
-        username = 'test_user'
-        self.rest_server.users = [username]
-        permissions = [{'pattern': topic_name, 'access_type': 'publisher'}]
-        self.backend.pattern_matcher.add_client(username, permissions)
+        # Add two users with different permissions
+        user1 = 'affected_user'
+        user2 = 'unaffected_user'
+        self.rest_server.users = [user1, user2]
 
-        # Verify permissions exist for the topic
-        result_before = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
-        self.assertTrue(result_before.is_ok)
+        # User1 has exact permission for the topic being deleted
+        permissions1 = [{'pattern': topic_name, 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(user1, permissions1)
+
+        # User2 has different permissions that should not be affected
+        permissions2 = [{'pattern': 'other.topic', 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(user2, permissions2)
+
+        # Verify initial permissions
+        result_user1_topic = self.backend.pattern_matcher.evaluate(user1, topic_name, 'publish')
+        result_user2_other = self.backend.pattern_matcher.evaluate(user2, 'other.topic', 'publish')
+        self.assertTrue(result_user1_topic.is_ok)
+        self.assertTrue(result_user2_other.is_ok)
 
         # Create the broker message
         msg = {
@@ -168,10 +177,115 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # Assert topic was removed
         self.assertFalse(self.backend._has_topic(topic_name))
 
-        # Assert permissions are removed correctly
-        # User should no longer have permission for the deleted topic
-        result_after = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
-        self.assertFalse(result_after.is_ok)  # Permission no longer exists
+        # Assert user1 permissions are removed
+        result_user1_after = self.backend.pattern_matcher.evaluate(user1, topic_name, 'publish')
+        self.assertFalse(result_user1_after.is_ok)  # Permission no longer exists
+
+        # Assert user2 permissions are unchanged
+        result_user2_other_after = self.backend.pattern_matcher.evaluate(user2, 'other.topic', 'publish')
+        self.assertTrue(result_user2_other_after.is_ok)  # Other permissions unchanged
+
+# ################################################################################################################################
+
+    def test_on_broker_msg_PUBSUB_TOPIC_DELETE_removes_subscriber_permissions_two_users(self):
+
+        # Create a topic
+        topic_name = 'test.topic.name'
+
+        topic = Topic()
+        topic.name = topic_name
+        topic.creation_time = None
+        self.backend._add_topic(topic_name, topic)
+
+        # Add two users with different permissions
+        user1 = 'affected_user'
+        user2 = 'unaffected_user'
+        self.rest_server.users = [user1, user2]
+
+        # User1 has exact subscriber permission for the topic being deleted
+        permissions1 = [{'pattern': topic_name, 'access_type': 'subscriber'}]
+        self.backend.pattern_matcher.add_client(user1, permissions1)
+
+        # User2 has different permissions that should not be affected
+        permissions2 = [{'pattern': 'other.topic', 'access_type': 'subscriber'}]
+        self.backend.pattern_matcher.add_client(user2, permissions2)
+
+        # Verify initial permissions
+        result_user1_topic = self.backend.pattern_matcher.evaluate(user1, topic_name, 'subscribe')
+        result_user2_other = self.backend.pattern_matcher.evaluate(user2, 'other.topic', 'subscribe')
+        self.assertTrue(result_user1_topic.is_ok)
+        self.assertTrue(result_user2_other.is_ok)
+
+        # Create the broker message
+        msg = {
+            'cid': 'test-cid',
+            'topic_name': topic_name
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
+
+        # Assert topic was removed
+        self.assertFalse(self.backend._has_topic(topic_name))
+
+        # Assert user1 permissions are removed
+        result_user1_after = self.backend.pattern_matcher.evaluate(user1, topic_name, 'subscribe')
+        self.assertFalse(result_user1_after.is_ok)  # Permission no longer exists
+
+        # Assert user2 permissions are unchanged
+        result_user2_other_after = self.backend.pattern_matcher.evaluate(user2, 'other.topic', 'subscribe')
+        self.assertTrue(result_user2_other_after.is_ok)  # Other permissions unchanged
+
+# ################################################################################################################################
+
+    def test_on_broker_msg_PUBSUB_TOPIC_DELETE_wildcard_permissions_unchanged_two_users(self):
+
+        # Create a topic
+        topic_name = 'exact.topic'
+
+        topic = Topic()
+        topic.name = topic_name
+        topic.creation_time = None
+        self.backend._add_topic(topic_name, topic)
+
+        # Add two users with different permission types
+        user1 = 'exact_user'
+        user2 = 'wildcard_user'
+        self.rest_server.users = [user1, user2]
+
+        # User1 has exact permission for the topic being deleted
+        permissions1 = [{'pattern': topic_name, 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(user1, permissions1)
+
+        # User2 has wildcard permissions that should not be affected
+        permissions2 = [{'pattern': 'wildcard.*', 'access_type': 'publisher'}]
+        self.backend.pattern_matcher.add_client(user2, permissions2)
+
+        # Verify initial permissions
+        result_user1_exact = self.backend.pattern_matcher.evaluate(user1, topic_name, 'publish')
+        result_user2_wildcard = self.backend.pattern_matcher.evaluate(user2, 'wildcard.test', 'publish')
+        self.assertTrue(result_user1_exact.is_ok)
+        self.assertTrue(result_user2_wildcard.is_ok)
+
+        # Create the broker message
+        msg = {
+            'cid': 'test-cid',
+            'topic_name': topic_name
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
+
+        # Assert topic was removed
+        self.assertFalse(self.backend._has_topic(topic_name))
+
+        # Assert user1 exact permissions are removed
+        result_user1_after = self.backend.pattern_matcher.evaluate(user1, topic_name, 'publish')
+        self.assertFalse(result_user1_after.is_ok)  # Exact permission no longer exists
+
+        # Assert user2 wildcard permissions are unchanged
+        result_user2_wildcard_after = self.backend.pattern_matcher.evaluate(user2, 'wildcard.test', 'publish')
+        self.assertTrue(result_user2_wildcard_after.is_ok)  # Wildcard permissions unchanged
 
 # ################################################################################################################################
 # ################################################################################################################################
