@@ -198,6 +198,7 @@ class RESTBackend(Backend):
         cid = msg['cid']
         pattern = msg['pattern']
         access_type = msg['access_type']
+        username = msg['username']
 
         # Parse patterns
         patterns = [elem.strip() for elem in pattern.splitlines() if elem.strip()]
@@ -205,10 +206,11 @@ class RESTBackend(Backend):
         # Create permission list
         permissions = [{'pattern': elem, 'access_type': access_type} for elem in patterns]
 
-        # Update permissions for all existing users
-        for username in self.rest_server.users:
+        if username in self.rest_server.users:
             self.pattern_matcher.set_permissions(username, permissions)
             logger.info(f'[{cid}] Set {len(permissions)} permissions for {username}')
+        else:
+            logger.info(f'[{cid}] User not found for permission edit: {username}')
 
         logger.info('PubSub permission edited -> msg: %s', msg)
 
