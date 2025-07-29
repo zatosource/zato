@@ -21,7 +21,7 @@ class RESTBackendTopicEditTestCase(TestCase):
 
     def setUp(self):
         self.rest_server = Mock()
-        self.rest_server.users = []
+        self.rest_server.users = ['user1', 'user2']
         self.broker_client = Mock()
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
