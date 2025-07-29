@@ -113,6 +113,7 @@ class Create(AdminService):
 
                 input.id = permission.id
                 input.sec_name = sec_base.name
+                input.username = sec_base.username
 
                 input.action = PUBSUB.PERMISSION_CREATE.value
 
