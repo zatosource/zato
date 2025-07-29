@@ -167,6 +167,7 @@ class Edit(AdminService):
             else:
                 input.id = permission.id
                 input.sec_name = permission.sec_base.name
+                input.username = permission.sec_base.username
 
                 input.action = PUBSUB.PERMISSION_EDIT.value
 
