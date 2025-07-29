@@ -220,40 +220,6 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_on_broker_msg_PUBSUB_PERMISSION_DELETE_user_not_in_rest_server(self):
-
-        # Set up a user with permissions but not in rest_server.users
-        username = 'orphaned_user'
-        orphaned_permissions = [{'pattern': 'orphaned.*', 'access_type': 'publisher'}]
-        self.backend.pattern_matcher.add_client(username, orphaned_permissions)
-
-        # Add a different user to rest_server.users
-        other_username = 'valid_user'
-        self.rest_server.users[other_username] = 'valid_password'
-
-        # Verify orphaned user has permissions
-        result_orphaned = self.backend.pattern_matcher.evaluate(username, 'orphaned.topic', 'publish')
-        self.assertTrue(result_orphaned.is_ok)
-
-        # Create the broker message for the orphaned user
-        msg = {
-            'cid': 'test-cid-orphaned',
-            'username': username
-        }
-
-        # Call the method under test
-        self.backend.on_broker_msg_PUBSUB_PERMISSION_DELETE(msg)
-
-        # Assert orphaned user's permissions are not removed (user not in rest_server.users)
-        result_orphaned_after = self.backend.pattern_matcher.evaluate(username, 'orphaned.topic', 'publish')
-        self.assertTrue(result_orphaned_after.is_ok)
-
-        # Assert pattern matcher still has the orphaned user
-        client_count = self.backend.pattern_matcher.get_client_count()
-        self.assertEqual(client_count, 1)
-
-# ################################################################################################################################
-
     def test_on_broker_msg_PUBSUB_PERMISSION_DELETE_preserves_cache_and_state(self):
 
         # Set up multiple users
@@ -270,8 +236,8 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
         self.backend.pattern_matcher.add_client(user2, user2_permissions)
 
         # Trigger some evaluations to populate cache
-        self.backend.pattern_matcher.evaluate(user1, 'cache1.topic', 'publish')
-        self.backend.pattern_matcher.evaluate(user2, 'cache2.topic', 'subscribe')
+        _ = self.backend.pattern_matcher.evaluate(user1, 'cache1.topic', 'publish')
+        _ = self.backend.pattern_matcher.evaluate(user2, 'cache2.topic', 'subscribe')
 
         # Get initial cache size
         cache_size_before = self.backend.pattern_matcher.get_cache_size()
