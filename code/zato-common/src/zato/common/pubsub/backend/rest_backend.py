@@ -220,11 +220,13 @@ class RESTBackend(Backend):
 
         # Local aliases
         cid = msg['cid']
+        username = msg['username']
 
-        # Remove permissions for all existing users
-        for username in self.rest_server.users:
+        if username in self.rest_server.users:
             self.pattern_matcher.remove_client(username)
             logger.info(f'[{cid}] Removed all permissions for {username}')
+        else:
+            logger.info(f'[{cid}] User not found for permission deletion: {username}')
 
         logger.info('PubSub permission deleted -> msg: %s', msg)
 
