@@ -194,10 +194,13 @@ class PatternMatcher:
             subscriber_pattern_list.sort(key=self._pattern_info_sort_key)
 
             client_permissions = ClientPermissions()
+
             client_permissions.client_id = client_id
             client_permissions.pub_patterns = publisher_pattern_list
             client_permissions.sub_patterns = subscriber_pattern_list
+
             self._clients[client_id] = client_permissions
+
             self._clear_evaluation_cache()
 
 # ################################################################################################################################
