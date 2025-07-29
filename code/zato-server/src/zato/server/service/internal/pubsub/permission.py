@@ -207,6 +207,8 @@ class Delete(AdminService):
                 raise
             else:
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
+                self.request.input.username = permission.sec_base.username
+
                 self.broker_client.publish(self.request.input)
                 self.broker_client.publish(self.request.input, routing_key='pubsub')
 
