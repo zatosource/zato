@@ -215,6 +215,18 @@ class PatternMatcher:
 
 # ################################################################################################################################
 
+    def change_client_id(self, old_client_id:'str', new_client_id:'str') -> 'None':
+        """ Change a client's ID while preserving all permissions.
+        """
+        with self._lock:
+            if old_client_id in self._clients:
+                client_permissions = self._clients.pop(old_client_id)
+                client_permissions.client_id = new_client_id
+                self._clients[new_client_id] = client_permissions
+                self._clear_evaluation_cache()
+
+# ################################################################################################################################
+
     def set_permissions(self, client_id:'str', permissions:'List[anydict]') -> 'None':
         """ Set/update all permissions for a client.
         """

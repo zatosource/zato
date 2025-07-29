@@ -119,8 +119,11 @@ class RESTBackend(Backend):
             # .. log what we're doing ..
             logger.info(f'[{cid}] Updating username from `{old_username}` to `{new_username}`')
 
-            # .. and actually do it ..
+            # .. update the username in rest_server ..
             self.rest_server.change_username(cid, old_username, new_username)
+
+            # .. and update the client ID in pattern_matcher ..
+            self.pattern_matcher.change_client_id(old_username, new_username)
 
         # .. we go here if the name of the security definition is different ..
         if has_sec_name_changed:
