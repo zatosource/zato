@@ -118,6 +118,34 @@ class Backend:
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        sub_key = msg['sub_key']
+        sec_name = msg['sec_name']
+
+        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, sec_name={sec_name}')
+
+        # Find all topics this user is subscribed to with this sub_key
+        topics_to_unsubscribe = []
+        for topic_name, subscriptions_by_sec_name in self.subs_by_topic.items():
+            if sec_name in subscriptions_by_sec_name:
+                subscription = subscriptions_by_sec_name[sec_name]
+                if subscription.sub_key == sub_key:
+                    topics_to_unsubscribe.append(topic_name)
+
+        # If we didn't find any matching subscriptions
+        if not topics_to_unsubscribe:
+            logger.info(f'[{cid}] No subscriptions found for {sec_name} with key {sub_key}')
+            return
+
+        # Unsubscribe from each topic
+        for topic_name in topics_to_unsubscribe:
+            _ = self.unregister_subscription(cid, topic_name, sec_name=sec_name)
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'strdict') -> 'None':
 
         # Local aliases
@@ -155,34 +183,6 @@ class Backend:
                 self.pattern_matcher.delete_topic(username, topic_name)
 
         logger.info(f'[{cid}] Successfully deleted topic {topic_name}')
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
-
-        # Local aliases
-        cid = msg['cid']
-        sub_key = msg['sub_key']
-        sec_name = msg['sec_name']
-
-        logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, sec_name={sec_name}')
-
-        # Find all topics this user is subscribed to with this sub_key
-        topics_to_unsubscribe = []
-        for topic_name, subscriptions_by_sec_name in self.subs_by_topic.items():
-            if sec_name in subscriptions_by_sec_name:
-                subscription = subscriptions_by_sec_name[sec_name]
-                if subscription.sub_key == sub_key:
-                    topics_to_unsubscribe.append(topic_name)
-
-        # If we didn't find any matching subscriptions
-        if not topics_to_unsubscribe:
-            logger.info(f'[{cid}] No subscriptions found for {sec_name} with key {sub_key}')
-            return
-
-        # Unsubscribe from each topic
-        for topic_name in topics_to_unsubscribe:
-            _ = self.unregister_subscription(cid, topic_name, sec_name=sec_name)
 
 # ################################################################################################################################
 
