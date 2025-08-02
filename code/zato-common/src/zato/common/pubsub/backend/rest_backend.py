@@ -232,4 +232,37 @@ class RESTBackend(Backend):
         logger.info('PubSub permission deleted -> msg: %s', msg)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        sub_key = msg['sub_key']
+        sec_name = msg['sec_name']
+        topic_name_list = msg['topic_name_list']
+
+        with self._main_lock:
+
+            # Remove existing subscription by sub_key from all topics
+            topics_to_clean = []
+
+            for topic_name, subs_by_sec_name in self.subs_by_topic.items():
+                for user_sec_name, subscription in list(subs_by_sec_name.items()):
+                    if subscription.sub_key == sub_key:
+                        del subs_by_sec_name[user_sec_name]
+                        topics_to_clean.append(topic_name)
+                        break
+
+            # Clean up empty topic entries
+            for topic_name in topics_to_clean:
+                if not self.subs_by_topic[topic_name]:
+                    del self.subs_by_topic[topic_name]
+
+        # Add subscription to new topics
+        for topic_name in topic_name_list:
+            self.register_subscription(cid, topic_name, sec_name, sub_key)
+
+        logger.info(f'[{cid}] Updated subscription {sub_key} for {sec_name} to topics: {topic_name_list}')
+
+# ################################################################################################################################
 # ################################################################################################################################
