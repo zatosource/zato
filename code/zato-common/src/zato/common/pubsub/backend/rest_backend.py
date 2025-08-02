@@ -85,8 +85,6 @@ class RESTBackend(Backend):
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'strdict') -> 'None':
 
-        logger.warning('222 on_broker_msg_SECURITY_BASIC_AUTH_CREATE')
-
         # Local aliases
         cid = msg['cid']
         sec_name = msg['sec_name']
