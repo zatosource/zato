@@ -249,14 +249,14 @@ class RESTBackend(Backend):
             for topic_name, subs_by_sec_name in self.subs_by_topic.items():
                 for user_sec_name, subscription in list(subs_by_sec_name.items()):
                     if subscription.sub_key == sub_key:
-                        del subs_by_sec_name[user_sec_name]
+                        _ = subs_by_sec_name.pop(user_sec_name, None)
                         topics_to_clean.append(topic_name)
                         break
 
-            # Clean up empty topic entries
+            # Clean up empty topic entries - the ones that don't have any subscriptions anymore
             for topic_name in topics_to_clean:
                 if not self.subs_by_topic[topic_name]:
-                    del self.subs_by_topic[topic_name]
+                    - = self.subs_by_topic.pop(topic_name, None)
 
         # Add subscription to new topics
         for topic_name in topic_name_list:
