@@ -357,6 +357,42 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         self.assertIn('overlap_user', self.backend.subs_by_topic['topic.add'])
 
 # ################################################################################################################################
+
+    def test_on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT_with_invalid_topic_names(self):
+
+        # Create initial subscription
+        initial_msg = {
+            'cid': 'setup-cid',
+            'sub_key': 'sk-invalid-333',
+            'sec_name': 'invalid_user',
+            'topic_name_list': ['valid.topic']
+        }
+        self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
+
+        # Edit subscription with invalid topic names
+        edit_msg = {
+            'cid': 'edit-cid-invalid',
+            'sub_key': 'sk-invalid-333',
+            'sec_name': 'invalid_user',
+            'topic_name_list': ['', None, 'valid.topic', '   ', 'topic with spaces']
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(edit_msg)
+
+        # Assert only valid topics were processed
+        valid_topics = []
+        for topic in edit_msg['topic_name_list']:
+            if topic:
+                topic = topic.strip()
+                if topic:
+                    valid_topics.append(topic)
+
+        for topic in valid_topics:
+            self.assertIn(topic, self.backend.subs_by_topic)
+            self.assertIn('invalid_user', self.backend.subs_by_topic[topic])
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
