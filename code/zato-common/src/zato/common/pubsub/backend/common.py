@@ -304,18 +304,18 @@ class Backend:
             if not self._has_topic(topic_name):
                 self.create_topic(cid, 'subscribe', topic_name)
 
-        # .. create a new subscription ..
-        sub = Subscription()
-        sub.topic_name = topic_name
-        sub.sec_name = sec_name
-        sub.sub_key = sub_key
-        sub.creation_time = utcnow()
+            # .. create a new subscription ..
+            sub = Subscription()
+            sub.topic_name = topic_name
+            sub.sec_name = sec_name
+            sub.sub_key = sub_key
+            sub.creation_time = utcnow()
 
-        # .. get or create a dict with subscriptions for users ..
-        subs_by_sec_name = self.subs_by_topic.setdefault(topic_name, {})
+            # .. get or create a dict with subscriptions for users ..
+            subs_by_sec_name = self.subs_by_topic.setdefault(topic_name, {})
 
-        # .. now add it for that user ..
-        subs_by_sec_name[sec_name] = sub
+            # .. now add it for that user ..
+            subs_by_sec_name[sec_name] = sub
 
         # .. build our response ..
         response = StatusResponse()
