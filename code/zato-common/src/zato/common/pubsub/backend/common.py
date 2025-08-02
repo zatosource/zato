@@ -127,13 +127,22 @@ class Backend:
 
         logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, sec_name={sec_name}')
 
-        # Find all topics this user is subscribed to with this sub_key
-        topics_to_unsubscribe = []
-        for topic_name, subscriptions_by_sec_name in self.subs_by_topic.items():
-            if sec_name in subscriptions_by_sec_name:
-                subscription = subscriptions_by_sec_name[sec_name]
-                if subscription.sub_key == sub_key:
-                    topics_to_unsubscribe.append(topic_name)
+        with self._main_lock:
+
+            # Remove existing subscription by sub_key from all topics
+            topics_to_unsubscribe = []
+
+            for topic_name, subs_by_sec_name in self.subs_by_topic.items():
+                if sec_name in subs_by_sec_name:
+                    subscription = subs_by_sec_name[sec_name]
+                    if subscription.sub_key == sub_key:
+                        _ = subs_by_sec_name.pop(sec_name, None)
+                        topics_to_unsubscribe.append(topic_name)
+
+            # Clean up empty topic entries
+            for topic_name in topics_to_unsubscribe:
+                if not self.subs_by_topic[topic_name]:
+                    _ = self.subs_by_topic.pop(topic_name, None)
 
         # If we didn't find any matching subscriptions
         if not topics_to_unsubscribe:
