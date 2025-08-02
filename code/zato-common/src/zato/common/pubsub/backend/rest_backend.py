@@ -256,7 +256,7 @@ class RESTBackend(Backend):
             # Clean up empty topic entries - the ones that don't have any subscriptions anymore
             for topic_name in topics_to_clean:
                 if not self.subs_by_topic[topic_name]:
-                    - = self.subs_by_topic.pop(topic_name, None)
+                    _ = self.subs_by_topic.pop(topic_name, None)
 
         # Add subscription to new topics
         for topic_name in topic_name_list:
