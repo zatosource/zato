@@ -45,8 +45,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-123',
             'sub_key': 'sk-delete-123',
-            'sec_name': 'test_user',
-            'topic_name': 'orders.test'
+            'sec_name': 'test_user'
         }
 
         # Call the method under test
@@ -78,8 +77,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-multi',
             'sub_key': 'sk-multi-1',
-            'sec_name': 'user2',
-            'topic_name': 'shared.topic'
+            'sec_name': 'user2'
         }
 
         # Call the method under test
@@ -111,22 +109,21 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
             self.assertIn(topic, self.backend.subs_by_topic)
             self.assertIn('multi_topic_user', self.backend.subs_by_topic[topic])
 
-        # Delete subscription for one topic
+        # Delete subscription for orders.new
         delete_msg = {
-            'cid': 'delete-cid-one-topic',
-            'sub_key': 'sk-topic-1',
-            'sec_name': 'multi_topic_user',
-            'topic_name': 'invoices.paid'
+            'cid': 'delete-cid-topics',
+            'sub_key': 'sk-topic-0',
+            'sec_name': 'multi_topic_user'
         }
 
         # Call the method under test
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(delete_msg)
 
         # Assert only the specified subscription was removed
-        self.assertIn('orders.new', self.backend.subs_by_topic)
-        self.assertIn('multi_topic_user', self.backend.subs_by_topic['orders.new'])
+        self.assertIn('invoices.paid', self.backend.subs_by_topic)
+        self.assertIn('multi_topic_user', self.backend.subs_by_topic['invoices.paid'])
 
-        self.assertNotIn('invoices.paid', self.backend.subs_by_topic)
+        self.assertNotIn('orders.new', self.backend.subs_by_topic)
 
         self.assertIn('alerts.critical', self.backend.subs_by_topic)
         self.assertIn('multi_topic_user', self.backend.subs_by_topic['alerts.critical'])
@@ -135,12 +132,11 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
 
     def test_on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE_nonexistent_subscription(self):
 
-        # Try to delete a subscription that doesn't exist
+        # Try to delete nonexistent subscription
         delete_msg = {
             'cid': 'delete-cid-nonexistent',
             'sub_key': 'sk-nonexistent-999',
-            'sec_name': 'nonexistent_user',
-            'topic_name': 'nonexistent.topic'
+            'sec_name': 'nonexistent_user'
         }
 
         # Call the method under test - should not raise an exception
@@ -170,8 +166,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-wrong-user',
             'sub_key': 'sk-wrong-user-123',
-            'sec_name': 'user2',
-            'topic_name': 'test.topic'
+            'sec_name': 'user2'
         }
 
         # Call the method under test
@@ -188,7 +183,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Create subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-cleanup-456',
+            'sub_key': 'sk-cleanup-123',
             'sec_name': 'cleanup_user',
             'topic_name_list': ['cleanup.topic']
         }
@@ -201,9 +196,8 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Delete the only subscription for this topic
         delete_msg = {
             'cid': 'delete-cid-cleanup',
-            'sub_key': 'sk-cleanup-456',
-            'sec_name': 'cleanup_user',
-            'topic_name': 'cleanup.topic'
+            'sub_key': 'sk-cleanup-123',
+            'sec_name': 'cleanup_user'
         }
 
         # Call the method under test
@@ -222,7 +216,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Create subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-preserve-789',
+            'sub_key': 'sk-preserve-123',
             'sec_name': 'preserve_user',
             'topic_name_list': ['preserve.topic']
         }
@@ -232,12 +226,11 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         self.assertIn('preserve.topic', self.backend.topics)
         self.assertIn('preserve.topic', self.backend.subs_by_topic)
 
-        # Delete subscription
+        # Delete subscription for preserve_user
         delete_msg = {
             'cid': 'delete-cid-preserve',
-            'sub_key': 'sk-preserve-789',
-            'sec_name': 'preserve_user',
-            'topic_name': 'preserve.topic'
+            'sub_key': 'sk-preserve-123',
+            'sec_name': 'preserve_user'
         }
 
         # Call the method under test
@@ -255,8 +248,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-empty',
             'sub_key': 'sk-empty-000',
-            'sec_name': 'empty_user',
-            'topic_name': ''
+            'sec_name': 'empty_user'
         }
 
         # Call the method under test - should not raise an exception
@@ -273,8 +265,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-none',
             'sub_key': 'sk-none-000',
-            'sec_name': 'none_user',
-            'topic_name': None
+            'sec_name': 'none_user'
         }
 
         # Call the method under test - should not raise an exception
@@ -314,8 +305,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         delete_msg = {
             'cid': 'delete-cid-complex',
             'sub_key': 'sk-complex-0',
-            'sec_name': 'alice',
-            'topic_name': 'orders.new'
+            'sec_name': 'alice'
         }
 
         # Call the method under test
