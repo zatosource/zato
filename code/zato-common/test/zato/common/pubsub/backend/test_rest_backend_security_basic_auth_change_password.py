@@ -110,8 +110,8 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was updated to empty string
-        self.assertEqual(self.rest_server.users[self.empty_password_username], self.empty_new_password)
+        # Assert password was not changed due to empty password
+        self.assertEqual(self.rest_server.users[self.empty_password_username], self.empty_old_password)
 
 # ################################################################################################################################
 
