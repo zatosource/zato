@@ -99,9 +99,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
-        # Assert user was added with empty password
-        self.assertIn(self.empty_password_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.empty_password_username], self.empty_password)
+        # Assert user was not created due to empty password
+        self.assertNotIn(self.empty_password_username, self.rest_server.users)
 
 # ################################################################################################################################
 
