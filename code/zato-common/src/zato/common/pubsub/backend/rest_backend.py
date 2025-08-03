@@ -260,7 +260,7 @@ class RESTBackend(Backend):
 
         # Add subscription to new topics
         for topic_name in topic_name_list:
-            self.register_subscription(cid, topic_name, sec_name, sub_key)
+            _ = self.register_subscription(cid, topic_name, sec_name, sub_key)
 
         logger.info(f'[{cid}] Updated subscription {sub_key} for {sec_name} to topics: {topic_name_list}')
 
