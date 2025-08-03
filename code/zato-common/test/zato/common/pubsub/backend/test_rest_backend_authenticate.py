@@ -6,14 +6,10 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Must come first
-from gevent import monkey;
-_ = monkey.patch_all()
-
 # stdlib
+import warnings
 from base64 import b64encode
 from unittest import main, TestCase
-import warnings
 
 # Zato
 from zato.common.pubsub.server.rest_base import BaseRESTServer, UnauthorizedException

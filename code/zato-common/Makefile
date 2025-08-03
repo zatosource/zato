@@ -13,4 +13,4 @@ static-check:
 	$(MAKE) flake8
 
 run-tests:
-	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning
+	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
