@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from unittest import main, TestCase
+import warnings
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
@@ -20,39 +21,43 @@ from zato.broker.client import BrokerClient
 class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
     def setUp(self):
+
+        # Suppress ResourceWarnings from gevent
+        warnings.filterwarnings('ignore', category=ResourceWarning)
+
         self.broker_client = BrokerClient()
         self.rest_server = PubSubRESTServer('localhost', 8080)
         self.backend = RESTBackend(self.rest_server, self.broker_client)
-        
+
         # Test data constants
         self.test_cid = 'test-cid-123'
         self.test_username = 'test_user'
         self.test_password = 'secure_password_123'
-        
+
         self.empty_password_cid = 'test-cid-empty'
         self.empty_password_username = 'empty_password_user'
         self.empty_password = ''
-        
+
         self.special_chars_cid = 'test-cid-special'
         self.special_chars_username = 'user@domain.com'
         self.special_chars_password = 'password123'
-        
+
         self.unicode_cid = 'test-cid-unicode'
         self.unicode_username = 'unicode_user_ñ'
         self.unicode_password = 'password_ü123'
-        
+
         self.long_values_cid = 'test-cid-long'
         self.long_username = 'a' * 100
         self.long_password = 'b' * 200
-        
+
         self.numeric_cid = 12345
         self.numeric_cid_username = 'numeric_cid_user'
         self.numeric_cid_password = 'numeric_password'
-        
+
         self.preserve_cid = 'test-cid-preserve'
         self.preserve_username = 'preserve_user'
         self.preserve_password = 'preserve_password'
-        
+
         self.duplicate_cid_1 = 'test-cid-duplicate'
         self.duplicate_cid_2 = 'test-cid-duplicate-2'
         self.duplicate_username = 'duplicate_user'
@@ -166,7 +171,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         multi_password_1 = 'password1'
         multi_password_2 = 'password2'
         multi_password_3 = 'password3'
-        
+
         # Create multiple broker messages
         messages = [
             {
@@ -206,7 +211,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message with additional fields
         extra_field_value = 'should_be_ignored'
         another_field_value = 123
-        
+
         msg = {
             'cid': self.preserve_cid,
             'sec_name': self.preserve_username,
