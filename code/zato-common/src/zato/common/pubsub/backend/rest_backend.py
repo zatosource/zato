@@ -179,6 +179,27 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+        username = msg['name']
+
+        # Remove the user
+        if username in self.rest_server.users:
+            del self.rest_server.users[username]
+            logger.info(f'[{cid}] Deleted user `{username}`')
+
+            # Remove all permissions for this user
+            self.pattern_matcher.remove_client(username)
+            logger.info(f'[{cid}] Removed all permissions for deleted user `{username}`')
+        else:
+            logger.warning(f'[{cid}] User not found for deletion: `{username}`')
+
+        logger.info('HTTP Basic Auth deleted -> msg: %s', msg)
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'strdict') -> 'None':
 
         # Local aliases
