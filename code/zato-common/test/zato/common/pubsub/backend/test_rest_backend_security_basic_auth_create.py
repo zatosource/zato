@@ -71,7 +71,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message
         msg = {
             'cid': self.test_cid,
-            'sec_name': self.test_username,
+            'username': self.test_username,
             'password': self.test_password
         }
 
@@ -92,7 +92,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message with empty password
         msg = {
             'cid': self.empty_password_cid,
-            'sec_name': self.empty_password_username,
+            'username': self.empty_password_username,
             'password': self.empty_password
         }
 
@@ -107,10 +107,10 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CREATE_with_special_characters_in_username(self):
 
-        # Create the broker message with special characters in username
+        # Create the broker message with special characters
         msg = {
             'cid': self.special_chars_cid,
-            'sec_name': self.special_chars_username,
+            'username': self.special_chars_username,
             'password': self.special_chars_password
         }
 
@@ -128,7 +128,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message with unicode characters
         msg = {
             'cid': self.unicode_cid,
-            'sec_name': self.unicode_username,
+            'username': self.unicode_username,
             'password': self.unicode_password
         }
 
@@ -146,7 +146,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message with long values
         msg = {
             'cid': self.long_values_cid,
-            'sec_name': self.long_username,
+            'username': self.long_username,
             'password': self.long_password
         }
 
@@ -176,17 +176,17 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         messages = [
             {
                 'cid': multi_cid_1,
-                'sec_name': multi_username_1,
+                'username': multi_username_1,
                 'password': multi_password_1
             },
             {
                 'cid': multi_cid_2,
-                'sec_name': multi_username_2,
+                'username': multi_username_2,
                 'password': multi_password_2
             },
             {
                 'cid': multi_cid_3,
-                'sec_name': multi_username_3,
+                'username': multi_username_3,
                 'password': multi_password_3
             }
         ]
@@ -214,7 +214,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
         msg = {
             'cid': self.preserve_cid,
-            'sec_name': self.preserve_username,
+            'username': self.preserve_username,
             'password': self.preserve_password,
             'extra_field': extra_field_value,
             'another_field': another_field_value
@@ -234,7 +234,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message with numeric CID
         msg = {
             'cid': self.numeric_cid,
-            'sec_name': self.numeric_cid_username,
+            'username': self.numeric_cid_username,
             'password': self.numeric_cid_password
         }
 
@@ -256,7 +256,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message
         msg = {
             'cid': 'test-cid-state',
-            'sec_name': 'state_user',
+            'username': 'state_user',
             'password': 'state_password'
         }
 
@@ -274,7 +274,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create the broker message
         msg = {
             'cid': self.duplicate_cid_1,
-            'sec_name': self.duplicate_username,
+            'username': self.duplicate_username,
             'password': self.duplicate_password_1
         }
 
@@ -288,7 +288,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         # Create second message with same user but different password
         msg2 = {
             'cid': self.duplicate_cid_2,
-            'sec_name': self.duplicate_username,
+            'username': self.duplicate_username,
             'password': self.duplicate_password_2
         }
 
