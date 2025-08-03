@@ -345,6 +345,141 @@ class RESTBackendAuthenticateTestCase(TestCase):
         self.assertEqual(result, self.test_username)
 
 # ################################################################################################################################
+
+    def test_authenticate_after_password_change(self):
+
+        # Create user with initial password
+        initial_password = 'initial_password_123'
+        self.rest_server.users[self.test_username] = initial_password
+
+        # Verify authentication works with initial password
+        auth_header = self._create_basic_auth_header(self.test_username, initial_password)
+        environ = self._create_environ(auth_header)
+        result = self.rest_server.authenticate(self.test_cid, environ)
+        self.assertEqual(result, self.test_username)
+
+        # Change password
+        new_password = 'new_password_456'
+        self.rest_server.users[self.test_username] = new_password
+
+        # Verify old password no longer works
+        old_auth_header = self._create_basic_auth_header(self.test_username, initial_password)
+        old_environ = self._create_environ(old_auth_header)
+        with self.assertRaises(UnauthorizedException) as cm:
+            _ = self.rest_server.authenticate(self.test_cid, old_environ)
+        self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify new password works
+        new_auth_header = self._create_basic_auth_header(self.test_username, new_password)
+        new_environ = self._create_environ(new_auth_header)
+        result = self.rest_server.authenticate(self.test_cid, new_environ)
+        self.assertEqual(result, self.test_username)
+
+# ################################################################################################################################
+
+    def test_authenticate_after_password_change_to_empty(self):
+
+        # Create user with initial password
+        initial_password = 'initial_password_123'
+        empty_password_user = 'empty_password_change_user'
+        self.rest_server.users[empty_password_user] = initial_password
+
+        # Change password to empty
+        self.rest_server.users[empty_password_user] = ''
+
+        # Verify old password no longer works
+        old_auth_header = self._create_basic_auth_header(empty_password_user, initial_password)
+        old_environ = self._create_environ(old_auth_header)
+
+        with self.assertRaises(UnauthorizedException) as cm:
+            _ = self.rest_server.authenticate(self.test_cid, old_environ)
+
+        self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify empty password works
+        new_auth_header = self._create_basic_auth_header(empty_password_user, '')
+        new_environ = self._create_environ(new_auth_header)
+
+        result = self.rest_server.authenticate(self.test_cid, new_environ)
+        self.assertEqual(result, empty_password_user)
+
+# ################################################################################################################################
+
+    def test_authenticate_after_multiple_password_changes(self):
+
+        # Create user with initial password
+        password_change_user = 'password_change_user'
+        password1 = 'password_1'
+        password2 = 'password_2'
+        password3 = 'password_3'
+
+        self.rest_server.users[password_change_user] = password1
+
+        # Verify first password works
+        auth_header1 = self._create_basic_auth_header(password_change_user, password1)
+        environ1 = self._create_environ(auth_header1)
+
+        result = self.rest_server.authenticate(self.test_cid, environ1)
+        self.assertEqual(result, password_change_user)
+
+        # Change to second password
+        self.rest_server.users[password_change_user] = password2
+
+        # Verify second password works and first doesn't
+        auth_header2 = self._create_basic_auth_header(password_change_user, password2)
+        environ2 = self._create_environ(auth_header2)
+
+        result = self.rest_server.authenticate(self.test_cid, environ2)
+        self.assertEqual(result, password_change_user)
+
+        with self.assertRaises(UnauthorizedException):
+            _ = self.rest_server.authenticate(self.test_cid, environ1)
+
+        # Change to third password
+        self.rest_server.users[password_change_user] = password3
+
+        # Verify third password works and previous don't
+        auth_header3 = self._create_basic_auth_header(password_change_user, password3)
+        environ3 = self._create_environ(auth_header3)
+
+        result = self.rest_server.authenticate(self.test_cid, environ3)
+        self.assertEqual(result, password_change_user)
+
+        with self.assertRaises(UnauthorizedException):
+            _ = self.rest_server.authenticate(self.test_cid, environ1)
+
+        with self.assertRaises(UnauthorizedException):
+            _ = self.rest_server.authenticate(self.test_cid, environ2)
+
+# ################################################################################################################################
+
+    def test_authenticate_after_password_change_with_special_characters(self):
+
+        # Create user with initial password
+        special_change_user = 'special_change_user'
+        initial_password = 'simple_password'
+        new_password = r'complex!@#$%^&*()_+{}|:<>?[]\;\',./'
+
+        self.rest_server.users[special_change_user] = initial_password
+
+        # Change to password with special characters
+        self.rest_server.users[special_change_user] = new_password
+
+        # Verify old password no longer works
+        old_auth_header = self._create_basic_auth_header(special_change_user, initial_password)
+        old_environ = self._create_environ(old_auth_header)
+
+        with self.assertRaises(UnauthorizedException):
+            _ = self.rest_server.authenticate(self.test_cid, old_environ)
+
+        # Verify new password with special characters works
+        new_auth_header = self._create_basic_auth_header(special_change_user, new_password)
+        new_environ = self._create_environ(new_auth_header)
+
+        result = self.rest_server.authenticate(self.test_cid, new_environ)
+        self.assertEqual(result, special_change_user)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
