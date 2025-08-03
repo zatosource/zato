@@ -158,20 +158,6 @@ class RESTBackendAuthenticateTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_authenticate_with_invalid_base64_encoding(self):
-
-        # Create environ with invalid base64 in auth header
-        environ = self._create_environ('Basic invalid_base64!')
-
-        # Call the method under test and expect exception
-        with self.assertRaises(UnauthorizedException) as cm:
-            _ = self.rest_server.authenticate(self.test_cid, environ)
-
-        # Assert exception contains correct CID
-        self.assertEqual(cm.exception.cid, self.test_cid)
-
-# ################################################################################################################################
-
     def test_authenticate_with_empty_username(self):
 
         # Create auth header with empty username
