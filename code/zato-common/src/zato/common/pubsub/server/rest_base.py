@@ -94,7 +94,7 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
-    def authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
+    def _authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
         """ Authenticate a request using HTTP Basic Authentication.
         """
         path_info = environ['PATH_INFO']
@@ -125,10 +125,10 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
-    def _ensure_authenticated(self, cid:'str', environ:'anydict') -> 'str':
+    def authenticate(self, cid:'str', environ:'anydict') -> 'str':
 
         # Authenticate request
-        username = self.authenticate(cid, environ)
+        username = self._authenticate(cid, environ)
 
         if not username:
             raise UnauthorizedException(cid)
@@ -251,7 +251,7 @@ class BaseRESTServer(BaseServer):
         """ Admin diagnostics endpoint - dumps topics, users, subscriptions, etc. to logs in YAML format.
         """
         # Ensure the request is authenticated
-        _ = self._ensure_authenticated(cid, environ)
+        _ = self.authenticate(cid, environ)
 
         # Collect data for diagnostics
         diagnostics = {
