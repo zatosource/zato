@@ -516,6 +516,60 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
         self.assertEqual(self.backend.subs_by_topic[topic_name], {})
 
 # ################################################################################################################################
+
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_username_change_target_exists(self):
+
+        # Setup initial users - both old and new usernames exist
+        self.rest_server.users['existing_old'] = 'password1'
+        self.rest_server.users['existing_new'] = 'password2'
+
+        # Create the broker message
+        msg = {
+            'cid': 'test-cid-target-exists',
+            'has_sec_name_changed': False,
+            'has_username_changed': True,
+            'old_sec_name': 'sec_name',
+            'new_sec_name': 'sec_name',
+            'old_username': 'existing_old',
+            'new_username': 'existing_new'
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_SECURITY_BASIC_AUTH_EDIT(msg)
+
+        # Assert both users still exist (no change occurred)
+        self.assertIn('existing_old', self.rest_server.users)
+        self.assertIn('existing_new', self.rest_server.users)
+        self.assertEqual(self.rest_server.users['existing_old'], 'password1')
+        self.assertEqual(self.rest_server.users['existing_new'], 'password2')
+
+# ################################################################################################################################
+
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_username_change_source_missing(self):
+
+        # Setup - old username does not exist
+        self.rest_server.users['some_other_user'] = 'password'
+
+        # Create the broker message
+        msg = {
+            'cid': 'test-cid-source-missing',
+            'has_sec_name_changed': False,
+            'has_username_changed': True,
+            'old_sec_name': 'sec_name',
+            'new_sec_name': 'sec_name',
+            'old_username': 'nonexistent_user',
+            'new_username': 'new_user'
+        }
+
+        # Call the method under test
+        self.backend.on_broker_msg_SECURITY_BASIC_AUTH_EDIT(msg)
+
+        # Assert no new user was created and existing user remains
+        self.assertNotIn('nonexistent_user', self.rest_server.users)
+        self.assertNotIn('new_user', self.rest_server.users)
+        self.assertIn('some_other_user', self.rest_server.users)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
