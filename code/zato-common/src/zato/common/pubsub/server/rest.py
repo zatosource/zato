@@ -75,7 +75,7 @@ class PubSubRESTServer(BaseRESTServer):
         logger.info(f'[{cid}] Processing publish request')
 
         # .. make sure the client is allowed to carry out this action ..
-        username = self._ensure_authenticated(cid, environ)
+        username = self.authenticate(cid, environ)
 
         # .. build our representation of the request ..
         request = Request(environ)
@@ -124,7 +124,7 @@ class PubSubRESTServer(BaseRESTServer):
         """ Get messages from the user's queue.
         """
         # Authenticate the user
-        username = self._ensure_authenticated(cid, environ)
+        username = self.authenticate(cid, environ)
 
         # Parse request data
         request = Request(environ)
@@ -237,7 +237,7 @@ class PubSubRESTServer(BaseRESTServer):
         logger.info(f'[{cid}] Processing subscribe request')
 
         # .. make sure the client is allowed to carry out this action ..
-        username = self._ensure_authenticated(cid, environ)
+        username = self.authenticate(cid, environ)
 
         # Subscribe to topic using backend
         result = self.backend.register_subscription(cid, topic_name, username)
@@ -257,7 +257,7 @@ class PubSubRESTServer(BaseRESTServer):
         logger.info(f'[{cid}] Processing unsubscribe request')
 
         # .. make sure the client is allowed to carry out this action ..
-        username = self._ensure_authenticated(cid, environ)
+        username = self.authenticate(cid, environ)
 
         # Unsubscribe from topic using backend
         result = self.backend.unregister_subscription(cid, topic_name, username=username)
