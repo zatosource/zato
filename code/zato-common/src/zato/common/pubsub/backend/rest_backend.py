@@ -90,6 +90,11 @@ class RESTBackend(Backend):
         username = msg['username']
         password = msg['password']
 
+        # Reject empty passwords
+        if not password:
+            logger.warning(f'[{cid}] Rejecting user creation with empty password for `{username}`')
+            return
+
         # Create the user now
         self.rest_server.create_user(cid, username, password)
 
@@ -157,6 +162,11 @@ class RESTBackend(Backend):
         cid = msg['cid']
         username = msg['username']
         new_password = msg['password']
+
+        # Reject empty passwords
+        if not new_password:
+            logger.warning(f'[{cid}] Rejecting password change to empty password for `{username}`')
+            return
 
         # Update the password in the users dictionary
         if username in self.rest_server.users:
