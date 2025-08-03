@@ -20,7 +20,7 @@ from zato.common.util.api import replace_secrets, spawn_greenlet
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.pubsub.server import PubSubRESTServer
+    from zato.common.pubsub.server.rest import PubSubRESTServer
     from zato.common.typing_ import strdict
 
 # ################################################################################################################################
@@ -52,6 +52,48 @@ class RESTBackend(Backend):
             'zato-pubsub',
             self._on_internal_message_callback
         )
+
+# ################################################################################################################################
+
+    def _remove_subscriptions_by_username(self, username:'str') -> 'list':
+        """ Remove all subscriptions for a specific username and clean up empty topics.
+        Returns list of topics that had subscriptions removed.
+        """
+        topics_to_clean = []
+
+        for topic_name, subs_by_sec_name in self.subs_by_topic.items():
+            if username in subs_by_sec_name:
+                _ = subs_by_sec_name.pop(username, None)
+                topics_to_clean.append(topic_name)
+
+        # Clean up empty topic entries
+        for topic_name in topics_to_clean:
+            if not self.subs_by_topic[topic_name]:
+                _ = self.subs_by_topic.pop(topic_name, None)
+
+        return topics_to_clean
+
+# ################################################################################################################################
+
+    def _remove_subscriptions_by_sub_key(self, sub_key:'str') -> 'list':
+        """ Remove subscriptions by sub_key and clean up empty topics.
+        Returns list of topics that had subscriptions removed.
+        """
+        topics_to_clean = []
+
+        for topic_name, subs_by_sec_name in self.subs_by_topic.items():
+            for user_sec_name, subscription in list(subs_by_sec_name.items()):
+                if subscription.sub_key == sub_key:
+                    _ = subs_by_sec_name.pop(user_sec_name, None)
+                    topics_to_clean.append(topic_name)
+                    break
+
+        # Clean up empty topic entries
+        for topic_name in topics_to_clean:
+            if not self.subs_by_topic[topic_name]:
+                _ = self.subs_by_topic.pop(topic_name, None)
+
+        return topics_to_clean
 
 # ################################################################################################################################
 
@@ -193,6 +235,13 @@ class RESTBackend(Backend):
             # Remove all permissions for this user
             self.pattern_matcher.remove_client(username)
             logger.info(f'[{cid}] Removed all permissions for deleted user `{username}`')
+
+            # Remove all subscriptions for this user
+            topics_to_clean = self._remove_subscriptions_by_username(username)
+
+            if topics_to_clean:
+                logger.info(f'[{cid}] Removed subscriptions for deleted user `{username}` from topics: {topics_to_clean}')
+
         else:
             logger.warning(f'[{cid}] User not found for deletion: `{username}`')
 
@@ -275,19 +324,7 @@ class RESTBackend(Backend):
         with self._main_lock:
 
             # Remove existing subscription by sub_key from all topics
-            topics_to_clean = []
-
-            for topic_name, subs_by_sec_name in self.subs_by_topic.items():
-                for user_sec_name, subscription in list(subs_by_sec_name.items()):
-                    if subscription.sub_key == sub_key:
-                        _ = subs_by_sec_name.pop(user_sec_name, None)
-                        topics_to_clean.append(topic_name)
-                        break
-
-            # Clean up empty topic entries - the ones that don't have any subscriptions anymore
-            for topic_name in topics_to_clean:
-                if not self.subs_by_topic[topic_name]:
-                    _ = self.subs_by_topic.pop(topic_name, None)
+            _ = self._remove_subscriptions_by_sub_key(sub_key)
 
         # Add subscription to new topics
         for topic_name in topic_name_list:
