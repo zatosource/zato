@@ -87,11 +87,11 @@ class RESTBackend(Backend):
 
         # Local aliases
         cid = msg['cid']
-        sec_name = msg['sec_name']
+        username = msg['username']
         password = msg['password']
 
         # Create the user now
-        self.rest_server.create_user(cid, sec_name, password)
+        self.rest_server.create_user(cid, username, password)
 
         logger.info('HTTP Basic Auth created -> msg: %s', replace_secrets(msg))
 
