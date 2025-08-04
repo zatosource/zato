@@ -20,7 +20,7 @@ from io import BytesIO
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
-from zato.common.api import APIResponse
+from zato.common.pubsub.models import APIResponse
 from zato.broker.client import BrokerClient
 
 # ################################################################################################################################
@@ -34,7 +34,7 @@ class RESTOnPublishBasicTestCase(TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         self.broker_client = BrokerClient()
-        self.rest_server = PubSubRESTServer('localhost', 8080)
+        self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client)
 
         # Test data constants
@@ -58,7 +58,8 @@ class RESTOnPublishBasicTestCase(TestCase):
         environ = {
             'HTTP_AUTHORIZATION': auth_header,
             'wsgi.input': BytesIO(json_data.encode('utf-8')),
-            'CONTENT_LENGTH': str(len(json_data))
+            'CONTENT_LENGTH': str(len(json_data)),
+            'PATH_INFO': '/api/v1/pubsub/publish'
         }
         return environ
 

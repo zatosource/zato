@@ -84,8 +84,15 @@ class BadRequestException(Exception):
 
 class BaseRESTServer(BaseServer):
 
-    def __init__(self, host:'str', port:'int', yaml_config_file:'any_'=None) -> 'None':
-        super().__init__(host, port, yaml_config_file)
+    def __init__(
+        self,
+        host:'str',
+        port:'int',
+        yaml_config_file:'any_'=None,
+        should_init_broker_client:'bool'=True,
+    ) -> 'None':
+
+        super().__init__(host, port, yaml_config_file, should_init_broker_client)
 
         # Initialize broker configuration for reuse
         self._broker_config = get_broker_config()
