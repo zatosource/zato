@@ -20,13 +20,13 @@ from io import BytesIO
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
-from zato.broker.client import BrokerClient
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestBrokerClient:
-    """Test broker client that captures publish calls without mocking."""
+    """ Test broker client that captures publish calls without mocking.
+    """
 
     def __init__(self):
         self.published_messages = []
@@ -34,7 +34,8 @@ class TestBrokerClient:
         self.published_routing_keys = []
 
     def publish(self, message, exchange, routing_key):
-        """Capture publish parameters for verification."""
+        """ Capture publish parameters for verification.
+        """
         self.published_messages.append(message)
         self.published_exchanges.append(exchange)
         self.published_routing_keys.append(routing_key)
@@ -52,7 +53,7 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
         # Create a test broker client that captures publish calls
         self.broker_client = TestBrokerClient()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
-        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client)
+        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Test data constants
         self.test_cid = 'test-cid-123'
@@ -88,13 +89,15 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
         return start_response
 
     def _add_user_permissions(self, username, permissions):
-        """Add permissions for a user to the pattern matcher."""
+        """ Add permissions for a user to the pattern matcher.
+        """
         self.rest_server.backend.pattern_matcher.add_client(username, permissions)
 
 # ################################################################################################################################
 
     def test_on_publish_with_exact_topic_match_permission(self):
-        """User with exact topic permission can publish to that topic."""
+        """ User with exact topic permission can publish to that topic.
+        """
 
         # Add exact topic permission
         permissions = [{'pattern': 'orders.created', 'access_type': 'publisher'}]
@@ -128,7 +131,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_single_wildcard_permission(self):
-        """User with single wildcard permission can publish to matching topics."""
+        """ User with single wildcard permission can publish to matching topics.
+        """
 
         # Add single wildcard permission
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -167,7 +171,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_multi_level_wildcard_permission(self):
-        """User with multi-level wildcard permission can publish to deeply nested topics."""
+        """ User with multi-level wildcard permission can publish to deeply nested topics.
+        """
 
         # Add multi-level wildcard permission
         permissions = [{'pattern': 'orders.**', 'access_type': 'publisher'}]
@@ -204,7 +209,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_complex_wildcard_pattern(self):
-        """User with complex wildcard pattern can publish to matching topics."""
+        """ User with complex wildcard pattern can publish to matching topics.
+        """
 
         # Add complex wildcard permission
         permissions = [{'pattern': 'department.*.events.**', 'access_type': 'publisher'}]
@@ -241,7 +247,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_both_pub_sub_permissions(self):
-        """User with both pub and sub permissions can publish."""
+        """ User with both pub and sub permissions can publish.
+        """
 
         # Add both pub and sub permissions
         permissions = [{'pattern': 'notifications.*', 'access_type': 'publisher-subscriber'}]
@@ -266,7 +273,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_exact_pattern_overrides_wildcard(self):
-        """Exact pattern permission overrides wildcard when both exist."""
+        """ Exact pattern permission overrides wildcard when both exist.
+        """
 
         # Add both wildcard (deny) and exact (allow) permissions
         permissions = [
@@ -294,7 +302,8 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_multiple_overlapping_patterns(self):
-        """User with multiple overlapping patterns can publish when any allows."""
+        """ User with multiple overlapping patterns can publish when any allows.
+        """
 
         # Add multiple overlapping permissions
         permissions = [
