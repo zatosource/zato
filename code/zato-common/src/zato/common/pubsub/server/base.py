@@ -92,7 +92,13 @@ def load_yaml_config(yaml_file:'str') -> 'dict_':
 
 class BaseServer:
 
-    def __init__(self, host:'str', port:'int', yaml_config_file:'any_'=None) -> 'None':
+    def __init__(
+        self,
+        host:'str',
+        port:'int',
+        yaml_config_file:'any_'=None,
+        should_init_broker_client:'bool'=True,
+    ) -> 'None':
         """ Initialize the server with host, port, and YAML config.
         """
         self.host = host
@@ -112,7 +118,8 @@ class BaseServer:
         self.backend = RESTBackend(self, self.broker_client)
 
         # Do start the broker client now
-        self._init_broker_client()
+        if should_init_broker_client:
+            self._init_broker_client()
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
