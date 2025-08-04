@@ -20,7 +20,6 @@ from io import BytesIO
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
-from zato.common.pubsub.models import BadRequestResponse, UnauthorizedResponse
 from zato.common.pubsub.server.rest_base import UnauthorizedException
 from zato.broker.client import BrokerClient
 
