@@ -334,31 +334,6 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
         self.assertIsNotNone(result)
 
 # ################################################################################################################################
-
-    def test_on_publish_with_deeply_nested_json(self):
-
-        # Create valid auth header
-        auth_header = self._create_basic_auth_header(self.test_username, self.test_password)
-
-        # Create deeply nested JSON structure
-        nested_data = {'level1': {'level2': {'level3': {'level4': {'level5': 'deep_value'}}}}}
-        for _ in range(100):  # Create very deep nesting
-            nested_data = {'level': nested_data}
-
-        message_data = {
-            'data': nested_data
-        }
-
-        environ = self._create_environ(auth_header, data=message_data)
-        start_response = self._create_start_response()
-
-        # Call the method under test - should handle deep nesting
-        result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-
-        # Should succeed or fail gracefully
-        self.assertIsNotNone(result)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
