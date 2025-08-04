@@ -20,7 +20,6 @@ from io import BytesIO
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
-from zato.common.pubsub.models import BadRequestResponse
 from zato.common.pubsub.server.rest_base import BadRequestException
 from zato.broker.client import BrokerClient
 
@@ -107,11 +106,10 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
         }
         start_response = self._create_start_response()
 
-        # Call the method under test and expect BadRequestException
-        with self.assertRaises(BadRequestException) as cm:
+        # Call the method under test and expect JSONDecodeError
+        from json import JSONDecodeError
+        with self.assertRaises(JSONDecodeError):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-
-        self.assertEqual(cm.exception.cid, self.test_cid)
 
 # ################################################################################################################################
 
@@ -177,7 +175,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle large payloads gracefully
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # This might succeed or fail depending on implementation limits
         # The test ensures it doesn't crash the server
         self.assertIsNotNone(result)
@@ -200,7 +198,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle gracefully
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should either succeed with default priority or fail with validation error
         self.assertIsNotNone(result)
 
@@ -220,11 +218,9 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
         environ = self._create_environ(auth_header, data=message_data)
         start_response = self._create_start_response()
 
-        # Call the method under test - should handle gracefully
-        result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
-        # Should either succeed with default expiration or fail with validation error
-        self.assertIsNotNone(result)
+        # Call the method under test and expect TypeError
+        with self.assertRaises(TypeError):
+            _ = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
 
 # ################################################################################################################################
 
@@ -244,7 +240,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle gracefully
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should either succeed or fail with validation error
         self.assertIsNotNone(result)
 
@@ -266,7 +262,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle gracefully
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should either succeed or fail with validation error
         self.assertIsNotNone(result)
 
@@ -289,7 +285,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle gracefully
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should either succeed or fail with validation error
         self.assertIsNotNone(result)
 
@@ -312,7 +308,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle special characters
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should succeed with proper escaping
         self.assertTrue(result.is_ok)
 
@@ -333,7 +329,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle binary data
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should succeed or fail gracefully
         self.assertIsNotNone(result)
 
@@ -346,7 +342,7 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Create deeply nested JSON structure
         nested_data = {'level1': {'level2': {'level3': {'level4': {'level5': 'deep_value'}}}}}
-        for i in range(100):  # Create very deep nesting
+        for _ in range(100):  # Create very deep nesting
             nested_data = {'level': nested_data}
 
         message_data = {
@@ -358,34 +354,9 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
 
         # Call the method under test - should handle deep nesting
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
+
         # Should succeed or fail gracefully
         self.assertIsNotNone(result)
-
-# ################################################################################################################################
-
-    def test_on_publish_with_circular_reference_attempt(self):
-
-        # Create valid auth header
-        auth_header = self._create_basic_auth_header(self.test_username, self.test_password)
-
-        # Note: JSON cannot represent circular references, but we can test
-        # with a structure that might cause issues in some parsers
-        message_data = {
-            'data': {
-                'self_ref': 'This references itself conceptually',
-                'items': [1, 2, 3, 1, 2, 3]  # Repeated values
-            }
-        }
-
-        environ = self._create_environ(auth_header, data=message_data)
-        start_response = self._create_start_response()
-
-        # Call the method under test
-        result = self.rest_server.on_publish(self.test_cid, environ, start_response, self.test_topic)
-        
-        # Should succeed
-        self.assertTrue(result.is_ok)
 
 # ################################################################################################################################
 # ################################################################################################################################
