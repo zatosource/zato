@@ -30,7 +30,7 @@ from werkzeug.wrappers import Request
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse
-from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer
+from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +76,12 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
+
+        # .. check if user has permission to publish to this topic ..
+        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
+        if not permission_result.is_ok:
+            logger.warning(f'[{cid}] User {username} denied publish access to topic {topic_name}: {permission_result.reason}')
+            raise UnauthorizedException(cid, f'No permission to publish to topic {topic_name}')
 
         # .. build our representation of the request ..
         request = Request(environ)
