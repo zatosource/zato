@@ -187,6 +187,7 @@ class PubSubRESTServer(BaseRESTServer):
         messages = []
 
         for msg in messages_data:
+
             properties = msg.get('properties', {})
             headers = properties.get('headers', {})
             payload_data = msg.get('payload', '')
@@ -196,18 +197,29 @@ class PubSubRESTServer(BaseRESTServer):
             else:
                 size = len(payload_data)
 
+            msg_id = properties.get('message_id', '')
+            correl_id = properties.get('correlation_id', '')
+            priority = properties.get('priority', _default_priority)
+            mime_type = properties.get('content_type', 'application/json')
+            pub_time_iso = properties.get('timestamp', '')
+            recv_time_iso = properties.get('timestamp', '')
+            expiration = properties.get('expiration', _default_expiration)
+            topic_name = headers.get('topic_name', '')
+            ext_client_id = headers.get('ext_client_id', '')
+            ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
+
             message = {
                 'data': payload_data,
-                'msg_id': properties.get('message_id', ''),
-                'correl_id': properties.get('correlation_id', ''),
-                'priority': properties.get('priority', _default_priority),
-                'mime_type': properties.get('content_type', 'application/json'),
-                'pub_time_iso': properties.get('timestamp', ''),
-                'recv_time_iso': properties.get('timestamp', ''),
-                'expiration': properties.get('expiration', _default_expiration),
-                'topic_name': headers.get('topic_name', ''),
-                'ext_client_id': headers.get('ext_client_id', ''),
-                'ext_pub_time_iso': headers.get('ext_pub_time_iso', ''),
+                'msg_id': msg_id,
+                'correl_id': correl_id,
+                'priority': priority,
+                'mime_type': mime_type,
+                'pub_time_iso': pub_time_iso,
+                'recv_time_iso': recv_time_iso,
+                'expiration': expiration,
+                'topic_name': topic_name,
+                'ext_client_id': ext_client_id,
+                'ext_pub_time_iso': ext_pub_time_iso,
                 'in_reply_to': '',
                 'expiration_time_iso': '',
                 'size': size,
