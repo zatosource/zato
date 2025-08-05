@@ -21,7 +21,25 @@ from io import BytesIO
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
-from zato.broker.client import BrokerClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestBrokerClient:
+    """ Test broker client that captures publish calls without mocking.
+    """
+
+    def __init__(self):
+        self.published_messages = []
+        self.published_exchanges = []
+        self.published_routing_keys = []
+
+    def publish(self, message, exchange, routing_key):
+        """ Capture publish parameters for verification.
+        """
+        self.published_messages.append(message)
+        self.published_exchanges.append(exchange)
+        self.published_routing_keys.append(routing_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,9 +51,10 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         # Suppress ResourceWarnings from gevent
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
-        self.broker_client = BrokerClient()
+        # Create a test broker client that captures publish calls
+        self.broker_client = TestBrokerClient()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
-        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client)
+        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Test data constants
         self.test_cid = 'test-cid-123'
@@ -78,7 +97,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_no_matching_pattern(self):
         """User with non-matching pattern cannot publish."""
-        
+
         # Add permission for different topic
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -101,7 +120,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_subscribe_only_permission(self):
         """User with subscribe-only permission cannot publish."""
-        
+
         # Add subscribe-only permission
         permissions = [{'pattern': 'orders.*', 'access_type': 'subscriber'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -124,7 +143,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_no_permissions(self):
         """User with no permissions cannot publish."""
-        
+
         # Don't add any permissions for user
 
         # Create valid auth header
@@ -145,7 +164,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_wildcard_mismatch(self):
         """User with wildcard pattern cannot publish to non-matching topic."""
-        
+
         # Add wildcard permission for orders
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -168,7 +187,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_single_wildcard_depth_mismatch(self):
         """User with single wildcard cannot publish to deeper nested topic."""
-        
+
         # Add single wildcard permission
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -191,7 +210,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_complex_pattern_mismatch(self):
         """User with complex pattern cannot publish to non-matching topic."""
-        
+
         # Add complex pattern permission
         permissions = [{'pattern': 'department.*.events.**', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -214,7 +233,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_first_matching_pattern_wins(self):
         """First matching pattern in list determines access."""
-        
+
         # Add patterns where first match allows
         permissions = [
             {'pattern': 'orders.**', 'access_type': 'publisher'},  # Allow all orders (first)
@@ -238,7 +257,7 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
     def test_on_publish_with_empty_permission_list(self):
         """User with empty permission list cannot publish."""
-        
+
         # Add empty permissions
         permissions = []
         self._add_user_permissions(self.test_username, permissions)
