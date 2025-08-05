@@ -21,7 +21,25 @@ from io import BytesIO
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException, BadRequestException
-from zato.broker.client import BrokerClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestBrokerClient:
+    """ Test broker client that captures publish calls without mocking.
+    """
+
+    def __init__(self):
+        self.published_messages = []
+        self.published_exchanges = []
+        self.published_routing_keys = []
+
+    def publish(self, message, exchange, routing_key):
+        """ Capture publish parameters for verification.
+        """
+        self.published_messages.append(message)
+        self.published_exchanges.append(exchange)
+        self.published_routing_keys.append(routing_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,9 +51,10 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         # Suppress ResourceWarnings from gevent
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
-        self.broker_client = BrokerClient()
+        # Create a test broker client that captures publish calls
+        self.broker_client = TestBrokerClient()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
-        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client)
+        self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Test data constants
         self.test_cid = 'test-cid-123'
@@ -78,7 +97,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_valid_auth_and_valid_permissions_succeeds(self):
         """Valid authentication + valid permissions = successful publish."""
-        
+
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -100,7 +119,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_valid_auth_and_invalid_permissions_fails_with_permission_error(self):
         """Valid authentication + invalid permissions = permission denied."""
-        
+
         # Add permissions for different topic
         permissions = [{'pattern': 'inventory.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -123,7 +142,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_invalid_auth_fails_with_authentication_error(self):
         """Invalid authentication = authentication error (not permission error)."""
-        
+
         # Add valid permissions for user
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -146,7 +165,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_invalid_auth_and_invalid_permissions_fails_with_authentication_error(self):
         """Invalid auth + invalid permissions = authentication error (auth checked first)."""
-        
+
         # Add permissions for different topic
         permissions = [{'pattern': 'inventory.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -169,7 +188,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_valid_auth_valid_permissions_invalid_data_fails_with_validation_error(self):
         """Valid auth + valid permissions + invalid data = validation error."""
-        
+
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -193,7 +212,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_no_auth_header_fails_immediately(self):
         """Missing auth header fails before permission check."""
-        
+
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
         self._add_user_permissions(self.test_username, permissions)
@@ -213,7 +232,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_multiple_users_with_different_permissions(self):
         """Multiple users with different permissions work independently."""
-        
+
         # Set up second user
         second_username = 'second_user'
         second_password = 'second_password'
@@ -257,7 +276,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
     def test_permission_check_happens_after_successful_authentication(self):
         """Permissions are only checked after successful authentication."""
-        
+
         # Don't add any permissions for user
 
         # Create valid auth header
