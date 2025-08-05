@@ -90,13 +90,15 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         return start_response
 
     def _add_user_permissions(self, username, permissions):
-        """Add permissions for a user to the pattern matcher."""
+        """ Add permissions for a user to the pattern matcher.
+        """
         self.rest_server.backend.pattern_matcher.add_client(username, permissions)
 
 # ################################################################################################################################
 
     def test_on_publish_with_no_matching_pattern(self):
-        """User with non-matching pattern cannot publish."""
+        """ User with non-matching pattern cannot publish.
+        """
 
         # Add permission for different topic
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -124,7 +126,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_subscribe_only_permission(self):
-        """User with subscribe-only permission cannot publish."""
+        """ User with subscribe-only permission cannot publish.
+        """
 
         # Add subscribe-only permission
         permissions = [{'pattern': 'orders.*', 'access_type': 'subscriber'}]
@@ -152,7 +155,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_no_permissions(self):
-        """User with no permissions cannot publish."""
+        """ User with no permissions cannot publish.
+        """
 
         # Don't add any permissions for user
 
@@ -178,7 +182,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_wildcard_mismatch(self):
-        """User with wildcard pattern cannot publish to non-matching topic."""
+        """ User with wildcard pattern cannot publish to non-matching topic.
+        """
 
         # Add wildcard permission for orders
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -206,7 +211,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_single_wildcard_depth_mismatch(self):
-        """User with single wildcard cannot publish to deeper nested topic."""
+        """ User with single wildcard cannot publish to deeper nested topic.
+        """
 
         # Add single wildcard permission
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -234,7 +240,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_complex_pattern_mismatch(self):
-        """User with complex pattern cannot publish to non-matching topic."""
+        """ User with complex pattern cannot publish to non-matching topic.
+        """
 
         # Add complex pattern permission
         permissions = [{'pattern': 'department.*.events.**', 'access_type': 'publisher'}]
@@ -262,7 +269,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_first_matching_pattern_wins(self):
-        """First matching pattern in list determines access."""
+        """ First matching pattern in list determines access.
+        """
 
         # Add patterns where first match allows
         permissions = [
@@ -294,7 +302,8 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_publish_with_empty_permission_list(self):
-        """User with empty permission list cannot publish."""
+        """ User with empty permission list cannot publish.
+        """
 
         # Add empty permissions
         permissions = []
