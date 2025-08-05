@@ -115,6 +115,14 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         self.assertTrue(result.is_ok)
         self.assertEqual(result.cid, self.test_cid)
 
+        # Verify topic creation and broker call
+        self.assertIn('orders.created', self.rest_server.backend.topics)
+        self.assertEqual(len(self.broker_client.published_messages), 1)
+        self.assertEqual(len(self.broker_client.published_exchanges), 1)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 1)
+        self.assertEqual(self.broker_client.published_exchanges[0], 'pubsubapi')
+        self.assertEqual(self.broker_client.published_routing_keys[0], 'orders.created')
+
 # ################################################################################################################################
 
     def test_valid_auth_and_invalid_permissions_fails_with_permission_error(self):
@@ -137,6 +145,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.created')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -161,6 +174,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 
         self.assertEqual(cm.exception.cid, self.test_cid)
 
+        # Verify no messages were published due to authentication failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
+
 # ################################################################################################################################
 
     def test_invalid_auth_and_invalid_permissions_fails_with_authentication_error(self):
@@ -183,6 +201,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.created')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authentication failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -208,6 +231,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         self.assertEqual(cm.exception.cid, self.test_cid)
         self.assertIn('missing', cm.exception.message.lower())
 
+        # Verify no messages were published due to validation failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
+
 # ################################################################################################################################
 
     def test_no_auth_header_fails_immediately(self):
@@ -227,6 +255,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.created')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authentication failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -264,6 +297,15 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         result2 = self.rest_server.on_publish(self.test_cid, environ2, start_response, 'inventory.updated')
         self.assertTrue(result2.is_ok)
 
+        # Verify both successful publishes were recorded
+        self.assertEqual(len(self.broker_client.published_messages), 2)
+        self.assertEqual(len(self.broker_client.published_exchanges), 2)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 2)
+        self.assertEqual(self.broker_client.published_exchanges[0], 'pubsubapi')
+        self.assertEqual(self.broker_client.published_exchanges[1], 'pubsubapi')
+        self.assertEqual(self.broker_client.published_routing_keys[0], 'orders.created')
+        self.assertEqual(self.broker_client.published_routing_keys[1], 'inventory.updated')
+
         # First user cannot publish to inventory
         with self.assertRaises(UnauthorizedException):
             _ = self.rest_server.on_publish(self.test_cid, environ1, start_response, 'inventory.updated')
@@ -271,6 +313,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         # Second user cannot publish to orders
         with self.assertRaises(UnauthorizedException):
             _ = self.rest_server.on_publish(self.test_cid, environ2, start_response, 'orders.created')
+
+        # Verify no additional messages were published due to authorization failures
+        self.assertEqual(len(self.broker_client.published_messages), 2)
+        self.assertEqual(len(self.broker_client.published_exchanges), 2)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 2)
 
 # ################################################################################################################################
 
@@ -292,6 +339,11 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'any.topic')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to permission failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
