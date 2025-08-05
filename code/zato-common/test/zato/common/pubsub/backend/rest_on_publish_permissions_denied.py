@@ -116,6 +116,11 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
         self.assertEqual(cm.exception.cid, self.test_cid)
 
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
+
 # ################################################################################################################################
 
     def test_on_publish_with_subscribe_only_permission(self):
@@ -133,11 +138,16 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         environ = self._create_environ(auth_header, data=message_data)
         start_response = self._create_start_response()
 
-        # Should fail - only has subscribe permission
+        # Should fail - user has subscribe permission, not publish
         with self.assertRaises(UnauthorizedException) as cm:
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.created')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -160,6 +170,11 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
 
         self.assertEqual(cm.exception.cid, self.test_cid)
 
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
+
 # ################################################################################################################################
 
     def test_on_publish_with_wildcard_mismatch(self):
@@ -173,15 +188,20 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         auth_header = self._create_basic_auth_header(self.test_username, self.test_password)
 
         # Create message data
-        message_data = {'data': 'Test user event'}
+        message_data = {'data': 'Test inventory update'}
         environ = self._create_environ(auth_header, data=message_data)
         start_response = self._create_start_response()
 
-        # Should fail - orders.* doesn't match users.created
+        # Should fail - orders.* doesn't match inventory.updated
         with self.assertRaises(UnauthorizedException) as cm:
-            _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'users.created')
+            _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'inventory.updated')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -200,11 +220,16 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         environ = self._create_environ(auth_header, data=message_data)
         start_response = self._create_start_response()
 
-        # Should fail - orders.* doesn't match orders.region.us.created
+        # Should fail - orders.* doesn't match orders.region.us.created (single wildcard doesn't match multiple levels)
         with self.assertRaises(UnauthorizedException) as cm:
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.region.us.created')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -228,6 +253,11 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'department.sales.alerts.critical')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 
@@ -253,6 +283,14 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
         result = self.rest_server.on_publish(self.test_cid, environ, start_response, 'orders.sensitive')
         self.assertTrue(result.is_ok)
 
+        # Verify topic creation and broker call
+        self.assertIn('orders.sensitive', self.rest_server.backend.topics)
+        self.assertEqual(len(self.broker_client.published_messages), 1)
+        self.assertEqual(len(self.broker_client.published_exchanges), 1)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 1)
+        self.assertEqual(self.broker_client.published_exchanges[0], 'pubsubapi')
+        self.assertEqual(self.broker_client.published_routing_keys[0], 'orders.sensitive')
+
 # ################################################################################################################################
 
     def test_on_publish_with_empty_permission_list(self):
@@ -275,6 +313,11 @@ class RESTOnPublishPermissionsDeniedTestCase(TestCase):
             _ = self.rest_server.on_publish(self.test_cid, environ, start_response, 'any.topic')
 
         self.assertEqual(cm.exception.cid, self.test_cid)
+
+        # Verify no messages were published due to authorization failure
+        self.assertEqual(len(self.broker_client.published_messages), 0)
+        self.assertEqual(len(self.broker_client.published_exchanges), 0)
+        self.assertEqual(len(self.broker_client.published_routing_keys), 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
