@@ -120,8 +120,15 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         self.assertEqual(len(self.broker_client.published_messages), 1)
         self.assertEqual(len(self.broker_client.published_exchanges), 1)
         self.assertEqual(len(self.broker_client.published_routing_keys), 1)
-        self.assertEqual(self.broker_client.published_exchanges[0], 'pubsubapi')
-        self.assertEqual(self.broker_client.published_routing_keys[0], 'orders.created')
+
+        published_exchange = self.broker_client.published_exchanges[0] if self.broker_client.published_exchanges else None
+        published_routing_key = self.broker_client.published_routing_keys[0] if self.broker_client.published_routing_keys else None
+
+        exchange_msg = f'Expected exchange pubsubapi, got {published_exchange}. All: {self.broker_client.published_exchanges}'
+        routing_key_msg = f'Expected routing key orders.created, got {published_routing_key}. All: {self.broker_client.published_routing_keys}'
+
+        self.assertEqual(published_exchange, 'pubsubapi', exchange_msg)
+        self.assertEqual(published_routing_key, 'orders.created', routing_key_msg)
 
 # ################################################################################################################################
 
@@ -301,10 +308,21 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         self.assertEqual(len(self.broker_client.published_messages), 2)
         self.assertEqual(len(self.broker_client.published_exchanges), 2)
         self.assertEqual(len(self.broker_client.published_routing_keys), 2)
-        self.assertEqual(self.broker_client.published_exchanges[0], 'pubsubapi')
-        self.assertEqual(self.broker_client.published_exchanges[1], 'pubsubapi')
-        self.assertEqual(self.broker_client.published_routing_keys[0], 'orders.created')
-        self.assertEqual(self.broker_client.published_routing_keys[1], 'inventory.updated')
+
+        first_exchange = self.broker_client.published_exchanges[0] if len(self.broker_client.published_exchanges) > 0 else None
+        second_exchange = self.broker_client.published_exchanges[1] if len(self.broker_client.published_exchanges) > 1 else None
+        first_routing_key = self.broker_client.published_routing_keys[0] if len(self.broker_client.published_routing_keys) > 0 else None
+        second_routing_key = self.broker_client.published_routing_keys[1] if len(self.broker_client.published_routing_keys) > 1 else None
+
+        first_exchange_msg = f'Expected first exchange pubsubapi, got {first_exchange}. All: {self.broker_client.published_exchanges}'
+        second_exchange_msg = f'Expected second exchange pubsubapi, got {second_exchange}. All: {self.broker_client.published_exchanges}'
+        first_routing_msg = f'Expected first routing key orders.created, got {first_routing_key}. All: {self.broker_client.published_routing_keys}'
+        second_routing_msg = f'Expected second routing key inventory.updated, got {second_routing_key}. All: {self.broker_client.published_routing_keys}'
+
+        self.assertEqual(first_exchange, 'pubsubapi', first_exchange_msg)
+        self.assertEqual(second_exchange, 'pubsubapi', second_exchange_msg)
+        self.assertEqual(first_routing_key, 'orders.created', first_routing_msg)
+        self.assertEqual(second_routing_key, 'inventory.updated', second_routing_msg)
 
         # First user cannot publish to inventory
         with self.assertRaises(UnauthorizedException):
