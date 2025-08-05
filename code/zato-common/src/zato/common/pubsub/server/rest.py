@@ -126,113 +126,150 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
-        """ Get messages from the user's queue.
+    def _validate_get_params(self, data:'dict') -> 'tuple[int, int]':
+        """ Extract and validate max_len/max_messages parameters.
         """
-        # Authenticate the user
-        username = self.authenticate(cid, environ)
-
-        # Parse request data
-        request = Request(environ)
-        data = self._parse_json(cid, request)
-
-        # Extract and validate parameters
         max_len = data.get('max_len', _max_len_limit)
         max_messages = data.get('max_messages', 1)
 
-        # Enforce limits
         max_len = min(max_len, _max_len_limit)
         max_messages = min(max_messages, _max_messages_limit)
 
-        # Find the user's subscription to get their sub_key (queue name)
-        sub_key = None
+        return max_len, max_messages
+
+# ################################################################################################################################
+
+    def _find_user_sub_key(self, cid:'str', username:'str') -> 'str | None':
+        """ Find user's subscription key from topics.
+        """
         for subs_by_sec_name in self.subs_by_topic.values():
             if username in subs_by_sec_name:
                 subscription = subs_by_sec_name[username]
-                sub_key = subscription.sub_key
-                break
+                return subscription.sub_key
 
-        if not sub_key:
-            logger.warning(f'[{cid}] No subscription found for user `{username}`')
-            response = BadRequestResponse()
-            response.cid = cid
-            response.details = 'No subscription found for user'
-            return response
+        logger.warning(f'[{cid}] No subscription found for user `{username}`')
+        return None
 
-        # Build RabbitMQ API URL
+# ################################################################################################################################
+
+    def _build_rabbitmq_request(self, sub_key:'str', max_messages:'int', max_len:'int') -> 'tuple[str, dict]':
+        """ Build RabbitMQ API URL and payload.
+        """
         api_url = f'{self._broker_api_base_url}/queues/{self._broker_config.vhost}/{sub_key}/get'
 
-        # Prepare request payload for RabbitMQ
         rabbitmq_payload = {
             'count': max_messages,
-            'ackmode': 'ack_requeue_false',  # Acknowledge and delete messages
+            'ackmode': 'ack_requeue_false',
             'encoding': 'auto',
             'truncate': max_len
         }
 
+        return api_url, rabbitmq_payload
+
+# ################################################################################################################################
+
+    def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
+        """ Make HTTP request to RabbitMQ API.
+        """
+        rabbitmq_response = requests.post(api_url, json=payload, auth=self._broker_auth)
+
+        if rabbitmq_response.status_code != OK:
+            logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
+            return None
+
+        return rabbitmq_response.json()
+
+# ################################################################################################################################
+
+    def _transform_messages(self, messages_data:'list') -> 'list':
+        """ Convert RabbitMQ format to Zato API format.
+        """
+        messages = []
+
+        for msg in messages_data:
+            properties = msg.get('properties', {})
+            headers = properties.get('headers', {})
+            payload_data = msg.get('payload', '')
+
+            if isinstance(payload_data, str):
+                size = len(payload_data.encode('utf-8'))
+            else:
+                size = len(payload_data)
+
+            message = {
+                'data': payload_data,
+                'msg_id': properties.get('message_id', ''),
+                'correl_id': properties.get('correlation_id', ''),
+                'priority': properties.get('priority', _default_priority),
+                'mime_type': properties.get('content_type', 'application/json'),
+                'pub_time_iso': properties.get('timestamp', ''),
+                'recv_time_iso': properties.get('timestamp', ''),
+                'expiration': properties.get('expiration', _default_expiration),
+                'topic_name': headers.get('topic_name', ''),
+                'ext_client_id': headers.get('ext_client_id', ''),
+                'ext_pub_time_iso': headers.get('ext_pub_time_iso', ''),
+                'in_reply_to': '',
+                'expiration_time_iso': '',
+                'size': size,
+            }
+
+            messages.append(message)
+
+        return messages
+
+# ################################################################################################################################
+
+    def _build_success_response(self, cid:'str', messages:'list') -> 'APIResponse':
+        """ Create successful APIResponse with messages.
+        """
+        response = APIResponse()
+        response.is_ok = True
+        response.cid = cid
+        response.data = messages
+        return response
+
+# ################################################################################################################################
+
+    def _build_error_response(self, cid:'str', details:'str') -> 'BadRequestResponse':
+        """ Create error responses for various failure cases.
+        """
+        response = BadRequestResponse()
+        response.cid = cid
+        response.details = details
+        return response
+
+# ################################################################################################################################
+
+    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
+        """ Get messages from the user's queue.
+        """
+        username = self.authenticate(cid, environ)
+
+        request = Request(environ)
+        data = self._parse_json(cid, request)
+
+        max_len, max_messages = self._validate_get_params(data)
+
+        sub_key = self._find_user_sub_key(cid, username)
+        if not sub_key:
+            return self._build_error_response(cid, 'No subscription found for user')
+
+        api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
+
         try:
-            # Make request to RabbitMQ
-            rabbitmq_response = requests.post(api_url, json=rabbitmq_payload, auth=self._broker_auth)
+            messages_data = self._fetch_from_rabbitmq(cid, api_url, rabbitmq_payload)
+            if messages_data is None:
+                return self._build_error_response(cid, 'Failed to retrieve messages from queue')
 
-            if rabbitmq_response.status_code != OK:
-                logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
-                response = BadRequestResponse()
-                response.cid = cid
-                response.details = 'Failed to retrieve messages from queue'
-                return response
-
-            # Parse RabbitMQ response
-            messages_data = rabbitmq_response.json()
-
-            # Transform messages to our API format
-            messages = []
-            for msg in messages_data:
-                # Extract message properties
-                properties = msg.get('properties', {})
-                headers = properties.get('headers', {})
-                payload_data = msg.get('payload', '')
-
-                # Calculate size
-                if isinstance(payload_data, str):
-                    size = len(payload_data.encode('utf-8'))
-                else:
-                    size = len(payload_data)
-
-                # Build our message format according to Zato spec
-                message = {
-                    'data': payload_data,
-                    'msg_id': properties.get('message_id', ''),
-                    'correl_id': properties.get('correlation_id', ''),
-                    'priority': properties.get('priority', _default_priority),
-                    'mime_type': properties.get('content_type', 'application/json'),
-                    'pub_time_iso': properties.get('timestamp', ''),
-                    'recv_time_iso': properties.get('timestamp', ''),
-                    'expiration': properties.get('expiration', _default_expiration),
-                    'topic_name': headers.get('topic_name', ''),
-                    'ext_client_id': headers.get('ext_client_id', ''),
-                    'ext_pub_time_iso': headers.get('ext_pub_time_iso', ''),
-                    'in_reply_to': '',
-                    'expiration_time_iso': '',
-                    'size': size,
-                }
-                messages.append(message)
+            messages = self._transform_messages(messages_data)
 
             logger.info(f'[{cid}] Retrieved {len(messages)} messages for user `{username}` from queue `{sub_key}`')
 
-            # Build success response
-            response = APIResponse()
-            response.is_ok = True
-            response.cid = cid
-            response.data = messages
-
-            return response
+            return self._build_success_response(cid, messages)
 
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
-            response = BadRequestResponse()
-            response.cid = cid
-            response.details = 'Internal error retrieving messages'
-            return response
+            return self._build_error_response(cid, 'Internal error retrieving messages')
 
 # ################################################################################################################################
 

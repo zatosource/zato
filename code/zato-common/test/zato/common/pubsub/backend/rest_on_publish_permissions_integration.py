@@ -90,13 +90,15 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         return start_response
 
     def _add_user_permissions(self, username, permissions):
-        """Add permissions for a user to the pattern matcher."""
+        """ Add permissions for a user to the pattern matcher.
+        """
         self.rest_server.backend.pattern_matcher.add_client(username, permissions)
 
 # ################################################################################################################################
 
     def test_valid_auth_and_valid_permissions_succeeds(self):
-        """Valid authentication + valid permissions = successful publish."""
+        """ Valid authentication + valid permissions = successful publish.
+        """
 
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -133,7 +135,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_valid_auth_and_invalid_permissions_fails_with_permission_error(self):
-        """Valid authentication + invalid permissions = permission denied."""
+        """ Valid authentication + invalid permissions = permission denied.
+        """
 
         # Add permissions for different topic
         permissions = [{'pattern': 'inventory.*', 'access_type': 'publisher'}]
@@ -161,7 +164,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_invalid_auth_fails_with_authentication_error(self):
-        """Invalid authentication = authentication error (not permission error)."""
+        """ Invalid authentication = authentication error (not permission error).
+        """
 
         # Add valid permissions for user
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -189,7 +193,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_invalid_auth_and_invalid_permissions_fails_with_authentication_error(self):
-        """Invalid auth + invalid permissions = authentication error (auth checked first)."""
+        """ Invalid auth + invalid permissions = authentication error (auth checked first).
+        """
 
         # Add permissions for different topic
         permissions = [{'pattern': 'inventory.*', 'access_type': 'publisher'}]
@@ -217,7 +222,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_valid_auth_valid_permissions_invalid_data_fails_with_validation_error(self):
-        """Valid auth + valid permissions + invalid data = validation error."""
+        """ Valid auth + valid permissions + invalid data = validation error.
+        """
 
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -246,7 +252,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_no_auth_header_fails_immediately(self):
-        """Missing auth header fails before permission check."""
+        """ Missing auth header fails before permission check.
+        """
 
         # Add valid permissions
         permissions = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
@@ -271,7 +278,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_multiple_users_with_different_permissions(self):
-        """Multiple users with different permissions work independently."""
+        """ Multiple users with different permissions work independently.
+        """
 
         # Set up second user
         second_username = 'second_user'
@@ -340,7 +348,8 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_permission_check_happens_after_successful_authentication(self):
-        """Permissions are only checked after successful authentication."""
+        """ Permissions are only checked after successful authentication.
+        """
 
         # Don't add any permissions for user
 
