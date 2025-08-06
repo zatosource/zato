@@ -21,7 +21,7 @@ from zato.common.pubsub.server.rest import PubSubRESTServer
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestBrokerClient:
+class BrokerClientHelper:
     """ Test broker client that captures publish calls without mocking.
     """
 
@@ -40,7 +40,7 @@ class TestBrokerClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRESTServer(PubSubRESTServer):
+class RESTServerHelper(PubSubRESTServer):
     """ Test REST server that overrides HTTP requests to RabbitMQ.
     """
 
@@ -73,8 +73,8 @@ class RESTFetchFromRabbitMQTestCase(TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         # Create a test broker client that captures publish calls
-        self.broker_client = TestBrokerClient()
-        self.rest_server = TestRESTServer('localhost', 8080, should_init_broker_client=False)
+        self.broker_client = BrokerClientHelper()
+        self.rest_server = RESTServerHelper('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Test data constants
