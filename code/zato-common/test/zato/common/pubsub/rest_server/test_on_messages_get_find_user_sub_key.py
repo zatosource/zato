@@ -22,7 +22,7 @@ from zato.common.pubsub.server.rest import PubSubRESTServer
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestBrokerClient:
+class BrokerClientHelper:
     """ Test broker client that captures publish calls without mocking.
     """
 
@@ -49,7 +49,7 @@ class RESTFindUserSubKeyTestCase(TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         # Create a test broker client that captures publish calls
-        self.broker_client = TestBrokerClient()
+        self.broker_client = BrokerClientHelper()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
