@@ -85,8 +85,8 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
         """
         max_messages = 1
         max_len = 1000
-
-        api_url, payload = self.rest_server._build_rabbitmq_request(
+        
+        _, payload = self.rest_server._build_rabbitmq_request(
             self.test_sub_key, max_messages, max_len
         )
 
@@ -106,14 +106,14 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
         """
         max_messages = 1000
         max_len = 5_000_000
-
-        api_url, payload = self.rest_server._build_rabbitmq_request(
+        
+        _, payload = self.rest_server._build_rabbitmq_request(
             self.test_sub_key, max_messages, max_len
         )
 
         expected_payload = {
             'count': 1000,
-            'ackmode': 'ack_requeue_false',
+            'ackmode': 'ack_requeue_true',
             'encoding': 'auto',
             'truncate': 5_000_000
         }
@@ -127,14 +127,14 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
         """
         max_messages = 0
         max_len = 0
-
-        api_url, payload = self.rest_server._build_rabbitmq_request(
+        
+        _, payload = self.rest_server._build_rabbitmq_request(
             self.test_sub_key, max_messages, max_len
         )
 
         expected_payload = {
             'count': 0,
-            'ackmode': 'ack_requeue_false',
+            'ackmode': 'ack_requeue_true',
             'encoding': 'auto',
             'truncate': 0
         }
@@ -160,7 +160,7 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
     def test_build_rabbitmq_request_payload_structure(self):
         """ _build_rabbitmq_request payload has correct structure.
         """
-        api_url, payload = self.rest_server._build_rabbitmq_request(
+        _, payload = self.rest_server._build_rabbitmq_request(
             self.test_sub_key, 5, 1000
         )
 
