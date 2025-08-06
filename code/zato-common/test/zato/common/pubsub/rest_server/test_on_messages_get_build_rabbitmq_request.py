@@ -113,7 +113,7 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
 
         expected_payload = {
             'count': 1000,
-            'ackmode': 'ack_requeue_true',
+            'ackmode': 'ack_requeue_false',
             'encoding': 'auto',
             'truncate': 5_000_000
         }
@@ -134,7 +134,7 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
 
         expected_payload = {
             'count': 0,
-            'ackmode': 'ack_requeue_true',
+            'ackmode': 'ack_requeue_false',
             'encoding': 'auto',
             'truncate': 0
         }
