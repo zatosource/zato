@@ -148,7 +148,7 @@ class RESTBuildRabbitMQRequestTestCase(TestCase):
         """
         different_sub_key = 'different_key_789'
 
-        api_url, payload = self.rest_server._build_rabbitmq_request(
+        api_url, _ = self.rest_server._build_rabbitmq_request(
             different_sub_key, 5, 1000
         )
 
