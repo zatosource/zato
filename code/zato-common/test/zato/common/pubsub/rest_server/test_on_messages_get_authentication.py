@@ -254,7 +254,7 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
         environ = self._create_environ({'max_messages': 1})
 
         # Call method
-        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify authenticate was called first
         self.assertTrue(len(method_calls) >= 3)
