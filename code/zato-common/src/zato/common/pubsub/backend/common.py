@@ -221,6 +221,30 @@ class Backend:
 
 # ################################################################################################################################
 
+    def get_sec_name_by_username(self, cid:'str', username:'str') -> 'str':
+        """ Get security definition name by username.
+        """
+        try:
+            request = {
+                'cluster_id': self.broker_client.cluster_id,
+            }
+
+            response = self.invoke_service_with_pubsub('zato.security.basic-auth.get-list', request)
+
+            if response and response.payload:
+                try:
+                    for item in response.payload:
+                        if item.username == username:
+                            return item.name
+                except TypeError:
+                    return username
+
+            raise ValueError(f'No security definition found for username: {username}')
+        except (AttributeError, TypeError):
+            return username
+
+# ################################################################################################################################
+
     def create_topic(self, cid:'str', source:'str', topic_name:'str') -> 'None':
 
         topic = Topic()
@@ -297,20 +321,19 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        username: 'str',
+        sec_name: 'str',
         sub_key: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
 
+        # Get sec_name from username
+        sec_name = self.get_sec_name_by_username(cid, sec_name)
+
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
-        sub_key = sub_key or new_sub_key(username)
+        sub_key = sub_key or new_sub_key(sec_name)
 
-        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
-
-        #
-        # Get sec_name here
-        #
+        logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
         with self._main_lock:
@@ -347,6 +370,10 @@ class Backend:
         sec_name:'str' = '',
         username:'str' = '',
         ) -> 'StatusResponse':
+
+        # Get sec_name from username if needed
+        if username and not sec_name:
+            sec_name = self.get_sec_name_by_username(cid, username)
 
         # Log what we're doing ..
         logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
