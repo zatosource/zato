@@ -65,8 +65,8 @@ class RESTFindUserSubKeyTestCase(TestCase):
         subscription.sec_name = self.test_username
         subscription.sub_key = self.test_sub_key
 
-        self.rest_server.subs_by_topic = {}
-        self.rest_server.subs_by_topic[self.test_topic] = {
+        self.rest_server.backend.subs_by_topic = {}
+        self.rest_server.backend.subs_by_topic[self.test_topic] = {
             self.test_username: subscription
         }
 
@@ -105,7 +105,7 @@ class RESTFindUserSubKeyTestCase(TestCase):
         subscription.sec_name = other_user
         subscription.sub_key = other_sub_key
 
-        self.rest_server.subs_by_topic[other_topic] = {
+        self.rest_server.backend.subs_by_topic[other_topic] = {
             other_user: subscription
         }
 
@@ -119,17 +119,17 @@ class RESTFindUserSubKeyTestCase(TestCase):
     def test_find_user_sub_key_returns_first_match_when_multiple_subscriptions(self):
         """ _find_user_sub_key returns first subscription key when user has multiple.
         """
-        # Add same user to another topic
+        # Add another subscription for same user
         other_topic = 'other.topic'
         other_sub_key = 'other_sub_key_456'
 
-        subscription = Subscription()
-        subscription.topic_name = other_topic
-        subscription.sec_name = self.test_username
-        subscription.sub_key = other_sub_key
+        other_subscription = Subscription()
+        other_subscription.topic_name = other_topic
+        other_subscription.sec_name = self.test_username
+        other_subscription.sub_key = other_sub_key
 
-        self.rest_server.subs_by_topic[other_topic] = {
-            self.test_username: subscription
+        self.rest_server.backend.subs_by_topic[other_topic] = {
+            self.test_username: other_subscription
         }
 
         sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
@@ -144,7 +144,7 @@ class RESTFindUserSubKeyTestCase(TestCase):
         """ _find_user_sub_key returns None when no topics exist.
         """
         # Clear all topics
-        self.rest_server.subs_by_topic.clear()
+        self.rest_server.backend.subs_by_topic.clear()
 
         sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
@@ -157,7 +157,7 @@ class RESTFindUserSubKeyTestCase(TestCase):
         """ _find_user_sub_key returns None when topic has no subscriptions.
         """
         # Clear subscriptions but keep topic
-        self.rest_server.subs_by_topic[self.test_topic] = {}
+        self.rest_server.backend.subs_by_topic[self.test_topic] = {}
 
         sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
