@@ -14,3 +14,7 @@ static-check:
 
 run-tests:
 	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+
+pubsub-tests:
+	$(Zato_Python_Dir)/pytest test/zato/common/pubsub -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
