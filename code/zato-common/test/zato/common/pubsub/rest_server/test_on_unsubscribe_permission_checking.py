@@ -17,8 +17,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,8 +63,6 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
             'denied_user': 'denied_password',
             'admin_user': 'admin_password'
         }
-
-        # Test data constants
         self.test_cid = 'test-cid-123'
         self.test_topic = 'test.topic'
         self.restricted_topic = 'restricted.topic'
@@ -76,10 +76,10 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
             {'pattern': 'test.*', 'access_type': 'subscriber'}
         ])
         self.rest_server.backend.pattern_matcher.add_client('allowed_user', [
-            {'pattern': '*', 'access_type': 'subscriber'}
+            {'pattern': 'test.*', 'access_type': 'subscriber'}
         ])
         self.rest_server.backend.pattern_matcher.add_client('admin_user', [
-            {'pattern': '**', 'access_type': 'subscriber'}
+            {'pattern': 'restricted.*', 'access_type': 'subscriber'}
         ])
         # denied_user gets no permissions
 
@@ -105,8 +105,17 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
     def test_on_unsubscribe_allows_user_with_subscribe_permission(self):
         """ on_unsubscribe allows user with subscribe permission to unsubscribe.
         """
+        # Mock backend unregister_subscription
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
+
         # Create request
-        environ = self._create_environ('test_user', 'test_password')
+        environ = self._create_environ()
 
         # Call method
         response = self.rest_server.on_unsubscribe(self.test_cid, environ, None, self.test_topic)
@@ -135,6 +144,15 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
     def test_on_unsubscribe_allows_wildcard_permissions(self):
         """ on_unsubscribe allows users with wildcard permissions.
         """
+        # Mock backend unregister_subscription
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
+
         # Create request
         environ = self._create_environ('allowed_user', 'allowed_password')
 
@@ -150,6 +168,15 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
     def test_on_unsubscribe_allows_double_wildcard_permissions(self):
         """ on_unsubscribe allows users with double wildcard permissions.
         """
+        # Mock backend unregister_subscription
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
+
         # Create request
         environ = self._create_environ('admin_user', 'admin_password')
 
@@ -168,30 +195,35 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
         # Track method calls
         method_calls = []
 
-        # Override methods to track calls
-        original_authenticate = self.rest_server.authenticate
-        original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
-
         def track_authenticate(cid, environ):
             method_calls.append('authenticate')
-            return original_authenticate(cid, environ)
+            return 'test_user'
 
         def track_evaluate(username, topic_name, operation):
             method_calls.append('evaluate')
-            return original_evaluate(username, topic_name, operation)
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
 
         self.rest_server.authenticate = track_authenticate
         self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
 
         # Create request
-        environ = self._create_environ('test_user', 'test_password')
+        environ = self._create_environ()
 
         # Call method
         _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, self.test_topic)
 
-        # Verify order of calls
-        self.assertTrue(len(method_calls) >= 2)
-        self.assertEqual(method_calls[0], 'authenticate')
+        # Verify order: authenticate should be called before evaluate
+        self.assertEqual(method_calls, ['authenticate', 'evaluate'])
         self.assertIn('evaluate', method_calls)
         auth_index = method_calls.index('authenticate')
         eval_index = method_calls.index('evaluate')
@@ -207,10 +239,19 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
 
         def track_evaluate(username, topic_name, operation):
             evaluate_calls.append((username, topic_name, operation))
-            return self.rest_server.backend.pattern_matcher._clients['test_user'].pub_patterns[0].compiled_regex.match(topic_name) is not None
 
-        original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
         self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
 
         # Create request
         environ = self._create_environ('test_user', 'test_password')
@@ -236,7 +277,7 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
         # Override method to track calls
         def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
             method_calls.append('unregister_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response

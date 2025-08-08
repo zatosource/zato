@@ -17,7 +17,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
+from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,7 +109,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
 
         def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
             backend_calls.append((cid, topic_name, sec_name, sub_key))
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -134,7 +137,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         """
         # Mock backend to return specific response
         def mock_register_subscription(cid, topic_name, sec_name, sub_key=''):
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
             return response

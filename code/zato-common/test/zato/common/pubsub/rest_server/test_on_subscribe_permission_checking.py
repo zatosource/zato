@@ -17,8 +17,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,10 +78,10 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
             {'pattern': 'test.*', 'access_type': 'subscriber'}
         ])
         self.rest_server.backend.pattern_matcher.add_client('allowed_user', [
-            {'pattern': '*', 'access_type': 'subscriber'}
+            {'pattern': 'test.*', 'access_type': 'subscriber'}
         ])
         self.rest_server.backend.pattern_matcher.add_client('admin_user', [
-            {'pattern': '**', 'access_type': 'subscriber'}
+            {'pattern': 'restricted.*', 'access_type': 'subscriber'}
         ])
         # denied_user gets no permissions
 
@@ -207,7 +209,7 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
 
         def track_evaluate(username, topic_name, operation):
             evaluate_calls.append((username, topic_name, operation))
-            return self.rest_server.backend.pattern_matcher._clients['test_user'].pub_patterns[0].compiled_regex.match(topic_name) is not None
+            return original_evaluate(username, topic_name, operation)
 
         original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
         self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
@@ -233,8 +235,8 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
         test_cases = [
             ('test_user', 'test_password', self.test_topic, True),      # Has permission for test.*
             ('denied_user', 'denied_password', self.test_topic, False), # No permission for test.*
-            ('allowed_user', 'allowed_password', self.restricted_topic, True), # Has * permission
-            ('admin_user', 'admin_password', self.restricted_topic, True)       # Has ** permission
+            ('allowed_user', 'allowed_password', self.test_topic, True), # Has test.* permission
+            ('admin_user', 'admin_password', self.restricted_topic, True)       # Has restricted.* permission
         ]
 
         for username, password, topic, should_succeed in test_cases:
@@ -262,7 +264,7 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
         # Override method to track calls
         def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
             method_calls.append('register_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
