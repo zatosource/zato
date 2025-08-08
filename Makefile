@@ -28,6 +28,9 @@ web-admin-tests:
 common-tests:
 	cd $(CURDIR)/code/zato-common && make run-tests
 
+pubsub-tests:
+	cd $(CURDIR)/code/zato-common && make pubsub-tests
+
 server-tests:
 	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make run-tests
 
