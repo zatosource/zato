@@ -26,6 +26,43 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         self.rest_server = Mock()
         self.rest_server.users = {}
         self.broker_client = Mock()
+        self.broker_client.cluster_id = 'test-cluster'
+        
+        # Create mock response for invoke_service_with_pubsub with test users
+        mock_response = Mock()
+        
+        # Create mock security items for test users
+        mock_item1 = Mock()
+        mock_item1.username = 'test_user'
+        mock_item1.name = 'test_user_sec'
+        
+        mock_item2 = Mock()
+        mock_item2.username = 'multi_user'
+        mock_item2.name = 'multi_user_sec'
+        
+        mock_item3 = Mock()
+        mock_item3.username = 'topic_creator'
+        mock_item3.name = 'topic_creator_sec'
+        
+        mock_item4 = Mock()
+        mock_item4.username = 'user_one'
+        mock_item4.name = 'user_one_sec'
+        
+        mock_item5 = Mock()
+        mock_item5.username = 'user_two'
+        mock_item5.name = 'user_two_sec'
+        
+        mock_item6 = Mock()
+        mock_item6.username = 'empty_user'
+        mock_item6.name = 'empty_user_sec'
+        
+        mock_item7 = Mock()
+        mock_item7.username = 'existing_user'
+        mock_item7.name = 'existing_user_sec'
+        
+        mock_response.payload = [mock_item1, mock_item2, mock_item3, mock_item4, mock_item5, mock_item6, mock_item7]
+        self.broker_client.invoke_sync.return_value = mock_response
+        
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
 # ################################################################################################################################
@@ -45,11 +82,11 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
 
         # Assert subscription was created
         self.assertIn('orders.new', self.backend.subs_by_topic)
-        self.assertIn('test_user', self.backend.subs_by_topic['orders.new'])
+        self.assertIn('test_user_sec', self.backend.subs_by_topic['orders.new'])
 
-        subscription = self.backend.subs_by_topic['orders.new']['test_user']
+        subscription = self.backend.subs_by_topic['orders.new']['test_user_sec']
         self.assertEqual(subscription.topic_name, 'orders.new')
-        self.assertEqual(subscription.sec_name, 'test_user')
+        self.assertEqual(subscription.sec_name, 'test_user_sec')
         self.assertEqual(subscription.sub_key, 'sk-test-123')
 
 # ################################################################################################################################
@@ -70,11 +107,11 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         # Assert all subscriptions were created
         for topic_name in ['orders.new', 'invoices.paid', 'alerts.critical']:
             self.assertIn(topic_name, self.backend.subs_by_topic)
-            self.assertIn('multi_user', self.backend.subs_by_topic[topic_name])
+            self.assertIn('multi_user_sec', self.backend.subs_by_topic[topic_name])
 
-            subscription = self.backend.subs_by_topic[topic_name]['multi_user']
+            subscription = self.backend.subs_by_topic[topic_name]['multi_user_sec']
             self.assertEqual(subscription.topic_name, topic_name)
-            self.assertEqual(subscription.sec_name, 'multi_user')
+            self.assertEqual(subscription.sec_name, 'multi_user_sec')
             self.assertEqual(subscription.sub_key, 'sk-multi-456')
 
 # ################################################################################################################################
@@ -128,16 +165,16 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
 
         # Assert both subscriptions exist
         self.assertIn('shared.topic', self.backend.subs_by_topic)
-        self.assertIn('user_one', self.backend.subs_by_topic['shared.topic'])
-        self.assertIn('user_two', self.backend.subs_by_topic['shared.topic'])
+        self.assertIn('user_one_sec', self.backend.subs_by_topic['shared.topic'])
+        self.assertIn('user_two_sec', self.backend.subs_by_topic['shared.topic'])
 
         # Assert subscription details are correct
-        sub1 = self.backend.subs_by_topic['shared.topic']['user_one']
-        sub2 = self.backend.subs_by_topic['shared.topic']['user_two']
+        sub1 = self.backend.subs_by_topic['shared.topic']['user_one_sec']
+        sub2 = self.backend.subs_by_topic['shared.topic']['user_two_sec']
 
-        self.assertEqual(sub1.sec_name, 'user_one')
+        self.assertEqual(sub1.sec_name, 'user_one_sec')
         self.assertEqual(sub1.sub_key, 'sk-user1')
-        self.assertEqual(sub2.sec_name, 'user_two')
+        self.assertEqual(sub2.sec_name, 'user_two_sec')
         self.assertEqual(sub2.sub_key, 'sk-user2')
 
 # ################################################################################################################################
@@ -165,7 +202,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(msg2)
 
         # Assert the subscription was overwritten
-        subscription = self.backend.subs_by_topic['test.topic']['test_user']
+        subscription = self.backend.subs_by_topic['test.topic']['test_user_sec']
         self.assertEqual(subscription.sub_key, 'sk-new')
 
         # Assert there's still only one subscription for this user/topic
@@ -213,7 +250,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
 
         # Assert subscription was still created
         self.assertIn('existing.topic', self.backend.subs_by_topic)
-        self.assertIn('existing_user', self.backend.subs_by_topic['existing.topic'])
+        self.assertIn('existing_user_sec', self.backend.subs_by_topic['existing.topic'])
 
 # ################################################################################################################################
 # ################################################################################################################################
