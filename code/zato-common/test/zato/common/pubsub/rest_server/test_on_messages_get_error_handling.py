@@ -133,8 +133,23 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
     def test_on_messages_get_handles_parameter_validation_error(self):
         """ on_messages_get handles parameter validation errors gracefully.
         """
-        # Set up users for authentication
+        # Set up users and permissions for authentication
         self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+
+        # Set up subscription
+        subscription = Subscription()
+        subscription.topic_name = self.test_topic
+        subscription.sec_name = self.test_username
+        subscription.sub_key = 'test_sub_key_123'
+
+        self.rest_server.backend.subs_by_topic = {
+            self.test_topic: {
+                self.test_username: subscription
+            }
+        }
 
         # Create request with invalid parameters
         environ = self._create_environ({'max_messages': -1})
@@ -142,10 +157,9 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         # Call method - invalid parameters should be handled gracefully
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Should get no subscription found since validation passed but no subscription exists
+        # Should get bad request for invalid parameters
         self.assertIsInstance(response, BadRequestResponse)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'No subscription found for user')
 
     def test_on_messages_get_handles_no_subscription_found(self):
         """ on_messages_get handles case when no subscription is found for user.
