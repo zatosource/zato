@@ -19,8 +19,6 @@ from unittest import main, TestCase
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
-from zato.common.pubsub.server.rest_base import UnauthorizedException
-from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
