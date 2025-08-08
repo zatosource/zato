@@ -20,7 +20,6 @@ from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
-from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -181,7 +180,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
         # Verify backend was called with authenticated username
         self.assertEqual(len(backend_calls), 1)
-        cid, topic_name, username = backend_calls[0]
+        _, _, username = backend_calls[0]
         self.assertEqual(username, expected_username)
 
 # ################################################################################################################################
@@ -228,7 +227,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
                 # Verify backend was called with correct username
                 self.assertEqual(len(backend_calls), 1)
-                cid, topic_name, passed_username = backend_calls[0]
+                _, _, passed_username = backend_calls[0]
                 self.assertEqual(passed_username, username)
 
 # ################################################################################################################################
