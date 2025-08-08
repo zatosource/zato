@@ -71,7 +71,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
         # Set up test subscriptions
         self.rest_server.backend.subs_by_topic = {}
-        
+
         for username in ['test_user', 'allowed_user', 'denied_user', 'admin_user']:
             # Subscription for test.topic
             subscription = Subscription()
@@ -96,7 +96,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
         # Clear pattern matcher and set up permissions
         self.rest_server.backend.pattern_matcher._clients = {}
         self.rest_server.backend.pattern_matcher._pattern_cache = {}
-        
+
         # Add permissions for users - use correct access_type
         self.rest_server.backend.pattern_matcher.add_client('test_user', [
             {'pattern': 'test.topic', 'access_type': 'subscriber'}
