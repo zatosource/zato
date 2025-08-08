@@ -139,16 +139,16 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _find_user_sub_key(self, cid:'str', username:'str') -> 'str | None':
+    def _find_user_sub_key(self, cid:'str', username:'str') -> 'tuple[str | None, str | None]':
         """ Find user's subscription key from topics.
         """
-        for subs_by_sec_name in self.subs_by_topic.values():
+        for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
             if username in subs_by_sec_name:
                 subscription = subs_by_sec_name[username]
-                return subscription.sub_key
+                return subscription.sub_key, topic_name
 
         logger.warning(f'[{cid}] No subscription found for user `{username}`')
-        return None
+        return None, None
 
 # ################################################################################################################################
 
@@ -262,9 +262,14 @@ class PubSubRESTServer(BaseRESTServer):
 
         max_len, max_messages = self._validate_get_params(data)
 
-        sub_key = self._find_user_sub_key(cid, username)
+        sub_key, topic_name = self._find_user_sub_key(cid, username)
         if not sub_key:
             return self._build_error_response(cid, 'No subscription found for user')
+
+        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
+        if not permission_result.is_ok:
+            logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
+            raise UnauthorizedException(cid, 'Permission denied')
 
         api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
 
