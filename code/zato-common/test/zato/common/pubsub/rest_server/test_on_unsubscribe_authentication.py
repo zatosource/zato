@@ -17,8 +17,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,6 +118,15 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
         self.rest_server.authenticate = track_authenticate
 
+        # Mock backend unregister_subscription to avoid broker call
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
+
         # Create request
         environ = self._create_environ()
 
@@ -139,12 +150,17 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         """
         expected_username = 'authenticated_user'
 
+        # Add permissions for the authenticated user
+        self.rest_server.backend.pattern_matcher.add_client(expected_username, [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+
         # Track backend calls
         backend_calls = []
 
-        def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
-            backend_calls.append((cid, topic_name, sec_name, username))
-            from zato.common.pubsub.models import StatusResponse
+        def track_unregister_subscription(cid, topic_name, username=''):
+            backend_calls.append((cid, topic_name, username))
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -165,8 +181,55 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
         # Verify backend was called with authenticated username
         self.assertEqual(len(backend_calls), 1)
-        cid, topic_name, sec_name, username = backend_calls[0]
+        cid, topic_name, username = backend_calls[0]
         self.assertEqual(username, expected_username)
+
+# ################################################################################################################################
+
+    def test_on_unsubscribe_with_different_usernames(self):
+        """ on_unsubscribe works correctly with different authenticated usernames.
+        """
+        test_usernames = ['user1', 'user2', 'admin_user']
+
+        for username in test_usernames:
+            with self.subTest(username=username):
+                # Add permissions for the user
+                self.rest_server.backend.pattern_matcher.add_client(username, [
+                    {'pattern': 'test.topic', 'access_type': 'subscriber'}
+                ])
+
+                # Track backend calls
+                backend_calls = []
+
+                def track_unregister_subscription(cid, topic_name, username=''):
+                    backend_calls.append((cid, topic_name, username))
+
+                    response = StatusResponse()
+                    response.is_ok = True
+                    return response
+
+                self.rest_server.backend.unregister_subscription = track_unregister_subscription
+
+                # Override authenticate to return specific username
+                def mock_authenticate(cid, environ):
+                    return username
+
+                self.rest_server.authenticate = mock_authenticate
+
+                # Create request
+                environ = self._create_environ()
+
+                # Call method
+                response = self.rest_server.on_unsubscribe(self.test_cid, environ, None, self.test_topic)
+
+                # Verify success
+                self.assertTrue(response.is_ok)
+                self.assertEqual(response.cid, self.test_cid)
+
+                # Verify backend was called with correct username
+                self.assertEqual(len(backend_calls), 1)
+                cid, topic_name, passed_username = backend_calls[0]
+                self.assertEqual(passed_username, username)
 
 # ################################################################################################################################
 
@@ -219,7 +282,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
         def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
             method_calls.append('unregister_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -249,7 +312,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         # Override method to track calls
         def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
             method_calls.append('unregister_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -267,27 +330,6 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         self.assertEqual(len(method_calls), 0)
 
 # ################################################################################################################################
-
-    def test_on_unsubscribe_with_different_usernames(self):
-        """ on_unsubscribe works correctly with different authenticated usernames.
-        """
-        test_cases = [
-            ('user1', 'password1'),
-            ('user2', 'password2'),
-            ('admin_user', 'admin_password'),
-        ]
-
-        for username, password in test_cases:
-            with self.subTest(username=username):
-                # Create request with this user's credentials
-                environ = self._create_environ(username, password)
-
-                # Call method
-                response = self.rest_server.on_unsubscribe(self.test_cid, environ, None, self.test_topic)
-
-                # Verify success for this user
-                self.assertTrue(response.is_ok)
-                self.assertEqual(response.cid, self.test_cid)
 
 # ################################################################################################################################
 # ################################################################################################################################

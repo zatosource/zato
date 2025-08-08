@@ -17,7 +17,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
+from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,13 +89,22 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
     def test_on_unsubscribe_returns_success_when_all_conditions_met(self):
         """ on_unsubscribe returns success response when all conditions are met.
         """
+        # Mock backend unregister_subscription
+        def mock_unregister_subscription(cid, topic_name, username=''):
+
+            response = StatusResponse()
+            response.is_ok = True
+            return response
+
+        self.rest_server.backend.unregister_subscription = mock_unregister_subscription
+
         # Create request
         environ = self._create_environ()
 
         # Call method
         response = self.rest_server.on_unsubscribe(self.test_cid, environ, None, self.test_topic)
 
-        # Verify success response
+        # Verify success
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
 
@@ -106,7 +118,7 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
 
         def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
             backend_calls.append((cid, topic_name, sec_name, username))
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -134,7 +146,7 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
         """
         # Mock backend to return specific response
         def mock_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
             return response

@@ -18,8 +18,10 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
+from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,12 +142,16 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         """
         expected_username = 'authenticated_user'
 
+        # Add permissions for the authenticated user
+        self.rest_server.backend.pattern_matcher.add_client(expected_username, [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+
         # Track backend calls
         backend_calls = []
 
         def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
             backend_calls.append((cid, topic_name, sec_name, sub_key))
-            from zato.common.pubsub.models import StatusResponse
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -220,7 +226,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
 
         def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
             method_calls.append('register_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -250,7 +256,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         # Override method to track calls
         def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
             method_calls.append('register_subscription')
-            from zato.common.pubsub.models import StatusResponse
+
             response = StatusResponse()
             response.is_ok = True
             return response
