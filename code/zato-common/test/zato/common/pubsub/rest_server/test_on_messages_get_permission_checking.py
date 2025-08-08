@@ -173,7 +173,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
         # Verify exception details
         self.assertEqual(context.exception.cid, self.test_cid)
-        self.assertIn('No permission to subscribe to topic', str(context.exception))
+        self.assertIn('Permission denied', str(context.exception))
 
 # ################################################################################################################################
 

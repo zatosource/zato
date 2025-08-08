@@ -59,6 +59,9 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
+        # Set up subscription data
+        self.rest_server.backend.subs_by_topic = {}
+
         # Set up test users for authentication
         self.rest_server.users = {
             'test_user': 'test_password',
@@ -68,43 +71,57 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
             'user2': 'password2'
         }
 
+        # Set up permissions for all users
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+        self.rest_server.backend.pattern_matcher.add_client('different_user', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+        self.rest_server.backend.pattern_matcher.add_client('admin_user', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+        self.rest_server.backend.pattern_matcher.add_client('user1', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+        self.rest_server.backend.pattern_matcher.add_client('user2', [
+            {'pattern': 'test.topic', 'access_type': 'subscriber'}
+        ])
+
         # Test data constants
         self.test_cid = 'test-cid-123'
-        self.test_username = 'test_user'
         self.test_topic = 'test.topic'
-        self.test_sub_key = 'test_sub_key_123'
+        self.test_username = 'test_user'
+
+        # Mock RabbitMQ fetch to return empty list
+        def mock_fetch_from_rabbitmq(cid, api_url, rabbitmq_payload):
+            return []
+
+        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
+
+        # Mock backend fetch_messages to return empty list
+        def mock_fetch_messages(cid, sub_key, max_messages, max_len):
+            return []
+
+        self.rest_server.backend.fetch_messages = mock_fetch_messages
+
+        # Mock _find_user_sub_key to return a subscription key and topic
+        def mock_find_user_sub_key(cid, username):
+            return 'test_sub_key_123', 'test.topic'
+
+        self.rest_server._find_user_sub_key = mock_find_user_sub_key
 
         # Set up test subscription
         subscription = Subscription()
         subscription.topic_name = self.test_topic
         subscription.sec_name = self.test_username
-        subscription.sub_key = self.test_sub_key
+        subscription.sub_key = 'test_sub_key_123'
 
         self.rest_server.backend.subs_by_topic = {
             self.test_topic: {
                 self.test_username: subscription
             }
         }
-
-        # Mock the fetch_messages method to return empty list
-        def mock_fetch_messages(cid, sub_key, max_messages):
-            return []
-
-        self.rest_server.backend.fetch_messages = mock_fetch_messages
-
-        # Override _find_user_sub_key to always find the subscription
-        def mock_find_user_sub_key(cid, username):
-            if username in self.rest_server.backend.subs_by_topic.get(self.test_topic, {}):
-                return self.rest_server.backend.subs_by_topic[self.test_topic][username].sub_key
-            return None
-
-        self.rest_server._find_user_sub_key = mock_find_user_sub_key
-
-        # Mock _fetch_from_rabbitmq to return empty list
-        def mock_fetch_from_rabbitmq(cid, api_url, rabbitmq_payload):
-            return []
-
-        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
 
     def _create_environ(self, json_data, username='test_user', password='test_password'):
         """ Helper to create WSGI environ with JSON data and HTTP Basic Auth.
