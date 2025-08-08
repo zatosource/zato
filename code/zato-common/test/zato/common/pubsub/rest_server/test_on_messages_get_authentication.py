@@ -194,7 +194,7 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
 
         # Call method and expect exception
         with self.assertRaises(UnauthorizedException) as context:
-            self.rest_server.on_messages_get(self.test_cid, environ, None)
+            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify exception details
         self.assertEqual(context.exception.cid, self.test_cid)
@@ -216,7 +216,7 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
 
         # Call method and expect exception
         with self.assertRaises(UnauthorizedException) as context:
-            self.rest_server.on_messages_get(self.test_cid, environ, None)
+            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify exception details
         self.assertEqual(context.exception.cid, self.test_cid)
@@ -284,7 +284,7 @@ class RESTOnMessagesGetAuthenticationTestCase(TestCase):
 
         # Call method and expect exception
         with self.assertRaises(UnauthorizedException):
-            self.rest_server.on_messages_get(self.test_cid, environ, None)
+            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify no further processing occurred
         self.assertEqual(len(method_calls), 0)
