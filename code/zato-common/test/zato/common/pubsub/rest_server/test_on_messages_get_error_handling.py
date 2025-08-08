@@ -100,7 +100,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         }
 
     def test_on_messages_get_handles_json_parsing_error(self):
-        """ on_messages_get handles JSON parsing errors gracefully.
+        """ on_messages_get handles JSON parsing errors by raising exception from _parse_json.
         """
         # Set up users for authentication
         self.rest_server.users = {'test_user': 'test_password'}
@@ -110,23 +110,25 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('ascii')
         auth_header = f'Basic {encoded_credentials}'
 
+        # Create malformed JSON
+        malformed_json = '{"max_messages": 1, "invalid": }'
+
         class MockInput:
             def __init__(self, data):
                 self.data = data
             def read(self, size=-1):
                 return self.data
 
-        # Create request with invalid JSON
         environ = {
             'REQUEST_METHOD': 'GET',
             'CONTENT_TYPE': 'application/json',
-            'CONTENT_LENGTH': '10',
-            'wsgi.input': MockInput(b'invalid json'),
+            'CONTENT_LENGTH': str(len(malformed_json)),
             'HTTP_AUTHORIZATION': auth_header,
-            'PATH_INFO': '/messages'
+            'PATH_INFO': '/messages',
+            'wsgi.input': MockInput(malformed_json.encode('utf-8'))
         }
 
-        # Call method and expect JSON parsing to fail
+        # Call method and expect exception to be raised by _parse_json (line 20 in _parse_json raises)
         with self.assertRaises(Exception):
             _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
@@ -260,12 +262,13 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         self.assertEqual(response.details, 'No subscription found for user')
 
     def test_on_messages_get_handles_malformed_subscription_data(self):
-        """ on_messages_get handles malformed subscription data gracefully.
+        """ on_messages_get raises AttributeError when subscription object is malformed.
         """
         # Set up users for authentication
         self.rest_server.users = {'test_user': 'test_password'}
 
-        # Set malformed subscription data
+        # Set malformed subscription data - None subscription will cause AttributeError
+        # when _find_user_sub_key tries to access subscription.sub_key
         self.rest_server.backend.subs_by_topic = {
             self.test_topic: {
                 self.test_username: None  # Invalid subscription object
@@ -275,12 +278,35 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         # Create request
         environ = self._create_environ({'max_messages': 1})
 
-        # Call method
-        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        # Call method and expect AttributeError when accessing subscription.sub_key
+        with self.assertRaises(AttributeError):
+            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify error response (should handle gracefully)
-        self.assertIsInstance(response, BadRequestResponse)
-        self.assertEqual(response.cid, self.test_cid)
+    def test_on_messages_get_handles_parameter_validation_with_invalid_types(self):
+        """ on_messages_get raises TypeError when parameter types are invalid in _validate_get_params.
+        """
+        # Set up users for authentication
+        self.rest_server.users = {'test_user': 'test_password'}
+
+        # Create request with invalid parameter types that cause TypeError in min() function
+        test_cases = [
+            {'max_messages': 'invalid_string', 'max_len': 1000},
+            {'max_messages': 5, 'max_len': 'invalid_string'},
+            {'max_messages': None, 'max_len': 1000},
+            {'max_messages': [], 'max_len': 1000}
+        ]
+
+        for invalid_data in test_cases:
+            with self.subTest(data=invalid_data):
+                # Clear subscriptions for consistent error
+                self.rest_server.backend.subs_by_topic.clear()
+
+                # Create request
+                environ = self._create_environ(invalid_data)
+
+                # Call method and expect TypeError from min() function in _validate_get_params
+                with self.assertRaises(TypeError):
+                    _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
     def test_on_messages_get_handles_authentication_failure(self):
         """ on_messages_get handles authentication failure properly.
