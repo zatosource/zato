@@ -238,12 +238,12 @@ class Backend:
         cid: 'str',
         topic_name:'str',
         msg:'PubMessage',
-        sec_name:'str',
+        username:'str',
         ext_client_id:'strnone'=None
         ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
-        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {sec_name}')
+        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
 
         # Create topic if it doesn't exist
         if not self._has_topic(topic_name):
@@ -275,13 +275,13 @@ class Backend:
             'expiration_time_iso': expiration_time_iso,
             'size': size,
             'delivery_count': 0,
-            'publisher': sec_name,
+            'publisher': username,
         }
 
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
         ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'[{cid}] Published message to topic {topic_name} (sec_name={sec_name} -> {ext_client_part})')
+        logger.info(f'[{cid}] Published message to topic {topic_name} (username={username} -> {ext_client_part})')
 
         # Return success response
         response = PubResponse()
@@ -297,16 +297,20 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        sec_name: 'str',
+        username: 'str',
         sub_key: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
-        sub_key = sub_key or new_sub_key(sec_name)
+        sub_key = sub_key or new_sub_key(username)
 
-        logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
+        logger.info(f'[{cid}] Subscribing {username} to topic {topic_name} (sk={sub_key})')
+
+        #
+        # Get sec_name here
+        #
 
         # Create topic if it doesn't exist ..
         with self._main_lock:
