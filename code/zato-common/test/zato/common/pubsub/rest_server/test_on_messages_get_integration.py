@@ -102,21 +102,38 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
 # ################################################################################################################################
 
     def test_on_messages_get_returns_success_with_messages(self):
-        """ on_messages_get returns success response with transformed messages.
+        """ on_messages_get returns success response with transformed messages when all conditions are met.
         """
-        # Clear subscriptions for consistent error
-        self.rest_server.backend.subs_by_topic.clear()
+        # Set up permissions for test_user
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': self.test_topic, 'access_type': 'subscriber'}
+        ])
+
+        # Mock _fetch_from_rabbitmq to return test messages
+        def mock_fetch_from_rabbitmq(cid, api_url, payload):
+            return [
+                {
+                    'payload': 'test message 1',
+                    'properties': {
+                        'message_id': 'msg_1',
+                        'correlation_id': 'corr_1'
+                    }
+                }
+            ]
+
+        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
 
         # Create request
-        environ = self._create_environ({'max_messages': 2})
+        environ = self._create_environ({'max_messages': 1})
 
         # Call method
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify error response (no subscription)
-        self.assertIsInstance(response, BadRequestResponse)
+        # Verify success response
+        self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'No subscription found for user')
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['data'], 'test message 1')
 
 # ################################################################################################################################
 
@@ -142,8 +159,16 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
     def test_on_messages_get_returns_error_when_rabbitmq_fails(self):
         """ on_messages_get returns error when RabbitMQ request fails.
         """
-        # Clear subscriptions for consistent error
-        self.rest_server.backend.subs_by_topic.clear()
+        # Set up permissions for test_user
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': self.test_topic, 'access_type': 'subscriber'}
+        ])
+
+        # Mock _fetch_from_rabbitmq to return None (simulating RabbitMQ failure)
+        def mock_fetch_from_rabbitmq(cid, api_url, payload):
+            return None
+
+        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
 
         # Create request
         environ = self._create_environ({'max_messages': 1})
@@ -151,18 +176,26 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Call method
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify error response
+        # Verify error response (line 25 in on_messages_get)
         self.assertIsInstance(response, BadRequestResponse)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'No subscription found for user')
+        self.assertEqual(response.details, 'Failed to retrieve messages from queue')
 
 # ################################################################################################################################
 
     def test_on_messages_get_handles_empty_message_list(self):
         """ on_messages_get handles empty message list from RabbitMQ.
         """
-        # Clear subscriptions for consistent error
-        self.rest_server.backend.subs_by_topic.clear()
+        # Set up permissions for test_user
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': self.test_topic, 'access_type': 'subscriber'}
+        ])
+
+        # Mock _fetch_from_rabbitmq to return empty list
+        def mock_fetch_from_rabbitmq(cid, api_url, payload):
+            return []
+
+        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
 
         # Create request
         environ = self._create_environ({'max_messages': 1})
@@ -170,10 +203,10 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Call method
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        # Verify success response with empty message list
+        self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'No subscription found for user')
+        self.assertEqual(response.data, [])
 
 # ################################################################################################################################
 
@@ -242,8 +275,16 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
     def test_on_messages_get_handles_exception_during_processing(self):
         """ on_messages_get handles exceptions during message processing.
         """
-        # Clear subscriptions for consistent error
-        self.rest_server.backend.subs_by_topic.clear()
+        # Set up permissions for test_user
+        self.rest_server.backend.pattern_matcher.add_client('test_user', [
+            {'pattern': self.test_topic, 'access_type': 'subscriber'}
+        ])
+
+        # Mock _fetch_from_rabbitmq to raise an exception
+        def mock_fetch_from_rabbitmq(cid, api_url, payload):
+            raise Exception('Simulated RabbitMQ connection error')
+
+        self.rest_server._fetch_from_rabbitmq = mock_fetch_from_rabbitmq
 
         # Create request
         environ = self._create_environ({'max_messages': 1})
@@ -251,10 +292,10 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Call method
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify error response
+        # Verify error response (line 34-35 in on_messages_get)
         self.assertIsInstance(response, BadRequestResponse)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'No subscription found for user')
+        self.assertEqual(response.details, 'Internal error retrieving messages')
 
 # ################################################################################################################################
 # ################################################################################################################################
