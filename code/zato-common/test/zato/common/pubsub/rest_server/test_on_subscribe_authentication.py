@@ -12,7 +12,6 @@ _ = monkey.patch_all()
 
 # stdlib
 import base64
-import json
 import warnings
 from unittest import main, TestCase
 
@@ -21,7 +20,6 @@ from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import StatusResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
-from zato.common.test import rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,7 +170,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
 
         # Verify backend was called with authenticated username
         self.assertEqual(len(backend_calls), 1)
-        cid, topic_name, sec_name, sub_key = backend_calls[0]
+        _, _, sec_name, _ = backend_calls[0]
         self.assertEqual(sec_name, expected_username)
 
 # ################################################################################################################################
