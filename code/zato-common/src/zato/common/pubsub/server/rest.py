@@ -11,6 +11,7 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+from json import loads
 from http.client import OK
 from logging import getLogger
 
@@ -193,24 +194,30 @@ class PubSubRESTServer(BaseRESTServer):
             headers = properties.get('headers', {})
             payload_data = msg.get('payload', '')
 
+            # Parse the payload to extract the original data
             if isinstance(payload_data, str):
-                size = len(payload_data.encode('utf-8'))
+                payload_obj = loads(payload_data)
             else:
-                size = len(payload_data)
+                payload_obj = payload_data
 
-            msg_id = properties.get('message_id', '')
-            correl_id = properties.get('correlation_id', '')
-            priority = properties.get('priority', _default_priority)
+            actual_data = payload_obj.get('data', payload_data)
+            msg_id = payload_obj.get('msg_id', '')
+            correl_id = payload_obj.get('correl_id', '')
+            priority = payload_obj.get('priority', _default_priority)
+            pub_time_iso = payload_obj.get('pub_time_iso', '')
+            recv_time_iso = payload_obj.get('recv_time_iso', '')
+            expiration = payload_obj.get('expiration', _default_expiration)
+            topic_name = payload_obj.get('topic_name', '')
+            ext_client_id = payload_obj.get('ext_client_id', '')
+            expiration_time_iso = payload_obj.get('expiration_time_iso', '')
+            in_reply_to = payload_obj.get('in_reply_to', '')
+            size = payload_obj.get('size', len(str(actual_data).encode('utf-8')))
+
             mime_type = properties.get('content_type', 'application/json')
-            pub_time_iso = properties.get('timestamp', '')
-            recv_time_iso = properties.get('timestamp', '')
-            expiration = properties.get('expiration', _default_expiration)
-            topic_name = headers.get('topic_name', '')
-            ext_client_id = headers.get('ext_client_id', '')
             ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
 
             message = {
-                'data': payload_data,
+                'data': actual_data,
                 'msg_id': msg_id,
                 'correl_id': correl_id,
                 'priority': priority,
@@ -221,8 +228,8 @@ class PubSubRESTServer(BaseRESTServer):
                 'topic_name': topic_name,
                 'ext_client_id': ext_client_id,
                 'ext_pub_time_iso': ext_pub_time_iso,
-                'in_reply_to': '',
-                'expiration_time_iso': '',
+                'in_reply_to': in_reply_to,
+                'expiration_time_iso': expiration_time_iso,
                 'size': size,
             }
 
