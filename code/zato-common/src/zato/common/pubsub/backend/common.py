@@ -317,6 +317,7 @@ class Backend:
         topic_name: 'str',
         username: 'str',
         sub_key: 'str'='',
+        should_create_bindings: 'bool'=True,
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
@@ -348,7 +349,8 @@ class Backend:
             subs_by_sec_name[sec_name] = sub
 
             # .. create AMQP bindings for the subscription ..
-            create_subscription_bindings(self.broker_client, cid, sub_key, ModuleCtx.Exchange_Name, topic_name)
+            if should_create_bindings:
+                create_subscription_bindings(self.broker_client, cid, sub_key, ModuleCtx.Exchange_Name, topic_name)
 
         # .. build our response ..
         response = StatusResponse()
