@@ -315,14 +315,14 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        sec_name: 'str',
+        username: 'str',
         sub_key: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
 
-        # Get sec_name from username if needed
-        sec_name = self.get_sec_name_by_username(cid, sec_name)
+        # Get sec_name from username
+        sec_name = self.get_sec_name_by_username(cid, username)
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         sub_key = sub_key or new_sub_key(sec_name)
