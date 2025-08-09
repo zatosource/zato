@@ -281,7 +281,9 @@ class PubSubRESTServer(BaseRESTServer):
 
             messages = self._transform_messages(messages_data)
 
-            logger.info(f'[{cid}] Retrieved {len(messages)} messages for user `{username}` from queue `{sub_key}`')
+            message_count = len(messages)
+            message_word = 'message' if message_count == 1 else 'messages'
+            logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
 
             return self._build_success_response(cid, messages)
 
