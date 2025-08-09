@@ -269,12 +269,9 @@ class BaseServer:
         for username in users_config.keys():
             permissions = []
             for topic_name in all_topics:
-                permissions.extend([
-                    {'pattern': topic_name, 'access_type': 'publish'},
-                    {'pattern': topic_name, 'access_type': 'subscribe'}
-                ])
+                permissions.append({'pattern': topic_name, 'access_type': PubSub.API_Client.Publisher_Subscriber})
+            logger.info(f'[{cid}] Adding permissions for user {username}: {permissions}')
             self.backend.pattern_matcher.add_client(username, permissions)
-            logger.info(f'[{cid}] Added permissions for user {username} on topics: {sorted(all_topics)}')
 
         # Process subscriptions section
         for topic_name, users_data in subs_config.items():
