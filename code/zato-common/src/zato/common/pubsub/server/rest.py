@@ -286,7 +286,7 @@ class PubSubRESTServer(BaseRESTServer):
         try:
             messages_data = self._fetch_from_rabbitmq(cid, api_url, rabbitmq_payload)
             if messages_data is None:
-                return self._build_error_response(cid, 'Failed to retrieve messages from queue')
+                return self._build_error_response(cid, 'No such queue')
 
             messages = self._transform_messages(messages_data)
 
