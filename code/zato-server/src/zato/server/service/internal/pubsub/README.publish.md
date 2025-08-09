@@ -53,8 +53,9 @@ Content-Type: application/json
 ```json
 {
   "is_ok": true,
-  "msg_id": "unique-message-id",
-  "cid": "correlation-id"
+  "cid": "correlation-id",
+  "status": "200 OK",
+  "msg_id": "zpsm3e2d9618450f4505b1796428dc2b0aea"
 }
 ```
 
@@ -140,9 +141,9 @@ using pattern matching - see the pattern documentation for details on how topic 
 - Set to 0 for messages that never expire
 
 ### Message ID
-- Each published message receives a unique ID
-- Use this ID for tracking and correlation
-- Format: `zato.msg.` followed by a UUID
+- Each published message receives a unique message ID in the response
+- Format: `zpsm` followed by a randomly generated string
+- Example: `zpsm3e2d9618450f4505b1796428dc2b0aea`
 
 ## Error Handling
 
