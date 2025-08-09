@@ -118,7 +118,8 @@ curl -X POST \
 
 ## Topic Permissions
 
-Your user account must have publish permissions for the topics you want to publish to. Permissions are configured using pattern matching - see the pattern documentation for details on how topic patterns work.
+Your user account must have publish permissions for the topics you want to publish to. Permissions are configured
+using pattern matching - see the pattern documentation for details on how topic patterns work.
 
 ## Message Properties
 
@@ -144,7 +145,6 @@ Common error scenarios:
 - **401 Unauthorized** - Invalid credentials or insufficient permissions
 - **400 Bad Request** - Missing data field or invalid request format
 - **404 Not Found** - Topic does not exist
-- **413 Payload Too Large** - Message exceeds size limits
 - **500 Internal Server Error** - Server-side error
 
 ## Best Practices
@@ -155,14 +155,3 @@ Common error scenarios:
 4. **Use correlation IDs** - Include correlation IDs for message tracking and debugging
 5. **Set reasonable expiration** - Don't let messages accumulate indefinitely
 6. **Validate data** - Ensure message content is properly formatted
-7. **Monitor message size** - Keep messages reasonably sized for better performance
-
-## Health Check
-
-Check if the pub/sub service is running:
-
-```
-GET /health
-```
-
-Returns `200 OK` with `{"status": "ok"}` if the service is healthy.
