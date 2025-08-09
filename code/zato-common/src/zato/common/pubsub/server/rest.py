@@ -274,10 +274,6 @@ class PubSubRESTServer(BaseRESTServer):
 
         api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
 
-        print()
-        print(111, api_url)
-        print()
-
         try:
             messages_data = self._fetch_from_rabbitmq(cid, api_url, rabbitmq_payload)
             if messages_data is None:
@@ -313,10 +309,11 @@ class PubSubRESTServer(BaseRESTServer):
         # Subscribe to topic using backend
         result = self.backend.register_subscription(cid, topic_name, username)
 
+        logger.info(f'[{cid}] Subscription result: {result.is_ok}')
+
         response = APIResponse()
         response.is_ok = result.is_ok
         response.cid = cid
-
         return response
 
 # ################################################################################################################################
@@ -324,7 +321,6 @@ class PubSubRESTServer(BaseRESTServer):
     def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Handle unsubscribe request.
         """
-        # Log what we're doing ..
         logger.info(f'[{cid}] Processing unsubscribe request')
 
         # .. make sure the client is allowed to carry out this action ..

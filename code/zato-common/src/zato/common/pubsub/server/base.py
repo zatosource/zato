@@ -289,7 +289,7 @@ class BaseServer:
 
                 # Create the subscription
                 logger.info(f'[{cid}] Registering subscription from YAML: {username} -> {topic_name} (key={sub_key})')
-                _ = self.backend.register_subscription(cid, topic_name, username, sub_key)
+                _ = self.backend.register_subscription(cid, topic_name, username, sub_key, should_create_bindings=False)
 
 # ################################################################################################################################
 
