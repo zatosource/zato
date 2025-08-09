@@ -264,7 +264,8 @@ class BaseRESTServer(BaseServer):
         diagnostics = {
             'topics': {},
             'users': self.users,
-            'subscriptions': {}
+            'subscriptions': {},
+            'pattern_matcher': {}
         }
 
         # Extract topic information
@@ -280,6 +281,16 @@ class BaseRESTServer(BaseServer):
                 diagnostics['subscriptions'][topic_name][username] = {
                     'sub_key': subscription.sub_key
                 }
+
+        # Extract pattern matcher information
+        diagnostics['pattern_matcher']['clients'] = {}
+        for client_id, client_perms in self.backend.pattern_matcher._clients.items():
+            diagnostics['pattern_matcher']['clients'][client_id] = {
+                'pub_patterns': [item.pattern for item in client_perms.pub_patterns],
+                'sub_patterns': [item.pattern for item in client_perms.sub_patterns]
+            }
+        diagnostics['pattern_matcher']['cache_size'] = len(self.backend.pattern_matcher._pattern_cache)
+        diagnostics['pattern_matcher']['client_count'] = len(self.backend.pattern_matcher._clients)
 
         # Dump to logs in YAML format
         yaml_output = yaml_dump(diagnostics, default_flow_style=False)
