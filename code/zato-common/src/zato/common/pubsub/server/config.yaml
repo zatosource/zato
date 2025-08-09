@@ -1,0 +1,22 @@
+users:
+  demo:
+    password: "demo"
+
+topics:
+  demo1:
+    name: "demo.1"
+  demo2:
+    name: "demo.2"
+  demo3:
+    name: "demo.3"
+
+subscriptions:
+  "demo.1":
+    demo:
+      sub_key: "zpsk.demo.demo1"
+  "demo.2":
+    demo:
+      sub_key: "zpsk.demo.demo2"
+  "demo.3":
+    demo:
+      sub_key: "zpsk.demo.demo3"
