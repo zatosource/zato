@@ -274,6 +274,8 @@ class PubSubRESTServer(BaseRESTServer):
         if not sub_key:
             return self._build_error_response(cid, 'No subscription found for user')
 
+        logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}, topic={topic_name}')
+
         permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
         if not permission_result.is_ok:
             logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
