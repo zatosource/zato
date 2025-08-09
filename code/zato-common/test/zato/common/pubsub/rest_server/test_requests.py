@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import http.client as http_client
+import logging
 import os
 from unittest import main, TestCase
 
@@ -16,6 +18,15 @@ from requests.auth import HTTPBasicAuth
 
 # PyYAML
 from yaml import safe_load as yaml_load
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger('requests.packages.urllib3').setLevel(logging.DEBUG)
+logging.getLogger('urllib3.connectionpool').setLevel(logging.DEBUG)
+
+http_client.HTTPConnection.debuglevel = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
