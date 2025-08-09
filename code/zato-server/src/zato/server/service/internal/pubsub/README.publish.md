@@ -103,14 +103,19 @@ curl -X POST \
   }'
 ```
 
-#### High Priority Alert
+#### High Priority Business Event
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/alerts.critical/publish \
+  http://localhost:17010/topic/payments.failed/publish \
   -u username:password \
   -H "Content-Type: application/json" \
   -d '{
-    "data": "System disk usage above 95%",
+    "data": {
+      "payment_id": "pay_67890",
+      "customer_id": "cust_12345",
+      "amount": 299.99,
+      "reason": "insufficient_funds"
+    },
     "priority": 9,
     "expiration": 300
   }'
@@ -124,9 +129,9 @@ using pattern matching - see the pattern documentation for details on how topic 
 ## Message Properties
 
 ### Priority Levels
-- **1-3**: Low priority (background tasks, logs)
-- **4-6**: Normal priority (regular business messages)
-- **7-9**: High priority (alerts, urgent notifications)
+- **1-3**: Low priority (background processing, audit logs)
+- **4-6**: Normal priority (regular business transactions)
+- **7-9**: High priority (urgent business events, payment failures)
 
 ### Expiration
 - Messages expire after the specified time in seconds
