@@ -47,12 +47,7 @@ basicConfig(
 
 logger = getLogger(__name__)
 
-# Default paths
-DEFAULT_YAML_CONFIG = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'test',
-    'users.yaml'
-)
+
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,8 +73,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
-    _ = start_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
-                                help='Path to YAML configuration file with users, topics, and subscriptions')
+
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
 
@@ -93,8 +87,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = connections_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
     _ = connections_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
     _ = connections_parser.add_argument('--output', type=str, default='json', choices=['json', 'pretty'], help='Output format')
-    _ = connections_parser.add_argument('--yaml-config', type=str, default=DEFAULT_YAML_CONFIG,
-                                    help='Path to YAML configuration file with users, topics, and subscriptions')
+
 
     # Enmasse command
     enmasse_parser = subparsers.add_parser('enmasse', help='Run enmasse import with demo configuration')
@@ -122,7 +115,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         app = PubSubRESTServer(
             host=args.host,
             port=args.port,
-            yaml_config_file=args.yaml_config,
+            yaml_config_file=None,
         )
 
         # Configure gunicorn options
@@ -293,7 +286,7 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
         # Create a temporary server instance to use its list_connections method
-        server = PubSubRESTServer(host='0.0.0.0', port=44556, yaml_config_file=args.yaml_config)
+        server = PubSubRESTServer(host='0.0.0.0', port=44556, yaml_config_file=None)
 
         # Get connection information
         result = server.list_connections(cid, args.management_port)

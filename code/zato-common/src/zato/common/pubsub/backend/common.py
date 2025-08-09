@@ -225,15 +225,14 @@ class Backend:
         """ Get security definition name by username.
         """
         request = {
-            'cluster_id': self.broker_client.cluster_id,
+            'cluster_id': 1,
         }
 
         response = self.invoke_service_with_pubsub('zato.security.basic-auth.get-list', request)
 
-        if response and response.payload:
-            for item in response.payload:
-                if item.username == username:
-                    return item.name
+        for item in response:
+            if item['username'] == username:
+                return item['name']
 
         raise ValueError(f'No security definition found for username: {username}')
 
