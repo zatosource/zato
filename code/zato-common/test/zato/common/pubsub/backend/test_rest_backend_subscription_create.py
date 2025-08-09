@@ -28,40 +28,16 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         self.broker_client = Mock()
         self.broker_client.cluster_id = 'test-cluster'
 
-        # Create mock response for invoke_service_with_pubsub with test users
-        mock_response = Mock()
-
-        # Create mock security items for test users
-        mock_item1 = Mock()
-        mock_item1.username = 'test_user'
-        mock_item1.name = 'test_user_sec'
-
-        mock_item2 = Mock()
-        mock_item2.username = 'multi_user'
-        mock_item2.name = 'multi_user_sec'
-
-        mock_item3 = Mock()
-        mock_item3.username = 'topic_creator'
-        mock_item3.name = 'topic_creator_sec'
-
-        mock_item4 = Mock()
-        mock_item4.username = 'user_one'
-        mock_item4.name = 'user_one_sec'
-
-        mock_item5 = Mock()
-        mock_item5.username = 'user_two'
-        mock_item5.name = 'user_two_sec'
-
-        mock_item6 = Mock()
-        mock_item6.username = 'empty_user'
-        mock_item6.name = 'empty_user_sec'
-
-        mock_item7 = Mock()
-        mock_item7.username = 'existing_user'
-        mock_item7.name = 'existing_user_sec'
-
-        mock_response.payload = [mock_item1, mock_item2, mock_item3, mock_item4, mock_item5, mock_item6, mock_item7]
-        self.broker_client.invoke_sync.return_value = mock_response
+        # Mock response for invoke_service_with_pubsub with test users
+        self.broker_client.invoke_sync.return_value = [
+            {'username': 'test_user', 'name': 'test_user_sec'},
+            {'username': 'multi_user', 'name': 'multi_user_sec'},
+            {'username': 'topic_creator', 'name': 'topic_creator_sec'},
+            {'username': 'user_one', 'name': 'user_one_sec'},
+            {'username': 'user_two', 'name': 'user_two_sec'},
+            {'username': 'empty_user', 'name': 'empty_user_sec'},
+            {'username': 'existing_user', 'name': 'existing_user_sec'}
+        ]
 
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
