@@ -274,6 +274,10 @@ class PubSubRESTServer(BaseRESTServer):
 
         api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
 
+        print()
+        print(111, api_url)
+        print()
+
         try:
             messages_data = self._fetch_from_rabbitmq(cid, api_url, rabbitmq_payload)
             if messages_data is None:
