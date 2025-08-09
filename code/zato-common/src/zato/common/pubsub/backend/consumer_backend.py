@@ -17,6 +17,7 @@ from gevent.lock import RLock
 from zato.common.util.api import spawn_greenlet
 from zato.common.pubsub.backend.common import Backend, ModuleCtx as CommonModuleCtx
 from zato.common.pubsub.consumer import start_public_consumer
+from zato.common.pubsub.util import create_subscription_bindings
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +80,7 @@ class ConsumerBackend(Backend):
                 logger.debug(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
 
                 # .. create bindings for the topic ..
-                self.broker_client.create_bindings(cid, sub_key, CommonModuleCtx.Exchange_Name, sub_key, topic_name)
+                create_subscription_bindings(self.broker_client, cid, sub_key, CommonModuleCtx.Exchange_Name, topic_name)
 
                 # .. start a background consumer ..
                 result = spawn(

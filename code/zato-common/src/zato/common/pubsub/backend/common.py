@@ -20,6 +20,7 @@ from gevent.lock import RLock
 from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
+from zato.common.pubsub.util import create_subscription_bindings
 from zato.common.util.api import new_sub_key, utcnow
 
 # ################################################################################################################################
@@ -345,6 +346,9 @@ class Backend:
 
             # .. now add it for that user ..
             subs_by_sec_name[sec_name] = sub
+
+            # .. create AMQP bindings for the subscription ..
+            create_subscription_bindings(self.broker_client, cid, sub_key, ModuleCtx.Exchange_Name, topic_name)
 
         # .. build our response ..
         response = StatusResponse()
