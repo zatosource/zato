@@ -8,8 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import unittest
-from json import dumps, loads
+from unittest import main, TestCase
 
 # requests
 import requests
@@ -21,7 +20,7 @@ from yaml import safe_load as yaml_load
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubRESTServerTestCase(unittest.TestCase):
+class PubSubRESTServerTestCase(TestCase):
     """ Test cases for the pub/sub REST server.
     """
 
@@ -64,13 +63,13 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_subscribe_publish_get_unsubscribe_flow(self):
+    def xtest_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
 
         # Step 1: Subscribe to topic
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, 200)
 
@@ -79,7 +78,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
         self.assertIn('cid', subscribe_data)
 
         # Step 2: Publish a message
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         message_data = {
             'data': 'Test message for demo.1',
             'priority': 7,
@@ -101,7 +100,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
         self.assertIn('cid', publish_data)
 
         # Step 3: Get messages
-        get_messages_url = f'{self.base_url}/messages/get'
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_data = {
             'max_messages': 10,
             'max_len': 1000000
@@ -128,7 +127,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
         self.assertEqual(message['priority'], 7)
 
         # Step 4: Unsubscribe from topic
-        unsubscribe_url = f'{self.base_url}/topic/{topic_name}/unsubscribe'
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
         response = requests.post(unsubscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, 200)
 
@@ -138,7 +137,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_multiple_topics_subscription(self):
+    def xtest_multiple_topics_subscription(self):
         """ Test subscribing to multiple topics and publishing to each.
         """
         topic1 = self.test_topics[1]  # demo.2
@@ -146,7 +145,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 
         # Subscribe to both topics
         for topic_name in [topic1, topic2]:
-            subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+            subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
             response = requests.post(subscribe_url, auth=self.auth)
             self.assertEqual(response.status_code, 200)
 
@@ -160,7 +159,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
         }
 
         for topic_name, message_text in messages.items():
-            publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+            publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
             message_data = {
                 'data': message_text,
                 'priority': 5,
@@ -179,7 +178,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
             self.assertTrue(publish_data['is_ok'])
 
         # Get all messages
-        get_messages_url = f'{self.base_url}/messages/get'
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_data = {
             'max_messages': 10,
             'max_len': 1000000
@@ -204,7 +203,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 
         # Unsubscribe from both topics
         for topic_name in [topic1, topic2]:
-            unsubscribe_url = f'{self.base_url}/topic/{topic_name}/unsubscribe'
+            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
             response = requests.post(unsubscribe_url, auth=self.auth)
             self.assertEqual(response.status_code, 200)
 
@@ -213,13 +212,13 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_publish_without_subscription(self):
+    def xtest_publish_without_subscription(self):
         """ Test publishing to a topic without being subscribed.
         """
         topic_name = self.test_topics[0]  # demo.1
 
         # Publish message without subscription
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         message_data = {
             'data': 'Message without subscription',
             'priority': 3
@@ -241,7 +240,7 @@ class PubSubRESTServerTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

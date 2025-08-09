@@ -243,7 +243,8 @@ class BaseServer:
 
         # Process users section
         users_config = self.yaml_config['users']
-        for username, password in users_config.items():
+        for username, user_data in users_config.items():
+            password = user_data['password']
             self.create_user(cid, username, password)
 
         # Process topics section
