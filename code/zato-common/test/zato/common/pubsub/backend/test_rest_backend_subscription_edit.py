@@ -28,72 +28,23 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         self.broker_client = Mock()
         self.broker_client.cluster_id = 'test-cluster'
 
-        # Create mock response for invoke_service_with_pubsub with test users
-        mock_response = Mock()
-
-        # Create mock security items for test users
-        mock_item1 = Mock()
-        mock_item1.username = 'test_user'
-        mock_item1.name = 'test_user_sec'
-
-        mock_item2 = Mock()
-        mock_item2.username = 'edit_user'
-        mock_item2.name = 'edit_user_sec'
-
-        mock_item3 = Mock()
-        mock_item3.username = 'user1'
-        mock_item3.name = 'user1_sec'
-
-        mock_item4 = Mock()
-        mock_item4.username = 'user2'
-        mock_item4.name = 'user2_sec'
-
-        mock_item5 = Mock()
-        mock_item5.username = 'same_user'
-        mock_item5.name = 'same_user_sec'
-
-        mock_item6 = Mock()
-        mock_item6.username = 'invalid_user'
-        mock_item6.name = 'invalid_user_sec'
-
-        mock_item7 = Mock()
-        mock_item7.username = 'multi_user'
-        mock_item7.name = 'multi_user_sec'
-
-        mock_item8 = Mock()
-        mock_item8.username = 'user_one'
-        mock_item8.name = 'user_one_sec'
-
-        mock_item9 = Mock()
-        mock_item9.username = 'user_two'
-        mock_item9.name = 'user_two_sec'
-
-        mock_item10 = Mock()
-        mock_item10.username = 'nonexistent_user'
-        mock_item10.name = 'nonexistent_user_sec'
-
-        mock_item11 = Mock()
-        mock_item11.username = 'overlap_user'
-        mock_item11.name = 'overlap_user_sec'
-
-        mock_item12 = Mock()
-        mock_item12.username = 'create_user'
-        mock_item12.name = 'create_user_sec'
-
-        mock_item13 = Mock()
-        mock_item13.username = 'empty_user'
-        mock_item13.name = 'empty_user_sec'
-
-        mock_item14 = Mock()
-        mock_item14.username = 'reduce_user'
-        mock_item14.name = 'reduce_user_sec'
-
-        mock_item15 = Mock()
-        mock_item15.username = 'cleanup_user'
-        mock_item15.name = 'cleanup_user_sec'
-
-        mock_response.payload = [mock_item1, mock_item2, mock_item3, mock_item4, mock_item5, mock_item6, mock_item7, mock_item8, mock_item9, mock_item10, mock_item11, mock_item12, mock_item13, mock_item14, mock_item15]
-        self.broker_client.invoke_sync.return_value = mock_response
+        self.broker_client.invoke_sync.return_value = [
+            {'username': 'test_user', 'name': 'test_user_sec'},
+            {'username': 'edit_user', 'name': 'edit_user_sec'},
+            {'username': 'user1', 'name': 'user1_sec'},
+            {'username': 'user2', 'name': 'user2_sec'},
+            {'username': 'same_user', 'name': 'same_user_sec'},
+            {'username': 'invalid_user', 'name': 'invalid_user_sec'},
+            {'username': 'multi_user', 'name': 'multi_user_sec'},
+            {'username': 'user_one', 'name': 'user_one_sec'},
+            {'username': 'user_two', 'name': 'user_two_sec'},
+            {'username': 'nonexistent_user', 'name': 'nonexistent_user_sec'},
+            {'username': 'overlap_user', 'name': 'overlap_user_sec'},
+            {'username': 'create_user', 'name': 'create_user_sec'},
+            {'username': 'empty_user', 'name': 'empty_user_sec'},
+            {'username': 'reduce_user', 'name': 'reduce_user_sec'},
+            {'username': 'cleanup_user', 'name': 'cleanup_user_sec'}
+        ]
 
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
