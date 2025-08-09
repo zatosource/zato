@@ -239,7 +239,7 @@ class BaseServer:
         if not self.yaml_config:
             return
 
-        logger.info(f'[{cid}] Setting up from YAML configuration')
+        logger.info(f'[{cid}] Setting up from YAML configuration -> {self.yaml_config}')
 
         # Process users section
         users_config = self.yaml_config['users']
@@ -317,7 +317,7 @@ class BaseServer:
         start = utcnow()
 
         # .. load test data ..
-        # self._setup_from_yaml_config(cid)
+        self._setup_from_yaml_config(cid)
 
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
