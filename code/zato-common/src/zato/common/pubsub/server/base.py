@@ -12,6 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 from logging import getLogger
+from os import environ
 from traceback import format_exc
 
 # PyYAML
@@ -107,6 +108,9 @@ class BaseServer:
         self.yaml_config = None
 
         # Load config from YAML file if provided
+        if not yaml_config_file:
+            yaml_config_file = environ.get('Zato_PubSub_YAML_Config_File')
+
         if yaml_config_file:
             self.yaml_config = load_yaml_config(yaml_config_file)
 
