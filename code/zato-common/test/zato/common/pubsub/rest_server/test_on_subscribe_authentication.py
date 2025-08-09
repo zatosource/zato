@@ -32,6 +32,7 @@ class BrokerClientHelper:
         self.published_messages = []
         self.published_exchanges = []
         self.published_routing_keys = []
+        self.cluster_id = 'test-cluster'
 
     def publish(self, message, exchange, routing_key):
         """ Capture publish parameters for verification.
@@ -39,6 +40,29 @@ class BrokerClientHelper:
         self.published_messages.append(message)
         self.published_exchanges.append(exchange)
         self.published_routing_keys.append(routing_key)
+
+    def invoke_sync(self, service, request, timeout=20, needs_root_elem=False):
+        """ Mock service invocation for security definitions.
+        """
+        class MockResponse:
+            def __init__(self):
+                self.payload = []
+
+        class MockItem:
+            def __init__(self, username, name):
+                self.username = username
+                self.name = name
+
+        mock_response = MockResponse()
+
+        # Create mock security items for test users
+        mock_item1 = MockItem('test_user', 'test_user_sec')
+        mock_item2 = MockItem('user1', 'user1_sec')
+        mock_item3 = MockItem('user2', 'user2_sec')
+        mock_item4 = MockItem('admin_user', 'admin_user_sec')
+
+        mock_response.payload = [mock_item1, mock_item2, mock_item3, mock_item4]
+        return mock_response
 
 # ################################################################################################################################
 # ################################################################################################################################
