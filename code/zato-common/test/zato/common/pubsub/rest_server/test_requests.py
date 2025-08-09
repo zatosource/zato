@@ -23,10 +23,21 @@ from yaml import safe_load as yaml_load
 # ################################################################################################################################
 
 logging.basicConfig(level=logging.DEBUG)
-logging.getLogger('requests.packages.urllib3').setLevel(logging.DEBUG)
-logging.getLogger('urllib3.connectionpool').setLevel(logging.DEBUG)
 
+# Enable HTTP traffic logging
 http_client.HTTPConnection.debuglevel = 1
+
+# Patch HTTPResponse to log response body
+original_read = http_client.HTTPResponse.read
+
+def patched_read(self, amt=None):
+    data = original_read(self, amt)
+    if data:
+        logger = logging.getLogger('http.client.response')
+        logger.debug(f'Response body: {data.decode("utf-8", errors="replace")}')
+    return data
+
+http_client.HTTPResponse.read = patched_read
 
 # ################################################################################################################################
 # ################################################################################################################################
