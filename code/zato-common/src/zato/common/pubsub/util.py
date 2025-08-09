@@ -8,9 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from logging import getLogger
 
 # Zato
 from zato.common.pubsub.common import BrokerConfig
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,7 +164,9 @@ def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_n
 def create_subscription_bindings(broker_client, cid:'str', sub_key:'str', exchange_name:'str', topic_name:'str') -> 'None':
     """ Create AMQP bindings for a subscription.
     """
+    logger.info(f'[{cid}] Creating AMQP bindings: sub_key={sub_key}, exchange={exchange_name}, topic={topic_name}')
     broker_client.create_bindings(cid, sub_key, exchange_name, sub_key, topic_name)
+    logger.info(f'[{cid}] AMQP bindings created successfully')
 
 # ################################################################################################################################
 # ################################################################################################################################
