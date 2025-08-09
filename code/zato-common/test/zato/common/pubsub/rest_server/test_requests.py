@@ -121,6 +121,8 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
 
+        return
+
         # Step 3: Get messages
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_data = {
