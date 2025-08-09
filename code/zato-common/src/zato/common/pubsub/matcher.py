@@ -123,7 +123,6 @@ class PatternMatcher:
             # Exact pattern - escape special regex chars and add ^ $ anchors
             regex_pattern = '^' + re.escape(pattern) + '$'
 
-
         compiled_regex = re.compile(regex_pattern, re.IGNORECASE)
 
         # Cache the compiled regex
