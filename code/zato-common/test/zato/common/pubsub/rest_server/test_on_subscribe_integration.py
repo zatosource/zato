@@ -43,22 +43,9 @@ class BrokerClientHelper:
     def invoke_sync(self, service, request, timeout=20, needs_root_elem=False):
         """ Mock service invocation for security definitions.
         """
-        class MockResponse:
-            def __init__(self):
-                self.payload = []
-
-        class MockItem:
-            def __init__(self, username, name):
-                self.username = username
-                self.name = name
-
-        mock_response = MockResponse()
-
-        # Create mock security items for test users
-        mock_item1 = MockItem('test_user', 'test_user_sec')
-
-        mock_response.payload = [mock_item1]
-        return mock_response
+        return [
+            {'username': 'test_user', 'name': 'test_user_sec'}
+        ]
 
 # ################################################################################################################################
 # ################################################################################################################################
