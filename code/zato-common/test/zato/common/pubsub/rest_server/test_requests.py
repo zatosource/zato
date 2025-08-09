@@ -157,6 +157,30 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertTrue(unsubscribe_data['is_ok'])
         self.assertIn('cid', unsubscribe_data)
 
+        # Step 5: Publish another message after unsubscribing
+        response = requests.post(
+            publish_url,
+            json=message_data,
+            auth=self.auth,
+            headers={'Content-Type': 'application/json'}
+        )
+
+        # Publishing should still work even without subscribers
+        self.assertEqual(response.status_code, 200)
+
+        # Step 6: Try to get messages - should return 400 error for unsubscribed user
+        response = requests.post(
+            get_messages_url,
+            json=get_data,
+            auth=self.auth,
+            headers={'Content-Type': 'application/json'}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        error_data = response.json()
+        self.assertFalse(error_data['is_ok'])
+        self.assertIn('No subscription found for user', error_data['details'])
+
 # ################################################################################################################################
 
     def xtest_multiple_topics_subscription(self):
