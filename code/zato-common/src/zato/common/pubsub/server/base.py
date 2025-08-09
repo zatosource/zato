@@ -255,8 +255,28 @@ class BaseServer:
                 self.backend.create_topic(cid, 'yaml-config', topic_name)
                 logger.info(f'[{cid}] Created topic: {topic_name}')
 
-        # Process subscriptions section
+        # Collect all topics from config for permissions
+        all_topics = set()
+        for topic_data in topics_config.values():
+            all_topics.add(topic_data['name'])
+
+        # Also collect topics from subscriptions section
         subs_config = self.yaml_config['subscriptions']
+        for topic_name in subs_config.keys():
+            all_topics.add(topic_name)
+
+        # Add permissions for each user for all topics in the config
+        for username in users_config.keys():
+            permissions = []
+            for topic_name in all_topics:
+                permissions.extend([
+                    {'pattern': topic_name, 'access_type': 'publish'},
+                    {'pattern': topic_name, 'access_type': 'subscribe'}
+                ])
+            self.backend.pattern_matcher.add_client(username, permissions)
+            logger.info(f'[{cid}] Added permissions for user {username} on topics: {sorted(all_topics)}')
+
+        # Process subscriptions section
         for topic_name, users_data in subs_config.items():
 
             # Make sure the topic exists
