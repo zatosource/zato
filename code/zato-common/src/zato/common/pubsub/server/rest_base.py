@@ -97,7 +97,12 @@ class BaseRESTServer(BaseServer):
         # Initialize broker configuration for reuse
         self._broker_config = get_broker_config()
         self._broker_auth = HTTPBasicAuth(self._broker_config.username, self._broker_config.password)
-        self._broker_api_base_url = f'{self._broker_config.protocol}://{self._broker_config.address}:15672/api'
+
+        # Extract host from address (remove port if present)
+        broker_host = self._broker_config.address.split(':')[0]
+
+        http_protocol = 'https' if self._broker_config.protocol == 'amqps' else 'http'
+        self._broker_api_base_url = f'{http_protocol}://{broker_host}:15672/api'
 
 # ################################################################################################################################
 
