@@ -120,6 +120,7 @@ class PubSubRESTServer(BaseRESTServer):
         response = APIResponse()
         response.is_ok = result.is_ok
         response.cid = cid
+        response.msg_id = result.msg_id
 
         # .. and return it to the caller.
         return response
