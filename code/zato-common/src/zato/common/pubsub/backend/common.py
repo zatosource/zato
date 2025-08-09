@@ -387,6 +387,15 @@ class Backend:
         # .. invoke our service ..
         self.invoke_service_with_pubsub('zato.pubsub.subscription.unsubscribe', request)
 
+        # .. remove subscription from memory ..
+        with self._main_lock:
+            if topic_name in self.subs_by_topic:
+                subs_by_sec_name = self.subs_by_topic[topic_name]
+                if sec_name in subs_by_sec_name:
+                    del subs_by_sec_name[sec_name]
+                    if not subs_by_sec_name:
+                        del self.subs_by_topic[topic_name]
+
         # .. log what happened ..
         logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
 
