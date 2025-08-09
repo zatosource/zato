@@ -154,4 +154,11 @@ def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_n
         raise ValueError(f'Topic "{topic_name}" does not match any subscription patterns for security definition {sec_base_id}')
 
 # ################################################################################################################################
+
+def create_subscription_bindings(broker_client, cid:'str', sub_key:'str', exchange_name:'str', topic_name:'str') -> 'None':
+    """ Create AMQP bindings for a subscription.
+    """
+    broker_client.create_bindings(cid, sub_key, exchange_name, sub_key, topic_name)
+
+# ################################################################################################################################
 # ################################################################################################################################
