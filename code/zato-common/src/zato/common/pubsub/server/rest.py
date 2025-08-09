@@ -77,10 +77,10 @@ class PubSubRESTServer(BaseRESTServer):
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
 
-        # .. check if user has permission to subscribe to this topic ..
-        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
+        # .. check if user has permission to publish to this topic ..
+        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
         if not permission_result.is_ok:
-            logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
+            logger.warning(f'[{cid}] User {username} denied publish access to topic {topic_name}: {permission_result.reason}')
             raise UnauthorizedException(cid, 'Permission denied')
 
         # .. build our representation of the request ..
