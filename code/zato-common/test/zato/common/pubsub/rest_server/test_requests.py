@@ -179,7 +179,7 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         error_data = response.json()
         self.assertFalse(error_data['is_ok'])
-        self.assertIn('No such queue', error_data['details'])
+        self.assertIn('Subscription not found', error_data['details'])
 
 # ################################################################################################################################
 
