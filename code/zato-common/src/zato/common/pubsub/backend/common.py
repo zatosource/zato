@@ -297,8 +297,8 @@ class Backend:
 
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
-        ext_client_part = f' -> {ext_client_id}' if ext_client_id else ''
-        logger.info(f'[{cid}] Published message to topic {topic_name} (username={username} -> {ext_client_part})')
+        ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
+        logger.info(f'[{cid}] Published message to topic {topic_name} (username={username}{ext_client_part}')
 
         # Return success response
         response = PubResponse()
