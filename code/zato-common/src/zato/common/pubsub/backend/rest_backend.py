@@ -97,6 +97,15 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_RELOAD_CONFIG(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+
+        logger.info('Reloading configuration ..')
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
 
         # Local aliases

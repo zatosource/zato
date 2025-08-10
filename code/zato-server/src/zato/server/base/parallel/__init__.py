@@ -34,7 +34,7 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDepl
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY
+from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
@@ -944,12 +944,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def reload_config(self):
 
+        # Optionally, log what we're doing ..
         if _needs_details:
             logger.debug('Config reloading')
 
+        # .. actually set up the configuration ..
         self.set_up_config(self) # type: ignore
+
+        # .. now reload it ..
         self.worker_store.init()
 
+        # .. notify the pub/sub server too ..
+        pubsub_msg = Bunch()
+        pubsub_msg.cid = new_cid()
+        pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
+
+        # .. publish the message for pub/sub ..
+        self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+
+        # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')
 
 # ################################################################################################################################
