@@ -102,7 +102,7 @@ class RESTBackend(Backend):
         # Local aliases
         cid = msg['cid']
 
-        logger.warning(f'[{cid}] Reloading pub/sub configuration')
+        logger.info(f'[{cid}] Reloading pub/sub configuration')
 
         with self._main_lock:
 
@@ -119,7 +119,7 @@ class RESTBackend(Backend):
         # Reload everything as if server was starting
         self.rest_server.setup()
 
-        logger.warning(f'[{cid}] Configuration reload completed')
+        logger.info(f'[{cid}] Configuration reload completed')
 
 # ################################################################################################################################
 

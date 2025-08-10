@@ -169,4 +169,13 @@ def create_subscription_bindings(broker_client, cid:'str', sub_key:'str', exchan
     logger.info(f'[{cid}] AMQP bindings created successfully')
 
 # ################################################################################################################################
+
+def get_username_to_sec_name_mapping(backend) -> 'dict':
+    """ Get username to security name mapping.
+    """
+    auth_request = {'cluster_id': 1}
+    auth_response = backend.invoke_service_with_pubsub('zato.security.basic-auth.get-list', auth_request)
+    return {item['username']: item['name'] for item in auth_response}
+
+# ################################################################################################################################
 # ################################################################################################################################
