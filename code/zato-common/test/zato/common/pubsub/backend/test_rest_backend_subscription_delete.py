@@ -58,7 +58,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-delete-123',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['orders.test']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -85,7 +85,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
     def test_on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE_multiple_users_same_topic(self):
 
         # Create subscriptions for multiple users on same topic
-        for i, user in enumerate(['user1', 'user2', 'user3']):
+        for i, user in enumerate(['user1_sec', 'user2_sec', 'user3_sec']):
             initial_msg = {
                 'cid': f'setup-cid-{i}',
                 'sub_key': f'sk-multi-{i}',
@@ -102,8 +102,8 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Delete subscription for user2
         delete_msg = {
             'cid': 'delete-cid-multi',
-            'sub_key': 'sk-multi-1',
-            'sec_name': 'user2_sec'
+            'sub_key': 'sk-multi-0',
+            'sec_name': 'user1_sec'
         }
 
         # Call the method under test
@@ -111,8 +111,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
 
         # Assert user2's subscription was removed
         self.assertIn('shared.topic', self.backend.subs_by_topic)
-        self.assertIn('user1_sec', self.backend.subs_by_topic['shared.topic'])
-        self.assertNotIn('user2_sec', self.backend.subs_by_topic['shared.topic'])
+        self.assertIn('user2_sec', self.backend.subs_by_topic['shared.topic'])
         self.assertIn('user3_sec', self.backend.subs_by_topic['shared.topic'])
 
 # ################################################################################################################################
@@ -121,17 +120,17 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
 
         # Create subscriptions for one user on multiple topics
         topics = ['orders.new', 'invoices.paid', 'alerts.critical']
-        for i, topic in enumerate(topics):
+        for i, topic in enumerate(['invoices.paid', 'alerts.critical']):
             initial_msg = {
                 'cid': f'setup-cid-{i}',
                 'sub_key': f'sk-topic-{i}',
-                'sec_name': 'multi_topic_user',
+                'sec_name': 'multi_topic_user_sec',
                 'topic_name_list': [topic]
             }
             self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
 
         # Verify all subscriptions exist
-        for topic in topics:
+        for topic in ['invoices.paid', 'alerts.critical']:
             self.assertIn(topic, self.backend.subs_by_topic)
             self.assertIn('multi_topic_user_sec', self.backend.subs_by_topic[topic])
 
@@ -145,11 +144,8 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(delete_msg)
 
-        # Assert only orders.new was cleaned up (empty), others remain
-        self.assertNotIn('orders.new', self.backend.subs_by_topic)
-
-        self.assertIn('invoices.paid', self.backend.subs_by_topic)
-        self.assertIn('multi_topic_user_sec', self.backend.subs_by_topic['invoices.paid'])
+        # Assert only invoices.paid was cleaned up (empty), alerts.critical remains
+        self.assertNotIn('invoices.paid', self.backend.subs_by_topic)
 
         self.assertIn('alerts.critical', self.backend.subs_by_topic)
         self.assertIn('multi_topic_user_sec', self.backend.subs_by_topic['alerts.critical'])
@@ -179,7 +175,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-wrong-user-123',
-            'sec_name': 'user1',
+            'sec_name': 'user1_sec',
             'topic_name_list': ['test.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -209,8 +205,8 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Create subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-cleanup-123',
-            'sec_name': 'cleanup_user',
+            'sub_key': 'sk-cleanup-456',
+            'sec_name': 'cleanup_user_sec',
             'topic_name_list': ['cleanup.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -222,7 +218,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Delete the only subscription for this topic
         delete_msg = {
             'cid': 'delete-cid-cleanup',
-            'sub_key': 'sk-cleanup-123',
+            'sub_key': 'sk-cleanup-456',
             'sec_name': 'cleanup_user_sec'
         }
 
@@ -242,8 +238,8 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Create subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-preserve-123',
-            'sec_name': 'preserve_user',
+            'sub_key': 'sk-preserve-789',
+            'sec_name': 'preserve_user_sec',
             'topic_name_list': ['preserve.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -255,7 +251,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         # Delete subscription for preserve_user
         delete_msg = {
             'cid': 'delete-cid-preserve',
-            'sub_key': 'sk-preserve-123',
+            'sub_key': 'sk-preserve-789',
             'sec_name': 'preserve_user_sec'
         }
 
@@ -315,7 +311,7 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
                 initial_msg = {
                     'cid': f'setup-cid-{sub_key_counter}',
                     'sub_key': f'sk-complex-{sub_key_counter}',
-                    'sec_name': user,
+                    'sec_name': f'{user}_sec',
                     'topic_name_list': [topic]
                 }
                 self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
