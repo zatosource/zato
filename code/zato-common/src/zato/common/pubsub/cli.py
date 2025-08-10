@@ -20,17 +20,13 @@ from dataclasses import dataclass
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
-from urllib.parse import quote
 
 # gevent
 import gevent
 
-# Requests
-import requests
-
 # Zato
 from zato.common.pubsub.server.rest import PubSubRESTServer, GunicornApplication
-from zato.common.pubsub.util import get_broker_config
+from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid
 
 # ################################################################################################################################
@@ -176,112 +172,25 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
     """ Clean up AMQP bindings and queues.
     """
     try:
-
         # Get broker configuration
         broker_config = get_broker_config()
 
-        # Extract host from address (remove port if present)
-        host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
-        management_port = args.management_port
+        # Call the implementation function
+        result = cleanup_broker_impl(broker_config, args.management_port)
 
-        # URL encode the vhost
-        encoded_vhost = quote(broker_config.vhost, safe='')
-
-        # Build HTTP API base URL
-        api_base_url = f'http://{host}:{management_port}/api'
-        auth = (broker_config.username, broker_config.password)
-
-        logger.info(f'Connecting to RabbitMQ API at: {api_base_url}')
-
-        # Find and remove all queues with specified prefixes
-        try:
-            # Define the prefixes to clean up
-            prefixes = ['zpsk', 'zato-reply']
-
-            # Get all queues
-            logger.info(f'Listing queues with prefixes: {prefixes}')
-            queues_url = f'{api_base_url}/queues/{encoded_vhost}'
-            response = requests.get(queues_url, auth=auth)
-
-            if response.status_code == 200:
-                all_queues = response.json()
-
-                # Process each prefix
-                for prefix in prefixes:
-                    matching_queues = [queue for queue in all_queues if queue['name'].startswith(prefix)]
-                    queue_count = len(matching_queues)
-                    if queue_count == 1:
-                        logger.info(f'Found 1 queue with prefix {prefix}')
-                    else:
-                        logger.info(f'Found {queue_count} queues with prefix {prefix}')
-
-                    # Delete each matching queue
-                    for queue in matching_queues:
-                        queue_name = queue['name']
-                        logger.info(f'Removing queue: {queue_name}')
-
-                        # Delete the queue - empty all arguments to force deletion
-                        queue_url = f'{api_base_url}/queues/{encoded_vhost}/{queue_name}'
-                        delete_response = requests.delete(
-                            queue_url,
-                            auth=auth,
-                            params={'if-unused': 'false', 'if-empty': 'false'}
-                        )
-
-                        if delete_response.status_code in (200, 204):
-                            logger.info(f'Successfully removed queue: {queue_name}')
-                        else:
-                            logger.error(f'Failed to remove queue: {delete_response.status_code}, {delete_response.text}')
-            else:
-                logger.error(f'Failed to list queues: {response.status_code}, {response.text}')
-
-        except Exception as e:
-            logger.error(f'Error removing queues: {e}')
-
-        # List all bindings from pubsubapi exchange
-        try:
-            logger.info('Listing bindings from pubsubapi exchange')
-            bindings_url = f'{api_base_url}/exchanges/{encoded_vhost}/pubsubapi/bindings/source'
-            response = requests.get(bindings_url, auth=auth)
-
-            if response.status_code == 200:
-                bindings = response.json()
-                binding_count = len(bindings)
-                if binding_count == 1:
-                    logger.info('Found 1 binding for pubsubapi exchange')
-                else:
-                    logger.info(f'Found {binding_count} bindings for pubsubapi exchange')
-
-                # Remove all bindings from pubsubapi exchange
-                for binding in bindings:
-                    queue_name = binding.get('destination')
-
-                    # Only process if the destination is a queue
-                    if binding.get('destination_type') == 'queue':
-
-                        routing_key = binding.get('routing_key', '')
-                        logger.info(f'Removing binding: queue={queue_name}, routing_key={routing_key} from exchange=pubsubapi')
-
-                        # Delete the binding
-                        unbind_url = f'{api_base_url}/bindings/{encoded_vhost}/e/pubsubapi/q/{queue_name}/{quote(routing_key, safe="")}'
-                        delete_response = requests.delete(unbind_url, auth=auth)
-
-                        if delete_response.status_code in (200, 204):
-                            logger.info(f'Successfully removed binding for queue: {queue_name}')
-                        else:
-                            logger.error(f'Failed to remove binding: {delete_response.status_code}, {delete_response.text}')
-            else:
-                logger.error(f'Failed to list bindings: {response.status_code}, {response.text}')
-
-        except Exception as e:
-            logger.error(f'Error removing bindings: {e}')
-
-        return OperationResult(is_ok=True, message='Cleanup completed successfully')
+        if result['errors']:
+            error_message = f"Cleanup completed with errors: {'; '.join(result['errors'])}"
+            logger.error(error_message)
+            return OperationResult(is_ok=False, message=error_message)
+        else:
+            success_message = f"Cleanup completed successfully. Removed {result['queues_removed']} queues and {result['bindings_removed']} bindings."
+            logger.info(success_message)
+            return OperationResult(is_ok=True, message=success_message)
 
     except Exception as e:
         message = f'Error during cleanup: {e}'
         logger.error(message)
-        return OperationResult(is_ok=False, message=message, details={'error': str(e)})
+        return OperationResult(is_ok=False, message=message)
 
 # ################################################################################################################################
 
