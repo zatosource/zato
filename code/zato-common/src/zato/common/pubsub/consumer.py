@@ -184,7 +184,7 @@ if __name__ == '__main__':
     # stdlib
     import logging
 
-    log_format = '%(asctime)s 1111 - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_format)
 
     def process_message(body:'any_', msg:'any_', name:'str', config:'strdict') -> 'None':
