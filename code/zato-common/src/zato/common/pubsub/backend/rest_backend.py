@@ -102,7 +102,24 @@ class RESTBackend(Backend):
         # Local aliases
         cid = msg['cid']
 
-        logger.info('Reloading configuration ..')
+        logger.info(f'[{cid}] Reloading pub/sub configuration from scratch')
+
+        with self._main_lock:
+
+            # Clear all in-memory structures
+            self.topics.clear()
+            self.subs_by_topic.clear()
+            self.rest_server.users.clear()
+            self.pattern_matcher.clear_cache()
+
+            # Remove all clients from pattern matcher
+            for client_id in list(self.pattern_matcher._clients.keys()):
+                self.pattern_matcher.remove_client(client_id)
+
+        # Reload everything as if server was starting
+        self.rest_server.setup()
+
+        logger.info(f'[{cid}] Configuration reload completed')
 
 # ################################################################################################################################
 
