@@ -20,6 +20,9 @@ from requests.auth import HTTPBasicAuth
 # PyYAML
 from yaml import safe_load as yaml_load
 
+# Zato
+from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -84,9 +87,13 @@ class PubSubRESTServerTestCase(TestCase):
         if self.skip_tests:
             self.skipTest("Zato_PubSub_YAML_Config environment variable not set")
 
+        # Clean up broker before running tests
+        broker_config = get_broker_config()
+        _ = cleanup_broker_impl(broker_config, 15672)
+
 # ################################################################################################################################
 
-    def xtest_subscribe_publish_get_unsubscribe_flow(self):
+    def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
