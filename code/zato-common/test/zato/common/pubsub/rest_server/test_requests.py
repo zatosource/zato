@@ -148,14 +148,15 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertEqual(message['correl_id'], 'test-correlation-id')
         self.assertEqual(message['priority'], 7)
 
-        # Step 4: Unsubscribe from topic
-        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
-        response = requests.post(unsubscribe_url, auth=self.auth)
-        self.assertEqual(response.status_code, 200)
+        # Step 4: Unsubscribe from all topics
+        for test_topic in self.test_topics:
+            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{test_topic}'
+            response = requests.post(unsubscribe_url, auth=self.auth)
+            self.assertEqual(response.status_code, 200)
 
-        unsubscribe_data = response.json()
-        self.assertTrue(unsubscribe_data['is_ok'])
-        self.assertIn('cid', unsubscribe_data)
+            unsubscribe_data = response.json()
+            self.assertTrue(unsubscribe_data['is_ok'])
+            self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
         response = requests.post(
@@ -179,7 +180,7 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
         error_data = response.json()
         self.assertFalse(error_data['is_ok'])
-        self.assertIn('Subscription not found', error_data['details'])
+        self.assertIn('No subscription found for user', error_data['details'])
 
 # ################################################################################################################################
 
