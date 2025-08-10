@@ -317,8 +317,13 @@ class PubSubRESTServer(BaseRESTServer):
             logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
             raise UnauthorizedException(cid, 'Permission denied')
 
+        # Get security definitions for username lookup
+        auth_request = {'cluster_id': 1}
+        auth_response = self.backend.invoke_service_with_pubsub('zato.security.basic-auth.get-list', auth_request)
+        username_to_sec_name = {item['username']: item['name'] for item in auth_response}
+
         # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username)
+        result = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name)
 
         logger.info(f'[{cid}] Subscription result: {result.is_ok}')
 

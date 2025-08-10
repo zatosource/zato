@@ -227,7 +227,7 @@ class Backend:
         """
         if username in username_to_sec_name:
             return username_to_sec_name[username]
-        
+
         raise ValueError(f'No security definition found for username: {username}')
 
 # ################################################################################################################################
