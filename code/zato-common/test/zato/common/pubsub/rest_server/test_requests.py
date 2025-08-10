@@ -64,7 +64,7 @@ class PubSubRESTServerTestCase(TestCase):
 
         # Extract demo user credentials
         cls.username = 'demo'
-        cls.password = cls.config['users']['demo']['password']
+        cls.password = cls.config['security'][0]['password']
         cls.auth = HTTPBasicAuth(cls.username, cls.password)
 
         # Server configuration
@@ -72,9 +72,9 @@ class PubSubRESTServerTestCase(TestCase):
 
         # Test topics from config
         cls.test_topics = [
-            cls.config['topics']['demo1']['name'],
-            cls.config['topics']['demo2']['name'],
-            cls.config['topics']['demo3']['name']
+            cls.config['pubsub_topic'][0]['name'],
+            cls.config['pubsub_topic'][1]['name'],
+            cls.config['pubsub_topic'][2]['name']
         ]
 
     def setUp(self):
@@ -85,7 +85,7 @@ class PubSubRESTServerTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_subscribe_publish_get_unsubscribe_flow(self):
+    def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
