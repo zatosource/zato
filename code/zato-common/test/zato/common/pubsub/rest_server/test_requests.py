@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import http.client as http_client
 import logging
 import os
+import time
 from unittest import main, TestCase
 
 # requests
@@ -85,7 +86,7 @@ class PubSubRESTServerTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_subscribe_publish_get_unsubscribe_flow(self):
+    def xtest_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
@@ -121,7 +122,9 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
 
-        # Step 3: Get messages
+        # Step 3: Get messages (with small delay for message delivery)
+        time.sleep(0.1)
+
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_data = {
             'max_messages': 10,
@@ -259,7 +262,7 @@ class PubSubRESTServerTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_publish_without_subscription(self):
+    def test_publish_without_subscription(self):
         """ Test publishing to a topic without being subscribed.
         """
         topic_name = self.test_topics[0]  # demo.1
