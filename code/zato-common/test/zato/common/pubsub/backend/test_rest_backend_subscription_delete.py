@@ -119,11 +119,10 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
     def test_on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE_user_with_multiple_topics(self):
 
         # Create subscriptions for one user on multiple topics
-        topics = ['orders.new', 'invoices.paid', 'alerts.critical']
-        for i, topic in enumerate(['invoices.paid', 'alerts.critical']):
+        for idx, topic in enumerate(['invoices.paid', 'alerts.critical']):
             initial_msg = {
-                'cid': f'setup-cid-{i}',
-                'sub_key': f'sk-topic-{i}',
+                'cid': f'setup-cid-{idx}',
+                'sub_key': f'sk-topic-{idx}',
                 'sec_name': 'multi_topic_user_sec',
                 'topic_name_list': [topic]
             }
