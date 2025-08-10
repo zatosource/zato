@@ -164,8 +164,9 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
-            backend_calls.append((cid, topic_name, sec_name, sub_key))
+        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+            backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
+
             response = StatusResponse()
             response.is_ok = True
             return response
@@ -186,8 +187,8 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
 
         # Verify backend was called with authenticated username
         self.assertEqual(len(backend_calls), 1)
-        _, _, sec_name, _ = backend_calls[0]
-        self.assertEqual(sec_name, expected_username)
+        _, _, username, username_to_sec_name, _, _ = backend_calls[0]
+        self.assertEqual(username, expected_username)
 
 # ################################################################################################################################
 
@@ -238,7 +239,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
             method_calls.append('authenticate')
             return original_authenticate(cid, environ)
 
-        def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
+        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
@@ -268,7 +269,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         method_calls = []
 
         # Override method to track calls
-        def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
+        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
