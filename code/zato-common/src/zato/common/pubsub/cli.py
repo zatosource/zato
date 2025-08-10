@@ -12,6 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 import argparse
+import logging
 import sys
 import requests
 from dataclasses import dataclass
@@ -33,6 +34,9 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 logger = getLogger(__name__)
 
