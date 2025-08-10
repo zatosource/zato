@@ -1,22 +1,39 @@
-users:
-  demo:
-    password: "demo"
+security:
 
-topics:
-  demo1:
-    name: "demo.1"
-  demo2:
-    name: "demo.2"
-  demo3:
-    name: "demo.3"
+  - name: demo.basic_auth.1
+    type: basic_auth
+    username: demo
+    password: demo
 
-subscriptions:
-  "demo.1":
-    demo:
-      sub_key: "zpsk.demo.demo1"
-  "demo.2":
-    demo:
-      sub_key: "zpsk.demo.demo2"
-  "demo.3":
-    demo:
-      sub_key: "zpsk.demo.demo3"
+pubsub_topic:
+
+  - name: demo.1
+    description: Demo topic 1
+
+  - name: demo.2
+    description: Demo topic 2
+
+  - name: demo.3
+    description: Demo topic 3
+
+pubsub_permission:
+
+  - security: demo.basic_auth.1
+    pub:
+      - demo.1
+      - demo.2
+      - demo.3
+    sub:
+      - demo.1
+      - demo.2
+      - demo.3
+
+pubsub_subscription:
+
+  - security: demo.basic_auth.1
+    delivery_type: pull
+    max_retry_time: 365d
+    topic_list:
+      - demo.1
+      - demo.2
+      - demo.3
