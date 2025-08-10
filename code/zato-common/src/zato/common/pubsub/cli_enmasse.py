@@ -66,6 +66,7 @@ pubsub_permission:
 pubsub_subscription:
   - security: demo
     delivery_type: pull
+    max_retry_time: 365d
     topic_list:
       - demo.1
       - demo.2
