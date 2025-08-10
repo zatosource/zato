@@ -13,7 +13,6 @@ _ = monkey.patch_all()
 # stdlib
 import argparse
 import logging
-import os
 import sys
 import requests
 from dataclasses import dataclass
