@@ -49,7 +49,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg = {
             'cid': 'test-cid-123',
             'sub_key': 'sk-test-123',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['orders.new']
         }
 
@@ -73,7 +73,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg = {
             'cid': 'test-cid-456',
             'sub_key': 'sk-multi-456',
-            'sec_name': 'multi_user',
+            'sec_name': 'multi_user_sec',
             'topic_name_list': ['orders.new', 'invoices.paid', 'alerts.critical']
         }
 
@@ -100,8 +100,8 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         # Create the broker message
         msg = {
             'cid': 'test-cid-789',
-            'sub_key': 'sk-new-topic-789',
-            'sec_name': 'topic_creator',
+            'sub_key': 'sk-creator-789',
+            'sec_name': 'topic_creator_sec',
             'topic_name_list': ['new.topic.one', 'new.topic.two']
         }
 
@@ -124,14 +124,14 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg1 = {
             'cid': 'test-cid-user1',
             'sub_key': 'sk-user1',
-            'sec_name': 'user_one',
+            'sec_name': 'user_one_sec',
             'topic_name_list': ['shared.topic']
         }
 
         msg2 = {
             'cid': 'test-cid-user2',
             'sub_key': 'sk-user2',
-            'sec_name': 'user_two',
+            'sec_name': 'user_two_sec',
             'topic_name_list': ['shared.topic']
         }
 
@@ -161,7 +161,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg1 = {
             'cid': 'test-cid-initial',
             'sub_key': 'sk-initial',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['test.topic']
         }
 
@@ -171,7 +171,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg2 = {
             'cid': 'test-cid-overwrite',
             'sub_key': 'sk-new',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['test.topic']
         }
 
@@ -192,7 +192,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg = {
             'cid': 'test-cid-empty',
             'sub_key': 'sk-empty',
-            'sec_name': 'empty_user',
+            'sec_name': 'empty_user_sec',
             'topic_name_list': []
         }
 
@@ -215,7 +215,7 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         msg = {
             'cid': 'test-cid-existing',
             'sub_key': 'sk-existing',
-            'sec_name': 'existing_user',
+            'sec_name': 'existing_user_sec',
             'topic_name_list': ['existing.topic']
         }
 
