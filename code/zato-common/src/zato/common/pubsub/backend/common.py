@@ -323,7 +323,15 @@ class Backend:
             sec_name = username_or_sec_name
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
-        sub_key = sub_key or new_sub_key(sec_name)
+        if not sub_key:
+            # Look for existing sub_key for this user across all topics
+            for topic_subs in self.subs_by_topic.values():
+                if sec_name in topic_subs:
+                    sub_key = topic_subs[sec_name].sub_key
+                    break
+            else:
+                # No existing sub_key found, generate new one
+                sub_key = new_sub_key(sec_name)
 
         logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
 
