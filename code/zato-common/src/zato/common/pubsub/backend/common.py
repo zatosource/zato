@@ -222,19 +222,12 @@ class Backend:
 
 # ################################################################################################################################
 
-    def get_sec_name_by_username(self, cid:'str', username:'str') -> 'str':
+    def get_sec_name_by_username(self, username:'str', username_to_sec_name:'dict') -> 'str':
         """ Get security definition name by username.
         """
-        request = {
-            'cluster_id': 1,
-        }
-
-        response = self.invoke_service_with_pubsub('zato.security.basic-auth.get-list', request)
-
-        for item in response:
-            if item['username'] == username:
-                return item['name']
-
+        if username in username_to_sec_name:
+            return username_to_sec_name[username]
+        
         raise ValueError(f'No security definition found for username: {username}')
 
 # ################################################################################################################################
@@ -316,6 +309,7 @@ class Backend:
         cid: 'str',
         topic_name: 'str',
         username: 'str',
+        username_to_sec_name: 'dict',
         sub_key: 'str'='',
         should_create_bindings: 'bool'=True,
         ) -> 'StatusResponse':
@@ -323,7 +317,7 @@ class Backend:
         """
 
         # Get sec_name from username
-        sec_name = self.get_sec_name_by_username(cid, username)
+        sec_name = self.get_sec_name_by_username(username, username_to_sec_name)
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         sub_key = sub_key or new_sub_key(sec_name)
