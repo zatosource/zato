@@ -264,13 +264,12 @@ class BaseServer:
                 else:
                     logger.info(f'[{cid}] User not found for permission loading: {sec_name}')
 
-            # Store total for later use
-            self._total_permissions_loaded = total_permissions_loaded
-
             logger.info('Finished loading permissions')
+            return total_permissions_loaded
 
         except Exception:
             logger.warning(f'[{cid}] Could not load permissions: {format_exc()}')
+            return 0
 
 # ################################################################################################################################
 
@@ -318,7 +317,7 @@ class BaseServer:
         self._load_subscriptions(cid)
 
         # .. load the initial permissions too ..
-        self._load_permissions(cid)
+        permission_count = self._load_permissions(cid)
 
         # .. we're going to need it in a moment ..
         end = utcnow()
@@ -327,7 +326,6 @@ class BaseServer:
         topic_count = len(self.backend.topics)
         subscription_count = sum(len(subs) for subs in self.backend.subs_by_topic.values())
         client_count = self.backend.pattern_matcher.get_client_count()
-        permission_count = getattr(self, '_total_permissions_loaded', 0)
 
         logger.info(f'[{cid}] ✅ Setup complete in {end - start}')
         logger.info(f'[{cid}] 🠊 {user_count} {"user" if user_count == 1 else "users"}')
