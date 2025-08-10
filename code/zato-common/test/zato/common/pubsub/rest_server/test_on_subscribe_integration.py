@@ -121,8 +121,8 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
-            backend_calls.append((cid, topic_name, sec_name, sub_key))
+        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+            backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
             response.is_ok = True
@@ -138,11 +138,13 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
 
         # Verify backend was called with correct parameters
         self.assertEqual(len(backend_calls), 1)
-        cid, topic_name, sec_name, sub_key = backend_calls[0]
+        cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings = backend_calls[0]
         self.assertEqual(cid, self.test_cid)
         self.assertEqual(topic_name, self.test_topic)
-        self.assertEqual(sec_name, self.test_username)
+        self.assertEqual(username, self.test_username)
+        self.assertIsInstance(username_to_sec_name, dict)
         self.assertEqual(sub_key, '')  # Default empty sub_key
+        self.assertTrue(should_create_bindings)  # Default True
 
 # ################################################################################################################################
 
@@ -150,7 +152,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         """ on_subscribe propagates backend response correctly.
         """
         # Mock backend to return specific response
-        def mock_register_subscription(cid, topic_name, sec_name, sub_key=''):
+        def mock_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
 
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
