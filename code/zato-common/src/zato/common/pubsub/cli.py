@@ -138,7 +138,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
         return OperationResult(is_ok=True, message='Server stopped')
     except Exception as e:
-        message = f'Error starting server: {e}'
+        message = f'Error starting server: {format_exc()}'
         logger.error(message)
         return OperationResult(is_ok=False, message=message, details={'error': str(e)})
 
