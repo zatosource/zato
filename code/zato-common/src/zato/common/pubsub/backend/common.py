@@ -357,6 +357,18 @@ class Backend:
             if should_create_bindings:
                 create_subscription_bindings(self.broker_client, cid, sub_key, ModuleCtx.Exchange_Name, topic_name)
 
+        # .. invoke the subscription service to update the database ..
+        request = {
+            'topic_name_list': [topic_name],
+            'sec_name': sec_name,
+            'is_active': True,
+        }
+
+        try:
+            self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request)
+        except Exception:
+            logger.error(f'[{cid}] Failed to create subscription in server: {format_exc()}')
+
         # .. build our response ..
         response = StatusResponse()
         response.is_ok = True
