@@ -35,18 +35,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Setup basic logging
-basicConfig(
-    level=INFO,
-    format='%(asctime)s - %(name)s - %(process)s:%(threadName)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
-
 logger = getLogger(__name__)
-
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,16 +89,6 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
     try:
-        # Set up logging level
-        level = DEBUG if args.has_debug else INFO
-        basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler()
-            ]
-        )
-
         # Create server application
         app = PubSubRESTServer(
             host=args.host,
