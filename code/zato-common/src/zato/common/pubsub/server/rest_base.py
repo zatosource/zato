@@ -88,7 +88,7 @@ class BaseRESTServer(BaseServer):
         self,
         host:'str',
         port:'int',
-        should_init_broker_client:'bool'=True,
+        should_init_broker_client:'bool'=False,
     ) -> 'None':
 
         super().__init__(host, port, should_init_broker_client)
