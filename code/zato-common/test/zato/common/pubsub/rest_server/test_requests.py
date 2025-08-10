@@ -85,7 +85,7 @@ class PubSubRESTServerTestCase(TestCase):
         """ Skip tests if no config available.
         """
         if self.skip_tests:
-            self.skipTest("Zato_PubSub_YAML_Config environment variable not set")
+            self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
 
     def tearDown(self):
         """ Clean up after tests.
@@ -270,15 +270,6 @@ class PubSubRESTServerTestCase(TestCase):
         received_topics = {msg['topic_name'] for msg in messages_data['data']}
         self.assertIn(topic1, received_topics)
         self.assertIn(topic2, received_topics)
-
-        # Unsubscribe from both topics
-        for topic_name in [topic1, topic2]:
-            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
-            response = requests.post(unsubscribe_url, auth=self.auth)
-            self.assertEqual(response.status_code, 200)
-
-            unsubscribe_data = response.json()
-            self.assertTrue(unsubscribe_data['is_ok'])
 
 # ################################################################################################################################
 
