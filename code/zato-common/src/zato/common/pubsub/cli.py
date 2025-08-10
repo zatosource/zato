@@ -115,7 +115,6 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         app = PubSubRESTServer(
             host=args.host,
             port=args.port,
-            yaml_config_file=None,
         )
 
         # Configure gunicorn options
@@ -286,7 +285,7 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
         # Create a temporary server instance to use its list_connections method
-        server = PubSubRESTServer(host='0.0.0.0', port=44556, yaml_config_file=None)
+        server = PubSubRESTServer(host='0.0.0.0', port=44556)
 
         # Get connection information
         result = server.list_connections(cid, args.management_port)
