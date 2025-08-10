@@ -87,13 +87,27 @@ class PubSubRESTServerTestCase(TestCase):
         if self.skip_tests:
             self.skipTest("Zato_PubSub_YAML_Config environment variable not set")
 
-        # Clean up broker before running tests
+    def tearDown(self):
+        """ Clean up after tests.
+        """
+        if self.skip_tests:
+            return
+
+        # Clean up broker
         broker_config = get_broker_config()
         _ = cleanup_broker_impl(broker_config, 15672)
 
+        # Unsubscribe from all topics to clear any existing subscriptions
+        for topic_name in self.test_topics:
+            try:
+                unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
+                _ = requests.post(unsubscribe_url, auth=self.auth)
+            except:
+                pass
+
 # ################################################################################################################################
 
-    def xtest_subscribe_publish_get_unsubscribe_flow(self):
+    def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
@@ -158,15 +172,14 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertEqual(message['correl_id'], 'test-correlation-id')
         self.assertEqual(message['priority'], 7)
 
-        # Step 4: Unsubscribe from all topics
-        for test_topic in self.test_topics:
-            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{test_topic}'
-            response = requests.post(unsubscribe_url, auth=self.auth)
-            self.assertEqual(response.status_code, 200)
+        # Step 4: Unsubscribe from the topic we subscribed to
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
+        response = requests.post(unsubscribe_url, auth=self.auth)
+        self.assertEqual(response.status_code, 200)
 
-            unsubscribe_data = response.json()
-            self.assertTrue(unsubscribe_data['is_ok'])
-            self.assertIn('cid', unsubscribe_data)
+        unsubscribe_data = response.json()
+        self.assertTrue(unsubscribe_data['is_ok'])
+        self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
         response = requests.post(
@@ -269,7 +282,7 @@ class PubSubRESTServerTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_publish_without_subscription(self):
+    def test_publish_without_subscription(self):
         """ Test publishing to a topic without being subscribed.
         """
         topic_name = self.test_topics[0]  # demo.1
