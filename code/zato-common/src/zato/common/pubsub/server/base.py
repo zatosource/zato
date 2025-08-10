@@ -84,7 +84,7 @@ class BaseServer:
         self,
         host:'str',
         port:'int',
-        should_init_broker_client:'bool'=True,
+        should_init_broker_client:'bool'=False,
     ) -> 'None':
         self.host = host
         self.port = port
@@ -96,10 +96,6 @@ class BaseServer:
 
         # Initialize the backend
         self.backend = RESTBackend(self, self.broker_client)
-
-        # Do start the broker client now
-        if should_init_broker_client:
-            self._init_broker_client()
 
         # Share references for backward compatibility and simpler access
         self.topics = self.backend.topics
@@ -141,7 +137,7 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def _init_broker_client(self):
+    def init_broker_client(self):
 
         # Delete the queue to remove any message we don't want to read since they were published when we were not running,
         # and then create it all again so we have a fresh start ..
@@ -252,7 +248,7 @@ class BaseServer:
         start = utcnow()
 
         # .. load all the initial subscriptions ..
-        # self._load_subscriptions(cid)
+        self._load_subscriptions(cid)
 
         # .. we're going to need it in a moment ..
         end = utcnow()
