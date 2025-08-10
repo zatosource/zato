@@ -282,7 +282,7 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
         method_calls = []
 
         # Override method to track calls
-        def track_register_subscription(cid, topic_name, sec_name, sub_key=''):
+        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
