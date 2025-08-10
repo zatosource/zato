@@ -253,8 +253,6 @@ class BaseServer:
         # For later use ..
         start = utcnow()
 
-
-
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
 
