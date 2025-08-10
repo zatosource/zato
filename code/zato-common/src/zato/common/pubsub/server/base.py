@@ -28,6 +28,7 @@ from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
+from zato.common.pubsub.util import get_username_to_sec_name_mapping
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,10 +176,8 @@ class BaseServer:
         else:
             logger.info('No subscriptions to load')
 
-        # .. get all security definitions upfront ..
-        auth_request = {'cluster_id': 1}
-        auth_response = self.backend.invoke_service_with_pubsub('zato.security.basic-auth.get-list', auth_request)
-        username_to_sec_name = {item['username']: item['name'] for item in auth_response}
+        # Get security definitions for username lookup
+        username_to_sec_name = get_username_to_sec_name_mapping(self.backend)
 
         # .. process each subscription ..
         for item in response:
