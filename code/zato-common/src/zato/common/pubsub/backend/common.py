@@ -110,7 +110,7 @@ class Backend:
 
         # Process each topic in the list
         for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name, sub_key)
+            _ = self.register_subscription(cid, topic_name, sec_name, {}, sub_key)
 
         # Log all subscribed topics
         topic_name_list_human = ', '.join(topic_name_list)
@@ -308,7 +308,7 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        username: 'str',
+        username_or_sec_name: 'str',
         username_to_sec_name: 'dict',
         sub_key: 'str'='',
         should_create_bindings: 'bool'=True,
@@ -316,8 +316,11 @@ class Backend:
         """ Subscribe to a topic.
         """
 
-        # Get sec_name from username
-        sec_name = self.get_sec_name_by_username(username, username_to_sec_name)
+        # Get sec_name from username or use directly if it's already sec_name
+        if username_to_sec_name:
+            sec_name = self.get_sec_name_by_username(username_or_sec_name, username_to_sec_name)
+        else:
+            sec_name = username_or_sec_name
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         sub_key = sub_key or new_sub_key(sec_name)
