@@ -199,7 +199,7 @@ class BaseServer:
                     if not topic_name:
                         continue
 
-                    logger.info(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
+                    logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
                     _ = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name, sub_key)
