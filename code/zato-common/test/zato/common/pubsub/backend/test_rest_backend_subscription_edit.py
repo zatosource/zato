@@ -56,7 +56,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-test-123',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['orders.old']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -65,7 +65,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-123',
             'sub_key': 'sk-test-123',
-            'sec_name': 'test_user',
+            'sec_name': 'test_user_sec',
             'topic_name_list': ['orders.new']
         }
 
@@ -92,7 +92,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-multi-456',
-            'sec_name': 'multi_user',
+            'sec_name': 'multi_user_sec',
             'topic_name_list': ['orders.original']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -101,8 +101,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-456',
             'sub_key': 'sk-multi-456',
-            'sec_name': 'multi_user',
-            'topic_name_list': ['orders.new', 'invoices.paid', 'alerts.critical']
+            'sec_name': 'multi_user_sec',
+            'topic_name_list': ['orders.new1', 'orders.new2', 'orders.new3']
         }
 
         # Call the method under test
@@ -112,7 +112,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         self.assertNotIn('orders.original', self.backend.subs_by_topic)
 
         # Assert all new subscriptions were created
-        for topic_name in ['orders.new', 'invoices.paid', 'alerts.critical']:
+        for topic_name in ['orders.new1', 'orders.new2', 'orders.new3']:
             self.assertIn(topic_name, self.backend.subs_by_topic)
             self.assertIn('multi_user_sec', self.backend.subs_by_topic[topic_name])
 
@@ -129,8 +129,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-reduce-789',
-            'sec_name': 'reduce_user',
-            'topic_name_list': ['topic.one', 'topic.two', 'topic.three']
+            'sec_name': 'reduce_user_sec',
+            'topic_name_list': ['orders.first', 'orders.second', 'orders.third']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
 
@@ -138,23 +138,23 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-789',
             'sub_key': 'sk-reduce-789',
-            'sec_name': 'reduce_user',
-            'topic_name_list': ['topic.final']
+            'sec_name': 'reduce_user_sec',
+            'topic_name_list': ['orders.single']
         }
 
         # Call the method under test
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(edit_msg)
 
         # Assert old subscriptions were removed
-        for topic_name in ['topic.one', 'topic.two', 'topic.three']:
+        for topic_name in ['orders.first', 'orders.second', 'orders.third']:
             self.assertNotIn(topic_name, self.backend.subs_by_topic)
 
         # Assert new subscription was created
-        self.assertIn('topic.final', self.backend.subs_by_topic)
-        self.assertIn('reduce_user_sec', self.backend.subs_by_topic['topic.final'])
+        self.assertIn('orders.single', self.backend.subs_by_topic)
+        self.assertIn('reduce_user_sec', self.backend.subs_by_topic['orders.single'])
 
-        subscription = self.backend.subs_by_topic['topic.final']['reduce_user_sec']
-        self.assertEqual(subscription.topic_name, 'topic.final')
+        subscription = self.backend.subs_by_topic['orders.single']['reduce_user_sec']
+        self.assertEqual(subscription.topic_name, 'orders.single')
         self.assertEqual(subscription.sec_name, 'reduce_user_sec')
         self.assertEqual(subscription.sub_key, 'sk-reduce-789')
 
@@ -165,14 +165,14 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Create subscriptions for multiple users on same topic
         user1_msg = {
             'cid': 'setup-cid-1',
-            'sub_key': 'sk-user1',
-            'sec_name': 'user_one',
+            'sub_key': 'sk-user1-111',
+            'sec_name': 'user_one_sec',
             'topic_name_list': ['shared.topic']
         }
         user2_msg = {
             'cid': 'setup-cid-2',
-            'sub_key': 'sk-user2',
-            'sec_name': 'user_two',
+            'sub_key': 'sk-user2-222',
+            'sec_name': 'user_two_sec',
             'topic_name_list': ['shared.topic']
         }
 
@@ -181,9 +181,9 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
 
         # Edit only user_one's subscription
         edit_msg = {
-            'cid': 'edit-cid-preserve',
-            'sub_key': 'sk-user1',
-            'sec_name': 'user_one',
+            'cid': 'edit-cid-user1',
+            'sub_key': 'sk-user1-111',
+            'sec_name': 'user_one_sec',
             'topic_name_list': ['different.topic']
         }
 
@@ -206,8 +206,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Create subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-cleanup-123',
-            'sec_name': 'cleanup_user',
+            'sub_key': 'sk-cleanup-444',
+            'sec_name': 'cleanup_user_sec',
             'topic_name_list': ['cleanup.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -218,8 +218,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Edit subscription to different topic
         edit_msg = {
             'cid': 'edit-cid-cleanup',
-            'sub_key': 'sk-cleanup-123',
-            'sec_name': 'cleanup_user',
+            'sub_key': 'sk-cleanup-444',
+            'sec_name': 'cleanup_user_sec',
             'topic_name_list': ['new.topic']
         }
 
@@ -239,8 +239,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Create initial subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-create-456',
-            'sec_name': 'create_user',
+            'sub_key': 'sk-create-555',
+            'sec_name': 'create_user_sec',
             'topic_name_list': ['existing.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -248,21 +248,21 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Edit subscription to non-existing topics
         edit_msg = {
             'cid': 'edit-cid-create',
-            'sub_key': 'sk-create-456',
-            'sec_name': 'create_user',
-            'topic_name_list': ['brand.new.topic', 'another.new.topic']
+            'sub_key': 'sk-create-555',
+            'sec_name': 'create_user_sec',
+            'topic_name_list': ['new.topic.one', 'new.topic.two']
         }
 
         # Call the method under test
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(edit_msg)
 
         # Assert new topics were created
-        self.assertIn('brand.new.topic', self.backend.topics)
-        self.assertIn('another.new.topic', self.backend.topics)
+        self.assertIn('new.topic.one', self.backend.topics)
+        self.assertIn('new.topic.two', self.backend.topics)
 
         # Assert subscriptions were created
-        self.assertIn('brand.new.topic', self.backend.subs_by_topic)
-        self.assertIn('another.new.topic', self.backend.subs_by_topic)
+        self.assertIn('new.topic.one', self.backend.subs_by_topic)
+        self.assertIn('new.topic.two', self.backend.subs_by_topic)
 
 # ################################################################################################################################
 
@@ -271,17 +271,17 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Create initial subscription
         initial_msg = {
             'cid': 'setup-cid',
-            'sub_key': 'sk-empty-789',
-            'sec_name': 'empty_user',
-            'topic_name_list': ['remove.me.topic']
+            'sub_key': 'sk-empty-666',
+            'sec_name': 'empty_user_sec',
+            'topic_name_list': ['remove.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
 
         # Edit subscription to empty topic list
         edit_msg = {
             'cid': 'edit-cid-empty',
-            'sub_key': 'sk-empty-789',
-            'sec_name': 'empty_user',
+            'sub_key': 'sk-empty-666',
+            'sec_name': 'empty_user_sec',
             'topic_name_list': []
         }
 
@@ -289,7 +289,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(edit_msg)
 
         # Assert old subscription was removed
-        self.assertNotIn('remove.me.topic', self.backend.subs_by_topic)
+        self.assertNotIn('remove.topic', self.backend.subs_by_topic)
 
         # Assert no new subscriptions were created
         for subs_by_sec_name in self.backend.subs_by_topic.values():
@@ -302,8 +302,8 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         # Try to edit a subscription that doesn't exist
         edit_msg = {
             'cid': 'edit-cid-nonexistent',
-            'sub_key': 'sk-nonexistent-999',
-            'sec_name': 'nonexistent_user',
+            'sub_key': 'sk-nonexistent-777',
+            'sec_name': 'nonexistent_user_sec',
             'topic_name_list': ['new.topic']
         }
 
@@ -315,7 +315,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         self.assertIn('nonexistent_user_sec', self.backend.subs_by_topic['new.topic'])
 
         subscription = self.backend.subs_by_topic['new.topic']['nonexistent_user_sec']
-        self.assertEqual(subscription.sub_key, 'sk-nonexistent-999')
+        self.assertEqual(subscription.sub_key, 'sk-nonexistent-777')
 
 # ################################################################################################################################
 
@@ -325,7 +325,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-same-111',
-            'sec_name': 'same_user',
+            'sec_name': 'same_user_sec',
             'topic_name_list': ['topic.alpha', 'topic.beta']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -334,7 +334,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-same',
             'sub_key': 'sk-same-111',
-            'sec_name': 'same_user',
+            'sec_name': 'same_user_sec',
             'topic_name_list': ['topic.alpha', 'topic.beta']
         }
 
@@ -355,7 +355,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-overlap-222',
-            'sec_name': 'overlap_user',
+            'sec_name': 'overlap_user_sec',
             'topic_name_list': ['topic.keep', 'topic.remove']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -364,7 +364,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-overlap',
             'sub_key': 'sk-overlap-222',
-            'sec_name': 'overlap_user',
+            'sec_name': 'overlap_user_sec',
             'topic_name_list': ['topic.keep', 'topic.add']
         }
 
@@ -388,7 +388,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         initial_msg = {
             'cid': 'setup-cid',
             'sub_key': 'sk-invalid-333',
-            'sec_name': 'invalid_user',
+            'sec_name': 'invalid_user_sec',
             'topic_name_list': ['valid.topic']
         }
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(initial_msg)
@@ -397,7 +397,7 @@ class RESTBackendSubscriptionEditTestCase(TestCase):
         edit_msg = {
             'cid': 'edit-cid-invalid',
             'sub_key': 'sk-invalid-333',
-            'sec_name': 'invalid_user',
+            'sec_name': 'invalid_user_sec',
             'topic_name_list': ['', None, 'valid.topic', '   ', 'topic with spaces']
         }
 
