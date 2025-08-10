@@ -44,8 +44,16 @@ class BrokerClientHelper:
         """ Mock service invocation for security definitions.
         """
         return [
+            {'username': 'allowed_user', 'name': 'allowed_user_sec'},
+            {'username': 'denied_user', 'name': 'denied_user_sec'},
+            {'username': 'admin_user', 'name': 'admin_user_sec'},
             {'username': 'test_user', 'name': 'test_user_sec'}
         ]
+
+    def create_bindings(self, cid, sub_key, exchange_name, queue_name, topic_name):
+        """ Mock AMQP binding creation.
+        """
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
