@@ -222,11 +222,50 @@ class BaseServer:
             'cluster_id': 1,
         }
 
-        # .. invoke the service ..
-        response = self.backend.invoke_service_with_pubsub(service, request)
+        try:
+            # .. invoke the service ..
+            response = self.backend.invoke_service_with_pubsub(service, request)
 
-        # Sample response
-        # [{'access_type': 'publisher', 'id': 1, 'name': 'demo', 'pattern': 'demo.*', 'sec_base_id': 442160, 'subscription_count': 172}, {'access_type': 'subscriber', 'id': 2, 'name': 'demo', 'pattern': 'demo.*', 'sec_base_id': 442160, 'subscription_count': 172}]
+            # .. log what we've received ..
+            len_response = len(response)
+            if len_response == 1:
+                logger.info('Loading 1 permission')
+            elif len_response > 0:
+                logger.info(f'Loading {len_response} permissions')
+            else:
+                logger.info('No permissions to load')
+
+            # Group permissions by sec_name
+            permissions_by_sec_name = {}
+            for item in response:
+                try:
+                    sec_name = item['name']
+                    pattern = item['pattern']
+                    access_type = item['access_type']
+
+                    if sec_name not in permissions_by_sec_name:
+                        permissions_by_sec_name[sec_name] = []
+
+                    permissions_by_sec_name[sec_name].append({
+                        'pattern': pattern,
+                        'access_type': access_type
+                    })
+
+                except Exception:
+                    logger.error(f'[{cid}] Error processing permission {item}: {format_exc()}')
+
+            # Add permissions to pattern matcher
+            for sec_name, permissions in permissions_by_sec_name.items():
+                if sec_name in self.users:
+                    self.backend.pattern_matcher.add_client(sec_name, permissions)
+                    logger.info(f'[{cid}] Added {len(permissions)} permissions for {sec_name}')
+                else:
+                    logger.info(f'[{cid}] User not found for permission loading: {sec_name}')
+
+            logger.info('Finished loading permissions')
+
+        except Exception:
+            logger.warning(f'[{cid}] Could not load permissions: {format_exc()}')
 
 # ################################################################################################################################
 
