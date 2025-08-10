@@ -113,7 +113,20 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         def mock_fetch_from_rabbitmq(cid, api_url, payload):
             return [
                 {
-                    'payload': 'test message 1',
+                    'payload': {
+                        'data': 'test message 1',
+                        'msg_id': 'msg_1',
+                        'correl_id': 'corr_1',
+                        'priority': 5,
+                        'pub_time_iso': '',
+                        'recv_time_iso': '',
+                        'expiration': '0',
+                        'topic_name': '',
+                        'ext_client_id': '',
+                        'expiration_time_iso': '',
+                        'in_reply_to': '',
+                        'size': 14
+                    },
                     'properties': {
                         'message_id': 'msg_1',
                         'correlation_id': 'corr_1'
@@ -179,7 +192,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Verify error response (line 25 in on_messages_get)
         self.assertIsInstance(response, BadRequestResponse)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.details, 'Failed to retrieve messages from queue')
+        self.assertEqual(response.details, 'Subscription not found')
 
 # ################################################################################################################################
 
