@@ -57,11 +57,10 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
 
         # Store action info in result
         result.action_code = action_code
-        action = code_to_name.get(action_code, '')
-        result.action_name = action
+        result.action_name = action_code
 
         # Find and call the handler method
-        handler_name = f'on_broker_msg_{action}'
+        handler_name = f'on_broker_msg_{action_code}'
         if func := getattr(context, handler_name, None):
             msg = bunchify(msg)
             response = func(msg)

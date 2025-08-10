@@ -222,6 +222,8 @@ class Groups(Constants):
 
 class PUBSUB(Constants):
 
+    RELOAD_CONFIG = ValueConstant('')
+
     TOPIC_CREATE = ValueConstant('')
     TOPIC_EDIT = ValueConstant('')
     TOPIC_DELETE = ValueConstant('')
