@@ -60,7 +60,20 @@ class RESTTransformMessagesTestCase(TestCase):
         """
         rabbitmq_messages = [
             {
-                'payload': 'test message data',
+                'payload': {
+                    'data': 'test message data',
+                    'msg_id': 'msg_123',
+                    'correl_id': 'corr_456',
+                    'priority': 5,
+                    'pub_time_iso': '2025-01-01T12:00:00Z',
+                    'recv_time_iso': '2025-01-01T12:00:00Z',
+                    'expiration': '3600',
+                    'topic_name': 'test.topic',
+                    'ext_client_id': 'client_789',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 17
+                },
                 'properties': {
                     'message_id': 'msg_123',
                     'correlation_id': 'corr_456',
@@ -104,7 +117,20 @@ class RESTTransformMessagesTestCase(TestCase):
         """
         rabbitmq_messages = [
             {
-                'payload': 'minimal message',
+                'payload': {
+                    'data': 'minimal message',
+                    'msg_id': '',
+                    'correl_id': '',
+                    'priority': 5,
+                    'pub_time_iso': '',
+                    'recv_time_iso': '',
+                    'expiration': '0',
+                    'topic_name': '',
+                    'ext_client_id': '',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 15
+                },
                 'properties': {}
             }
         ]
@@ -119,7 +145,7 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['correl_id'], '')
         self.assertEqual(message['priority'], PubSub.Message.Default_Priority)
         self.assertEqual(message['mime_type'], 'application/json')
-        self.assertEqual(message['expiration'], PubSub.Message.Default_Expiration)
+        self.assertEqual(message['expiration'], '0')
 
 # ################################################################################################################################
 
@@ -128,7 +154,20 @@ class RESTTransformMessagesTestCase(TestCase):
         """
         rabbitmq_messages = [
             {
-                'payload': 'message without headers',
+                'payload': {
+                    'data': 'message without headers',
+                    'msg_id': 'msg_456',
+                    'correl_id': '',
+                    'priority': 5,
+                    'pub_time_iso': '',
+                    'recv_time_iso': '',
+                    'expiration': '0',
+                    'topic_name': '',
+                    'ext_client_id': '',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 22
+                },
                 'properties': {
                     'message_id': 'msg_456'
                 }
@@ -152,9 +191,23 @@ class RESTTransformMessagesTestCase(TestCase):
         """ _transform_messages calculates correct size for string payloads.
         """
         test_payload = 'test string message'
+        payload_dict = {
+            'data': test_payload,
+            'msg_id': '',
+            'correl_id': '',
+            'priority': 5,
+            'pub_time_iso': '',
+            'recv_time_iso': '',
+            'expiration': '0',
+            'topic_name': '',
+            'ext_client_id': '',
+            'expiration_time_iso': '',
+            'in_reply_to': '',
+            'size': len(test_payload.encode('utf-8'))
+        }
         rabbitmq_messages = [
             {
-                'payload': test_payload,
+                'payload': payload_dict,
                 'properties': {}
             }
         ]
@@ -173,9 +226,23 @@ class RESTTransformMessagesTestCase(TestCase):
         """ _transform_messages calculates correct size for byte payloads.
         """
         byte_payload = b'binary data'
+        payload_dict = {
+            'data': byte_payload.decode('utf-8'),
+            'msg_id': '',
+            'correl_id': '',
+            'priority': 5,
+            'pub_time_iso': '',
+            'recv_time_iso': '',
+            'expiration': '0',
+            'topic_name': '',
+            'ext_client_id': '',
+            'expiration_time_iso': '',
+            'in_reply_to': '',
+            'size': len(byte_payload)
+        }
         rabbitmq_messages = [
             {
-                'payload': byte_payload,
+                'payload': payload_dict,
                 'properties': {}
             }
         ]
@@ -185,7 +252,7 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(len(result), 1)
         message = result[0]
 
-        self.assertEqual(message['data'], byte_payload)
+        self.assertEqual(message['data'], byte_payload.decode('utf-8'))
         self.assertEqual(message['size'], len(byte_payload))
 
 # ################################################################################################################################
@@ -194,9 +261,23 @@ class RESTTransformMessagesTestCase(TestCase):
         """ _transform_messages handles unicode strings correctly.
         """
         unicode_payload = 'test message with unicode: 🚀 ñáéíóú'
+        payload_dict = {
+            'data': unicode_payload,
+            'msg_id': '',
+            'correl_id': '',
+            'priority': 5,
+            'pub_time_iso': '',
+            'recv_time_iso': '',
+            'expiration': '0',
+            'topic_name': '',
+            'ext_client_id': '',
+            'expiration_time_iso': '',
+            'in_reply_to': '',
+            'size': len(unicode_payload.encode('utf-8'))
+        }
         rabbitmq_messages = [
             {
-                'payload': unicode_payload,
+                'payload': payload_dict,
                 'properties': {}
             }
         ]
@@ -216,15 +297,54 @@ class RESTTransformMessagesTestCase(TestCase):
         """
         rabbitmq_messages = [
             {
-                'payload': 'first message',
+                'payload': {
+                    'data': 'first message',
+                    'msg_id': 'msg_1',
+                    'correl_id': '',
+                    'priority': 5,
+                    'pub_time_iso': '',
+                    'recv_time_iso': '',
+                    'expiration': '0',
+                    'topic_name': '',
+                    'ext_client_id': '',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 13
+                },
                 'properties': {'message_id': 'msg_1'}
             },
             {
-                'payload': 'second message',
+                'payload': {
+                    'data': 'second message',
+                    'msg_id': 'msg_2',
+                    'correl_id': '',
+                    'priority': 5,
+                    'pub_time_iso': '',
+                    'recv_time_iso': '',
+                    'expiration': '0',
+                    'topic_name': '',
+                    'ext_client_id': '',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 14
+                },
                 'properties': {'message_id': 'msg_2'}
             },
             {
-                'payload': 'third message',
+                'payload': {
+                    'data': 'third message',
+                    'msg_id': 'msg_3',
+                    'correl_id': '',
+                    'priority': 5,
+                    'pub_time_iso': '',
+                    'recv_time_iso': '',
+                    'expiration': '0',
+                    'topic_name': '',
+                    'ext_client_id': '',
+                    'expiration_time_iso': '',
+                    'in_reply_to': '',
+                    'size': 13
+                },
                 'properties': {'message_id': 'msg_3'}
             }
         ]
