@@ -12,11 +12,10 @@ _ = monkey.patch_all()
 
 # stdlib
 from logging import getLogger
-from os import environ
+
 from traceback import format_exc
 
-# PyYAML
-from yaml import safe_load as yaml_load
+
 
 # Zato
 from zato.common.typing_ import any_, dict_
@@ -73,20 +72,7 @@ class BadRequestException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def load_yaml_config(yaml_file:'str') -> 'dict_':
-    """ Load configuration from a YAML file including users, topics, and subscriptions.
-    """
-    logger.info(f'Loading configuration from YAML file {yaml_file}')
 
-    try:
-        with open(yaml_file, 'r') as f:
-            config = yaml_load(f)
-
-        return config
-
-    except Exception as e:
-        logger.error(f'Error loading YAML configuration: {e}')
-        return {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,22 +83,11 @@ class BaseServer:
         self,
         host:'str',
         port:'int',
-        yaml_config_file:'any_'=None,
         should_init_broker_client:'bool'=True,
     ) -> 'None':
-        """ Initialize the server with host, port, and YAML config.
-        """
         self.host = host
         self.port = port
-        self.users = {}  # username -> password
-        self.yaml_config = None
-
-        # Load config from YAML file if provided
-        if not yaml_config_file:
-            yaml_config_file = environ.get('Zato_PubSub_YAML_Config_File')
-
-        if yaml_config_file:
-            self.yaml_config = load_yaml_config(yaml_config_file)
+        self.users = {}
 
         # Build our broker client
         self.broker_client = BrokerClient(consumer_drain_events_timeout=0.1)
@@ -233,63 +208,7 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def _setup_from_yaml_config(self, cid:'str') -> 'None':
-        """ Set up users, topics, and subscriptions based on YAML configuration.
-        """
-        if not self.yaml_config:
-            return
 
-        logger.info(f'[{cid}] Setting up from YAML configuration -> {self.yaml_config}')
-
-        # Process users section
-        users_config = self.yaml_config['users']
-        for username, user_data in users_config.items():
-            password = user_data['password']
-            self.create_user(cid, username, password)
-
-        # Process topics section
-        topics_config = self.yaml_config['topics']
-        for topic_data in topics_config.values():
-            topic_name = topic_data['name']
-            if topic_name not in self.backend.topics:
-                self.backend.create_topic(cid, 'yaml-config', topic_name)
-                logger.info(f'[{cid}] Created topic: {topic_name}')
-
-        # Collect all topics from config for permissions
-        all_topics = set()
-        for topic_data in topics_config.values():
-            all_topics.add(topic_data['name'])
-
-        # Also collect topics from subscriptions section
-        subs_config = self.yaml_config['subscriptions']
-        for topic_name in subs_config.keys():
-            all_topics.add(topic_name)
-
-        # Add permissions for each user for all topics in the config
-        for username in users_config.keys():
-            permissions = []
-            for topic_name in all_topics:
-                permissions.append({'pattern': topic_name, 'access_type': PubSub.API_Client.Publisher_Subscriber})
-            logger.info(f'[{cid}] Adding permissions for user {username}: {permissions}')
-            self.backend.pattern_matcher.add_client(username, permissions)
-
-        # Process subscriptions section
-        for topic_name, users_data in subs_config.items():
-
-            # Make sure the topic exists
-            if topic_name not in self.backend.topics:
-                self.backend.create_topic(cid, 'yaml-config-subscription', topic_name)
-                logger.info(f'[{cid}] Created topic for subscription: {topic_name}')
-
-            # Process each user subscription for this topic
-            for username, sub_data in users_data.items():
-
-                # Get the subscription key
-                sub_key = sub_data['sub_key']
-
-                # Create the subscription
-                logger.info(f'[{cid}] Registering subscription from YAML: {username} -> {topic_name} (key={sub_key})')
-                _ = self.backend.register_subscription(cid, topic_name, username, sub_key, should_create_bindings=False)
 
 # ################################################################################################################################
 
@@ -334,8 +253,7 @@ class BaseServer:
         # For later use ..
         start = utcnow()
 
-        # .. load test data ..
-        self._setup_from_yaml_config(cid)
+
 
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
