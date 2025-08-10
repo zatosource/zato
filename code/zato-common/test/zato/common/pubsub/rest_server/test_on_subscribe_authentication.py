@@ -51,6 +51,11 @@ class BrokerClientHelper:
             {'username': 'admin_user', 'name': 'admin_user_sec'}
         ]
 
+    def create_bindings(self, cid, sub_key, exchange_name, queue_name, topic_name):
+        """ Mock AMQP binding creation.
+        """
+        pass
+
 # ################################################################################################################################
 # ################################################################################################################################
 
