@@ -209,6 +209,25 @@ class BaseServer:
 
         logger.info('Finished loading subscriptions')
 
+
+# ################################################################################################################################
+
+    def _load_permissions(self, cid:'str') -> 'None':
+        """ Load permissions from server and set up the matcher structure.
+        """
+
+        # Prepare our input ..
+        service = 'zato.pubsub.permission.get-list'
+        request = {
+            'cluster_id': 1,
+        }
+
+        # .. invoke the service ..
+        response = self.backend.invoke_service_with_pubsub(service, request)
+
+        # Sample response
+        # [{'access_type': 'publisher', 'id': 1, 'name': 'demo', 'pattern': 'demo.*', 'sec_base_id': 442160, 'subscription_count': 172}, {'access_type': 'subscriber', 'id': 2, 'name': 'demo', 'pattern': 'demo.*', 'sec_base_id': 442160, 'subscription_count': 172}]
+
 # ################################################################################################################################
 
     def create_user(self, cid:'str', username:'str', password:'str') -> 'None':
@@ -253,6 +272,9 @@ class BaseServer:
 
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
+
+        # .. load the initial permissions too ..
+        self._load_permissions(cid)
 
         # .. we're going to need it in a moment ..
         end = utcnow()
