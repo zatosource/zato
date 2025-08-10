@@ -35,8 +35,43 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+import os
+import threading
+import gevent
+
+class GreenletFormatter(logging.Formatter):
+    def format(self, record):
+        # Get process info
+        process_id = os.getpid()
+
+        # Get thread info
+        thread = threading.current_thread()
+        thread_name = thread.name
+        thread_id = thread.ident
+
+        # Get greenlet info
+        current_greenlet = gevent.getcurrent()
+        greenlet_name = getattr(current_greenlet, 'name', 'Greenlet-0')
+        greenlet_id = id(current_greenlet)
+
+        # Add custom fields to record
+        record.process_id = process_id
+        record.thread_name = thread_name
+        record.thread_id = thread_id
+        record.greenlet_name = greenlet_name
+        record.greenlet_id = greenlet_id
+
+        return super().format(record)
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s - Process: %(process_id)s, Thread: %(thread_name)s (id: %(thread_id)s), Greenlet name: %(greenlet_name)s, Greenlet id: %(greenlet_id)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
+
+# Set the custom formatter on the root logger
+root_logger = logging.getLogger()
+if root_logger.handlers:
+    formatter = GreenletFormatter(log_format)
+    for handler in root_logger.handlers:
+        handler.setFormatter(formatter)
 
 logger = getLogger(__name__)
 
