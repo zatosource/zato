@@ -255,12 +255,17 @@ class BaseServer:
                     logger.error(f'[{cid}] Error processing permission {item}: {format_exc()}')
 
             # Add permissions to pattern matcher
+            total_permissions_loaded = 0
             for sec_name, permissions in permissions_by_sec_name.items():
                 if sec_name in self.users:
                     self.backend.pattern_matcher.add_client(sec_name, permissions)
+                    total_permissions_loaded += len(permissions)
                     logger.info(f'[{cid}] Added {len(permissions)} permissions for {sec_name}')
                 else:
                     logger.info(f'[{cid}] User not found for permission loading: {sec_name}')
+
+            # Store total for later use
+            self._total_permissions_loaded = total_permissions_loaded
 
             logger.info('Finished loading permissions')
 
@@ -321,11 +326,14 @@ class BaseServer:
         user_count = len(self.users)
         topic_count = len(self.backend.topics)
         subscription_count = sum(len(subs) for subs in self.backend.subs_by_topic.values())
+        client_count = self.backend.pattern_matcher.get_client_count()
+        permission_count = getattr(self, '_total_permissions_loaded', 0)
 
         logger.info(f'[{cid}] ✅ Setup complete in {end - start}')
         logger.info(f'[{cid}] 🠊 {user_count} {"user" if user_count == 1 else "users"}')
         logger.info(f'[{cid}] 🠊 {topic_count} {"topic" if topic_count == 1 else "topics"}')
         logger.info(f'[{cid}] 🠊 {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
+        logger.info(f'[{cid}] 🠊 {client_count} {"user" if client_count == 1 else "users"} with {permission_count} {"permission" if permission_count == 1 else "permissions"}')
 
 # ################################################################################################################################
 # ################################################################################################################################
