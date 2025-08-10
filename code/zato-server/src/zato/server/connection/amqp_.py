@@ -286,11 +286,11 @@ class Consumer:
                             logger.info(
                                 'Closing and reconnecting a lost connection for queue=%s -> `%s` -> %s',
                                 self.config.queue,
-                                e,
                                 connection.as_uri(),
+                                format_exc(),
                             )
 
-                            # .. indicate we've already logged a message about ..
+                            # .. indicate we've already logged a message about it ..
                             had_log = True
 
                             # .. now close it ..

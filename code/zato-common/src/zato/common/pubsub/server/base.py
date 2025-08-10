@@ -175,15 +175,19 @@ class BaseServer:
         else:
             logger.info('No subscriptions to load')
 
+        # .. get all security definitions upfront ..
+        auth_request = {'cluster_id': 1}
+        auth_response = self.backend.invoke_service_with_pubsub('zato.security.basic-auth.get-list', auth_request)
+        username_to_sec_name = {item['username']: item['name'] for item in auth_response}
+
         # .. process each subscription ..
         for item in response:
 
             try:
                 # .. extract what we need ..
-                sec_name = item['sec_name']
                 username = item['username']
                 password = item['password']
-                topic_names = item.get('topic_names') or []
+                topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
 
                 # Add user credentials
@@ -199,16 +203,12 @@ class BaseServer:
                     logger.info(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.register_subscription(cid, topic_name, sec_name, sub_key)
+                    _ = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name, sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
 
         logger.info('Finished loading subscriptions')
-
-# ################################################################################################################################
-
-
 
 # ################################################################################################################################
 
@@ -248,7 +248,6 @@ class BaseServer:
         """ Set up the server, loading users, topics, and subscriptions from YAML config.
         """
         cid = new_cid()
-        logger.info(f'[{cid}] Setting up PubSub REST server at {self.host}:{self.port}')
 
         # For later use ..
         start = utcnow()
