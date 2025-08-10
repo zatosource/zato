@@ -12,12 +12,11 @@ _ = monkey.patch_all()
 
 # stdlib
 import argparse
-import logging
 import sys
 import requests
 from dataclasses import dataclass
 from json import dumps
-from logging import basicConfig, DEBUG, getLogger, INFO
+from logging import getLogger
 from traceback import format_exc
 from urllib.parse import quote
 
@@ -127,15 +126,6 @@ def cleanup_broker(args:'argparse.Namespace') -> 'OperationResult':
     """ Clean up AMQP bindings and queues.
     """
     try:
-        # Set up logging level
-        level = DEBUG if args.has_debug else INFO
-        basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler()
-            ]
-        )
 
         # Get broker configuration
         broker_config = get_broker_config()
@@ -249,15 +239,6 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
     """ List and analyze RabbitMQ connections.
     """
     try:
-        # Set up logging level
-        level = DEBUG if args.has_debug else INFO
-        basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(process)s:%(threadName)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler()
-            ]
-        )
 
         cid = new_cid()
         logger.info(f'[{cid}] Listing RabbitMQ connections')
