@@ -101,6 +101,10 @@ class BaseServer:
         self.topics = self.backend.topics
         self.subs_by_topic = self.backend.subs_by_topic
 
+        # Initialize broker client if requested (worker process only)
+        if should_init_broker_client:
+            self.init_broker_client()
+
         # URL routing configuration
         self.url_map = Map([
 

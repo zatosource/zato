@@ -13,18 +13,25 @@ _ = monkey.patch_all()
 # stdlib
 import argparse
 import logging
+import os
 import sys
-import requests
+import threading
 from dataclasses import dataclass
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
 from urllib.parse import quote
 
+# gevent
+import gevent
+
+# Requests
+import requests
+
 # Zato
 from zato.common.pubsub.server.rest import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid
+from zato.common.util.api import as_bool, new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,9 +42,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-import os
-import threading
-import gevent
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class GreenletFormatter(logging.Formatter):
     def format(self, record):
@@ -63,12 +71,15 @@ class GreenletFormatter(logging.Formatter):
 
         return super().format(record)
 
-log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s - Process: %(process_id)s, Thread: %(thread_name)s (id: %(thread_id)s), Greenlet name: %(greenlet_name)s, Greenlet id: %(greenlet_id)s'
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+if _needs_details:
+    log_format += ' - Process: %(process_id)s, Thread: %(thread_name)s (id: %(thread_id)s), Greenlet name: %(greenlet_name)s, Greenlet id: %(greenlet_id)s'
+
 logging.basicConfig(level=logging.INFO, format=log_format)
 
-# Set the custom formatter on the root logger
+# Set the custom formatter on the root logger only if details are needed
 root_logger = logging.getLogger()
-if root_logger.handlers:
+if _needs_details and root_logger.handlers:
     formatter = GreenletFormatter(log_format)
     for handler in root_logger.handlers:
         handler.setFormatter(formatter)
