@@ -300,11 +300,12 @@ class BaseRESTServer(BaseServer):
         yaml_output = yaml_dump(diagnostics, default_flow_style=False)
         logger.info(f'[{cid}] Admin diagnostics: \n{yaml_output}')
 
-        # Return a simple success response (not exposing the data)
+        # Return diagnostics data in response
         response = APIResponse()
         response.is_ok = True
         response.cid = cid
-        response.details = 'Diagnostics logged successfully'
+        response.details = 'Diagnostics retrieved successfully'
+        response.data = diagnostics
 
         return response
 
