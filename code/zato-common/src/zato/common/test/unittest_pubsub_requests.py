@@ -96,6 +96,9 @@ class PubSubRESTServerBaseTestCase(TestCase):
         if self.skip_tests:
             self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
 
+        # Flag to control whether tearDown should automatically unsubscribe from topics
+        self.skip_auto_unsubscribe = False
+
 # ################################################################################################################################
 
     def tearDown(self):
@@ -109,10 +112,12 @@ class PubSubRESTServerBaseTestCase(TestCase):
         _ = cleanup_broker_impl(broker_config, 15672)
 
         # Unsubscribe from all topics to clear any existing subscriptions
-        for topic_name in self.test_topics:
-            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
-            _ = requests.post(unsubscribe_url, auth=self.auth)
-            _ = self._call_diagnostics()
+        # Skip this if the test wants to handle unsubscribe manually
+        if not self.skip_auto_unsubscribe:
+            for topic_name in self.test_topics:
+                unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
+                _ = requests.post(unsubscribe_url, auth=self.auth)
+                _ = self._call_diagnostics()
 
 # ################################################################################################################################
 
