@@ -391,6 +391,7 @@ class Delete(AdminService):
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
                 pubsub_msg.username = security_def.username
+                pubsub_msg.sec_name = security_def.name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
                 self.broker_client.publish(pubsub_msg)

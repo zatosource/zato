@@ -121,14 +121,6 @@ class Backend:
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'strdict') -> 'None':
 
-        print()
-        print(111, msg)
-        print()
-
-        # 111 Bunch(action='PUBSUB_SUBSCRIPTION_DELETE', cid='2427faf896f9a3aa27e17e32', sub_key='zpsk.838ef73469f87f6f4741dcc7.demo', username='demo')
-
-        return
-
         # Local aliases
         cid = msg['cid']
         sub_key = msg['sub_key']
