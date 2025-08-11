@@ -402,6 +402,8 @@ class Delete(AdminService):
 class _BaseModifyTopicList(AdminService):
     """ Base class for Subscribe/Unsubscribe operations.
     """
+    action = '<Action-Not-Set>'
+
     class SimpleIO(AdminSIO):
         input_required = AsIs('topic_name_list')
         input_optional = 'username', 'sec_name', 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', \
@@ -460,7 +462,8 @@ class _BaseModifyTopicList(AdminService):
                         current_sub = item
                         break
                 else:
-                    raise Exception(f'Could not find subscription for input {lookup_field} `{lookup_value}`')
+                    err_msg = f'{self.action}: Could not find subscription for input {lookup_field} `{lookup_value}` -> {get_list_response}'
+                    raise Exception(err_msg)
 
                 # Find topics and check permissions
                 new_topic_names = []
@@ -522,6 +525,8 @@ class _BaseModifyTopicList(AdminService):
 class Subscribe(_BaseModifyTopicList):
     """ Subscribes security definition to one or more topics.
     """
+    action = 'Subscribe'
+
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
         # Start with existing topics
@@ -540,6 +545,8 @@ class Subscribe(_BaseModifyTopicList):
 class Unsubscribe(_BaseModifyTopicList):
     """ Unsubscribes security definition from one or more topics.
     """
+    action = 'Unsubscribe'
+
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
         # Start with existing topics
