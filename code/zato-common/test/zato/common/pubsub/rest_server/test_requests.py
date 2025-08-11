@@ -149,7 +149,10 @@ class PubSubRESTServerTestCase(TestCase):
             diagnostics_url = f'{self.base_url}/pubsub/admin/diagnostics'
             response = requests.get(diagnostics_url, auth=self.auth)
             if response.status_code == 200:
-                logger.info(f'Diagnostics response: {response.text}')
+                import json
+                data = response.json()
+                pretty_json = json.dumps(data, indent=4)
+                logger.info(f'Diagnostics response:\n{pretty_json}')
             else:
                 logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
         except Exception as e:
