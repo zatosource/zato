@@ -41,7 +41,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         subscribe_data = response.json()
         self.assertTrue(subscribe_data['is_ok'])
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
         self.assertIn('cid', subscribe_data)
 
         # Step 2: Publish a message
@@ -65,7 +65,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertTrue(publish_data['is_ok'])
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
 
         # Step 3: Get messages (with small delay for message delivery)
         time.sleep(0.1)
@@ -87,7 +87,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreater(len(messages_data['data']), 0)
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
 
         # Verify message content
         message = messages_data['data'][0]
@@ -103,7 +103,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         unsubscribe_data = response.json()
         self.assertTrue(unsubscribe_data['is_ok'])
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
         self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
@@ -116,7 +116,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # Publishing should still work even without subscribers
         self.assertEqual(response.status_code, 200)
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
 
         # Step 6: Try to get messages - should return 400 error for unsubscribed user
         response = requests.post(
@@ -147,7 +147,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             subscribe_data = response.json()
             self.assertTrue(subscribe_data['is_ok'])
-            self._call_diagnostics()
+            _ = self._call_diagnostics()
 
         # Publish messages to both topics
         messages = {
@@ -173,7 +173,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             publish_data = response.json()
             self.assertTrue(publish_data['is_ok'])
-            self._call_diagnostics()
+            _ = self._call_diagnostics()
 
         # Get all messages
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
@@ -193,7 +193,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreaterEqual(len(messages_data['data']), 2)
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
 
         # Verify we got messages from both topics
         received_topics = {msg['topic_name'] for msg in messages_data['data']}
