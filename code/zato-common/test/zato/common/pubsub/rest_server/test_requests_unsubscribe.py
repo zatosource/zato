@@ -151,6 +151,8 @@ class PubSubRESTServerUnsubscribeTestCase(TestCase):
         broker_config = get_broker_config()
         _ = cleanup_broker_impl(broker_config, 15672)
 
+        return
+
         # Unsubscribe from all topics to clear any existing subscriptions
         for topic in self.test_topics:
             try:
