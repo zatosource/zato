@@ -276,19 +276,19 @@ if __name__ == '__main__':
 curl http://localhost:44556/pubsub/health; echo
 
 echo '{"data":"Hello World"}' > post_data.json
-ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:44556/pubsub/topic/my.topic
+ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:44556/pubsub/topic/demo.1
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic -d '{"data":"Hello World"}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
 
-echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:44556/pubsub/topic/my.topic
-N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:44556/pubsub/topic/my.topic -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
+echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:44556/pubsub/topic/demo.1
+N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
 
 # Subscribe to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/my.topic; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/demo.1; echo
 
 # Unsubscribe from a topic:
-curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/my.topic
+curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/demo.1
 
 # Get admin diagnostics (logs topics, users, subscriptions etc.):
 curl -u demo:demo -X GET http://localhost:44556/pubsub/admin/diagnostics; echo
