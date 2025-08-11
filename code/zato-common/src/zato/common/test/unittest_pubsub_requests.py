@@ -106,7 +106,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
         for topic_name in self.test_topics:
             unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
             _ = requests.post(unsubscribe_url, auth=self.auth)
-            self._call_diagnostics()
+            _ = self._call_diagnostics()
 
 # ################################################################################################################################
 
