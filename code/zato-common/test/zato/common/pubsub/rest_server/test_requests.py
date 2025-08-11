@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import http.client as http_client
 import logging
 import time
 from unittest import main
@@ -21,15 +20,6 @@ from zato.common.test.unittest_pubsub_requests import PubSubRESTServerBaseTestCa
 # ################################################################################################################################
 # ################################################################################################################################
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -38,98 +28,6 @@ logger = logging.getLogger(__name__)
 class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
-
-    @classmethod
-    def _setup_http_patching(cls):
-        """ Set up HTTP client patching for detailed logging.
-        """
-        # Disable default HTTP traffic logging to avoid duplicates
-        http_client.HTTPConnection.debuglevel = 0
-
-        def patched_send(self, data):
-            logger = logging.getLogger('http.client')
-            if isinstance(data, bytes):
-                logger.debug(f'send: {data.decode("utf-8", errors="replace")}')
-            else:
-                logger.debug(f'send: {data}')
-            return cls._original_send(self, data)
-
-        def patched_getresponse(self):
-            response = cls._original_getresponse(self)
-            logger = logging.getLogger('http.client')
-            version = f'HTTP/{response.version // 10}.{response.version % 10}'
-            logger.debug(f'reply: \'{version} {response.status} {response.reason}\\r\\n\'')
-            for header, value in response.getheaders():
-                logger.debug(f'header: {header}: {value}')
-            return response
-
-        def patched_read(self, amt=None):
-            data = cls._original_read(self, amt)
-            if data:
-                logger = logging.getLogger('http.client.response')
-                try:
-                    decoded = data.decode("utf-8")
-                    logger.debug(f'Response body: {decoded}')
-                except UnicodeDecodeError:
-                    logger.debug(f'Response body (binary): {len(data)} bytes')
-            return data
-
-        # Store original methods
-        cls._original_send = http_client.HTTPConnection.send
-        cls._original_getresponse = http_client.HTTPConnection.getresponse
-        cls._original_read = http_client.HTTPResponse.read
-
-        # Apply patches
-        http_client.HTTPConnection.send = patched_send
-        http_client.HTTPConnection.getresponse = patched_getresponse
-        http_client.HTTPResponse.read = patched_read
-
-# ################################################################################################################################
-
-    def setUp(self):
-        """ Skip tests if no config available.
-        """
-        if self.skip_tests:
-            self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
-
-# ################################################################################################################################
-
-    def _call_diagnostics(self):
-        """ Call diagnostics endpoint and log the response.
-        """
-        try:
-            diagnostics_url = f'{self.base_url}/pubsub/admin/diagnostics'
-            response = requests.get(diagnostics_url, auth=self.auth)
-            if response.status_code == 200:
-                import json
-                data = response.json()
-                pretty_json = json.dumps(data, indent=4)
-                logger.info(f'Diagnostics response:\n{pretty_json}')
-            else:
-                logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
-        except Exception as e:
-            logger.error(f'Error calling diagnostics: {e}')
-
-    def tearDown(self):
-        """ Clean up after tests.
-        """
-        if self.skip_tests:
-            return
-
-        # Clean up broker
-        broker_config = get_broker_config()
-        _ = cleanup_broker_impl(broker_config, 15672)
-
-        # Unsubscribe from all topics to clear any existing subscriptions
-        for topic_name in self.test_topics:
-            try:
-                unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
-                _ = requests.post(unsubscribe_url, auth=self.auth)
-                self._call_diagnostics()
-            except:
-                pass
-
-# ################################################################################################################################
 
     def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
