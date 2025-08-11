@@ -96,6 +96,11 @@ http_client.HTTPResponse.read = patched_read
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PubSubRESTServerTestCase(TestCase):
     """ Test cases for the pub/sub REST server.
     """
@@ -137,6 +142,19 @@ class PubSubRESTServerTestCase(TestCase):
         if self.skip_tests:
             self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
 
+    def _call_diagnostics(self):
+        """ Call diagnostics endpoint and log the response.
+        """
+        try:
+            diagnostics_url = f'{self.base_url}/pubsub/admin/diagnostics'
+            response = requests.get(diagnostics_url, auth=self.auth)
+            if response.status_code == 200:
+                logger.info(f'Diagnostics response: {response.text}')
+            else:
+                logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
+        except Exception as e:
+            logger.error(f'Error calling diagnostics: {e}')
+
     def tearDown(self):
         """ Clean up after tests.
         """
@@ -169,6 +187,7 @@ class PubSubRESTServerTestCase(TestCase):
 
         subscribe_data = response.json()
         self.assertTrue(subscribe_data['is_ok'])
+        self._call_diagnostics()
         self.assertIn('cid', subscribe_data)
 
         # Step 2: Publish a message
@@ -192,6 +211,7 @@ class PubSubRESTServerTestCase(TestCase):
         self.assertTrue(publish_data['is_ok'])
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
+        self._call_diagnostics()
 
         # Step 3: Get messages (with small delay for message delivery)
         time.sleep(0.1)
@@ -212,8 +232,8 @@ class PubSubRESTServerTestCase(TestCase):
 
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
-        self.assertIn('data', messages_data)
         self.assertGreater(len(messages_data['data']), 0)
+        self._call_diagnostics()
 
         # Verify message content
         message = messages_data['data'][0]
@@ -229,6 +249,7 @@ class PubSubRESTServerTestCase(TestCase):
 
         unsubscribe_data = response.json()
         self.assertTrue(unsubscribe_data['is_ok'])
+        self._call_diagnostics()
         self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
@@ -241,6 +262,7 @@ class PubSubRESTServerTestCase(TestCase):
 
         # Publishing should still work even without subscribers
         self.assertEqual(response.status_code, 200)
+        self._call_diagnostics()
 
         # Step 6: Try to get messages - should return 400 error for unsubscribed user
         response = requests.post(
@@ -271,6 +293,7 @@ class PubSubRESTServerTestCase(TestCase):
 
             subscribe_data = response.json()
             self.assertTrue(subscribe_data['is_ok'])
+            self._call_diagnostics()
 
         # Publish messages to both topics
         messages = {
@@ -296,6 +319,7 @@ class PubSubRESTServerTestCase(TestCase):
 
             publish_data = response.json()
             self.assertTrue(publish_data['is_ok'])
+            self._call_diagnostics()
 
         # Get all messages
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
@@ -315,6 +339,7 @@ class PubSubRESTServerTestCase(TestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreaterEqual(len(messages_data['data']), 2)
+        self._call_diagnostics()
 
         # Verify we got messages from both topics
         received_topics = {msg['topic_name'] for msg in messages_data['data']}

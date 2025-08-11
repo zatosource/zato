@@ -96,6 +96,11 @@ http_client.HTTPResponse.read = patched_read
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PubSubRESTServerUnsubscribeTestCase(TestCase):
     """ Test cases for the pub/sub REST server unsubscribe functionality.
     """
@@ -141,6 +146,19 @@ class PubSubRESTServerUnsubscribeTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _call_diagnostics(self):
+        """ Call diagnostics endpoint and log the response.
+        """
+        try:
+            diagnostics_url = f'{self.base_url}/pubsub/admin/diagnostics'
+            response = requests.get(diagnostics_url, auth=self.auth)
+            if response.status_code == 200:
+                logger.info(f'Diagnostics response: {response.text}')
+            else:
+                logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
+        except Exception as e:
+            logger.error(f'Error calling diagnostics: {e}')
+
     def tearDown(self):
         """ Clean up after tests.
         """
@@ -178,6 +196,7 @@ class PubSubRESTServerUnsubscribeTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['is_ok'])
+        self._call_diagnostics()
 
         return
 
