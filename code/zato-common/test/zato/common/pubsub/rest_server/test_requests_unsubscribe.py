@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import time
 from unittest import main
 
 # requests
@@ -42,12 +41,18 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['is_ok'])
-        _ = self._call_diagnostics()
 
-        return
+        # Check diagnostics after subscribe - should show subscription
+        diagnostics_after_subscribe = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_subscribe)
+        self.assertTrue(diagnostics_after_subscribe['is_ok'])
+        self.assertIn('data', diagnostics_after_subscribe)
 
-        # Wait 0.1 second
-        time.sleep(0.1)
+        # Verify subscription exists
+        subscriptions = diagnostics_after_subscribe['data']['subscriptions']
+        self.assertIn(topic, subscriptions)
+        self.assertIn('demo', subscriptions[topic])
+        self.assertIn('sub_key', subscriptions[topic]['demo'])
 
         # Unsubscribe from topic
         response = requests.post(
@@ -57,6 +62,16 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['is_ok'])
+
+        # Check diagnostics after unsubscribe - subscription should be removed
+        diagnostics_after_unsubscribe = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_unsubscribe)
+        self.assertTrue(diagnostics_after_unsubscribe['is_ok'])
+        self.assertIn('data', diagnostics_after_unsubscribe)
+
+        # Verify subscription no longer exists for this topic
+        subscriptions = diagnostics_after_unsubscribe['data']['subscriptions']
+        self.assertNotIn(topic, subscriptions)
 
 # ################################################################################################################################
 # ################################################################################################################################
