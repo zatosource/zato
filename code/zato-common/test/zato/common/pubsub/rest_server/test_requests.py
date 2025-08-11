@@ -9,19 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import http.client as http_client
 import logging
-import os
 import time
-from unittest import main, TestCase
+from unittest import main
 
 # requests
 import requests
-from requests.auth import HTTPBasicAuth
-
-# PyYAML
-from yaml import safe_load as yaml_load
 
 # Zato
-from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
+from zato.common.test.unittest_pubsub_requests import PubSubRESTServerBaseTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,45 +35,9 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubRESTServerTestCase(TestCase):
+class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
-
-    @classmethod
-    def setUpClass(cls):
-        """ Set up test configuration.
-        """
-        # Check if config environment variable exists
-        config_path = os.environ.get('Zato_PubSub_YAML_Config_File')
-        if not config_path:
-            cls.skip_tests = True
-            return
-
-        cls.skip_tests = False
-
-        # Load configuration
-        with open(config_path, 'r') as f:
-            cls.config = yaml_load(f)
-
-        # Extract demo user credentials
-        cls.username = 'demo'
-        cls.password = cls.config['security'][0]['password']
-        cls.auth = HTTPBasicAuth(cls.username, cls.password)
-
-        # Server configuration
-        cls.base_url = 'http://127.0.0.1:44556'
-
-        # Test topics from config
-        cls.test_topics = [
-            cls.config['pubsub_topic'][0]['name'],
-            cls.config['pubsub_topic'][1]['name'],
-            cls.config['pubsub_topic'][2]['name']
-        ]
-
-        # Set up HTTP client patching
-        cls._setup_http_patching()
-
-# ################################################################################################################################
 
     @classmethod
     def _setup_http_patching(cls):
