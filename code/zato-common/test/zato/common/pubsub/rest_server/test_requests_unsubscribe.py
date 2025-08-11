@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import http.client as http_client
 import logging
 import os
 import time
@@ -30,6 +31,25 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Enable HTTP traffic logging
+http_client.HTTPConnection.debuglevel = 1
+
+# Patch HTTPResponse to log response body
+original_read = http_client.HTTPResponse.read
+
+def patched_read(self, amt=None):
+    data = original_read(self, amt)
+    if data:
+        logger = logging.getLogger('http.client.response')
+        try:
+            decoded = data.decode("utf-8")
+            logger.debug(f'Response body: {decoded}')
+        except UnicodeDecodeError:
+            logger.debug(f'Response body (binary): {len(data)} bytes')
+    return data
+
+http_client.HTTPResponse.read = patched_read
 
 # ################################################################################################################################
 # ################################################################################################################################
