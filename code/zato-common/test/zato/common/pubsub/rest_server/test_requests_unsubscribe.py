@@ -42,7 +42,7 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['is_ok'])
-        self._call_diagnostics()
+        _ = self._call_diagnostics()
 
         return
 
