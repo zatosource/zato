@@ -30,6 +30,15 @@ from zato.common.pubsub.util import cleanup_broker_impl, get_broker_config
 # ################################################################################################################################
 # ################################################################################################################################
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -72,6 +81,34 @@ class PubSubRESTServerBaseTestCase(TestCase):
 
         # Set up HTTP client patching
         cls._setup_http_patching()
+
+# ################################################################################################################################
+
+    def setUp(self):
+        """ Skip tests if no config available.
+        """
+        if self.skip_tests:
+            self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
+
+# ################################################################################################################################
+
+    def tearDown(self):
+        """ Clean up after tests.
+        """
+        if self.skip_tests:
+            return
+
+        # Clean up broker
+        broker_config = get_broker_config()
+        _ = cleanup_broker_impl(broker_config, 15672)
+
+        # Unsubscribe from all topics to clear any existing subscriptions
+        for topic_name in self.test_topics:
+            unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
+            _ = requests.post(unsubscribe_url, auth=self.auth)
+            self._call_diagnostics()
+
+# ################################################################################################################################
 
     @classmethod
     def _setup_http_patching(cls):
@@ -118,11 +155,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
         http_client.HTTPConnection.getresponse = patched_getresponse
         http_client.HTTPResponse.read = patched_read
 
-    def setUp(self):
-        """ Skip tests if no config available.
-        """
-        if self.skip_tests:
-            self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
+# ################################################################################################################################
 
     def _call_diagnostics(self):
         """ Call diagnostics endpoint and log the response.
@@ -134,29 +167,11 @@ class PubSubRESTServerBaseTestCase(TestCase):
                 data = response.json()
                 pretty_json = json.dumps(data, indent=2)
                 logger.info(f'Diagnostics response:\n{pretty_json}')
+                return data
             else:
                 logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
         except Exception as e:
             logger.error(f'Error calling diagnostics: {e}')
-
-    def tearDown(self):
-        """ Clean up after tests.
-        """
-        if self.skip_tests:
-            return
-
-        # Clean up broker
-        broker_config = get_broker_config()
-        _ = cleanup_broker_impl(broker_config, 15672)
-
-        # Unsubscribe from all topics to clear any existing subscriptions
-        for topic_name in self.test_topics:
-            try:
-                unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
-                _ = requests.post(unsubscribe_url, auth=self.auth)
-                self._call_diagnostics()
-            except:
-                pass
 
 # ################################################################################################################################
 # ################################################################################################################################
