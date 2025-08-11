@@ -41,7 +41,19 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         subscribe_data = response.json()
         self.assertTrue(subscribe_data['is_ok'])
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after subscribe - should show subscription
+        diagnostics_after_subscribe = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_subscribe)
+        self.assertTrue(diagnostics_after_subscribe['is_ok'])
+        self.assertIn('data', diagnostics_after_subscribe)
+        
+        # Verify subscription exists
+        subscriptions = diagnostics_after_subscribe['data']['subscriptions']
+        self.assertIn(topic_name, subscriptions)
+        self.assertIn('demo', subscriptions[topic_name])
+        self.assertIn('sub_key', subscriptions[topic_name]['demo'])
+        
         self.assertIn('cid', subscribe_data)
 
         # Step 2: Publish a message
@@ -65,7 +77,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertTrue(publish_data['is_ok'])
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after publish - subscription should still exist
+        diagnostics_after_publish = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_publish)
+        self.assertTrue(diagnostics_after_publish['is_ok'])
+        self.assertIn('data', diagnostics_after_publish)
+        
+        # Verify subscription still exists
+        subscriptions = diagnostics_after_publish['data']['subscriptions']
+        self.assertIn(topic_name, subscriptions)
+        self.assertIn('demo', subscriptions[topic_name])
 
         # Step 3: Get messages (with small delay for message delivery)
         time.sleep(0.1)
@@ -87,7 +109,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreater(len(messages_data['data']), 0)
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after getting messages - subscription should still exist
+        diagnostics_after_get = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_get)
+        self.assertTrue(diagnostics_after_get['is_ok'])
+        self.assertIn('data', diagnostics_after_get)
+        
+        # Verify subscription still exists
+        subscriptions = diagnostics_after_get['data']['subscriptions']
+        self.assertIn(topic_name, subscriptions)
+        self.assertIn('demo', subscriptions[topic_name])
 
         # Verify message content
         message = messages_data['data'][0]
@@ -103,7 +135,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         unsubscribe_data = response.json()
         self.assertTrue(unsubscribe_data['is_ok'])
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after unsubscribe - subscription should be removed
+        diagnostics_after_unsubscribe = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_unsubscribe)
+        self.assertTrue(diagnostics_after_unsubscribe['is_ok'])
+        self.assertIn('data', diagnostics_after_unsubscribe)
+        
+        # Verify subscription no longer exists for this topic
+        subscriptions = diagnostics_after_unsubscribe['data']['subscriptions']
+        self.assertNotIn(topic_name, subscriptions)
+        
         self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
@@ -116,7 +158,16 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # Publishing should still work even without subscribers
         self.assertEqual(response.status_code, 200)
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after publish without subscription - should still have no subscriptions
+        diagnostics_after_publish_no_sub = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_publish_no_sub)
+        self.assertTrue(diagnostics_after_publish_no_sub['is_ok'])
+        self.assertIn('data', diagnostics_after_publish_no_sub)
+        
+        # Verify no subscription exists for this topic
+        subscriptions = diagnostics_after_publish_no_sub['data']['subscriptions']
+        self.assertNotIn(topic_name, subscriptions)
 
         # Step 6: Try to get messages - should return 400 error for unsubscribed user
         response = requests.post(
@@ -147,7 +198,18 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             subscribe_data = response.json()
             self.assertTrue(subscribe_data['is_ok'])
-            _ = self._call_diagnostics()
+            
+            # Check diagnostics after subscribe - should show subscription for this topic
+            diagnostics_after_subscribe = self._call_diagnostics()
+            self.assertIsNotNone(diagnostics_after_subscribe)
+            self.assertTrue(diagnostics_after_subscribe['is_ok'])
+            self.assertIn('data', diagnostics_after_subscribe)
+            
+            # Verify subscription exists for this topic
+            subscriptions = diagnostics_after_subscribe['data']['subscriptions']
+            self.assertIn(topic_name, subscriptions)
+            self.assertIn('demo', subscriptions[topic_name])
+            self.assertIn('sub_key', subscriptions[topic_name]['demo'])
 
         # Publish messages to both topics
         messages = {
@@ -173,7 +235,19 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             publish_data = response.json()
             self.assertTrue(publish_data['is_ok'])
-            _ = self._call_diagnostics()
+            
+            # Check diagnostics after publish - subscriptions should still exist
+            diagnostics_after_publish = self._call_diagnostics()
+            self.assertIsNotNone(diagnostics_after_publish)
+            self.assertTrue(diagnostics_after_publish['is_ok'])
+            self.assertIn('data', diagnostics_after_publish)
+            
+            # Verify subscriptions exist for both topics
+            subscriptions = diagnostics_after_publish['data']['subscriptions']
+            self.assertIn(topic1, subscriptions)
+            self.assertIn(topic2, subscriptions)
+            self.assertIn('demo', subscriptions[topic1])
+            self.assertIn('demo', subscriptions[topic2])
 
         # Get all messages
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
@@ -193,7 +267,19 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreaterEqual(len(messages_data['data']), 2)
-        _ = self._call_diagnostics()
+        
+        # Check diagnostics after getting messages - subscriptions should still exist
+        diagnostics_after_get = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_after_get)
+        self.assertTrue(diagnostics_after_get['is_ok'])
+        self.assertIn('data', diagnostics_after_get)
+        
+        # Verify subscriptions exist for both topics
+        subscriptions = diagnostics_after_get['data']['subscriptions']
+        self.assertIn(topic1, subscriptions)
+        self.assertIn(topic2, subscriptions)
+        self.assertIn('demo', subscriptions[topic1])
+        self.assertIn('demo', subscriptions[topic2])
 
         # Verify we got messages from both topics
         received_topics = {msg['topic_name'] for msg in messages_data['data']}
