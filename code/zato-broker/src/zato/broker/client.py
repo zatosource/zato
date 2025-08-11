@@ -185,7 +185,7 @@ class BrokerClient:
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
         """ Publishes a message directly to a specific queue.
         """
-        logger.info(f'Pub to queue -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg:`{msg}`')
+        logger.debug(f'Pub to queue -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg:`{msg}`')
 
         if not isinstance(msg, str):
             msg = dumps(msg)
