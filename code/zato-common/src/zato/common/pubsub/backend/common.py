@@ -365,7 +365,8 @@ class Backend:
         }
 
         try:
-            self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request)
+            # self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request)
+            pass
         except Exception:
             logger.error(f'[{cid}] Failed to create subscription in server: {format_exc()}')
 
