@@ -35,67 +35,6 @@ logging.basicConfig(
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Disable default HTTP traffic logging to avoid duplicates
-http_client.HTTPConnection.debuglevel = 0
-
-# Patch HTTPConnection methods to log with proper format
-original_send = http_client.HTTPConnection.send
-original_getresponse = http_client.HTTPConnection.getresponse
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def patched_send(self, data):
-    logger = logging.getLogger('http.client')
-    if isinstance(data, bytes):
-        logger.debug(f'send: {data.decode("utf-8", errors="replace")}')
-    else:
-        logger.debug(f'send: {data}')
-    return original_send(self, data)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def patched_getresponse(self):
-    response = original_getresponse(self)
-    logger = logging.getLogger('http.client')
-    version = f'HTTP/{response.version // 10}.{response.version % 10}'
-    logger.debug(f'reply: \'{version} {response.status} {response.reason}\\r\\n\'')
-    for header, value in response.getheaders():
-        logger.debug(f'header: {header}: {value}')
-    return response
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-http_client.HTTPConnection.send = patched_send
-http_client.HTTPConnection.getresponse = patched_getresponse
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Patch HTTPResponse to log response body
-original_read = http_client.HTTPResponse.read
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def patched_read(self, amt=None):
-    data = original_read(self, amt)
-    if data:
-        logger = logging.getLogger('http.client.response')
-        try:
-            decoded = data.decode("utf-8")
-            logger.debug(f'Response body: {decoded}')
-        except UnicodeDecodeError:
-            logger.debug(f'Response body (binary): {len(data)} bytes')
-    return data
-
-http_client.HTTPResponse.read = patched_read
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -136,11 +75,65 @@ class PubSubRESTServerTestCase(TestCase):
             cls.config['pubsub_topic'][2]['name']
         ]
 
+        # Set up HTTP client patching
+        cls._setup_http_patching()
+
+# ################################################################################################################################
+
+    @classmethod
+    def _setup_http_patching(cls):
+        """ Set up HTTP client patching for detailed logging.
+        """
+        # Disable default HTTP traffic logging to avoid duplicates
+        http_client.HTTPConnection.debuglevel = 0
+
+        def patched_send(self, data):
+            logger = logging.getLogger('http.client')
+            if isinstance(data, bytes):
+                logger.debug(f'send: {data.decode("utf-8", errors="replace")}')
+            else:
+                logger.debug(f'send: {data}')
+            return cls._original_send(self, data)
+
+        def patched_getresponse(self):
+            response = cls._original_getresponse(self)
+            logger = logging.getLogger('http.client')
+            version = f'HTTP/{response.version // 10}.{response.version % 10}'
+            logger.debug(f'reply: \'{version} {response.status} {response.reason}\\r\\n\'')
+            for header, value in response.getheaders():
+                logger.debug(f'header: {header}: {value}')
+            return response
+
+        def patched_read(self, amt=None):
+            data = cls._original_read(self, amt)
+            if data:
+                logger = logging.getLogger('http.client.response')
+                try:
+                    decoded = data.decode("utf-8")
+                    logger.debug(f'Response body: {decoded}')
+                except UnicodeDecodeError:
+                    logger.debug(f'Response body (binary): {len(data)} bytes')
+            return data
+
+        # Store original methods
+        cls._original_send = http_client.HTTPConnection.send
+        cls._original_getresponse = http_client.HTTPConnection.getresponse
+        cls._original_read = http_client.HTTPResponse.read
+
+        # Apply patches
+        http_client.HTTPConnection.send = patched_send
+        http_client.HTTPConnection.getresponse = patched_getresponse
+        http_client.HTTPResponse.read = patched_read
+
+# ################################################################################################################################
+
     def setUp(self):
         """ Skip tests if no config available.
         """
         if self.skip_tests:
             self.skipTest('Zato_PubSub_YAML_Config environment variable not set')
+
+# ################################################################################################################################
 
     def _call_diagnostics(self):
         """ Call diagnostics endpoint and log the response.
@@ -173,6 +166,7 @@ class PubSubRESTServerTestCase(TestCase):
             try:
                 unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
                 _ = requests.post(unsubscribe_url, auth=self.auth)
+                self._call_diagnostics()
             except:
                 pass
 
