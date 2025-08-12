@@ -74,7 +74,7 @@ class ConsumerBackend(Backend):
     def start_public_queue_consumer(
         self,
         cid: 'str',
-        topic_name: 'str',
+        topic_name_list: 'strlist',
         sec_name: 'str',
         sub_key: 'str',
         is_active: 'bool',
@@ -92,12 +92,14 @@ class ConsumerBackend(Backend):
         # .. create a new consumer if one doesn't exist yet ..
         with _lock:
 
+            # .. start by adding all the bindings for input topics ..
+            for topic_name in topic_name_list:
+                create_subscription_bindings(self.broker_client, cid, sub_key, CommonModuleCtx.Exchange_Name, topic_name)
+
+            # .. now start a consumer unless we already have one ..
             if sub_key not in self.consumers:
 
                 logger.debug(f'[{cid}] Creating a new consumer for sub_key=`{sub_key}`')
-
-                # .. create bindings for the topic ..
-                create_subscription_bindings(self.broker_client, cid, sub_key, CommonModuleCtx.Exchange_Name, topic_name)
 
                 # .. start a background consumer ..
                 result = spawn_greenlet(
@@ -110,13 +112,13 @@ class ConsumerBackend(Backend):
                 )
 
                 # .. get the actual consumer object ..
-                consumer:'Consumer' = result.get()
+                consumer:'Consumer' = result.get() # type: ignore
 
                 # .. store it for later use ..
                 self._add_consumer(sub_key, consumer)
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}` (running={is_active})')
+        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name_list}` with key `{sub_key}` (running={is_active})')
 
 # ################################################################################################################################
 
@@ -180,16 +182,14 @@ class ConsumerBackend(Backend):
         sec_name:'str' = msg['sec_name']
         topic_name_list:'strlist' = msg['topic_name_list']
 
-        # Process each topic in the list
-        for topic_name in topic_name_list:
-            _ = self.start_public_queue_consumer(
-                cid,
-                topic_name,
-                sec_name,
-                sub_key,
-                is_active,
-                self.worker_store.on_pubsub_public_message_callback
-            )
+        _ = self.start_public_queue_consumer(
+            cid,
+            topic_name_list,
+            sec_name,
+            sub_key,
+            is_active,
+            self.worker_store.on_pubsub_public_message_callback
+        )
 
 # ################################################################################################################################
 
