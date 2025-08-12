@@ -41,6 +41,7 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
             f'{self.base_url}/pubsub/subscribe/topic/{topic}',
             auth=self.auth
         )
+
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['is_ok'])

@@ -345,7 +345,7 @@ class Edit(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 self.broker_client.publish(pubsub_msg)
-                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                # self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -480,10 +480,10 @@ class _BaseModifyTopicList(AdminService):
                     if not topic:
                         raise Exception(f'Topic `{topic_name}` not found')
 
-                    # Check if the security definition has permission to subscribe to this topic
+                    # Check if the security definition has permission to subscribe to or unsubscribe from this topic
                     pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
                     if not pattern_matched:
-                        msg = f'User `{sec_def.username}` does not have permission to subscribe to topic `{topic_name}`'
+                        msg = f'User `{sec_def.username}` does not have permission for action `{self.action}` on topic `{topic_name}`'
                         raise Exception(msg)
 
                     new_topic_names.append(topic_name)
