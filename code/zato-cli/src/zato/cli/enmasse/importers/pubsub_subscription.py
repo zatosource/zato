@@ -192,24 +192,33 @@ class PubSubSubscriptionImporter:
         """ Determines if a pubsub subscription definition should be created.
         """
 
-        print()
-        print(111, db_defs)
-        print()
-
-        security_name = yaml_def['security']
-        topic_list = yaml_def['topic_list']
+        topic_list = sorted(yaml_def['topic_list'])
         delivery_type = yaml_def['delivery_type']
 
-        # Create a key based on security, topics, and delivery type
-        key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
-        return key not in db_defs
+        # Check if any existing subscription matches security, topics, and delivery type
+        for db_def in db_defs.values():
+
+            db_sec_base_id = db_def.get('sec_base_id')
+            db_delivery_type = db_def.get('delivery_type')
+
+            db_topic_list = db_def.get('topic_name_list', [])
+            db_topic_list = sorted(db_topic_list)
+
+            has_sec_base_id = db_sec_base_id is not None
+            delivery_type_matches = db_delivery_type == delivery_type
+            topic_list_matches = db_topic_list == topic_list
+
+            if has_sec_base_id and delivery_type_matches and topic_list_matches:
+                return False
+
+        return True
 
 # ################################################################################################################################
 
     def should_update_pubsub_subscription_definition(self, yaml_def:'stranydict', db_def:'stranydict') -> 'bool':
         """ Determines if a pubsub subscription definition should be updated by comparing YAML and DB definitions.
         """
-        z
+
         # Compare delivery_type
         yaml_delivery_type = yaml_def.get('delivery_type')
         db_delivery_type = db_def.get('delivery_type')
