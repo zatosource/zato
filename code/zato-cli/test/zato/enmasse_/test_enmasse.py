@@ -87,7 +87,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_import_export_flow(self) -> 'None':
+    def test_enmasse_import_export_flow(self) -> 'None':
         """ Test a complete import-export flow to verify data consistency.
         """
 
@@ -146,6 +146,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                 os.remove(export_path)
 
             self._cleanup(test_suffix)
+
+# ################################################################################################################################
 
     def test_enmasse_with_env_file(self) -> 'None':
         """Test enmasse with environment variables loaded from a file."""
