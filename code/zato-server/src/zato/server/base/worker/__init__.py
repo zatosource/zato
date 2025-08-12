@@ -40,8 +40,8 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, spawn_greenlet, \
-    update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, rebuild_subscription_dict_list, \
+    spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -864,9 +864,22 @@ class WorkerStore(_WorkerStoreBase):
         # Local aliases
         cid = new_cid()
 
-        for item in self.worker_config.pubsub_subs.values():
+        print()
+        print(list(self.worker_config.pubsub_subs.values()))
+        print()
+
+        pubsub_subs = self.worker_config.pubsub_subs.values()
+        pubsub_subs = rebuild_subscription_dict_list(pubsub_subs)
+
+        for item in pubsub_subs:
 
             config = item['config']
+
+            print()
+            print(111, config)
+            print()
+
+            continue
 
             topic_name = config['topic_name']
             sec_name = config['sec_name']
