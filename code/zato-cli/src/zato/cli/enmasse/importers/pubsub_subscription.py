@@ -188,14 +188,25 @@ class PubSubSubscriptionImporter:
 
 # ################################################################################################################################
 
+    def find_existing_subscription_for_security(self, db_defs:'anydict', sec_base_id:'int') -> 'stranydict':
+        """ Finds existing subscription for a security definition. Returns None if not found.
+        """
+        for db_def in db_defs.values():
+            db_sec_base_id = db_def.get('sec_base_id')
+            if db_sec_base_id == sec_base_id:
+                return db_def
+
+        raise Exception(f'Could not find sec_base_id `{sec_base_id}` in db_defs `{db_defs}`')
+
+# ################################################################################################################################
+
     def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict', sec_base_id:'int') -> 'bool':
         """ Determines if a pubsub subscription definition should be created.
         """
         # Check if any existing subscription exists for this security definition
-        for db_def in db_defs.values():
-            db_sec_base_id = db_def.get('sec_base_id')
-            if db_sec_base_id == sec_base_id:
-                return False
+        existing_subscription = self.find_existing_subscription_for_security(db_defs, sec_base_id)
+        if existing_subscription:
+            return False
 
         return True
 
@@ -281,7 +292,7 @@ class PubSubSubscriptionImporter:
 
         for yaml_def in subscription_list:
             security_name = yaml_def['security']
-            topic_list = yaml_def['topic_list']
+            topic_list = yaml_def.get('topic_list') or []
             delivery_type = yaml_def['delivery_type']
 
             logger.info('Processing YAML pubsub subscription definition: security=%s, topics=%s, delivery_type=%s',
@@ -342,14 +353,10 @@ class PubSubSubscriptionImporter:
                     'cluster_id': instance.cluster_id
                 }
             else:
-                # Find existing subscription for this security definition
-                existing_sub = None
-                for sub_def in db_defs.values():
-                    if sub_def['sec_base_id'] == sec_base_id:
-                        existing_sub = sub_def
-                        break
+                existing_sub = self.find_existing_subscription_for_security(db_defs, sec_base_id)
 
-                if existing_sub and self.should_update_pubsub_subscription_definition(yaml_def, existing_sub):
+                # Update existing subscription
+                if self.should_update_pubsub_subscription_definition(yaml_def, existing_sub):
                     subscription_def['id'] = existing_sub['id']
                     instance = self.update_pubsub_subscription_definition(subscription_def, session)
                     updated.append(instance)
