@@ -16,7 +16,6 @@ from gevent.lock import RLock
 from zato.common.util.api import spawn_greenlet
 from zato.common.pubsub.backend.common import Backend, ModuleCtx as CommonModuleCtx
 from zato.common.pubsub.consumer import start_public_consumer
-from zato.common.pubsub.util import create_subscription_bindings
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,9 +91,8 @@ class ConsumerBackend(Backend):
         # .. create a new consumer if one doesn't exist yet ..
         with _lock:
 
-            # .. start by adding all the bindings for input topics ..
-            for topic_name in topic_name_list:
-                create_subscription_bindings(self.broker_client, cid, sub_key, CommonModuleCtx.Exchange_Name, topic_name)
+            # .. update all the bindings for input topics ..
+            binding_changes = self.broker_client.update_bindings(cid, sub_key, CommonModuleCtx.Exchange_Name, sub_key, topic_name_list)
 
             # .. now start a consumer unless we already have one ..
             if sub_key not in self.consumers:
@@ -118,7 +116,13 @@ class ConsumerBackend(Backend):
                 self._add_consumer(sub_key, consumer)
 
         # .. confirm it's started ..
-        logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name_list}` with key `{sub_key}` (running={is_active})')
+        if binding_changes['added'] or binding_changes['removed']:
+            if binding_changes['added']:
+                logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{binding_changes["added"]}` with key `{sub_key}` (running={is_active})')
+            if binding_changes['removed']:
+                logger.info(f'[{cid}] Unsubscribed `{sec_name}` from `{binding_changes["removed"]}` with key `{sub_key}`')
+        else:
+            logger.info(f'[{cid}] Sub key `{sub_key}` was already subscribed to all topics `{topic_name_list}` (running={is_active})')
 
 # ################################################################################################################################
 

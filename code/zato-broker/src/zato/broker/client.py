@@ -751,7 +751,7 @@ class BrokerClient:
         queue_name: 'str',
         new_routing_key_list: 'strlist',
         conn: 'BrokerConnection | None'=None,
-    ) -> 'None':
+    ) -> 'dict':
 
         # Get broker connection from input or build a new one
         conn = conn or self.get_connection()
@@ -770,24 +770,30 @@ class BrokerClient:
         # If sets are identical, do nothing
         if current_keys_set == new_keys_set:
             logger.debug(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
-            return
+            return {'added': [], 'removed': []}
 
         logger.info(f'[{cid}] [{sub_key}] Current routing keys: {current_routing_keys}')
         logger.info(f'[{cid}] [{sub_key}] New routing keys: {new_routing_key_list}')
 
         # Find routing keys to add (in new list but not in current list)
+        added_keys = []
         for routing_key in new_routing_key_list:
             if routing_key not in current_routing_keys:
                 logger.info(f'[{cid}] [{sub_key}] Adding binding: {routing_key}')
                 self.create_bindings(cid, sub_key, exchange_name, queue_name, routing_key, conn)
+                added_keys.append(routing_key)
 
         # Find routing keys to remove (in current list but not in new list)
+        removed_keys = []
         for routing_key in current_routing_keys:
             if routing_key not in new_routing_key_list:
                 logger.info(f'[{cid}] [{sub_key}] Removing binding: {routing_key}')
                 self.delete_bindings(cid, sub_key, exchange_name, queue_name, routing_key, conn)
+                removed_keys.append(routing_key)
 
         logger.info(f'[{cid}] [{sub_key}] Updated bindings for exchange={exchange_name} -> queue={queue_name} -> {new_routing_key_list}')
+
+        return {'added': added_keys, 'removed': removed_keys}
 
 # ################################################################################################################################
 
