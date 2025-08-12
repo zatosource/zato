@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import timedelta
 from json import loads
 from logging import INFO, WARN
 from pathlib import Path
@@ -46,7 +46,7 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
-    register_diag_handlers, spawn_greenlet, StaticConfig
+    register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -745,7 +745,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Will be None if we are not running in background.
         if not zato_deployment_key:
-            zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
+            zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
 
         # Each time a server starts a new deployment key is generated to uniquely
         # identify this particular time the server is running.
@@ -953,6 +953,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. now reload it ..
         self.worker_store.init()
+        self.worker_store.init_pubsub()
 
         # .. notify the pub/sub server too ..
         pubsub_msg = Bunch()
@@ -996,12 +997,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # psutil
         import psutil
 
-        now = datetime.utcnow()
+        now = utcnow()
         stop_at = now + timedelta(seconds=cast_('int', self.stop_after))
 
         while now < stop_at:
             logger.info(f'Now is {now}; waiting to stop until {stop_at}')
-            now = datetime.utcnow()
+            now = utcnow()
             sleep(1)
 
         logger.info(f'Stopping Zato after {self.stop_after}s')
@@ -1174,7 +1175,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. indicate the message has not been processed
         except Exception:
-            logger.warn('Broker message could not be processed: %s', format_exc())
+            logger.warning('Broker message could not be processed: %s', format_exc())
             amqp_msg.reject(requeue=True)
 
         # .. otherwise, confirm it's been consumed.
@@ -1242,10 +1243,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if isinstance(data, bytes):
             data = data.decode('utf8')
 
-        if data and data.startswith((_prefix, _marker)):
-            return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
+        if data and data.startswith((_prefix, _marker)): # type: ignore
+            return self.decrypt_no_prefix(data.replace(_prefix, '', 1)) # type: ignore
         else:
-            return data # Already decrypted, return as is
+            return data # Already decrypted, return as is # type: ignore
 
 # ################################################################################################################################
 
@@ -1281,7 +1282,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         set of server processes. It needs to be added to the arbiter because
         we want for each worker to be (re-)started to see the same key.
         """
-        arbiter.zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
+        arbiter.zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
 
 # ################################################################################################################################
 
@@ -1290,7 +1291,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Invoke cleanup procedures
         app:'ParallelServer' = worker.app.zato_wsgi_app
-        app.cleanup_on_stop()
+        _ = app.cleanup_on_stop()
 
 # ################################################################################################################################
 
