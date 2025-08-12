@@ -12,6 +12,9 @@ from logging import getLogger
 from socket import error as socket_error
 from traceback import format_exc
 
+# amqp
+from amqp.exceptions import ConsumerCancelled
+
 # gevent
 from gevent import sleep, spawn
 
@@ -266,9 +269,11 @@ class Consumer:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
                             pass
+                        except ConsumerCancelled as e:
+                            logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', connection.as_uri(), e.message)
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
-                except Exception as e:
+                except Exception:
                     try:
 
                         # .. this flag is to ensure we don't log too much ..
