@@ -55,14 +55,6 @@ class ConsumerBackend(Backend):
     def _add_consumer(self, sub_key:'str', consumer:'Consumer') -> 'None':
         self.consumers[sub_key] = consumer
 
-        logger.warning('AAA-1 Added consumer for %s -> %s', sub_key, consumer)
-
-        # z
-
-        print()
-        print(111)
-        print()
-
 # ################################################################################################################################
 
     def _remove_consumer(self, sub_key:'str') -> 'None':
@@ -122,7 +114,7 @@ class ConsumerBackend(Backend):
         added_msg = f'[{cid}] Successfully subscribed `{sec_name}` to `{added}` with key `{sub_key}`, all topics `{topic_name_list}` (running={is_active})'
         remaining_topics = sorted(topic for topic in topic_name_list if topic not in removed)
         removed_msg = f'[{cid}] Unsubscribed `{sec_name}` from `{removed}` with key `{sub_key}`, still subscribed to `{remaining_topics}`'
-        not_changed_msg = f'[{cid}] Sub key `{sub_key}` was already subscribed to all topics `{topic_name_list}` (running={is_active})'
+        not_changed_msg = f'[{cid}] Topics for `{sub_key}` are `{topic_name_list}` (running={is_active})'
 
         if added or removed:
             if added:
