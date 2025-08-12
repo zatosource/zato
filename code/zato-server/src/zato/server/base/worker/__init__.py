@@ -32,7 +32,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -40,7 +40,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, \
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, spawn_greenlet, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
@@ -873,7 +873,7 @@ class WorkerStore(_WorkerStoreBase):
             sub_key = config['sub_key']
             is_active = config['is_active']
 
-            _ = spawn(
+            _ = spawn_greenlet(
                 self.pubsub_consumer_backend.start_public_queue_consumer,
                 cid,
                 topic_name,
@@ -881,6 +881,7 @@ class WorkerStore(_WorkerStoreBase):
                 sub_key,
                 is_active,
                 self.on_pubsub_public_message_callback,
+                timeout=10
             )
 
 # ################################################################################################################################

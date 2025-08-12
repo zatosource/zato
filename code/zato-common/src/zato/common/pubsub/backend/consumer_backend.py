@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # gevent
-from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
@@ -54,6 +53,24 @@ class ConsumerBackend(Backend):
 
 # ################################################################################################################################
 
+    def _add_consumer(self, sub_key:'str', consumer:'Consumer') -> 'None':
+        self.consumers[sub_key] = consumer
+
+        logger.warning('AAA-1 Added consumer for %s -> %s', sub_key, consumer)
+
+        # z
+
+        print()
+        print(111)
+        print()
+
+# ################################################################################################################################
+
+    def _remove_consumer(self, sub_key:'str') -> 'None':
+        _ = self.consumers.pop(sub_key)
+
+# ################################################################################################################################
+
     def start_public_queue_consumer(
         self,
         cid: 'str',
@@ -83,7 +100,7 @@ class ConsumerBackend(Backend):
                 create_subscription_bindings(self.broker_client, cid, sub_key, CommonModuleCtx.Exchange_Name, topic_name)
 
                 # .. start a background consumer ..
-                result = spawn(
+                result = spawn_greenlet(
                     start_public_consumer,
                     cid,
                     sec_name,
@@ -96,7 +113,7 @@ class ConsumerBackend(Backend):
                 consumer:'Consumer' = result.get()
 
                 # .. store it for later use ..
-                self.consumers[sub_key] = consumer
+                self._add_consumer(sub_key, consumer)
 
         # .. confirm it's started ..
         logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{topic_name}` with key `{sub_key}` (running={is_active})')
@@ -110,7 +127,7 @@ class ConsumerBackend(Backend):
 
             # .. first, stop it ..
             consumer.stop()
-            _ = self.consumers.pop(sub_key)
+            self._remove_consumer(sub_key)
 
             # .. now, log success.
             logger.debug(f'[{cid}] Stopped consumer for `{sub_key}`')
@@ -189,6 +206,9 @@ class ConsumerBackend(Backend):
         # Do we have such a consumer ..
         if consumer := self.consumers.get(sub_key):
 
+            err_msg = f'[{cid}] Found consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
+            logger.warning(err_msg)
+
             # .. get a queue for that consumer ..
             queue_name = consumer.config.queue
 
@@ -216,7 +236,8 @@ class ConsumerBackend(Backend):
 
         # .. no consumer = we cannot continue.
         else:
-            logger.warning(f'[{cid}] No such consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}')
+            err_msg = f'[{cid}] on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT: No such consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
+            logger.warning(err_msg)
 
 # ################################################################################################################################
 
