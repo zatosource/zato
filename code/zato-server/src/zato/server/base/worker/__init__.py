@@ -864,10 +864,6 @@ class WorkerStore(_WorkerStoreBase):
         # Local aliases
         cid = new_cid()
 
-        print()
-        print(list(self.worker_config.pubsub_subs.values()))
-        print()
-
         pubsub_subs = self.worker_config.pubsub_subs.values()
         pubsub_subs = rebuild_subscription_dict_list(pubsub_subs)
 
