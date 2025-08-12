@@ -875,13 +875,7 @@ class WorkerStore(_WorkerStoreBase):
 
             config = item['config']
 
-            print()
-            print(111, config)
-            print()
-
-            continue
-
-            topic_name = config['topic_name']
+            topic_name_list = config['topic_name_list']
             sec_name = config['sec_name']
             sub_key = config['sub_key']
             is_active = config['is_active']
@@ -889,7 +883,7 @@ class WorkerStore(_WorkerStoreBase):
             _ = spawn_greenlet(
                 self.pubsub_consumer_backend.start_public_queue_consumer,
                 cid,
-                topic_name,
+                topic_name_list,
                 sec_name,
                 sub_key,
                 is_active,

@@ -2003,16 +2003,16 @@ def replace_secrets(data:'any_') -> 'strdict':
 # ################################################################################################################################
 
 def rebuild_subscription_dict_list(subscription_list):
-    """ Rebuilds a list of subscription dictionaries by consolidating multiple rows 
+    """ Rebuilds a list of subscription dictionaries by consolidating multiple rows
     for the same sub_key into a single dictionary with a topic_name_list.
     """
     result = {}
-    
+
     for item in subscription_list:
         config = item['config']
         sub_key = config['sub_key']
         topic_name = config['topic_name']
-        
+
         if sub_key not in result:
             # Create new entry with all attributes except topic_name
             new_config = config.copy()
@@ -2025,7 +2025,13 @@ def rebuild_subscription_dict_list(subscription_list):
             existing_config = existing_item['config']
             existing_topic_list = existing_config['topic_name_list']
             existing_topic_list.append(topic_name)
-    
+
+    # Sort topic names in each subscription
+    for item in result.values():
+        config = item['config']
+        topic_list = config['topic_name_list']
+        topic_list.sort()
+
     return list(result.values())
 
 # ################################################################################################################################

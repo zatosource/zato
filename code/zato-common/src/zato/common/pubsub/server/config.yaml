@@ -27,5 +27,4 @@ pubsub_subscription:
     max_retry_time: 365d
     topic_list:
       - demo.1
-      - demo.2
       - demo.3
