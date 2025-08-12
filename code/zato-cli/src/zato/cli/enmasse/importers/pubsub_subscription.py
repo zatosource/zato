@@ -74,11 +74,35 @@ class PubSubSubscriptionImporter:
         out = {}
 
         logger.info('Retrieving pubsub subscription definitions from database for cluster_id=%s', cluster_id)
-        query = session.query(PubSubSubscription).filter(PubSubSubscription.cluster_id == cluster_id)
-        subscriptions = query.all()
+
+        # Single query to get subscriptions with their topic names
+        query = session.query(
+            PubSubSubscription,
+            PubSubTopic.name
+        ).outerjoin(
+            PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
+        ).outerjoin(
+            PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
+        ).filter(PubSubSubscription.cluster_id == cluster_id)
+
+        results = query.all()
+
+        # Group topics by subscription
+        subscription_topics = {}
+        for subscription, topic_name in results:
+            if subscription.sub_key not in subscription_topics:
+                subscription_topics[subscription.sub_key] = {
+                    'subscription': subscription,
+                    'topics': []
+                }
+            if topic_name:
+                subscription_topics[subscription.sub_key]['topics'].append(topic_name)
 
         # Process subscriptions directly
-        for subscription in subscriptions:
+        for sub_key, data in subscription_topics.items():
+            subscription = data['subscription']
+            topic_names = sorted(data['topics'])
+
             subscription_dict = {
                 'id': subscription.id,
                 'sub_key': subscription.sub_key,
@@ -88,7 +112,8 @@ class PubSubSubscriptionImporter:
                 'rest_push_endpoint_id': subscription.rest_push_endpoint_id,
                 'push_service_name': subscription.push_service_name,
                 'is_active': subscription.is_active,
-                'cluster_id': subscription.cluster_id
+                'cluster_id': subscription.cluster_id,
+                'topic_name_list': topic_names
             }
             out[subscription.sub_key] = subscription_dict
 
@@ -166,12 +191,17 @@ class PubSubSubscriptionImporter:
     def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict') -> 'bool':
         """ Determines if a pubsub subscription definition should be created.
         """
+
+        print()
+        print(111, db_defs)
+        print()
+
         security_name = yaml_def['security']
         topic_list = yaml_def['topic_list']
         delivery_type = yaml_def['delivery_type']
 
         # Create a key based on security, topics, and delivery type
-        key = f"{security_name}_{sorted(topic_list)}_{delivery_type}"
+        key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
         return key not in db_defs
 
 # ################################################################################################################################
@@ -179,6 +209,7 @@ class PubSubSubscriptionImporter:
     def should_update_pubsub_subscription_definition(self, yaml_def:'stranydict', db_def:'stranydict') -> 'bool':
         """ Determines if a pubsub subscription definition should be updated by comparing YAML and DB definitions.
         """
+        z
         # Compare delivery_type
         yaml_delivery_type = yaml_def.get('delivery_type')
         db_delivery_type = db_def.get('delivery_type')
@@ -288,9 +319,10 @@ class PubSubSubscriptionImporter:
                     subscription_def[key] = value
 
             # Create a key for tracking
-            key = f"{security_name}_{sorted(topic_list)}_{delivery_type}"
+            key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
 
             if self.should_create_pubsub_subscription_definition(yaml_def, db_defs):
+
                 # Create new definition
                 instance = self.create_pubsub_subscription_definition(subscription_def, session)
                 created.append(instance)
