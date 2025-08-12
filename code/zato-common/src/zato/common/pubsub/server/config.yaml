@@ -1,12 +1,10 @@
 security:
-
-  - name: demo.basic_auth.1
+  - name: demo
     type: basic_auth
     username: demo
     password: demo
 
 pubsub_topic:
-
   - name: demo.1
     description: Demo topic 1
 
@@ -17,23 +15,16 @@ pubsub_topic:
     description: Demo topic 3
 
 pubsub_permission:
-
-  - security: demo.basic_auth.1
+  - security: demo
     pub:
-      - demo.1
-      - demo.2
-      - demo.3
+      - demo.*
     sub:
-      - demo.1
-      - demo.2
-      - demo.3
+      - demo.*
 
 pubsub_subscription:
-
-  - security: demo.basic_auth.1
+  - security: demo
     delivery_type: pull
     max_retry_time: 365d
     topic_list:
       - demo.1
-      - demo.2
       - demo.3
