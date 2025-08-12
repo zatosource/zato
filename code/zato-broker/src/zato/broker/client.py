@@ -712,7 +712,7 @@ class BrokerClient:
         exchange = Exchange(exchange_name, type='topic', durable=True)
 
         # Unbind the queue from the exchange with the topic name as the routing key
-        logger.info(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
+        logger.debug(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         # Get a channel from the connection
         channel = conn.channel()
