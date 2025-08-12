@@ -116,13 +116,20 @@ class ConsumerBackend(Backend):
                 self._add_consumer(sub_key, consumer)
 
         # .. confirm it's started ..
-        if binding_changes['added'] or binding_changes['removed']:
-            if binding_changes['added']:
-                logger.info(f'[{cid}] Successfully subscribed `{sec_name}` to `{binding_changes["added"]}` with key `{sub_key}` (running={is_active})')
-            if binding_changes['removed']:
-                logger.info(f'[{cid}] Unsubscribed `{sec_name}` from `{binding_changes["removed"]}` with key `{sub_key}`')
+        added = binding_changes['added']
+        removed = binding_changes['removed']
+
+        added_msg = f'[{cid}] Successfully subscribed `{sec_name}` to `{added}` with key `{sub_key}` (running={is_active})'
+        removed_msg = f'[{cid}] Unsubscribed `{sec_name}` from `{removed}` with key `{sub_key}`'
+        not_changed_msg = f'[{cid}] Sub key `{sub_key}` was already subscribed to all topics `{topic_name_list}` (running={is_active})'
+
+        if added or removed:
+            if added:
+                logger.info(added_msg)
+            if removed:
+                logger.info(removed_msg)
         else:
-            logger.info(f'[{cid}] Sub key `{sub_key}` was already subscribed to all topics `{topic_name_list}` (running={is_active})')
+            logger.info(not_changed_msg)
 
 # ################################################################################################################################
 
@@ -217,7 +224,7 @@ class ConsumerBackend(Backend):
             queue_name = consumer.config.queue
 
             # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
-            self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
+            _ = self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
 
             # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
 
