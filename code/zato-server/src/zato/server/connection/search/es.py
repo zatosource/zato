@@ -22,4 +22,4 @@ class ElasticSearchConnStore(BaseStore):
     """ Stores connections to ElasticSearch.
     """
     def create_impl(self, config, config_no_sensitive):
-        return Elasticsearch(config.hosts.splitlines(), timeout=float(config.timeout), send_get_body_as=config.body_as)
+        return Elasticsearch(config.hosts.splitlines())

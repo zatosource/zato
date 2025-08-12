@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import cast_
@@ -45,9 +44,9 @@ class CloudMicrosoft365Wrapper(Wrapper):
         try:
             conn = Microsoft365Client(self.config)
             _ = self.client.put_client(conn)
-        except Exception:
+        except Exception as e:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',
-                self.config['name'], format_exc())
+                self.config['name'], e)
 
 # ################################################################################################################################
 

@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # gevent
 from gevent.lock import RLock
@@ -24,7 +21,7 @@ from zato.server.connection.queue import ConnectionQueue
 from six import PY2
 
 if PY2:
-    import openerplib as client_lib
+    import openerplib as client_lib # type: ignore
 else:
     import odoolib as client_lib
 
@@ -73,9 +70,9 @@ class OdooWrapper:
 
         try:
             ping_odoo(conn)
-        except Exception:
-            logger.warning('Could not ping Odoo (%s), e:`%s`', self.config.name, format_exc())
+        except Exception as e:
+            logger.warning('Could not ping Odoo (%s), e:`%s`', self.config.name, e)
 
-        self.client.put_client(conn)
+        _ = self.client.put_client(conn)
 
 # ################################################################################################################################
