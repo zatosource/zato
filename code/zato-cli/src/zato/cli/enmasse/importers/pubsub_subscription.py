@@ -188,27 +188,13 @@ class PubSubSubscriptionImporter:
 
 # ################################################################################################################################
 
-    def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict') -> 'bool':
+    def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict', sec_base_id:'int') -> 'bool':
         """ Determines if a pubsub subscription definition should be created.
         """
-
-        topic_list = sorted(yaml_def['topic_list'])
-        delivery_type = yaml_def['delivery_type']
-
-        # Check if any existing subscription matches security, topics, and delivery type
+        # Check if any existing subscription exists for this security definition
         for db_def in db_defs.values():
-
             db_sec_base_id = db_def.get('sec_base_id')
-            db_delivery_type = db_def.get('delivery_type')
-
-            db_topic_list = db_def.get('topic_name_list', [])
-            db_topic_list = sorted(db_topic_list)
-
-            has_sec_base_id = db_sec_base_id is not None
-            delivery_type_matches = db_delivery_type == delivery_type
-            topic_list_matches = db_topic_list == topic_list
-
-            if has_sec_base_id and delivery_type_matches and topic_list_matches:
+            if db_sec_base_id == sec_base_id:
                 return False
 
         return True
@@ -239,6 +225,13 @@ class PubSubSubscriptionImporter:
 
         if yaml_is_active is not db_is_active:
             logger.info('is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
+            return True
+
+        # Compare topic lists
+        yaml_topic_list = sorted(yaml_def.get('topic_list', []))
+        db_topic_list = sorted(db_def.get('topic_name_list', []))
+        if yaml_topic_list != db_topic_list:
+            logger.info('topic_list differs: YAML=%s, DB=%s', yaml_topic_list, db_topic_list)
             return True
 
         return False
@@ -330,7 +323,7 @@ class PubSubSubscriptionImporter:
             # Create a key for tracking
             key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
 
-            if self.should_create_pubsub_subscription_definition(yaml_def, db_defs):
+            if self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id):
 
                 # Create new definition
                 instance = self.create_pubsub_subscription_definition(subscription_def, session)
@@ -349,11 +342,10 @@ class PubSubSubscriptionImporter:
                     'cluster_id': instance.cluster_id
                 }
             else:
-                # Find existing subscription to update
+                # Find existing subscription for this security definition
                 existing_sub = None
-                for _, sub_def in db_defs.items():
-                    if (sub_def['sec_base_id'] == sec_base_id and
-                        sub_def['delivery_type'] == delivery_type):
+                for sub_def in db_defs.values():
+                    if sub_def['sec_base_id'] == sec_base_id:
                         existing_sub = sub_def
                         break
 
