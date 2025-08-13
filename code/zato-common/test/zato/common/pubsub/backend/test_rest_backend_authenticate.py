@@ -177,7 +177,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
 
         # Add user with empty password
         empty_password_user = 'empty_password_user'
-        self.rest_server.users[empty_password_user] = self.empty_password
+        self.rest_server.users[empty_password_user] = {'sec_name': 'empty_sec_def', 'password': self.empty_password}
 
         # Create auth header with empty password
         auth_header = self._create_basic_auth_header(empty_password_user, self.empty_password)
@@ -238,7 +238,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
         # Add user with colon in password
         colon_password_user = 'colon_password_user'
         colon_password = 'password:with:colons'
-        self.rest_server.users[colon_password_user] = colon_password
+        self.rest_server.users[colon_password_user] = {'sec_name': 'colon_sec_def', 'password': colon_password}
 
         # Create auth header with colon in password
         auth_header = self._create_basic_auth_header(colon_password_user, colon_password)
@@ -350,7 +350,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
 
         # Create user with initial password
         initial_password = 'initial_password_123'
-        self.rest_server.users[self.test_username] = initial_password
+        self.rest_server.users[self.test_username] = {'sec_name': 'test_sec_def', 'password': initial_password}
 
         # Verify authentication works with initial password
         auth_header = self._create_basic_auth_header(self.test_username, initial_password)
@@ -360,7 +360,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
 
         # Change password
         new_password = 'new_password_456'
-        self.rest_server.users[self.test_username] = new_password
+        self.rest_server.users[self.test_username] = {'sec_name': 'test_sec_def', 'password': new_password}
 
         # Verify old password no longer works
         old_auth_header = self._create_basic_auth_header(self.test_username, initial_password)
@@ -382,10 +382,10 @@ class RESTBackendAuthenticateTestCase(TestCase):
         # Create user with initial password
         initial_password = 'initial_password_123'
         empty_password_user = 'empty_password_change_user'
-        self.rest_server.users[empty_password_user] = initial_password
+        self.rest_server.users[empty_password_user] = {'sec_name': 'empty_sec_def', 'password': initial_password}
 
         # Change password to empty
-        self.rest_server.users[empty_password_user] = ''
+        self.rest_server.users[empty_password_user] = {'sec_name': 'empty_sec_def', 'password': ''}
 
         # Verify old password no longer works
         old_auth_header = self._create_basic_auth_header(empty_password_user, initial_password)
@@ -413,7 +413,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
         password2 = 'password_2'
         password3 = 'password_3'
 
-        self.rest_server.users[password_change_user] = password1
+        self.rest_server.users[password_change_user] = {'sec_name': 'change_sec_def', 'password': password1}
 
         # Verify first password works
         auth_header1 = self._create_basic_auth_header(password_change_user, password1)
@@ -423,7 +423,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
         self.assertEqual(result, password_change_user)
 
         # Change to second password
-        self.rest_server.users[password_change_user] = password2
+        self.rest_server.users[password_change_user] = {'sec_name': 'change_sec_def', 'password': password2}
 
         # Verify second password works and first doesn't
         auth_header2 = self._create_basic_auth_header(password_change_user, password2)
@@ -436,7 +436,7 @@ class RESTBackendAuthenticateTestCase(TestCase):
             _ = self.rest_server.authenticate(self.test_cid, environ1)
 
         # Change to third password
-        self.rest_server.users[password_change_user] = password3
+        self.rest_server.users[password_change_user] = {'sec_name': 'change_sec_def', 'password': password3}
 
         # Verify third password works and previous don't
         auth_header3 = self._create_basic_auth_header(password_change_user, password3)
@@ -460,10 +460,10 @@ class RESTBackendAuthenticateTestCase(TestCase):
         initial_password = 'simple_password'
         new_password = r'complex!@#$%^&*()_+{}|:<>?[]\;\',./'
 
-        self.rest_server.users[special_change_user] = initial_password
+        self.rest_server.users[special_change_user] = {'sec_name': 'special_sec_def', 'password': initial_password}
 
         # Change to password with special characters
-        self.rest_server.users[special_change_user] = new_password
+        self.rest_server.users[special_change_user] = {'sec_name': 'special_sec_def', 'password': new_password}
 
         # Verify old password no longer works
         old_auth_header = self._create_basic_auth_header(special_change_user, initial_password)
