@@ -442,7 +442,7 @@ class _BaseModifyTopicList(AdminService):
         # Get security definition by username
         with closing(self.odb.session()) as session:
             try:
-                # Find security definition by username or sec_name
+                # .. find security definition by username or sec_name ..
                 sec_def, lookup_field, lookup_value = get_security_definition(
                     session,
                     cluster_id,
@@ -452,14 +452,16 @@ class _BaseModifyTopicList(AdminService):
 
                 sec_base_id = sec_def.id
 
-                # Find any existing subscriptions using GetList service
+                # .. find any existing subscriptions using GetList service  ..
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
 
-                # If no subscriptions exist, create one
+                # .. we go here if this is the very first subscription for this subscriber ..
                 if not subscriptions:
+
+                    # .. prepare our request ..
                     create_request = Bunch()
                     create_request.cluster_id = cluster_id
-                    create_request.topic_name_list = []
+                    create_request.topic_name_list = input.topic_name_list
                     create_request.sec_base_id = sec_base_id
                     create_request.delivery_type = input.delivery_type
                     create_request.is_active = input.is_active
@@ -467,10 +469,11 @@ class _BaseModifyTopicList(AdminService):
                     create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
                     create_request.push_service_name = input.push_service_name
 
+                    # .. invoke the Create service ..
                     _ = self.invoke('zato.pubsub.subscription.create', create_request)
 
-                    # Get subscriptions again after creation
-                    subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
+                    # .. and now we can return because we've already done what needed doing for the first subscription ..
+                    return
 
                 # Extract subscriptions for this security definition
                 current_sub = None
