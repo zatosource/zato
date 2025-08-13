@@ -210,8 +210,8 @@ class ConsumerBackend(Backend):
         # Do we have such a consumer ..
         if consumer := self.consumers.get(sub_key):
 
-            err_msg = f'[{cid}] Found consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
-            logger.warning(err_msg)
+            debug_msg = f'[{cid}] Found consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
+            logger.debug(debug_msg)
 
             # .. get a queue for that consumer ..
             queue_name = consumer.config.queue

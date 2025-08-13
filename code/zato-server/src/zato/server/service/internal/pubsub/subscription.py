@@ -35,6 +35,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+    Action_Subsctibe = 'Subscribe'
+    Action_Unsubsctibe = 'Unsubscribe'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _push_type = PubSub.Push_Type
 
 # ################################################################################################################################
@@ -455,25 +462,39 @@ class _BaseModifyTopicList(AdminService):
                 # .. find any existing subscriptions using GetList service  ..
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
 
-                # .. we go here if this is the very first subscription for this subscriber ..
+                # .. if we do not have any subscription, what to do next, depends on whether we are creating
+                # .. new subscriptions, or if we're unsubscribing the client ..
                 if not subscriptions:
 
-                    # .. prepare our request ..
-                    create_request = Bunch()
-                    create_request.cluster_id = cluster_id
-                    create_request.topic_name_list = input.topic_name_list
-                    create_request.sec_base_id = sec_base_id
-                    create_request.delivery_type = input.delivery_type
-                    create_request.is_active = input.is_active
-                    create_request.push_type = input.push_type
-                    create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
-                    create_request.push_service_name = input.push_service_name
+                    # .. or, we are to create a new (the very first) subscription ..
+                    if self.action == ModuleCtx.Action_Subsctibe:
 
-                    # .. invoke the Create service ..
-                    _ = self.invoke('zato.pubsub.subscription.create', create_request)
+                        # .. prepare our request ..
+                        create_request = Bunch()
+                        create_request.cluster_id = cluster_id
+                        create_request.topic_name_list = input.topic_name_list
+                        create_request.sec_base_id = sec_base_id
+                        create_request.delivery_type = input.delivery_type
+                        create_request.is_active = input.is_active
+                        create_request.push_type = input.push_type
+                        create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
+                        create_request.push_service_name = input.push_service_name
 
-                    # .. and now we can return because we've already done what needed doing for the first subscription ..
-                    return
+                        # .. invoke the Create service ..
+                        _ = self.invoke('zato.pubsub.subscription.create', create_request)
+
+                        # .. and now we can return because we've already done what needed doing for the first subscription ..
+                        return
+
+                    elif self.action == ModuleCtx.Action_Unsubsctibe:
+
+                        # .. if weare here, it means that someone called unsubscribe on a client without any subscriptions, ..
+                        # .. which is not an error but we don't really have anything to do here so we can just return ..
+                        # .. indicate that there are no topics for this client ..
+                        self.response.payload.topic_name_list = []
+
+                        # .. and now we can return.
+                        return
 
                 # Extract subscriptions for this security definition
                 current_sub = None
@@ -547,7 +568,7 @@ class _BaseModifyTopicList(AdminService):
 class Subscribe(_BaseModifyTopicList):
     """ Subscribes security definition to one or more topics.
     """
-    action = 'Subscribe'
+    action = ModuleCtx.Action_Subsctibe
 
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
@@ -567,7 +588,7 @@ class Subscribe(_BaseModifyTopicList):
 class Unsubscribe(_BaseModifyTopicList):
     """ Unsubscribes security definition from one or more topics.
     """
-    action = 'Unsubscribe'
+    action = ModuleCtx.Action_Unsubsctibe
 
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
