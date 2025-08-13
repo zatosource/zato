@@ -153,6 +153,46 @@ class BaseServer:
 
 # ################################################################################################################################
 
+    def _load_users(self, cid:'str') -> 'None':
+        """ Load users from security definitions.
+        """
+
+        # Prepare our input ..
+        service = 'zato.security.basic-auth.get-list'
+        request = {
+            'cluster_id': 1,
+            'needs_password': True,
+        }
+
+        # .. invoke the service ..
+        response = self.backend.invoke_service_with_pubsub(service, request)
+
+        # .. log what we've received ..
+        len_response = len(response)
+        if len_response == 1:
+            logger.info('Loading 1 user')
+        elif len_response > 0:
+            logger.info(f'Loading {len_response} users')
+        else:
+            logger.info('No users to load')
+
+        # .. process each user ..
+        for item in response:
+            try:
+                # .. extract what we need ..
+                username = item['username']
+                password = item['password']
+
+                # Add user credentials
+                self.create_user(cid, username, password)
+
+            except Exception:
+                logger.error(f'[{cid}] Error processing user {item}: {format_exc()}')
+
+        logger.info('Finished loading users')
+
+# ################################################################################################################################
+
     def _load_subscriptions(self, cid:'str') -> 'None':
         """ Load subscriptions from server and set up the pub/sub structure.
         """
@@ -312,6 +352,9 @@ class BaseServer:
 
         # For later use ..
         start = utcnow()
+
+        # .. load all the initial users ..
+        self._load_users(cid)
 
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
