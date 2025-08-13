@@ -49,10 +49,10 @@ class RESTBackendAuthenticateTestCase(TestCase):
         self.long_password = 'b' * 200
 
         # Add test users to server
-        self.rest_server.users[self.test_username] = self.test_password
-        self.rest_server.users[self.special_chars_username] = self.special_chars_password
-        self.rest_server.users[self.unicode_username] = self.unicode_password
-        self.rest_server.users[self.long_username] = self.long_password
+        self.rest_server.users[self.test_username] = {'sec_name': 'test_sec_def', 'password': self.test_password}
+        self.rest_server.users[self.special_chars_username] = {'sec_name': 'special_sec_def', 'password': self.special_chars_password}
+        self.rest_server.users[self.unicode_username] = {'sec_name': 'unicode_sec_def', 'password': self.unicode_password}
+        self.rest_server.users[self.long_username] = {'sec_name': 'long_sec_def', 'password': self.long_password}
 
     def _create_basic_auth_header(self, username, password):
         """Helper method to create Basic Auth header"""

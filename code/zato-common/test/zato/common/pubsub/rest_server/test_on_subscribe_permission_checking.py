@@ -44,6 +44,8 @@ class BrokerClientHelper:
     def invoke_sync(self, service, request, timeout=20, needs_root_elem=False):
         """ Mock service invocation for security definitions.
         """
+        if needs_root_elem:
+            return {'error': None}
         return [
             {'username': 'allowed_user', 'name': 'allowed_user_sec'},
             {'username': 'denied_user', 'name': 'denied_user_sec'},
@@ -73,10 +75,10 @@ class RESTOnSubscribePermissionCheckingTestCase(TestCase):
 
         # Set up test users for authentication
         self.rest_server.users = {
-            'test_user': 'test_password',
-            'allowed_user': 'allowed_password',
-            'denied_user': 'denied_password',
-            'admin_user': 'admin_password'
+            'test_user': {'sec_name': 'test_user_sec', 'password': 'test_password'},
+            'allowed_user': {'sec_name': 'allowed_user_sec', 'password': 'allowed_password'},
+            'denied_user': {'sec_name': 'denied_user_sec', 'password': 'denied_password'},
+            'admin_user': {'sec_name': 'admin_user_sec', 'password': 'admin_password'}
         }
 
         # Test data constants
