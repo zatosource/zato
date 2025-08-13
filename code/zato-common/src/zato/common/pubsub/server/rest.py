@@ -324,8 +324,6 @@ class PubSubRESTServer(BaseRESTServer):
         # Subscribe to topic using backend
         result = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name)
 
-        logger.info(f'[{cid}] Subscription result: {result.is_ok}')
-
         response = APIResponse()
         response.cid = cid
         response.is_ok = result.is_ok
