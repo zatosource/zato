@@ -193,6 +193,44 @@ class BaseServer:
 
 # ################################################################################################################################
 
+    def _load_topics(self, cid:'str') -> 'None':
+        """ Load topics from topic definitions.
+        """
+
+        # Prepare our input ..
+        service = 'zato.pubsub.topic.get-list'
+        request = {
+            'cluster_id': 1
+        }
+
+        # .. invoke the service ..
+        response = self.backend.invoke_service_with_pubsub(service, request)
+
+        # .. log what we've received ..
+        len_response = len(response)
+        if len_response == 1:
+            logger.info('Loading 1 topic')
+        elif len_response > 0:
+            logger.info(f'Loading {len_response} topics')
+        else:
+            logger.info('No topics to load')
+
+        # .. process each topic ..
+        for item in response:
+            try:
+                # .. extract what we need ..
+                topic_name = item['name']
+
+                # Create the topic
+                self.backend.create_topic(cid, 'config', topic_name)
+
+            except Exception:
+                logger.error(f'[{cid}] Error processing topic {item}: {format_exc()}')
+
+        logger.info('Finished loading topics')
+
+# ################################################################################################################################
+
     def _load_subscriptions(self, cid:'str') -> 'None':
         """ Load subscriptions from server and set up the pub/sub structure.
         """
@@ -355,6 +393,9 @@ class BaseServer:
 
         # .. load all the initial users ..
         self._load_users(cid)
+
+        # .. load all the initial topics ..
+        self._load_topics(cid)
 
         # .. load all the initial subscriptions ..
         self._load_subscriptions(cid)
