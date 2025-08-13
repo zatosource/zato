@@ -180,11 +180,12 @@ class BaseServer:
         for item in response:
             try:
                 # .. extract what we need ..
+                sec_name = item['name']
                 username = item['username']
                 password = item['password']
 
                 # Add user credentials
-                self.create_user(cid, username, password)
+                self.create_user(cid, sec_name, username, password)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing user {item}: {format_exc()}')
@@ -262,13 +263,14 @@ class BaseServer:
 
             try:
                 # .. extract what we need ..
+                sec_name = item['sec_name']
                 username = item['username']
                 password = item['password']
                 topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
 
                 # Add user credentials
-                self.create_user(cid, username, password)
+                self.create_user(cid, sec_name, username, password)
 
                 # Handle multiple topics (comma-separated)
                 for topic_name in topic_names:
@@ -351,12 +353,12 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def create_user(self, cid:'str', username:'str', password:'str') -> 'None':
+    def create_user(self, cid:'str', sec_name:'str', username:'str', password:'str') -> 'None':
         if username not in self.users:
-            logger.info(f'[{cid}] Adding user credentials for `{username}`')
-            self.users[username] = password
+            logger.info(f'[{cid}] Adding user credentials for `{username}` (`{sec_name}`)')
+            self.users[username] = {'sec_name': sec_name, 'password': password}
         else:
-            logger.debug(f'[{cid}] User already exists: `{username}`')
+            logger.debug(f'[{cid}] User already exists: `{username}` (`{sec_name}`)')
 
 # ################################################################################################################################
 
