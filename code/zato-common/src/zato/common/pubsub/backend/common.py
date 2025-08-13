@@ -21,7 +21,7 @@ from gevent.lock import RLock
 from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
-from zato.common.pubsub.util import create_subscription_bindings, get_username_to_sec_name_mapping
+from zato.common.pubsub.util import create_subscription_bindings
 from zato.common.util.api import new_sub_key, utcnow
 
 # ################################################################################################################################
@@ -407,7 +407,7 @@ class Backend:
 
         # Get sec_name from username if needed
         if username and not sec_name:
-            config = self.users[username]
+            config = self.rest_server.get_user_config(username)
             sec_name = config['sec_name']
 
         # Check if user is actually subscribed to this topic
