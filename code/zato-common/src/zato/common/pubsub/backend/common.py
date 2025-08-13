@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import timedelta
+from http.client import BAD_REQUEST, OK
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
@@ -372,13 +373,16 @@ class Backend:
 
         if error := response.get('error'):
             is_ok = False
+            status = BAD_REQUEST
             logger.error(f'[{cid}] Failed to create subscription in server: {error}')
         else:
             is_ok = True
+            status = OK
 
         # .. build our response ..
         response = StatusResponse()
         response.is_ok = is_ok
+        response.status = status
 
         # .. and return it to our caller.
         return response

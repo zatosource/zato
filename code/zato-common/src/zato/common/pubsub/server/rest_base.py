@@ -12,7 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
-from http.client import OK
+from http.client import responses as http_responses
 from json import dumps, loads
 from logging import getLogger
 
@@ -184,7 +184,11 @@ class BaseRESTServer(BaseServer):
         json_data = dumps(response_data).encode('utf-8')
 
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
-        start_response(data.status, headers)
+
+        response_text = http_responses[data.status]
+        status = f'{data.status} {response_text}'
+
+        start_response(status, headers)
 
         return [json_data]
 
