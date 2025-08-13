@@ -319,7 +319,8 @@ class Backend:
 
         # Get sec_name from username or use directly if it's already sec_name
         if username_to_sec_name:
-            sec_name = self.get_sec_name_by_username(username_or_sec_name, username_to_sec_name)
+            config = self.rest_server.get_user_config(username_or_sec_name)
+            sec_name = config['sec_name']
         else:
             sec_name = username_or_sec_name
 
