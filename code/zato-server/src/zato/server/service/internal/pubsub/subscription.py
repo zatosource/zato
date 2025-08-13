@@ -412,8 +412,25 @@ class _BaseModifyTopicList(AdminService):
         output_optional = AsIs('topic_name_list')
         response_elem = None
 
+# ################################################################################################################################
+
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
         raise NotImplementedError('Subclasses must implement _modify_topic_list')
+
+# ################################################################################################################################
+
+    def _get_subscriptions_by_sec(self, cluster_id, sec_base_id):
+        """ Get subscriptions for a security definition.
+        """
+        get_list_request = {
+            'cluster_id': cluster_id,
+            'sec_base_id': sec_base_id
+        }
+
+        get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
+        return get_list_response
+
+# ################################################################################################################################
 
     def handle(self):
 
@@ -434,23 +451,18 @@ class _BaseModifyTopicList(AdminService):
                 sec_base_id = sec_def.id
 
                 # Find any existing subscriptions using GetList service
-                get_list_request = {
-                    'cluster_id': cluster_id,
-                    'sec_base_id': sec_base_id
-                }
-
-                get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
+                subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
 
                 # Extract subscriptions for this security definition
                 current_sub = None
 
-                for item in get_list_response:
+                for item in subscriptions:
                     item = bunchify(item)
                     if item.sec_base_id == sec_base_id:
                         current_sub = item
                         break
                 else:
-                    err_msg = f'{self.action}: Could not find subscription for input {lookup_field} `{lookup_value}` -> {get_list_response}'
+                    err_msg = f'{self.action}: Could not find subscription for input {lookup_field} `{lookup_value}` -> {subscriptions}'
                     raise Exception(err_msg)
 
                 # Find topics and check permissions
