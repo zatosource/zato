@@ -111,7 +111,7 @@ class Backend:
 
         # Process each topic in the list
         for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name, {}, sub_key)
+            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
 
         # Log all subscribed topics
         topic_name_list_human = ', '.join(topic_name_list)
@@ -309,8 +309,9 @@ class Backend:
         self,
         cid: 'str',
         topic_name: 'str',
-        username_or_sec_name: 'str',
-        username_to_sec_name: 'dict',
+        *,
+        username: 'str'='',
+        sec_name: 'str'='',
         sub_key: 'str'='',
         should_create_bindings: 'bool'=True,
         ) -> 'StatusResponse':
@@ -318,11 +319,9 @@ class Backend:
         """
 
         # Get sec_name from username or use directly if it's already sec_name
-        if username_to_sec_name:
-            config = self.rest_server.get_user_config(username_or_sec_name)
+        if username:
+            config = self.rest_server.get_user_config(username)
             sec_name = config['sec_name']
-        else:
-            sec_name = username_or_sec_name
 
         # Check if user is already subscribed to this topic
         with self._main_lock:
