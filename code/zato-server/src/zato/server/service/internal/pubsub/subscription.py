@@ -236,6 +236,8 @@ class Create(AdminService):
                 self.response.payload.topic_name_list = topic_name_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
+                self.logger.info('Subscription(s) created for %s -> %s', security_def.name, topic_name_list)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -452,6 +454,23 @@ class _BaseModifyTopicList(AdminService):
 
                 # Find any existing subscriptions using GetList service
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
+
+                # If no subscriptions exist, create one
+                if not subscriptions:
+                    create_request = Bunch()
+                    create_request.cluster_id = cluster_id
+                    create_request.topic_name_list = []
+                    create_request.sec_base_id = sec_base_id
+                    create_request.delivery_type = input.delivery_type
+                    create_request.is_active = input.is_active
+                    create_request.push_type = input.push_type
+                    create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
+                    create_request.push_service_name = input.push_service_name
+
+                    _ = self.invoke('zato.pubsub.subscription.create', create_request)
+
+                    # Get subscriptions again after creation
+                    subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
 
                 # Extract subscriptions for this security definition
                 current_sub = None
