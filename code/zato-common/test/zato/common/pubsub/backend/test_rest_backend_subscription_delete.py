@@ -28,25 +28,30 @@ class RESTBackendSubscriptionDeleteTestCase(TestCase):
         self.broker_client = Mock()
         self.broker_client.cluster_id = 'test-cluster'
 
-        self.broker_client.invoke_sync.return_value = [
-            {'username': 'test_user', 'name': 'test_user_sec'},
-            {'username': 'user_one', 'name': 'user_one_sec'},
-            {'username': 'user_two', 'name': 'user_two_sec'},
-            {'username': 'multi_user', 'name': 'multi_user_sec'},
-            {'username': 'wrong_user', 'name': 'wrong_user_sec'},
-            {'username': 'user1', 'name': 'user1_sec'},
-            {'username': 'user2', 'name': 'user2_sec'},
-            {'username': 'multi_topic_user', 'name': 'multi_topic_user_sec'},
-            {'username': 'preserve_user', 'name': 'preserve_user_sec'},
-            {'username': 'alice', 'name': 'alice_sec'},
-            {'username': 'bob', 'name': 'bob_sec'},
-            {'username': 'charlie', 'name': 'charlie_sec'},
-            {'username': 'cleanup_user', 'name': 'cleanup_user_sec'},
-            {'username': 'user3', 'name': 'user3_sec'},
-            {'username': 'nonexistent_user', 'name': 'nonexistent_user_sec'},
-            {'username': 'empty_user', 'name': 'empty_user_sec'},
-            {'username': 'none_user', 'name': 'none_user_sec'}
-        ]
+        def mock_invoke_sync(service, request, timeout=20, needs_root_elem=False):
+            if needs_root_elem:
+                return {'error': None}
+            return [
+                {'username': 'test_user', 'name': 'test_user_sec'},
+                {'username': 'user_one', 'name': 'user_one_sec'},
+                {'username': 'user_two', 'name': 'user_two_sec'},
+                {'username': 'multi_user', 'name': 'multi_user_sec'},
+                {'username': 'wrong_user', 'name': 'wrong_user_sec'},
+                {'username': 'user1', 'name': 'user1_sec'},
+                {'username': 'user2', 'name': 'user2_sec'},
+                {'username': 'multi_topic_user', 'name': 'multi_topic_user_sec'},
+                {'username': 'preserve_user', 'name': 'preserve_user_sec'},
+                {'username': 'alice', 'name': 'alice_sec'},
+                {'username': 'bob', 'name': 'bob_sec'},
+                {'username': 'charlie', 'name': 'charlie_sec'},
+                {'username': 'cleanup_user', 'name': 'cleanup_user_sec'},
+                {'username': 'user3', 'name': 'user3_sec'},
+                {'username': 'nonexistent_user', 'name': 'nonexistent_user_sec'},
+                {'username': 'empty_user', 'name': 'empty_user_sec'},
+                {'username': 'none_user', 'name': 'none_user_sec'}
+            ]
+
+        self.broker_client.invoke_sync.side_effect = mock_invoke_sync
 
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 

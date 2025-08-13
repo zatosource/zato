@@ -76,7 +76,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.test_cid,
             'username': self.test_username,
-            'password': self.test_password
+            'password': self.test_password,
+            'sec_name': 'test_sec_def'
         }
 
         # Verify user doesn't exist initially
@@ -87,7 +88,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
         # Assert user was added to users dict
         self.assertIn(self.test_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.test_username], self.test_password)
+        self.assertEqual(self.rest_server.users[self.test_username], {'sec_name': 'test_sec_def', 'password': self.test_password})
 
 # ################################################################################################################################
 
@@ -97,7 +98,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.empty_password_cid,
             'username': self.empty_password_username,
-            'password': self.empty_password
+            'password': self.empty_password,
+            'sec_name': 'empty_sec_def'
         }
 
         # Call the method under test
@@ -114,15 +116,16 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.special_chars_cid,
             'username': self.special_chars_username,
-            'password': self.special_chars_password
+            'password': self.special_chars_password,
+            'sec_name': 'special_sec_def'
         }
 
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
-        # Assert user was added with special character username
+        # Assert user was added to users dict
         self.assertIn(self.special_chars_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.special_chars_username], self.special_chars_password)
+        self.assertEqual(self.rest_server.users[self.special_chars_username], {'sec_name': 'special_sec_def', 'password': self.special_chars_password})
 
 # ################################################################################################################################
 
@@ -132,15 +135,16 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.unicode_cid,
             'username': self.unicode_username,
-            'password': self.unicode_password
+            'password': self.unicode_password,
+            'sec_name': 'unicode_sec_def'
         }
 
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
-        # Assert user was added with unicode characters
+        # Assert user was added to users dict
         self.assertIn(self.unicode_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.unicode_username], self.unicode_password)
+        self.assertEqual(self.rest_server.users[self.unicode_username], {'sec_name': 'unicode_sec_def', 'password': self.unicode_password})
 
 # ################################################################################################################################
 
@@ -150,15 +154,16 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.long_values_cid,
             'username': self.long_username,
-            'password': self.long_password
+            'password': self.long_password,
+            'sec_name': 'long_sec_def'
         }
 
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
-        # Assert user was added with long values
+        # Assert user was added to users dict
         self.assertIn(self.long_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.long_username], self.long_password)
+        self.assertEqual(self.rest_server.users[self.long_username], {'sec_name': 'long_sec_def', 'password': self.long_password})
 
 # ################################################################################################################################
 
@@ -180,17 +185,20 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
             {
                 'cid': multi_cid_1,
                 'username': multi_username_1,
-                'password': multi_password_1
+                'password': multi_password_1,
+                'sec_name': 'multi_sec_1'
             },
             {
                 'cid': multi_cid_2,
                 'username': multi_username_2,
-                'password': multi_password_2
+                'password': multi_password_2,
+                'sec_name': 'multi_sec_2'
             },
             {
                 'cid': multi_cid_3,
                 'username': multi_username_3,
-                'password': multi_password_3
+                'password': multi_password_3,
+                'sec_name': 'multi_sec_3'
             }
         ]
 
@@ -203,9 +211,9 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         self.assertIn(multi_username_1, self.rest_server.users)
         self.assertIn(multi_username_2, self.rest_server.users)
         self.assertIn(multi_username_3, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[multi_username_1], multi_password_1)
-        self.assertEqual(self.rest_server.users[multi_username_2], multi_password_2)
-        self.assertEqual(self.rest_server.users[multi_username_3], multi_password_3)
+        self.assertEqual(self.rest_server.users[multi_username_1], {'sec_name': 'multi_sec_1', 'password': multi_password_1})
+        self.assertEqual(self.rest_server.users[multi_username_2], {'sec_name': 'multi_sec_2', 'password': multi_password_2})
+        self.assertEqual(self.rest_server.users[multi_username_3], {'sec_name': 'multi_sec_3', 'password': multi_password_3})
 
 # ################################################################################################################################
 
@@ -216,9 +224,10 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         another_field_value = 123
 
         msg = {
-            'cid': self.preserve_cid,
-            'username': self.preserve_username,
-            'password': self.preserve_password,
+            'cid': self.test_cid,
+            'username': self.test_username,
+            'password': self.test_password,
+            'sec_name': 'test_sec_def',
             'extra_field': extra_field_value,
             'another_field': another_field_value
         }
@@ -227,8 +236,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
         # Assert only the required fields were used and user was created
-        self.assertIn(self.preserve_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.preserve_username], self.preserve_password)
+        self.assertIn(self.test_username, self.rest_server.users)
+        self.assertEqual(self.rest_server.users[self.test_username], {'sec_name': 'test_sec_def', 'password': self.test_password})
 
 # ################################################################################################################################
 
@@ -238,7 +247,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.numeric_cid,
             'username': self.numeric_cid_username,
-            'password': self.numeric_cid_password
+            'password': self.numeric_cid_password,
+            'sec_name': 'numeric_sec_def'
         }
 
         # Call the method under test
@@ -246,7 +256,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
         # Assert user was created regardless of CID type
         self.assertIn(self.numeric_cid_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.numeric_cid_username], self.numeric_cid_password)
+        self.assertEqual(self.rest_server.users[self.numeric_cid_username], {'sec_name': 'numeric_sec_def', 'password': self.numeric_cid_password})
+
 
 # ################################################################################################################################
 
@@ -260,7 +271,8 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': 'test-cid-state',
             'username': 'state_user',
-            'password': 'state_password'
+            'password': 'state_password',
+            'sec_name': 'state_sec_def'
         }
 
         # Call the method under test
@@ -278,21 +290,23 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
         msg = {
             'cid': self.duplicate_cid_1,
             'username': self.duplicate_username,
-            'password': self.duplicate_password_1
+            'password': self.duplicate_password_1,
+            'sec_name': 'duplicate_sec_def'
         }
 
         # Call the method under test first time
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg)
 
-        # Assert user was created
+        # Assert user was added first time
         self.assertIn(self.duplicate_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.duplicate_username], self.duplicate_password_1)
+        self.assertEqual(self.rest_server.users[self.duplicate_username], {'sec_name': 'duplicate_sec_def', 'password': self.duplicate_password_1})
 
         # Create second message with same user but different password
         msg2 = {
             'cid': self.duplicate_cid_2,
             'username': self.duplicate_username,
-            'password': self.duplicate_password_2
+            'password': self.duplicate_password_2,
+            'sec_name': 'duplicate_sec_def_2'
         }
 
         # Call the method under test second time
@@ -300,7 +314,7 @@ class RESTBackendSecurityBasicAuthCreateTestCase(TestCase):
 
         # Assert user still exists with original password (no overwrite)
         self.assertIn(self.duplicate_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.duplicate_username], self.duplicate_password_1)
+        self.assertEqual(self.rest_server.users[self.duplicate_username], {'sec_name': 'duplicate_sec_def', 'password': self.duplicate_password_1})
 
 # ################################################################################################################################
 # ################################################################################################################################

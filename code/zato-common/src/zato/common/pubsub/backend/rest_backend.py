@@ -185,7 +185,12 @@ class RESTBackend(Backend):
 
         # Update the password in the users dictionary
         if username in self.rest_server.users:
-            self.rest_server.users[username] = new_password
+            user_config = self.rest_server.users[username]
+            if isinstance(user_config, dict):
+                user_config['password'] = new_password
+            else:
+                # Legacy format - convert to new format
+                self.rest_server.users[username] = {'sec_name': 'default_sec', 'password': new_password}
             logger.info(f'[{cid}] Updated password for user `{username}`')
         else:
             logger.info(f'[{cid}] User not found for password change: `{username}`')
@@ -328,7 +333,7 @@ class RESTBackend(Backend):
 
         # Add subscription to new topics
         for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name, {}, sub_key)
+            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
 
         logger.info(f'[{cid}] Updated subscription {sub_key} for {sec_name} to topics: {topic_name_list}')
 
