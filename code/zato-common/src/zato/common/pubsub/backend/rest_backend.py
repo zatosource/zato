@@ -341,8 +341,6 @@ class RESTBackend(Backend):
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'strdict') -> 'None':
 
-        return
-
         # Local aliases
         cid = msg['cid']
         sub_key = msg['sub_key']
