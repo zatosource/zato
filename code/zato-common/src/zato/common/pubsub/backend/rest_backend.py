@@ -111,7 +111,7 @@ class RESTBackend(Backend):
             return
 
         # Create the user now
-        self.rest_server.create_user(cid, username, password)
+        self.rest_server.create_user(cid, sec_name, username, password)
 
         logger.info('HTTP Basic Auth created -> msg: %s', replace_secrets(msg))
 
