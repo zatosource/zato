@@ -327,8 +327,9 @@ class PubSubRESTServer(BaseRESTServer):
         logger.info(f'[{cid}] Subscription result: {result.is_ok}')
 
         response = APIResponse()
-        response.is_ok = result.is_ok
         response.cid = cid
+        response.is_ok = result.is_ok
+        response.status = result.status
         return response
 
 # ################################################################################################################################
