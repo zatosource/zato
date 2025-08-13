@@ -375,9 +375,15 @@ class BaseServer:
             logger.info(f'[{cid}] User not found: `{old_username}`')
             return
 
-        if new_username in self.users:
-            logger.info(f'[{cid}] Cannot change username, target already exists: `{new_username}`')
-            return
+        # We go here if it's a rename ..
+        if old_username != new_username:
+
+            # .. and we go here if the new name already exists ..
+            if new_username in self.users:
+
+                # .. in which case we reject it because we would otherwise overwrite an existing username.
+                logger.info(f'[{cid}] Cannot change username, target already exists: `{new_username}`')
+                return
 
         # Store the user data
         user_data = self.users[old_username]
