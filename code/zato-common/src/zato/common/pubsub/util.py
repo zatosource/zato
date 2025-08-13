@@ -173,15 +173,6 @@ def create_subscription_bindings(broker_client, cid:'str', sub_key:'str', exchan
 
 # ################################################################################################################################
 
-def get_username_to_sec_name_mapping(backend) -> 'dict':
-    """ Get username to security name mapping.
-    """
-    auth_request = {'cluster_id': 1}
-    auth_response = backend.invoke_service_with_pubsub('zato.security.basic-auth.get-list', auth_request)
-    return {item['username']: item['name'] for item in auth_response}
-
-# ################################################################################################################################
-
 def cleanup_broker_impl(
     broker_config: 'BrokerConfig',
     management_port: 'int'
@@ -303,13 +294,13 @@ def cleanup_broker_impl(
 
 def get_security_definition(session, cluster_id, username=None, sec_name=None):
     """ Get security definition by username or sec_name.
-    
+
     Returns tuple of (sec_def, lookup_field, lookup_value).
     Raises Exception if not found or if neither username nor sec_name provided.
     """
     # Zato
     from zato.common.odb.model import SecurityBase
-    
+
     if username:
         sec_def = session.query(SecurityBase).\
             filter(SecurityBase.cluster_id==cluster_id).\
@@ -329,7 +320,7 @@ def get_security_definition(session, cluster_id, username=None, sec_name=None):
 
     if not sec_def:
         raise Exception(f'Security definition not found for {lookup_field} `{lookup_value}`')
-    
+
     return sec_def, lookup_field, lookup_value
 
 # ################################################################################################################################
