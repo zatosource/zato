@@ -379,11 +379,13 @@ class BaseServer:
             logger.info(f'[{cid}] Cannot change username, target already exists: `{new_username}`')
             return
 
-        # Store the password
-        password = self.users[old_username]
+        # Store the user data
+        user_data = self.users[old_username]
+        sec_name = user_data['sec_name']
+        password = user_data['password']
 
         # Create the new user entry
-        self.users[new_username] = password
+        self.users[new_username] = {'sec_name': sec_name, 'password': password}
 
         # Remove the old username
         del self.users[old_username]
