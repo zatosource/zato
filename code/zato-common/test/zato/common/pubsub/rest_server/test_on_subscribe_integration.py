@@ -69,7 +69,15 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         self.broker_client = BrokerClientHelper()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
+        
+        # Mock broker client invoke_sync to return dict with error key
+        def mock_invoke_sync(service, request, timeout=None, needs_root_elem=False):
+            if needs_root_elem:
+                return {'error': None}
+            return []
+        
+        self.broker_client.invoke_sync = mock_invoke_sync
 
         # Set up permissions for test_user
         self.rest_server.backend.pattern_matcher.add_client('test_user', [
@@ -121,7 +129,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
             backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
@@ -142,7 +150,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         self.assertEqual(cid, self.test_cid)
         self.assertEqual(topic_name, self.test_topic)
         self.assertEqual(username, self.test_username)
-        self.assertIsInstance(username_to_sec_name, dict)
+        self.assertIsNone(username_to_sec_name)
         self.assertEqual(sub_key, '')  # Default empty sub_key
         self.assertTrue(should_create_bindings)  # Default True
 
@@ -152,7 +160,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         """ on_subscribe propagates backend response correctly.
         """
         # Mock backend to return specific response
-        def mock_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+        def mock_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
 
             response = StatusResponse()
             response.is_ok = False  # Simulate failure

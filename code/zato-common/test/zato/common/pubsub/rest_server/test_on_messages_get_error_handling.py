@@ -103,7 +103,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get handles JSON parsing errors by raising exception from _parse_json.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Create HTTP Basic Auth header
         credentials = 'test_user:test_password'
@@ -136,7 +136,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get handles parameter validation errors gracefully.
         """
         # Set up users and permissions for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
         self.rest_server.backend.pattern_matcher.add_client('test_user', [
             {'pattern': 'test.topic', 'access_type': 'subscriber'}
         ])
@@ -167,7 +167,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get handles case when no subscription is found for user.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Clear subscriptions so none will be found
         self.rest_server.backend.subs_by_topic.clear()
@@ -189,7 +189,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get returns consistent error responses across different failures.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Test no subscription scenario
         self.rest_server.backend.subs_by_topic.clear()
@@ -211,7 +211,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get preserves CID in all error response types.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         different_cids = ['cid-001', 'cid-002', 'error-cid-123', 'test-correlation-456']
 
@@ -245,7 +245,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get handles empty subscription data gracefully.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Clear all subscriptions
         self.rest_server.backend.subs_by_topic.clear()
@@ -265,7 +265,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get raises AttributeError when subscription object is malformed.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Set malformed subscription data - None subscription will cause AttributeError
         # when _find_user_sub_key tries to access subscription.sub_key
@@ -286,7 +286,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         """ on_messages_get raises TypeError when parameter types are invalid in _validate_get_params.
         """
         # Set up users for authentication
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Create request with invalid parameter types that cause TypeError in min() function
         test_cases = [
