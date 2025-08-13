@@ -124,7 +124,8 @@ class BaseRESTServer(BaseServer):
             return None
 
         if username in self.users:
-            password = self.users[username]['password']
+            config = self.users[username]
+            password = config['password']
             if check_basic_auth(cid, auth_header, username, password) is True:
                 return username
             else:

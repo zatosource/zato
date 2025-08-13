@@ -369,7 +369,7 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def edit_user(self, cid:'str', old_username:'str', new_username:'str') -> 'None':
+    def edit_user(self, cid:'str', old_sec_name:'str', new_sec_name:'str', old_username:'str', new_username:'str') -> 'None':
 
         if old_username not in self.users:
             logger.info(f'[{cid}] User not found: `{old_username}`')
@@ -381,11 +381,10 @@ class BaseServer:
 
         # Store the user data
         user_data = self.users[old_username]
-        sec_name = user_data['sec_name']
         password = user_data['password']
 
         # Create the new user entry
-        self.users[new_username] = {'sec_name': sec_name, 'password': password}
+        self.users[new_username] = {'sec_name': new_sec_name, 'password': password}
 
         # Remove the old username
         del self.users[old_username]
