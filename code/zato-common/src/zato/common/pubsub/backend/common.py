@@ -407,8 +407,8 @@ class Backend:
 
         # Get sec_name from username if needed
         if username and not sec_name:
-            username_to_sec_name = get_username_to_sec_name_mapping(self)
-            sec_name = self.get_sec_name_by_username(username, username_to_sec_name)
+            config = self.users[username]
+            sec_name = config['sec_name']
 
         # Check if user is actually subscribed to this topic
         with self._main_lock:

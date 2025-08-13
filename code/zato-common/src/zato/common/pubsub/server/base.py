@@ -375,8 +375,11 @@ class BaseServer:
             logger.info(f'[{cid}] User not found: `{old_username}`')
             return
 
+        # Local variables
+        has_new_username = old_username != new_username
+
         # We go here if it's a rename ..
-        if old_username != new_username:
+        if has_new_username:
 
             # .. and we go here if the new name already exists ..
             if new_username in self.users:
@@ -392,8 +395,9 @@ class BaseServer:
         # Create the new user entry
         self.users[new_username] = {'sec_name': new_sec_name, 'password': password}
 
-        # Remove the old username
-        del self.users[old_username]
+        # Remove the old username only if it's different from the new one
+        if has_new_username:
+            _ = self.users.pop(old_username)
 
         logger.info(f'[{cid}] Changed username from `{old_username}` to `{new_username}`')
 
