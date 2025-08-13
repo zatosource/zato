@@ -337,10 +337,17 @@ class BaseServer:
             # Add permissions to pattern matcher
             total_permissions_loaded = 0
             for sec_name, permissions in permissions_by_sec_name.items():
-                if sec_name in self.users:
-                    self.backend.pattern_matcher.add_client(sec_name, permissions)
+                # Find username by sec_name
+                username = None
+                for username_key, config in self.users.items():
+                    if config['sec_name'] == sec_name:
+                        username = username_key
+                        break
+
+                if username:
+                    self.backend.pattern_matcher.add_client(username, permissions)
                     total_permissions_loaded += len(permissions)
-                    logger.info(f'[{cid}] Added {len(permissions)} permissions for {sec_name}')
+                    logger.info(f'[{cid}] Added {len(permissions)} permissions for {username}')
                 else:
                     logger.info(f'[{cid}] User not found for permission loading: {sec_name}')
 
