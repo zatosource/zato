@@ -400,8 +400,17 @@ class Backend:
             username_to_sec_name = get_username_to_sec_name_mapping(self)
             sec_name = self.get_sec_name_by_username(username, username_to_sec_name)
 
+        # Check if user is actually subscribed to this topic
+        with self._main_lock:
+            subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
+            if sec_name not in subs_by_sec_name:
+                logger.info(f'[{cid}] User `{username}` not subscribed to topic `{topic_name}` - no action needed')
+                response = StatusResponse()
+                response.is_ok = True
+                return response
+
         # Log what we're doing ..
-        logger.info(f'[{cid}] Unsubscribing {username} from topic {topic_name}')
+        logger.info(f'[{cid}] Unsubscribing `{username}` from topic `{topic_name}`')
 
         # .. this is optional because we may have been called from self.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE ..
         # .. in which case the server has already deleted the subscription so we don't need to notify it about it ..
@@ -427,7 +436,7 @@ class Backend:
                             del self.subs_by_topic[topic_name]
 
         # .. log what happened ..
-        logger.info(f'[{cid}] Successfully unsubscribed {username} from {topic_name}')
+        logger.info(f'[{cid}] Successfully unsubscribed `{username}` from `{topic_name}`')
 
         # .. build are OK response ..
         response = StatusResponse()
