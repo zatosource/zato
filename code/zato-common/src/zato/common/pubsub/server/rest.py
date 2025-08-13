@@ -32,7 +32,6 @@ from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
-from zato.common.pubsub.util import get_username_to_sec_name_mapping
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,11 +317,8 @@ class PubSubRESTServer(BaseRESTServer):
             logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
             raise UnauthorizedException(cid, 'Permission denied')
 
-        # Get security definitions for username lookup
-        username_to_sec_name = get_username_to_sec_name_mapping(self.backend)
-
         # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name)
+        result = self.backend.register_subscription(cid, topic_name, username=username)
 
         response = APIResponse()
         response.cid = cid

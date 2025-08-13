@@ -28,7 +28,6 @@ from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.util import get_username_to_sec_name_mapping
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -255,9 +254,6 @@ class BaseServer:
         else:
             logger.info('No subscriptions to load')
 
-        # Get security definitions for username lookup
-        username_to_sec_name = get_username_to_sec_name_mapping(self.backend)
-
         # .. process each subscription ..
         for item in response:
 
@@ -282,7 +278,7 @@ class BaseServer:
                     logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.register_subscription(cid, topic_name, username, username_to_sec_name, sub_key)
+                    _ = self.backend.register_subscription(cid, topic_name, username=username, sub_key=sub_key)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
