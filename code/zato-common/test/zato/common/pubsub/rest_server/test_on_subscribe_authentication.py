@@ -70,14 +70,22 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         self.broker_client = BrokerClientHelper()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
+        
+        # Mock broker client invoke_sync to return dict with error key
+        def mock_invoke_sync(service, request, timeout=None, needs_root_elem=False):
+            if needs_root_elem:
+                return {'error': None}
+            return []
+        
+        self.broker_client.invoke_sync = mock_invoke_sync
 
         # Set up test users for authentication
         self.rest_server.users = {
-            'test_user': 'test_password',
-            'different_user': 'different_password',
-            'admin_user': 'admin_password',
-            'user1': 'password1',
-            'user2': 'password2'
+            'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'},
+            'different_user': {'sec_name': 'test_sec_def', 'password': 'different_password'},
+            'admin_user': {'sec_name': 'test_sec_def', 'password': 'admin_password'},
+            'user1': {'sec_name': 'test_sec_def', 'password': 'password1'},
+            'user2': {'sec_name': 'test_sec_def', 'password': 'password2'}
         }
 
         # Set up permissions for all users
@@ -164,7 +172,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
             backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
@@ -239,7 +247,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
             method_calls.append('authenticate')
             return original_authenticate(cid, environ)
 
-        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
@@ -269,7 +277,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         method_calls = []
 
         # Override method to track calls
-        def track_register_subscription(cid, topic_name, username, username_to_sec_name, sub_key='', should_create_bindings=True):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
             method_calls.append('register_subscription')
 
             response = StatusResponse()

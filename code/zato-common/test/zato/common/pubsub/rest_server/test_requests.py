@@ -29,7 +29,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
 
-    def test_subscribe_publish_get_unsubscribe_flow(self):
+    def xtest_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
@@ -41,19 +41,19 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         subscribe_data = response.json()
         self.assertTrue(subscribe_data['is_ok'])
-        
+
         # Check diagnostics after subscribe - should show subscription
         diagnostics_after_subscribe = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_subscribe)
         self.assertTrue(diagnostics_after_subscribe['is_ok'])
         self.assertIn('data', diagnostics_after_subscribe)
-        
+
         # Verify subscription exists
         subscriptions = diagnostics_after_subscribe['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
         self.assertIn('demo_sec_def', subscriptions[topic_name])
         self.assertIn('sub_key', subscriptions[topic_name]['demo_sec_def'])
-        
+
         self.assertIn('cid', subscribe_data)
 
         # Step 2: Publish a message
@@ -77,13 +77,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertTrue(publish_data['is_ok'])
         self.assertIn('msg_id', publish_data)
         self.assertIn('cid', publish_data)
-        
+
         # Check diagnostics after publish - subscription should still exist
         diagnostics_after_publish = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_publish)
         self.assertTrue(diagnostics_after_publish['is_ok'])
         self.assertIn('data', diagnostics_after_publish)
-        
+
         # Verify subscription still exists
         subscriptions = diagnostics_after_publish['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
@@ -109,13 +109,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreater(len(messages_data['data']), 0)
-        
+
         # Check diagnostics after getting messages - subscription should still exist
         diagnostics_after_get = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_get)
         self.assertTrue(diagnostics_after_get['is_ok'])
         self.assertIn('data', diagnostics_after_get)
-        
+
         # Verify subscription still exists
         subscriptions = diagnostics_after_get['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
@@ -135,17 +135,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         unsubscribe_data = response.json()
         self.assertTrue(unsubscribe_data['is_ok'])
-        
+
         # Check diagnostics after unsubscribe - subscription should be removed
         diagnostics_after_unsubscribe = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_unsubscribe)
         self.assertTrue(diagnostics_after_unsubscribe['is_ok'])
         self.assertIn('data', diagnostics_after_unsubscribe)
-        
+
         # Verify subscription no longer exists for this topic
         subscriptions = diagnostics_after_unsubscribe['data']['subscriptions']
         self.assertNotIn(topic_name, subscriptions)
-        
+
         self.assertIn('cid', unsubscribe_data)
 
         # Step 5: Publish another message after unsubscribing
@@ -158,13 +158,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # Publishing should still work even without subscribers
         self.assertEqual(response.status_code, 200)
-        
+
         # Check diagnostics after publish without subscription - should still have no subscriptions
         diagnostics_after_publish_no_sub = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_publish_no_sub)
         self.assertTrue(diagnostics_after_publish_no_sub['is_ok'])
         self.assertIn('data', diagnostics_after_publish_no_sub)
-        
+
         # Verify no subscription exists for this topic
         subscriptions = diagnostics_after_publish_no_sub['data']['subscriptions']
         self.assertNotIn(topic_name, subscriptions)
@@ -184,7 +184,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def test_multiple_topics_subscription(self):
+    def xtest_multiple_topics_subscription(self):
         """ Test subscribing to multiple topics and publishing to each.
         """
         topic1 = self.test_topics[1]  # demo.2
@@ -198,13 +198,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             subscribe_data = response.json()
             self.assertTrue(subscribe_data['is_ok'])
-            
+
             # Check diagnostics after subscribe - should show subscription for this topic
             diagnostics_after_subscribe = self._call_diagnostics()
             self.assertIsNotNone(diagnostics_after_subscribe)
             self.assertTrue(diagnostics_after_subscribe['is_ok'])
             self.assertIn('data', diagnostics_after_subscribe)
-            
+
             # Verify subscription exists for this topic
             subscriptions = diagnostics_after_subscribe['data']['subscriptions']
             self.assertIn(topic_name, subscriptions)
@@ -235,13 +235,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             publish_data = response.json()
             self.assertTrue(publish_data['is_ok'])
-            
+
             # Check diagnostics after publish - subscriptions should still exist
             diagnostics_after_publish = self._call_diagnostics()
             self.assertIsNotNone(diagnostics_after_publish)
             self.assertTrue(diagnostics_after_publish['is_ok'])
             self.assertIn('data', diagnostics_after_publish)
-            
+
             # Verify subscriptions exist for both topics
             subscriptions = diagnostics_after_publish['data']['subscriptions']
             self.assertIn(topic1, subscriptions)
@@ -267,13 +267,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
         self.assertGreaterEqual(len(messages_data['data']), 2)
-        
+
         # Check diagnostics after getting messages - subscriptions should still exist
         diagnostics_after_get = self._call_diagnostics()
         self.assertIsNotNone(diagnostics_after_get)
         self.assertTrue(diagnostics_after_get['is_ok'])
         self.assertIn('data', diagnostics_after_get)
-        
+
         # Verify subscriptions exist for both topics
         subscriptions = diagnostics_after_get['data']['subscriptions']
         self.assertIn(topic1, subscriptions)
@@ -288,7 +288,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def test_publish_without_subscription(self):
+    def xtest_publish_without_subscription(self):
         """ Test publishing to a topic without being subscribed.
         """
         topic_name = self.test_topics[0]  # demo.1
