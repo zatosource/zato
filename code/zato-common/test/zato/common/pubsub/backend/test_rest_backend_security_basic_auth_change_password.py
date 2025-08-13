@@ -79,7 +79,7 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_updates_existing_user(self):
 
         # First create a user
-        self.rest_server.users[self.test_username] = self.test_old_password
+        self.rest_server.users[self.test_username] = {"sec_name": "test_sec_def", "password": self.test_old_password}
 
         # Create the broker message
         msg = {
@@ -89,20 +89,20 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         }
 
         # Verify user has old password initially
-        self.assertEqual(self.rest_server.users[self.test_username], self.test_old_password)
+        self.assertEqual(self.rest_server.users[self.test_username], {'sec_name': 'test_sec_def', 'password': self.test_old_password})
 
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
         # Assert password was updated
-        self.assertEqual(self.rest_server.users[self.test_username], self.test_new_password)
+        self.assertEqual(self.rest_server.users[self.test_username], {'sec_name': 'test_sec_def', 'password': self.test_new_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_with_empty_password(self):
 
         # First create a user
-        self.rest_server.users[self.empty_password_username] = self.empty_old_password
+        self.rest_server.users[self.empty_password_username] = {"sec_name": "test_sec_def", "password": self.empty_old_password}
 
         # Create the broker message with empty new password
         msg = {
@@ -114,15 +114,15 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was not changed due to empty password
-        self.assertEqual(self.rest_server.users[self.empty_password_username], self.empty_old_password)
+        # Assert password was not changed due to empty new password
+        self.assertEqual(self.rest_server.users[self.empty_password_username], {'sec_name': 'test_sec_def', 'password': self.empty_old_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_with_special_characters(self):
 
         # First create a user
-        self.rest_server.users[self.special_chars_username] = self.special_chars_old_password
+        self.rest_server.users[self.special_chars_username] = {"sec_name": "test_sec_def", "password": self.special_chars_old_password}
 
         # Create the broker message with special characters
         msg = {
@@ -134,15 +134,15 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was updated
-        self.assertEqual(self.rest_server.users[self.special_chars_username], self.special_chars_new_password)
+        # Assert password was updated with special characters
+        self.assertEqual(self.rest_server.users[self.special_chars_username], {'sec_name': 'test_sec_def', 'password': self.special_chars_new_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_with_unicode_characters(self):
 
         # First create a user
-        self.rest_server.users[self.unicode_username] = self.unicode_old_password
+        self.rest_server.users[self.unicode_username] = {"sec_name": "test_sec_def", "password": self.unicode_old_password}
 
         # Create the broker message with unicode characters
         msg = {
@@ -154,15 +154,15 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was updated
-        self.assertEqual(self.rest_server.users[self.unicode_username], self.unicode_new_password)
+        # Assert password was updated with Unicode characters
+        self.assertEqual(self.rest_server.users[self.unicode_username], {'sec_name': 'test_sec_def', 'password': self.unicode_new_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_with_long_values(self):
 
         # First create a user
-        self.rest_server.users[self.long_username] = self.long_old_password
+        self.rest_server.users[self.long_username] = {"sec_name": "test_sec_def", "password": self.long_old_password}
 
         # Create the broker message with long values
         msg = {
@@ -174,8 +174,8 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was updated
-        self.assertEqual(self.rest_server.users[self.long_username], self.long_new_password)
+        # Assert password was updated with long values
+        self.assertEqual(self.rest_server.users[self.long_username], {'sec_name': 'test_sec_def', 'password': self.long_new_password})
 
 # ################################################################################################################################
 
@@ -189,7 +189,7 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         multi_password_3 = 'password_3'
 
         # First create a user
-        self.rest_server.users[multi_username] = multi_password_1
+        self.rest_server.users[multi_username] = {"sec_name": "test_sec_def", "password": multi_password_1}
 
         # First password change
         msg1 = {
@@ -199,7 +199,7 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         }
 
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg1)
-        self.assertEqual(self.rest_server.users[multi_username], multi_password_2)
+        self.assertEqual(self.rest_server.users[multi_username], {'sec_name': 'test_sec_def', 'password': multi_password_2})
 
         # Second password change
         msg2 = {
@@ -209,14 +209,14 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         }
 
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg2)
-        self.assertEqual(self.rest_server.users[multi_username], multi_password_3)
+        self.assertEqual(self.rest_server.users[multi_username], {'sec_name': 'test_sec_def', 'password': multi_password_3})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_preserves_message_data(self):
 
         # First create a user
-        self.rest_server.users[self.preserve_username] = self.preserve_old_password
+        self.rest_server.users[self.preserve_username] = {"sec_name": "test_sec_def", "password": self.preserve_old_password}
 
         # Extra fields that should be ignored
         extra_field_value = 'extra_value'
@@ -234,14 +234,14 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
         # Assert password was updated and user exists
-        self.assertEqual(self.rest_server.users[self.preserve_username], self.preserve_new_password)
+        self.assertEqual(self.rest_server.users[self.preserve_username], {'sec_name': 'test_sec_def', 'password': self.preserve_new_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_with_numeric_cid(self):
 
         # First create a user
-        self.rest_server.users[self.numeric_cid_username] = self.numeric_old_password
+        self.rest_server.users[self.numeric_cid_username] = {"sec_name": "test_sec_def", "password": self.numeric_old_password}
 
         # Create the broker message with numeric CID
         msg = {
@@ -253,15 +253,15 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         # Call the method under test
         self.backend.on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg)
 
-        # Assert password was updated regardless of CID type
-        self.assertEqual(self.rest_server.users[self.numeric_cid_username], self.numeric_new_password)
+        # Assert password was updated with numeric CID
+        self.assertEqual(self.rest_server.users[self.numeric_cid_username], {'sec_name': 'test_sec_def', 'password': self.numeric_new_password})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD_does_not_modify_backend_state(self):
 
         # First create a user
-        self.rest_server.users['state_user'] = 'old_state_password'
+        self.rest_server.users['state_user'] = {"sec_name": "test_sec_def", "password": 'old_state_password'}
 
         # Store initial state
         initial_topics = dict(self.backend.topics)
@@ -281,8 +281,8 @@ class RESTBackendSecurityBasicAuthChangePasswordTestCase(TestCase):
         self.assertEqual(self.backend.topics, initial_topics)
         self.assertEqual(self.backend.subs_by_topic, initial_subs)
 
-        # But password should be updated
-        self.assertEqual(self.rest_server.users['state_user'], 'new_state_password')
+        # Assert password was updated and backend state unchanged
+        self.assertEqual(self.rest_server.users['state_user'], {'sec_name': 'test_sec_def', 'password': 'new_state_password'})
 
 # ################################################################################################################################
 

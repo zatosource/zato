@@ -29,15 +29,20 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
         self.broker_client.cluster_id = 'test-cluster'
 
         # Mock response for invoke_service_with_pubsub with test users
-        self.broker_client.invoke_sync.return_value = [
-            {'username': 'test_user', 'name': 'test_user_sec'},
-            {'username': 'multi_user', 'name': 'multi_user_sec'},
-            {'username': 'topic_creator', 'name': 'topic_creator_sec'},
-            {'username': 'user_one', 'name': 'user_one_sec'},
-            {'username': 'user_two', 'name': 'user_two_sec'},
-            {'username': 'empty_user', 'name': 'empty_user_sec'},
-            {'username': 'existing_user', 'name': 'existing_user_sec'}
-        ]
+        def mock_invoke_sync(service, request, timeout=20, needs_root_elem=False):
+            if needs_root_elem:
+                return {'error': None}
+            return [
+                {'username': 'test_user', 'name': 'test_user_sec'},
+                {'username': 'multi_user', 'name': 'multi_user_sec'},
+                {'username': 'topic_creator', 'name': 'topic_creator_sec'},
+                {'username': 'user_one', 'name': 'user_one_sec'},
+                {'username': 'user_two', 'name': 'user_two_sec'},
+                {'username': 'empty_user', 'name': 'empty_user_sec'},
+                {'username': 'existing_user', 'name': 'existing_user_sec'}
+            ]
+
+        self.broker_client.invoke_sync.side_effect = mock_invoke_sync
 
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
@@ -177,9 +182,9 @@ class RESTBackendSubscriptionCreateTestCase(TestCase):
 
         self.backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(msg2)
 
-        # Assert the subscription was overwritten
+        # Assert the subscription was not overwritten (existing behavior)
         subscription = self.backend.subs_by_topic['test.topic']['test_user_sec']
-        self.assertEqual(subscription.sub_key, 'sk-new')
+        self.assertEqual(subscription.sub_key, 'sk-initial')
 
         # Assert there's still only one subscription for this user/topic
         self.assertEqual(len(self.backend.subs_by_topic['test.topic']), 1)

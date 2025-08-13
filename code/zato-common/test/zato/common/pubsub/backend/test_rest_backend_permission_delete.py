@@ -34,7 +34,7 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
 
         # Set up test data
         username = 'test_user'
-        self.rest_server.users[username] = 'password123'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'password123'}
 
         # Add initial permissions
         initial_permissions = [
@@ -74,7 +74,7 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
 
         # Add a different user to ensure we don't affect existing users
         other_username = 'other_user'
-        self.rest_server.users[other_username] = 'other_password'
+        self.rest_server.users[other_username] = {"sec_name": "test_sec_def", "password": 'other_password'}
         other_permissions = [{'pattern': 'other.*', 'access_type': 'publisher'}]
         self.backend.pattern_matcher.add_client(other_username, other_permissions)
 
@@ -103,9 +103,9 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
         user1 = 'user_one'
         user2 = 'user_two'
         user3 = 'user_three'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
-        self.rest_server.users[user3] = 'password3'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
+        self.rest_server.users[user3] = {"sec_name": "test_sec_def", "password": 'password3'}
 
         # Give each user different permissions
         user1_permissions = [{'pattern': 'user1.*', 'access_type': 'publisher'}]
@@ -155,7 +155,7 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
 
         # Set up test data
         username = 'multi_permission_user'
-        self.rest_server.users[username] = 'multi_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'multi_password'}
 
         # Add permissions for both publisher and subscriber
         mixed_permissions = [
@@ -203,7 +203,7 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
 
         # Set up user but no permissions
         username = 'empty_user'
-        self.rest_server.users[username] = 'empty_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'empty_password'}
 
         # Verify pattern matcher is empty
         client_count_before = self.backend.pattern_matcher.get_client_count()
@@ -229,8 +229,8 @@ class RESTBackendPermissionDeleteTestCase(TestCase):
         # Set up multiple users
         user1 = 'cache_user1'
         user2 = 'cache_user2'
-        self.rest_server.users[user1] = 'cache_password1'
-        self.rest_server.users[user2] = 'cache_password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'cache_password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'cache_password2'}
 
         # Add permissions
         user1_permissions = [{'pattern': 'cache1.*', 'access_type': 'publisher'}]

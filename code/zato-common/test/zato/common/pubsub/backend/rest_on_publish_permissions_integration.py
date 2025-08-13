@@ -62,7 +62,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         self.test_password = 'secure_password_123'
 
         # Add test user to server
-        self.rest_server.users[self.test_username] = self.test_password
+        self.rest_server.users[self.test_username] = {"sec_name": "test_sec_def", "password": self.test_password}
 
 # ################################################################################################################################
 
@@ -284,7 +284,7 @@ class RESTOnPublishPermissionsIntegrationTestCase(TestCase):
         # Set up second user
         second_username = 'second_user'
         second_password = 'second_password'
-        self.rest_server.users[second_username] = second_password
+        self.rest_server.users[second_username] = {"sec_name": "test_sec_def", "password": second_password}
 
         # Give first user orders permissions
         permissions1 = [{'pattern': 'orders.*', 'access_type': 'publisher'}]
