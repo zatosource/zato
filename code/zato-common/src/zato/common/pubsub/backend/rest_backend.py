@@ -138,7 +138,7 @@ class RESTBackend(Backend):
             logger.info(f'[{cid}] Updating username from `{old_username}` to `{new_username}`')
 
             # .. update the username in rest_server ..
-            self.rest_server.edit_user(cid, old_username, new_username)
+            self.rest_server.edit_user(cid, old_sec_name, new_sec_name, old_username, new_username)
 
             # .. and update the client ID in pattern_matcher ..
             self.pattern_matcher.change_client_id(old_username, new_username)
