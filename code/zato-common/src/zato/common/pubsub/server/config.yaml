@@ -1,5 +1,5 @@
 security:
-  - name: demo
+  - name: demo_sec_def
     type: basic_auth
     username: demo
     password: demo
@@ -15,14 +15,14 @@ pubsub_topic:
     description: Demo topic 3
 
 pubsub_permission:
-  - security: demo
+  - security: demo_sec_def
     pub:
       - demo.*
     sub:
       - demo.*
 
 pubsub_subscription:
-  - security: demo
+  - security: demo_sec_def
     delivery_type: pull
     max_retry_time: 365d
     topic_list:
