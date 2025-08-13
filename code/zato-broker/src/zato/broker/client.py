@@ -511,6 +511,9 @@ class BrokerClient:
             data_keys = list(data.keys()) # type: ignore
             root = data_keys[0]
             data = data[root] # type: ignore
+            print()
+            print(111, repr(data), needs_root_elem)
+            print()
         else:
             data = response.data
 
