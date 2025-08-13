@@ -97,65 +97,12 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_RELOAD_CONFIG(self, msg:'strdict') -> 'None':
-
-        # Local aliases
-        cid = msg['cid']
-
-        logger.info(f'[{cid}] Reloading pub/sub configuration')
-
-        with self._main_lock:
-
-            # Clear all in-memory structures
-            self.topics.clear()
-            self.subs_by_topic.clear()
-            self.rest_server.users.clear()
-            self.pattern_matcher.clear_cache()
-
-            # Remove all clients from pattern matcher
-            for client_id in list(self.pattern_matcher._clients.keys()):
-                self.pattern_matcher.remove_client(client_id)
-
-        # Reload everything as if server was starting
-        self.rest_server.setup()
-
-        logger.info(f'[{cid}] Configuration reload completed')
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
-
-        # Local aliases
-        new_topic_name:'str' = msg['new_topic_name']
-        old_topic_name:'str' = msg['old_topic_name']
-
-        # Move the topic in internal mappings
-        if old_topic_name in self.topics:
-            topic = self.topics.pop(old_topic_name)
-            self.topics[new_topic_name] = topic
-
-        # Move all subscriptions to the new topic name
-        if old_topic_name in self.subs_by_topic:
-            subs = self.subs_by_topic.pop(old_topic_name)
-            self.subs_by_topic[new_topic_name] = subs
-
-            # Update each subscription to point to the new topic
-            for sub in subs.values():
-                sub.topic_name = new_topic_name
-
-        # Update permissions for all users in pattern matcher
-        for username in self.rest_server.users:
-            self.pattern_matcher.rename_topic(username, old_topic_name, new_topic_name)
-
-        logger.info('Topic updated -> msg: %s', msg)
-
-# ################################################################################################################################
-
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'strdict') -> 'None':
 
         # Local aliases
         cid = msg['cid']
         username = msg['username']
+        sec_name = msg['sec_name']
         password = msg['password']
 
         # Reject empty passwords
@@ -191,7 +138,7 @@ class RESTBackend(Backend):
             logger.info(f'[{cid}] Updating username from `{old_username}` to `{new_username}`')
 
             # .. update the username in rest_server ..
-            self.rest_server.change_username(cid, old_username, new_username)
+            self.rest_server.edit_user(cid, old_username, new_username)
 
             # .. and update the client ID in pattern_matcher ..
             self.pattern_matcher.change_client_id(old_username, new_username)
@@ -272,6 +219,34 @@ class RESTBackend(Backend):
             logger.warning(f'[{cid}] User not found for deletion: `{username}`')
 
         logger.info('HTTP Basic Auth deleted -> msg: %s', msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        new_topic_name:'str' = msg['new_topic_name']
+        old_topic_name:'str' = msg['old_topic_name']
+
+        # Move the topic in internal mappings
+        if old_topic_name in self.topics:
+            topic = self.topics.pop(old_topic_name)
+            self.topics[new_topic_name] = topic
+
+        # Move all subscriptions to the new topic name
+        if old_topic_name in self.subs_by_topic:
+            subs = self.subs_by_topic.pop(old_topic_name)
+            self.subs_by_topic[new_topic_name] = subs
+
+            # Update each subscription to point to the new topic
+            for sub in subs.values():
+                sub.topic_name = new_topic_name
+
+        # Update permissions for all users in pattern matcher
+        for username in self.rest_server.users:
+            self.pattern_matcher.rename_topic(username, old_topic_name, new_topic_name)
+
+        logger.info('Topic updated -> msg: %s', msg)
 
 # ################################################################################################################################
 
@@ -356,6 +331,32 @@ class RESTBackend(Backend):
             _ = self.register_subscription(cid, topic_name, sec_name, {}, sub_key)
 
         logger.info(f'[{cid}] Updated subscription {sub_key} for {sec_name} to topics: {topic_name_list}')
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_RELOAD_CONFIG(self, msg:'strdict') -> 'None':
+
+        # Local aliases
+        cid = msg['cid']
+
+        logger.info(f'[{cid}] Reloading pub/sub configuration')
+
+        with self._main_lock:
+
+            # Clear all in-memory structures
+            self.topics.clear()
+            self.subs_by_topic.clear()
+            self.rest_server.users.clear()
+            self.pattern_matcher.clear_cache()
+
+            # Remove all clients from pattern matcher
+            for client_id in list(self.pattern_matcher._clients.keys()):
+                self.pattern_matcher.remove_client(client_id)
+
+        # Reload everything as if server was starting
+        self.rest_server.setup()
+
+        logger.info(f'[{cid}] Configuration reload completed')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -360,7 +360,7 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def change_username(self, cid:'str', old_username:'str', new_username:'str') -> 'None':
+    def edit_user(self, cid:'str', old_username:'str', new_username:'str') -> 'None':
 
         if old_username not in self.users:
             logger.info(f'[{cid}] User not found: `{old_username}`')
