@@ -57,10 +57,10 @@ class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
 
         # Set up test users for authentication
         self.rest_server.users = {
-            'test_user': 'test_password',
-            'allowed_user': 'allowed_password',
-            'denied_user': 'denied_password',
-            'admin_user': 'admin_password'
+            'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'},
+            'allowed_user': {'sec_name': 'test_sec_def', 'password': 'allowed_password'},
+            'denied_user': {'sec_name': 'test_sec_def', 'password': 'denied_password'},
+            'admin_user': {'sec_name': 'test_sec_def', 'password': 'admin_password'}
         }
         self.test_cid = 'test-cid-123'
         self.test_topic = 'test.topic'

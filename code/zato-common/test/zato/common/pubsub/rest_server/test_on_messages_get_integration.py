@@ -52,7 +52,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         self.broker_client = BrokerClientHelper()
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
-        self.rest_server.users = {'test_user': 'test_password'}
+        self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
 
         # Test data constants
         self.test_cid = 'test-cid-123'

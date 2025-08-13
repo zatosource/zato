@@ -57,11 +57,11 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
 
         # Set up test users for authentication
         self.rest_server.users = {
-            'test_user': 'test_password',
-            'different_user': 'different_password',
-            'admin_user': 'admin_password',
-            'user1': 'password1',
-            'user2': 'password2'
+            'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'},
+            'different_user': {'sec_name': 'test_sec_def', 'password': 'different_password'},
+            'admin_user': {'sec_name': 'test_sec_def', 'password': 'admin_password'},
+            'user1': {'sec_name': 'test_sec_def', 'password': 'password1'},
+            'user2': {'sec_name': 'test_sec_def', 'password': 'password2'}
         }
 
         # Set up permissions for all users
