@@ -91,7 +91,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_username_changed_only(self):
 
         # Setup initial user
-        self.rest_server.users[self.username_only_old] = self.password
+        self.rest_server.users[self.username_only_old] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Add permissions to pattern matcher
         permissions = [{'pattern': 'test.topic.*', 'access_type': 'pub'}]
@@ -114,7 +114,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
         # Assert old username was removed and new username was added
         self.assertNotIn(self.username_only_old, self.rest_server.users)
         self.assertIn(self.username_only_new, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.username_only_new], self.password)
+        self.assertEqual(self.rest_server.users[self.username_only_new], {'sec_name': 'username_only_new', 'password': self.password})
 
         # Assert pattern matcher was updated
         self.assertNotIn(self.username_only_old, self.backend.pattern_matcher._clients)
@@ -162,7 +162,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_both_changed(self):
 
         # Setup initial user
-        self.rest_server.users[self.both_old_username] = self.password
+        self.rest_server.users[self.both_old_username] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Setup initial subscription
         topic_name = 'test.topic'
@@ -194,7 +194,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
         # Assert username was changed
         self.assertNotIn(self.both_old_username, self.rest_server.users)
         self.assertIn(self.both_new_username, self.rest_server.users)
-        self.assertEqual(self.rest_server.users[self.both_new_username], self.password)
+        self.assertEqual(self.rest_server.users[self.both_new_username], {'sec_name': 'both_new_sec_name', 'password': self.password})
 
         # Assert pattern matcher was updated
         self.assertNotIn(self.both_old_username, self.backend.pattern_matcher._clients)
@@ -213,7 +213,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_no_changes(self):
 
         # Setup initial user
-        self.rest_server.users[self.no_changes_username] = self.password
+        self.rest_server.users[self.no_changes_username] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Setup initial subscription
         topic_name = 'test.topic'
@@ -363,7 +363,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_with_special_characters(self):
 
         # Setup initial user
-        self.rest_server.users[self.special_chars_old_username] = self.password
+        self.rest_server.users[self.special_chars_old_username] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Setup initial subscription
         topic_name = 'test.topic'
@@ -401,7 +401,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_with_unicode_characters(self):
 
         # Setup initial user
-        self.rest_server.users[self.unicode_old_username] = self.password
+        self.rest_server.users[self.unicode_old_username] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Setup initial subscription
         topic_name = 'test.topic'
@@ -439,7 +439,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_with_numeric_cid(self):
 
         # Setup initial user
-        self.rest_server.users[self.numeric_old_username] = self.password
+        self.rest_server.users[self.numeric_old_username] = {"sec_name": "test_sec_def", "password": self.password}
 
         # Create the broker message with numeric CID
         msg = {
@@ -524,8 +524,8 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_username_change_target_exists(self):
 
         # Setup initial users - both old and new usernames exist
-        self.rest_server.users['existing_old'] = 'password1'
-        self.rest_server.users['existing_new'] = 'password2'
+        self.rest_server.users['existing_old'] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users['existing_new'] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # Create the broker message
         msg = {
@@ -544,15 +544,15 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
         # Assert both users still exist (no change occurred)
         self.assertIn('existing_old', self.rest_server.users)
         self.assertIn('existing_new', self.rest_server.users)
-        self.assertEqual(self.rest_server.users['existing_old'], 'password1')
-        self.assertEqual(self.rest_server.users['existing_new'], 'password2')
+        self.assertEqual(self.rest_server.users['existing_old'], {'sec_name': 'test_sec_def', 'password': 'password1'})
+        self.assertEqual(self.rest_server.users['existing_new'], {'sec_name': 'test_sec_def', 'password': 'password2'})
 
 # ################################################################################################################################
 
     def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT_username_change_source_missing(self):
 
         # Setup - old username does not exist
-        self.rest_server.users['some_other_user'] = 'password'
+        self.rest_server.users['some_other_user'] = {"sec_name": "test_sec_def", "password": 'password'}
 
         # Create the broker message
         msg = {

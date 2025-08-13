@@ -153,8 +153,8 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # Add two users with different permissions
         user1 = 'affected_user'
         user2 = 'unaffected_user'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # User1 has exact permission for the topic being deleted
         permissions1 = [{'pattern': topic_name, 'access_type': 'publisher'}]
@@ -205,8 +205,8 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # Add two users with different permissions
         user1 = 'affected_user'
         user2 = 'unaffected_user'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # User1 has exact subscriber permission for the topic being deleted
         permissions1 = [{'pattern': topic_name, 'access_type': 'subscriber'}]
@@ -257,8 +257,8 @@ class RESTBackendTopicDeleteTestCase(TestCase):
         # Add two users with different permission types
         user1 = 'exact_user'
         user2 = 'wildcard_user'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # User1 has exact permission for the topic being deleted
         permissions1 = [{'pattern': topic_name, 'access_type': 'publisher'}]

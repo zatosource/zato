@@ -34,7 +34,7 @@ class RESTBackendPermissionEditTestCase(TestCase):
 
         # Set up test data
         username = 'test_user'
-        self.rest_server.users[username] = 'password123'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'password123'}
 
         # Add initial permissions
         initial_permissions = [{'pattern': 'old.*', 'access_type': 'publisher'}]
@@ -87,7 +87,7 @@ class RESTBackendPermissionEditTestCase(TestCase):
 
         # Set up test data
         username = 'subscriber_user'
-        self.rest_server.users[username] = 'sub_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'sub_password'}
 
         # Add initial publisher permissions
         initial_permissions = [{'pattern': 'old.*', 'access_type': 'publisher'}]
@@ -128,7 +128,7 @@ class RESTBackendPermissionEditTestCase(TestCase):
 
         # Set up test data
         username = 'single_user'
-        self.rest_server.users[username] = 'single_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'single_password'}
 
         # Add initial permissions
         initial_permissions = [{'pattern': 'old.*', 'access_type': 'publisher'}]
@@ -163,7 +163,7 @@ class RESTBackendPermissionEditTestCase(TestCase):
 
         # Set up test data
         username = 'filter_user'
-        self.rest_server.users[username] = 'filter_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'filter_password'}
 
         # Add initial permissions
         initial_permissions = [{'pattern': 'old.*', 'access_type': 'publisher'}]
@@ -196,8 +196,8 @@ class RESTBackendPermissionEditTestCase(TestCase):
         # Set up multiple users
         user1 = 'user_one'
         user2 = 'user_two'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # Give both users initial permissions
         initial_permissions_1 = [{'pattern': 'user1.*', 'access_type': 'publisher'}]
@@ -236,7 +236,7 @@ class RESTBackendPermissionEditTestCase(TestCase):
 
         # Set up test data
         username = 'replace_user'
-        self.rest_server.users[username] = 'replace_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'replace_password'}
 
         # Add multiple initial permissions
         initial_permissions = [

@@ -61,7 +61,7 @@ class RESTOnPublishPermissionsAllowedTestCase(TestCase):
         self.test_password = 'secure_password_123'
 
         # Add test user to server
-        self.rest_server.users[self.test_username] = self.test_password
+        self.rest_server.users[self.test_username] = {"sec_name": "test_sec_def", "password": self.test_password}
 
 # ################################################################################################################################
 

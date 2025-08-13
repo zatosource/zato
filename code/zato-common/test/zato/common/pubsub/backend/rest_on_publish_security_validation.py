@@ -44,7 +44,12 @@ class RESTOnPublishSecurityValidationTestCase(TestCase):
         self.test_topic = 'test.topic'
 
         # Add test user to server
-        self.rest_server.users[self.test_username] = self.test_password
+        self.rest_server.users[self.test_username] = {"sec_name": "test_sec_def", "password": self.test_password}
+
+        # Add permissions for test user
+        self.rest_server.backend.pattern_matcher.add_client(self.test_username, [
+            {'pattern': 'test.*', 'access_type': 'publisher'}
+        ])
 
 # ################################################################################################################################
 

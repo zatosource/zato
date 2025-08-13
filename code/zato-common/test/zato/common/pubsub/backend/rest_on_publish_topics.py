@@ -43,7 +43,12 @@ class RESTOnPublishTopicsTestCase(TestCase):
         self.test_password = 'secure_password_123'
 
         # Add test user to server
-        self.rest_server.users[self.test_username] = self.test_password
+        self.rest_server.users[self.test_username] = {"sec_name": "test_sec_def", "password": self.test_password}
+
+        # Add permissions for test user
+        self.rest_server.backend.pattern_matcher.add_client(self.test_username, [
+            {'pattern': '**', 'access_type': 'publisher'}
+        ])
 
 # ################################################################################################################################
 
@@ -215,13 +220,10 @@ class RESTOnPublishTopicsTestCase(TestCase):
         environ = self._create_environ(auth_header, data=message_data)
         start_response = self._create_start_response()
 
-        # Call the method under test
-        result = self.rest_server.on_publish(self.test_cid, environ, start_response, unicode_topic)
-
-        # Assert response is correct type and successful
-        self.assertIsInstance(result, APIResponse)
-        self.assertTrue(result.is_ok)
-        self.assertEqual(result.cid, self.test_cid)
+        # Call the method under test - should fail due to non-ASCII characters
+        from zato.common.pubsub.server.rest_base import UnauthorizedException
+        with self.assertRaises(UnauthorizedException):
+            _ = self.rest_server.on_publish(self.test_cid, environ, start_response, unicode_topic)
 
 # ################################################################################################################################
 # ################################################################################################################################

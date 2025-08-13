@@ -34,7 +34,7 @@ class RESTBackendPermissionCreateTestCase(TestCase):
 
         # Set up test data
         username = 'test_user'
-        self.rest_server.users[username] = 'password123'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'password123'}
 
         # Create the broker message
         msg = {
@@ -81,7 +81,7 @@ class RESTBackendPermissionCreateTestCase(TestCase):
 
         # Set up test data
         username = 'subscriber_user'
-        self.rest_server.users[username] = 'sub_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'sub_password'}
 
         # Create the broker message for subscriber permissions
         msg = {
@@ -116,7 +116,7 @@ class RESTBackendPermissionCreateTestCase(TestCase):
 
         # Set up test data
         username = 'single_pattern_user'
-        self.rest_server.users[username] = 'single_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'single_password'}
 
         # Create the broker message with a single pattern
         msg = {
@@ -144,7 +144,7 @@ class RESTBackendPermissionCreateTestCase(TestCase):
 
         # Set up test data
         username = 'filter_user'
-        self.rest_server.users[username] = 'filter_password'
+        self.rest_server.users[username] = {"sec_name": "test_sec_def", "password": 'filter_password'}
 
         # Create the broker message with empty lines that should be filtered
         msg = {
@@ -171,8 +171,8 @@ class RESTBackendPermissionCreateTestCase(TestCase):
         # Set up multiple users
         user1 = 'user_one'
         user2 = 'user_two'
-        self.rest_server.users[user1] = 'password1'
-        self.rest_server.users[user2] = 'password2'
+        self.rest_server.users[user1] = {"sec_name": "test_sec_def", "password": 'password1'}
+        self.rest_server.users[user2] = {"sec_name": "test_sec_def", "password": 'password2'}
 
         # Give user1 some initial permissions
         initial_permissions = [{'pattern': 'initial.*', 'access_type': 'publisher'}]
