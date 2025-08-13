@@ -19,7 +19,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
-from zato.common.pubsub.util import evaluate_pattern_match
+from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
@@ -424,25 +424,12 @@ class _BaseModifyTopicList(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 # Find security definition by username or sec_name
-                if input.username:
-                    sec_def = session.query(SecurityBase).\
-                        filter(SecurityBase.cluster_id==cluster_id).\
-                        filter(SecurityBase.username==input.username).\
-                        first()
-                    lookup_field = 'username'
-                    lookup_value = input.username
-                elif input.sec_name:
-                    sec_def = session.query(SecurityBase).\
-                        filter(SecurityBase.cluster_id==cluster_id).\
-                        filter(SecurityBase.name==input.sec_name).\
-                        first()
-                    lookup_field = 'sec_name'
-                    lookup_value = input.sec_name
-                else:
-                    raise Exception('Either username or sec_name must be provided')
-
-                if not sec_def:
-                    raise Exception(f'Security definition not found for {lookup_field} `{lookup_value}`')
+                sec_def, lookup_field, lookup_value = get_security_definition(
+                    session,
+                    cluster_id,
+                    username=getattr(input, 'username', None),
+                    sec_name=getattr(input, 'sec_name', None)
+                )
 
                 sec_base_id = sec_def.id
 
