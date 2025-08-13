@@ -51,8 +51,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Verify subscription exists
         subscriptions = diagnostics_after_subscribe['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
-        self.assertIn('demo', subscriptions[topic_name])
-        self.assertIn('sub_key', subscriptions[topic_name]['demo'])
+        self.assertIn('demo_sec_def', subscriptions[topic_name])
+        self.assertIn('sub_key', subscriptions[topic_name]['demo_sec_def'])
         
         self.assertIn('cid', subscribe_data)
 
@@ -87,7 +87,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Verify subscription still exists
         subscriptions = diagnostics_after_publish['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
-        self.assertIn('demo', subscriptions[topic_name])
+        self.assertIn('demo_sec_def', subscriptions[topic_name])
 
         # Step 3: Get messages (with small delay for message delivery)
         time.sleep(0.1)
@@ -119,7 +119,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Verify subscription still exists
         subscriptions = diagnostics_after_get['data']['subscriptions']
         self.assertIn(topic_name, subscriptions)
-        self.assertIn('demo', subscriptions[topic_name])
+        self.assertIn('demo_sec_def', subscriptions[topic_name])
 
         # Verify message content
         message = messages_data['data'][0]
@@ -208,8 +208,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             # Verify subscription exists for this topic
             subscriptions = diagnostics_after_subscribe['data']['subscriptions']
             self.assertIn(topic_name, subscriptions)
-            self.assertIn('demo', subscriptions[topic_name])
-            self.assertIn('sub_key', subscriptions[topic_name]['demo'])
+            self.assertIn('demo_sec_def', subscriptions[topic_name])
+            self.assertIn('sub_key', subscriptions[topic_name]['demo_sec_def'])
 
         # Publish messages to both topics
         messages = {
@@ -246,8 +246,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             subscriptions = diagnostics_after_publish['data']['subscriptions']
             self.assertIn(topic1, subscriptions)
             self.assertIn(topic2, subscriptions)
-            self.assertIn('demo', subscriptions[topic1])
-            self.assertIn('demo', subscriptions[topic2])
+            self.assertIn('demo_sec_def', subscriptions[topic1])
+            self.assertIn('demo_sec_def', subscriptions[topic2])
 
         # Get all messages
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
@@ -278,8 +278,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         subscriptions = diagnostics_after_get['data']['subscriptions']
         self.assertIn(topic1, subscriptions)
         self.assertIn(topic2, subscriptions)
-        self.assertIn('demo', subscriptions[topic1])
-        self.assertIn('demo', subscriptions[topic2])
+        self.assertIn('demo_sec_def', subscriptions[topic1])
+        self.assertIn('demo_sec_def', subscriptions[topic2])
 
         # Verify we got messages from both topics
         received_topics = {msg['topic_name'] for msg in messages_data['data']}
