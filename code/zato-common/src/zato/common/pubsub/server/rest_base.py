@@ -186,17 +186,24 @@ class BaseRESTServer(BaseServer):
         # .. replace the status we were given on input ..
         data.status = status
 
+        # .. now we can serialize it ..
         response_data = asdict(data)
 
-        if not response_data.get('details'):
-            del response_data['details']
+        # .. drop the fields that may be empty ..
+        for key in ['details', 'msg_id', 'data']:
+            if not response_data.get(key):
+                del response_data[key]
 
+        # .. now we can serialize it ..
         json_data = dumps(response_data).encode('utf-8')
 
+        # .. prepare our headers ..
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
 
+        # .. call the WSGI handler ..
         start_response(status, headers)
 
+        # .. and return the response to our WSGI caller.
         return [json_data]
 
 # ################################################################################################################################
