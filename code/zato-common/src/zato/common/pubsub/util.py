@@ -300,4 +300,37 @@ def cleanup_broker_impl(
     return result
 
 # ################################################################################################################################
+
+def get_security_definition(session, cluster_id, username=None, sec_name=None):
+    """ Get security definition by username or sec_name.
+    
+    Returns tuple of (sec_def, lookup_field, lookup_value).
+    Raises Exception if not found or if neither username nor sec_name provided.
+    """
+    # Zato
+    from zato.common.odb.model import SecurityBase
+    
+    if username:
+        sec_def = session.query(SecurityBase).\
+            filter(SecurityBase.cluster_id==cluster_id).\
+            filter(SecurityBase.username==username).\
+            first()
+        lookup_field = 'username'
+        lookup_value = username
+    elif sec_name:
+        sec_def = session.query(SecurityBase).\
+            filter(SecurityBase.cluster_id==cluster_id).\
+            filter(SecurityBase.name==sec_name).\
+            first()
+        lookup_field = 'sec_name'
+        lookup_value = sec_name
+    else:
+        raise Exception('Either username or sec_name must be provided')
+
+    if not sec_def:
+        raise Exception(f'Security definition not found for {lookup_field} `{lookup_value}`')
+    
+    return sec_def, lookup_field, lookup_value
+
+# ################################################################################################################################
 # ################################################################################################################################
