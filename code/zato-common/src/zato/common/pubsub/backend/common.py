@@ -323,6 +323,16 @@ class Backend:
         else:
             sec_name = username_or_sec_name
 
+        # Check if user is already subscribed to this topic
+        with self._main_lock:
+            subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
+            if sec_name in subs_by_sec_name:
+                logger.info(f'[{cid}] User `{sec_name}` already subscribed to topic `{topic_name}` - no action needed')
+                response = StatusResponse()
+                response.is_ok = True
+                response.status = OK
+                return response
+
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         if not sub_key:
             # Look for existing sub_key for this user across all topics
