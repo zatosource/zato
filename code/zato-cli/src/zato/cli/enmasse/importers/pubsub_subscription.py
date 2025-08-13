@@ -195,8 +195,10 @@ class PubSubSubscriptionImporter:
             db_sec_base_id = db_def.get('sec_base_id')
             if db_sec_base_id == sec_base_id:
                 return db_def
-
-        raise Exception(f'Could not find sec_base_id `{sec_base_id}` in db_defs `{db_defs}`')
+        else:
+            # If we are here, it means this security definition must have existed
+            # but it doesn't have any subscriptions, so we can return an empty dict to indicate that.
+            return {}
 
 # ################################################################################################################################
 
@@ -334,9 +336,11 @@ class PubSubSubscriptionImporter:
             # Create a key for tracking
             key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
 
-            if self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id):
+            should_create = self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id)
 
-                # Create new definition
+            if should_create:
+
+                # Create a new definition
                 instance = self.create_pubsub_subscription_definition(subscription_def, session)
                 created.append(instance)
 
@@ -352,7 +356,9 @@ class PubSubSubscriptionImporter:
                     'is_active': instance.is_active,
                     'cluster_id': instance.cluster_id
                 }
+
             else:
+
                 existing_sub = self.find_existing_subscription_for_security(db_defs, sec_base_id)
 
                 # Update existing subscription
