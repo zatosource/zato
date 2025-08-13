@@ -364,15 +364,21 @@ class Backend:
             'is_active': True,
         }
 
-        try:
-            # self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request)
-            pass
-        except Exception:
-            logger.error(f'[{cid}] Failed to create subscription in server: {format_exc()}')
+        response = self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request, needs_root_elem=True)
+
+        print()
+        print(222, repr(response))
+        print()
+
+        if error := response.get('error'):
+            is_ok = False
+            logger.error(f'[{cid}] Failed to create subscription in server: {error}')
+        else:
+            is_ok = True
 
         # .. build our response ..
         response = StatusResponse()
-        response.is_ok = True
+        response.is_ok = is_ok
 
         # .. and return it to our caller.
         return response
