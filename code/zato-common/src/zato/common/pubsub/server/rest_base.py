@@ -176,6 +176,16 @@ class BaseRESTServer(BaseServer):
     def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
         """ Return a JSON response.
         """
+
+        # Get the textual part of the status code ..
+        response_text = http_responses[data.status]
+
+        # .. build a full status field ..
+        status = f'{data.status} {response_text}'
+
+        # .. replace the status we were given on input ..
+        data.status = status
+
         response_data = asdict(data)
 
         if not response_data.get('details'):
@@ -184,9 +194,6 @@ class BaseRESTServer(BaseServer):
         json_data = dumps(response_data).encode('utf-8')
 
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
-
-        response_text = http_responses[data.status]
-        status = f'{data.status} {response_text}'
 
         start_response(status, headers)
 
