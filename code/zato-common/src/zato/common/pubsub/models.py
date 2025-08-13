@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass, field
+from http.client import OK
 
 # Zato
 from zato.common.api import PubSub
@@ -86,6 +87,7 @@ class MessagesResponse:
 @dataclass(init=False)
 class StatusResponse:
     is_ok: 'bool'
+    status: 'int' = OK
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +99,7 @@ class APIResponse:
     is_ok: 'bool'
     cid: 'str'
     details: 'str' = ''
-    status: 'str' = '200 OK'
+    status: 'int' = OK
     msg_id: 'str' = ''
     data: 'any_' = None
 
