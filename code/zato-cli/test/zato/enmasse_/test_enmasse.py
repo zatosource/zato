@@ -125,6 +125,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             with open(import_path, 'r') as f:
                 import_data = f.read()
 
+
             with open(export_path, 'r') as f:
                 export_data = f.read()
 

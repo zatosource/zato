@@ -40,6 +40,9 @@ class PubSubPermissionExporter:
         """
         logger.info('Exporting pub/sub permission definitions')
 
+        # Local variables
+        pub_prefix = 'pub='
+        sub_prefix = 'sub='
         exported_permissions: 'pubsub_permission_def_list' = []
 
         # Get pub/sub permissions from database
@@ -73,12 +76,15 @@ class PubSubPermissionExporter:
                 permission['sub'].append(permission_obj.pattern)
 
             elif permission_obj.access_type == PubSub.API_Client.Publisher_Subscriber:
-                if permission_obj.pattern.startswith('pub='):
-                    permission['pub'].append(permission_obj.pattern)
-                elif permission_obj.pattern.startswith('sub='):
-                    permission['sub'].append(permission_obj.pattern)
-                else:
-                    raise ValueError(f'Unknown permission pattern: {permission_obj.pattern}')
+                # Split combined patterns on newlines and parse prefixes
+                patterns = [p.strip() for p in permission_obj.pattern.splitlines() if p.strip()]
+                for individual_pattern in patterns:
+                    if individual_pattern.startswith(pub_prefix):
+                        clean_pattern = individual_pattern[len(pub_prefix):]
+                        permission['pub'].append(clean_pattern)
+                    elif individual_pattern.startswith(sub_prefix):
+                        clean_pattern = individual_pattern[len(sub_prefix):]
+                        permission['sub'].append(clean_pattern)
 
             else:
                 raise ValueError(f'Unknown access_type: {permission_obj.access_type}')
