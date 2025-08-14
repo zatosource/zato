@@ -336,6 +336,9 @@ class BrokerClient:
     def _create_reply_consumer(self, queue_name:'str') -> 'Consumer':
         """ Creates a consumer for a specific reply queue.
         """
+        # Local variables
+        connect_timeout = PubSub.Max_Retry_Time
+
         # Set up configuration for a reply consumer
         reply_config = bunchify(dict(self.consumer_config, **{
             'name': f'reply-consumer-{queue_name}',
@@ -359,14 +362,15 @@ class BrokerClient:
         # Wait for consumer to be ready using wait_for_predicate
         connected = wait_for_predicate(
             is_consumer_connected,
-            timeout=PubSub.Max_Retry_Time,
+            timeout=connect_timeout,
             interval=0.01,
             log_msg_details=f'reply consumer {queue_name} to connect',
             needs_log=True,
         )
 
         if not connected:
-            logger.error(f'Reply consumer for queue {queue_name} failed to connect within 1s')
+            msg = f'Reply consumer for queue {queue_name} failed to connect within {connect_timeout}'
+            raise Exception(msg)
 
         # Track this consumer
         with self.lock:
