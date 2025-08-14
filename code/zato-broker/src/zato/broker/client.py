@@ -207,7 +207,7 @@ class BrokerClient:
         # Publish the message
         with self.producer.acquire() as client:
             logger.debug(f'Producer connection acquired: {client}')
-            logger.warn('PUBLISH %s %s', msg, publish_kwargs)
+            logger.warning('PUBLISH %s %s', msg, publish_kwargs)
             _ = client.publish(msg, **publish_kwargs)
 
 # ################################################################################################################################
@@ -338,7 +338,7 @@ class BrokerClient:
         """
         # Set up configuration for a reply consumer
         reply_config = bunchify(dict(self.consumer_config, **{
-            'name': f'reply-consumer-{queue_name[-8:]}',
+            'name': f'reply-consumer-{queue_name}',
             'queue': queue_name,
             'consumer_tag_prefix': 'zato-reply',
             'queue_opts': {
@@ -351,13 +351,25 @@ class BrokerClient:
         consumer = Consumer(reply_config, self._on_reply)
 
         # Start the consumer in its own greenlet
-        _ = spawn(consumer.start)
+        greenlet = spawn(consumer.start)
+
+        # Wait for consumer to be ready - check is_connected flag with timeout
+        max_wait = 1.0
+        wait_interval = 0.01
+        waited = 0.0
+
+        while waited < max_wait and not consumer.is_connected:
+            sleep(wait_interval)
+            waited += wait_interval
+
+        if not consumer.is_connected:
+            logger.error(f'Reply consumer for queue {queue_name} failed to connect within {max_wait}s')
 
         # Track this consumer
         with self.lock:
             self.reply_consumers[queue_name] = consumer
 
-        logger.debug(f'Started reply consumer for queue: {queue_name}')
+        logger.warning(f'Started reply consumer for queue: {queue_name}')
         return consumer
 
 # ################################################################################################################################
@@ -425,7 +437,7 @@ class BrokerClient:
         self,
         service:'str',
         request:'anydictnone'=None,
-        timeout:'int'=PubSub.Timeout.Invoke_Sync,
+        timeout:'int | float'=PubSub.Timeout.Invoke_Sync,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
         """ Synchronously invokes a service via the broker and waits for the response.
@@ -486,7 +498,7 @@ class BrokerClient:
         while not response.ready and utcnow() < end_time:
             sleep(sleep_time)
             time_left = (end_time - utcnow()).total_seconds()
-            logger.info(f'Still waiting .. sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
+            logger.info(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
 
         # Handle timeout
         if not response.ready:
