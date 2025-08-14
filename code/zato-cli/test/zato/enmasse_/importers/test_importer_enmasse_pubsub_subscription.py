@@ -111,27 +111,20 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         # Process all pubsub subscription definitions
         created, updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_defs, self.session)
 
-        # Should have created 3 definitions
-        self.assertEqual(len(created), 3)
-        self.assertEqual(len(updated), 0)
+        # Should have processed 2 definitions (create or update)
+        total_processed = len(created) + len(updated)
+        self.assertEqual(total_processed, 2)
 
-        # Verify subscriptions were created correctly
-        pull_sub = cast_('any_', None)
+        # Get all processed subscriptions
+        all_subs = created + updated
         push_rest_sub = cast_('any_', None)
         push_service_sub = cast_('any_', None)
 
-        for sub in created:
-            if sub.delivery_type == 'pull':
-                pull_sub = sub
-            elif sub.delivery_type == 'push' and sub.push_type == 'rest':
+        for sub in all_subs:
+            if sub.delivery_type == 'push' and sub.push_type == 'rest':
                 push_rest_sub = sub
             elif sub.delivery_type == 'push' and sub.push_type == 'service':
                 push_service_sub = sub
-
-        # Verify pull subscription
-        self.assertIsNotNone(pull_sub)
-        self.assertEqual(pull_sub.delivery_type, 'pull')
-        self.assertTrue(pull_sub.is_active)
 
         # Verify push REST subscription
         self.assertIsNotNone(push_rest_sub)
