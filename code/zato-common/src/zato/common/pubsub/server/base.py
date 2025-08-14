@@ -292,6 +292,10 @@ class BaseServer:
         """ Load permissions from server and set up the matcher structure.
         """
 
+        # Local variables
+        pub_prefix = 'pub='
+        sub_prefix = 'sub='
+
         # Prepare our input ..
         service = 'zato.pubsub.permission.get-list'
         request = {
@@ -323,12 +327,27 @@ class BaseServer:
                         permissions_by_sec_name[sec_name] = []
 
                     # Split patterns on newlines since service layer joins them
-                    patterns = [elem.strip() for elem in pattern.splitlines() if elem.strip()]
+                    patterns = [p.strip() for p in pattern.splitlines() if p.strip()]
 
                     for individual_pattern in patterns:
+
+                        if access_type == 'publisher-subscriber':
+                            if individual_pattern.startswith(pub_prefix):
+                                clean_pattern = individual_pattern[len(pub_prefix):]
+                                pattern_access_type = 'publisher'
+                            elif individual_pattern.startswith(sub_prefix):
+                                clean_pattern = individual_pattern[len(sub_prefix):]
+                                pattern_access_type = 'subscriber'
+                            else:
+                                clean_pattern = individual_pattern
+                                pattern_access_type = access_type
+                        else:
+                            clean_pattern = individual_pattern
+                            pattern_access_type = access_type
+
                         permissions_by_sec_name[sec_name].append({
-                            'pattern': individual_pattern,
-                            'access_type': access_type
+                            'pattern': clean_pattern,
+                            'access_type': pattern_access_type
                         })
 
                 except Exception:
