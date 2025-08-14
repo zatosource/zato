@@ -184,63 +184,37 @@ class PubSubPermissionImporter:
             # Get security base ID
             sec_base_id = self.get_security_base_id_by_name(security_name, session)
 
-            # Process pub permissions
-            for pattern in yaml_def.get('pub', []):
+            # Collect all patterns for each access type
+            pub_patterns = yaml_def.get('pub', [])
+            sub_patterns = yaml_def.get('sub', [])
+
+            # Create single permission with combined patterns and publisher-subscriber access type
+            if pub_patterns or sub_patterns:
+                combined_patterns = []
+
+                # Add pub patterns with prefix
+                for pattern in pub_patterns:
+                    combined_patterns.append(f"pub={pattern}")
+
+                # Add sub patterns with prefix
+                for pattern in sub_patterns:
+                    combined_patterns.append(f"sub={pattern}")
+
+                combined_pattern = '\n'.join(combined_patterns)
                 permission_def = {
                     'sec_base_id': sec_base_id,
-                    'pattern': pattern,
-                    'access_type': PubSub.API_Client.Publisher,
+                    'pattern': combined_pattern,
+                    'access_type': PubSub.API_Client.Publisher_Subscriber,
                     'is_active': yaml_def.get('is_active', True),
                     'cluster_id': 1
                 }
 
-                key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Publisher}"
-                logger.info('DEBUG: Publisher constant value: %s', PubSub.API_Client.Publisher)
+                key = f"{sec_base_id}_{combined_pattern}_{PubSub.API_Client.Publisher_Subscriber}"
+                logger.info('DEBUG: Publisher_Subscriber constant value: %s', PubSub.API_Client.Publisher_Subscriber)
                 logger.info('DEBUG: Checking if should create permission with key: %s', key)
                 logger.info('DEBUG: Key exists in db_defs: %s', key in db_defs)
                 if key in db_defs:
                     logger.info('DEBUG: Existing permission found: %s', db_defs[key])
-
-                if self.should_create_pubsub_permission_definition(permission_def, db_defs):
-                    instance = self.create_pubsub_permission_definition(permission_def, session)
-                    created.append(instance)
-                    self.pubsub_permission_defs[key] = {
-                        'id': instance.id,
-                        'sec_base_id': instance.sec_base_id,
-                        'pattern': instance.pattern,
-                        'access_type': instance.access_type,
-                        'is_active': instance.is_active,
-                        'cluster_id': instance.cluster_id
-                    }
-                else:
-                    permission_def['id'] = db_defs[key]['id']
-                    instance = self.update_pubsub_permission_definition(permission_def, session)
-                    updated.append(instance)
-                    self.pubsub_permission_defs[key] = {
-                        'id': instance.id,
-                        'sec_base_id': instance.sec_base_id,
-                        'pattern': instance.pattern,
-                        'access_type': instance.access_type,
-                        'is_active': instance.is_active,
-                        'cluster_id': instance.cluster_id
-                    }
-
-            # Process sub permissions
-            for pattern in yaml_def.get('sub', []):
-                permission_def = {
-                    'sec_base_id': sec_base_id,
-                    'pattern': pattern,
-                    'access_type': PubSub.API_Client.Subscriber,
-                    'is_active': yaml_def.get('is_active', True),
-                    'cluster_id': 1
-                }
-
-                key = f"{sec_base_id}_{pattern}_{PubSub.API_Client.Subscriber}"
-                logger.info('DEBUG: Subscriber constant value: %s', PubSub.API_Client.Subscriber)
-                logger.info('DEBUG: Checking if should create subscriber permission with key: %s', key)
-                logger.info('DEBUG: Key exists in db_defs: %s', key in db_defs)
-                if key in db_defs:
-                    logger.info('DEBUG: Existing subscriber permission found: %s', db_defs[key])
 
                 if self.should_create_pubsub_permission_definition(permission_def, db_defs):
                     instance = self.create_pubsub_permission_definition(permission_def, session)
