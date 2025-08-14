@@ -136,7 +136,7 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
 
 # ################################################################################################################################
 
-def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_name:'str') -> 'str':
+def evaluate_pattern_match(session, sec_base_name:'str', sec_base_id:'int', cluster_id:'int', topic_name:'str') -> 'str':
     """ Evaluate which pattern matches the given topic name for a security definition.
     Returns the matched pattern or raises an exception if no pattern matches.
     """
@@ -146,7 +146,8 @@ def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_n
     permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
 
     if not permissions:
-        raise ValueError(f'No permissions defined for security definition {sec_base_id}')
+        msg = f'No permissions defined for security definition {sec_base_id} ({sec_base_name})'
+        raise ValueError(msg)
 
     # Create temporary matcher
     matcher = PatternMatcher()
@@ -161,7 +162,8 @@ def evaluate_pattern_match(session, sec_base_id:'int', cluster_id:'int', topic_n
     if result.is_ok and result.matched_pattern:
         return result.matched_pattern
     else:
-        raise ValueError(f'Topic "{topic_name}" does not match any subscription patterns for security definition {sec_base_id}')
+        msg = f'Topic "{topic_name}" does not match any subscription patterns for security definition {sec_base_id} ({sec_base_name})'
+        raise ValueError(msg)
 
 # ################################################################################################################################
 

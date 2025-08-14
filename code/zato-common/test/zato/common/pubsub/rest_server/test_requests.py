@@ -29,7 +29,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
 
-    def xtest_subscribe_publish_get_unsubscribe_flow(self):
+    def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
@@ -184,7 +184,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_multiple_topics_subscription(self):
+    def test_multiple_topics_subscription(self):
         """ Test subscribing to multiple topics and publishing to each.
         """
         topic1 = self.test_topics[1]  # demo.2
@@ -288,7 +288,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_publish_without_subscription(self):
+    def test_publish_without_subscription(self):
         """ Test publishing to a topic without being subscribed.
         """
         topic_name = self.test_topics[0]  # demo.1
