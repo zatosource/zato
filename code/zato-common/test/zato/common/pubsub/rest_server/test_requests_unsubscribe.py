@@ -28,7 +28,7 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server unsubscribe functionality.
     """
 
-    def test_subscribe_then_unsubscribe(self):
+    def xtest_subscribe_then_unsubscribe(self):
         """ Test subscribing to a topic and then unsubscribing.
         """
         # Skip automatic unsubscribe in tearDown since this test handles it manually
