@@ -116,21 +116,23 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
     ).all()
 
     result = []
+    sub_prefix = 'sub='
+    pub_prefix = 'pub='
+
     for perm in permissions:
-        # Only include subscription patterns (sub= prefix) for subscription evaluation
-        if perm.pattern.startswith('sub='):
-            # Strip the sub= prefix to get the actual pattern
-            pattern = perm.pattern.replace('sub=', '')
-            result.append({
-                'pattern': pattern,
-                'access_type': perm.access_type
-            })
-        # For patterns without prefix, assume they are subscription patterns
-        elif not perm.pattern.startswith('pub='):
-            result.append({
-                'pattern': perm.pattern,
-                'access_type': perm.access_type
-            })
+
+        # Split patterns on newlines since service layer joins them
+        patterns = [elem.strip() for elem in perm.pattern.splitlines() if elem.strip()]
+
+        for individual_pattern in patterns:
+            for prefix in [sub_prefix, pub_prefix]:
+                if individual_pattern.startswith(prefix):
+                    clean_pattern = individual_pattern[len(prefix):]
+                    result.append({
+                        'pattern': clean_pattern,
+                        'access_type': perm.access_type
+                    })
+                    break
 
     return result
 
