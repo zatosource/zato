@@ -1162,24 +1162,36 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def on_pubsub_message(self, body:'any_', amqp_msg:'KombuMessage', name:'str', config:'dict') -> 'None':
 
+        # logger.warn('*' * 70)
+        # logger.warn('AAA-1', name)
+        # logger.warn('AAA-2', body)
+
         # Make sure we work with a dict ..
         if not isinstance(body, dict):
+            # logger.warn('AAA-3', name)
             body = loads(body)
 
         # .. which we can now turn into a Bunch ..
         body = bunchify(body)
+        # logger.warn('AAA-4', name)
 
         # .. and now we can call the actual handler now ..
         try:
+            # logger.warn('AAA-5', name)
             self.on_broker_msg(body)
+            # logger.warn('AAA-6', name)
 
         # .. indicate the message has not been processed
         except Exception:
-            logger.warning('Broker message could not be processed: %s', format_exc())
+            # logger.warn('AAA-7', name)
+            # logger.warning('Broker message could not be processed: %s', format_exc())
+            # logger.warn('AAA-8', name)
             amqp_msg.reject(requeue=True)
+            # logger.warn('AAA-9', name)
 
         # .. otherwise, confirm it's been consumed.
         else:
+            # logger.warn('AAA-10', name)
             amqp_msg.ack()
 
 # ################################################################################################################################

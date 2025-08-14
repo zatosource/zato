@@ -1143,7 +1143,7 @@ class PubSub:
     class Timeout:
 
         # How many seconds a consumer will wait in its drain_events call
-        Consumer = 5
+        Consumer = 51224
 
         # Must be bigger than the Consumer timeout to give a consumer enough time
         # to drain its events.
