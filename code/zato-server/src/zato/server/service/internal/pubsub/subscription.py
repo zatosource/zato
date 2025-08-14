@@ -158,10 +158,10 @@ class Create(AdminService):
             try:
                 # Get cluster and security definition
                 cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
-                security_def = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
+                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
                 # Generate a new subscription key
-                sub_key = new_sub_key(security_def.username)
+                sub_key = new_sub_key(sec_base.username)
 
                 # Get topics
                 topics = []
@@ -181,7 +181,7 @@ class Create(AdminService):
                 sub.sub_key = sub_key # type: ignore
                 sub.is_active = input.is_active
                 sub.cluster = cluster
-                sub.sec_base = security_def
+                sub.sec_base = sec_base
                 sub.delivery_type = input.delivery_type
                 sub.push_type = input.push_type
                 sub.push_service_name = input.push_service_name
@@ -204,7 +204,14 @@ class Create(AdminService):
                     sub_topic.cluster = cluster
 
                     with session.no_autoflush:
-                        pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                        pattern_matched = evaluate_pattern_match(
+                            session,
+                            sec_base.name,
+                            input.sec_base_id,
+                            input.cluster_id,
+                            topic.name
+                        )
+
                     sub_topic.pattern_matched = pattern_matched
 
                     session.add(sub_topic)
@@ -225,8 +232,8 @@ class Create(AdminService):
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
                 pubsub_msg.is_active = input.is_active
-                pubsub_msg.sec_name = security_def.name # type: ignore
-                pubsub_msg.username = security_def.username
+                pubsub_msg.sec_name = sec_base.name # type: ignore
+                pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
@@ -237,13 +244,13 @@ class Create(AdminService):
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_active = sub.is_active
                 self.response.payload.created = sub.created
-                self.response.payload.sec_name = security_def.name # type: ignore
+                self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_name_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
-                self.logger.info('Subscription(s) created for %s -> %s', security_def.name, topic_name_list)
+                self.logger.info('Subscription(s) created for %s -> %s', sec_base.name, topic_name_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -283,7 +290,7 @@ class Edit(AdminService):
                         setattr(sub, key, value)
 
                 # Get the security definition
-                sec_def = session.query(SecurityBase).\
+                sec_base = session.query(SecurityBase).\
                     filter(SecurityBase.id==sub.sec_base_id).\
                     one()
 
@@ -319,7 +326,13 @@ class Edit(AdminService):
 
                             # Use no_autoflush to prevent premature flush during pattern evaluation
                             with session.no_autoflush:
-                                pattern_matched = evaluate_pattern_match(session, input.sec_base_id, input.cluster_id, topic.name)
+                                pattern_matched = evaluate_pattern_match(
+                                    session,
+                                    sec_base.name,
+                                    input.sec_base_id,
+                                    input.cluster_id,
+                                    topic.name
+                                )
                             sub_topic.pattern_matched = pattern_matched
 
                             session.add(sub_topic)
@@ -347,9 +360,9 @@ class Edit(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
-                pubsub_msg.is_active = sec_def.is_active
-                pubsub_msg.sec_name = sec_def.name
-                pubsub_msg.username = sec_def.username
+                pubsub_msg.is_active = sec_base.is_active
+                pubsub_msg.sec_name = sec_base.name
+                pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
@@ -359,7 +372,7 @@ class Edit(AdminService):
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_active = sub.is_active
-                self.response.payload.sec_name = sec_def.name
+                self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_name_list
@@ -450,14 +463,14 @@ class _BaseModifyTopicList(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 # .. find security definition by username or sec_name ..
-                sec_def, lookup_field, lookup_value = get_security_definition(
+                sec_base, lookup_field, lookup_value = get_security_definition(
                     session,
                     cluster_id,
                     username=getattr(input, 'username', None),
                     sec_name=getattr(input, 'sec_name', None)
                 )
 
-                sec_base_id = sec_def.id
+                sec_base_id = sec_base.id
 
                 # .. find any existing subscriptions using GetList service  ..
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
@@ -523,9 +536,16 @@ class _BaseModifyTopicList(AdminService):
                         raise Exception(f'Topic `{topic_name}` not found')
 
                     # Check if the security definition has permission to subscribe to or unsubscribe from this topic
-                    pattern_matched = evaluate_pattern_match(session, sec_base_id, cluster_id, topic_name)
+                    pattern_matched = evaluate_pattern_match(
+                        session,
+                        sec_base.name,
+                        sec_base_id,
+                        cluster_id,
+                        topic_name
+                    )
+
                     if not pattern_matched:
-                        msg = f'User `{sec_def.username}` does not have permission for action `{self.action}` on topic `{topic_name}`'
+                        msg = f'User `{sec_base.username}` does not have permission for action `{self.action}` on topic `{topic_name}`'
                         raise Exception(msg)
 
                     new_topic_names.append(topic_name)
