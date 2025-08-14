@@ -1138,7 +1138,7 @@ class PubSub:
     Max_Repeats = 100_000_000
 
     # 90 days in seconds
-    Max_Retry_Time = 90 * 24 * 3600
+    Max_Retry_Time = 365 * 24 * 3600
 
     class Timeout:
 

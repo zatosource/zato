@@ -353,16 +353,16 @@ class BrokerClient:
         # Start the consumer in its own greenlet
         _ = spawn(consumer.start)
 
-        # Wait for consumer to be ready using wait_for_predicate
         def is_consumer_connected():
             return consumer.is_connected
 
+        # Wait for consumer to be ready using wait_for_predicate
         connected = wait_for_predicate(
             is_consumer_connected,
-            timeout=1,
+            timeout=PubSub.Max_Retry_Time,
             interval=0.01,
             log_msg_details=f'reply consumer {queue_name} to connect',
-            needs_log=False
+            needs_log=True,
         )
 
         if not connected:
