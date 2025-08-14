@@ -190,6 +190,7 @@ class Ping(AdminService):
     name = 'demo.ping'
 
     def handle(self):
+        # self.logger.warning('PING invoked %s', self.request.raw_request)
         self.response.payload = '{"pong":"zato"}'
 
 # ################################################################################################################################
