@@ -322,10 +322,14 @@ class BaseServer:
                     if sec_name not in permissions_by_sec_name:
                         permissions_by_sec_name[sec_name] = []
 
-                    permissions_by_sec_name[sec_name].append({
-                        'pattern': pattern,
-                        'access_type': access_type
-                    })
+                    # Split patterns on newlines since service layer joins them
+                    patterns = [elem.strip() for elem in pattern.splitlines() if elem.strip()]
+
+                    for individual_pattern in patterns:
+                        permissions_by_sec_name[sec_name].append({
+                            'pattern': individual_pattern,
+                            'access_type': access_type
+                        })
 
                 except Exception:
                     logger.error(f'[{cid}] Error processing permission {item}: {format_exc()}')
