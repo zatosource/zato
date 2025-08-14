@@ -207,6 +207,7 @@ class BrokerClient:
         # Publish the message
         with self.producer.acquire() as client:
             logger.debug(f'Producer connection acquired: {client}')
+            logger.warn('PUBLISH %s %s', msg, publish_kwargs)
             _ = client.publish(msg, **publish_kwargs)
 
 # ################################################################################################################################
@@ -484,6 +485,8 @@ class BrokerClient:
         end_time = utcnow() + timedelta(seconds=timeout)
         while not response.ready and utcnow() < end_time:
             sleep(sleep_time)
+            time_left = (end_time - utcnow()).total_seconds()
+            logger.info(f'Still waiting .. sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
 
         # Handle timeout
         if not response.ready:
@@ -491,7 +494,7 @@ class BrokerClient:
             # If timed out and we know the queue name, clean it up
             if response.reply_queue_name:
 
-                logger.debug(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
+                logger.info(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
                 self._cleanup_reply_consumer(response.reply_queue_name)
 
                 # Also clean up the callback registration

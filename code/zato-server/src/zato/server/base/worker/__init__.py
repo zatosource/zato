@@ -909,7 +909,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def get_pubsub_sub_config(self, sub_key:'str') -> 'strdict':
-        # sub_key = 'zpsk.d063a18eeb7c34ad51d260c6.2'
+
         if config := self.worker_config.pubsub_subs.get(sub_key):
             config = config['config']
             return config
