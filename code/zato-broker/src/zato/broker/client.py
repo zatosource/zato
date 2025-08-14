@@ -32,7 +32,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid, new_msg_id, utcnow
+from zato.common.util.api import new_cid, new_msg_id, utcnow, wait_for_predicate
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 
@@ -351,19 +351,22 @@ class BrokerClient:
         consumer = Consumer(reply_config, self._on_reply)
 
         # Start the consumer in its own greenlet
-        greenlet = spawn(consumer.start)
+        _ = spawn(consumer.start)
 
-        # Wait for consumer to be ready - check is_connected flag with timeout
-        max_wait = 1.0
-        wait_interval = 0.01
-        waited = 0.0
+        # Wait for consumer to be ready using wait_for_predicate
+        def is_consumer_connected():
+            return consumer.is_connected
 
-        while waited < max_wait and not consumer.is_connected:
-            sleep(wait_interval)
-            waited += wait_interval
+        connected = wait_for_predicate(
+            is_consumer_connected,
+            timeout=1,
+            interval=0.01,
+            log_msg_details=f'reply consumer {queue_name} to connect',
+            needs_log=False
+        )
 
-        if not consumer.is_connected:
-            logger.error(f'Reply consumer for queue {queue_name} failed to connect within {max_wait}s')
+        if not connected:
+            logger.error(f'Reply consumer for queue {queue_name} failed to connect within 1s')
 
         # Track this consumer
         with self.lock:
