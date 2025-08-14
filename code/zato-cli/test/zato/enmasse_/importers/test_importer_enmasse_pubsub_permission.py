@@ -106,34 +106,24 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         # Process all pubsub permission definitions
         created, updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
 
-        # Should have created permissions for all pub/sub patterns
-        # enmasse.basic_auth.1: 2 pub + 2 sub = 4 permissions
-        # enmasse.basic_auth.2: 1 pub + 1 sub = 2 permissions
-        # enmasse.basic_auth.3: 0 pub + 1 sub = 1 permission
-        # Total: 7 permissions
-        self.assertEqual(len(created), 7)
+        # Should have created combined permissions
+        # enmasse.basic_auth.1: 1 combined permission (2 pub + 2 sub patterns)
+        # enmasse.basic_auth.2: 1 combined permission (1 pub + 1 sub patterns)
+        # enmasse.basic_auth.3: 1 combined permission (1 sub pattern)
+        # Total: 3 permissions
+        self.assertEqual(len(created), 3)
         self.assertEqual(len(updated), 0)
 
         # Verify specific permissions were created correctly
-        # Check enmasse.basic_auth.1 publisher permissions
-        pub_perms = self.session.query(PubSubPermission).filter_by(
-            access_type=PubSub.API_Client.Publisher
+        # Check combined permissions
+        combined_perms = self.session.query(PubSubPermission).filter_by(
+            access_type=PubSub.API_Client.Publisher_Subscriber
         ).all()
 
-        pub_patterns = [perm.pattern for perm in pub_perms]
-        self.assertIn('enmasse.topic.1', pub_patterns)
-        self.assertIn('enmasse.topic.2', pub_patterns)
-        self.assertIn('enmasse.topic.*', pub_patterns)
-
-        # Check subscriber permissions
-        sub_perms = self.session.query(PubSubPermission).filter_by(
-            access_type=PubSub.API_Client.Subscriber
-        ).all()
-
-        sub_patterns = [perm.pattern for perm in sub_perms]
-        self.assertIn('enmasse.topic.2', sub_patterns)
-        self.assertIn('enmasse.topic.3', sub_patterns)
-        self.assertIn('enmasse.#', sub_patterns)
+        combined_patterns = [perm.pattern for perm in combined_perms]
+        self.assertIn('pub=enmasse.topic.1\npub=enmasse.topic.2\nsub=enmasse.topic.2\nsub=enmasse.topic.3', combined_patterns)
+        self.assertIn('pub=enmasse.topic.*\nsub=enmasse.#', combined_patterns)
+        self.assertIn('sub=enmasse.topic.3', combined_patterns)
 
 # ################################################################################################################################
 
@@ -146,16 +136,16 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         # First, create the permissions
         permission_defs = self.yaml_config['pubsub_permission']
         created, _ = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
-        self.assertEqual(len(created), 7)
+        self.assertEqual(len(created), 3)
 
         # Run sync again - should result in updates, not new creations
         created2, updated2 = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_defs, self.session)
         self.assertEqual(len(created2), 0)
-        self.assertEqual(len(updated2), 7)
+        self.assertEqual(len(updated2), 3)
 
         # Verify all permissions still exist
         all_perms = self.session.query(PubSubPermission).all()
-        self.assertEqual(len(all_perms), 7)
+        self.assertEqual(len(all_perms), 3)
 
 # ################################################################################################################################
 
@@ -179,13 +169,13 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
         # Check specific security definition mappings
         basic_auth_1_perms = [perm for perm in created if perm.sec_base.name == 'enmasse.basic_auth.1']
-        self.assertEqual(len(basic_auth_1_perms), 4)  # 2 pub + 2 sub
+        self.assertEqual(len(basic_auth_1_perms), 1)  # 1 combined permission
 
         basic_auth_2_perms = [perm for perm in created if perm.sec_base.name == 'enmasse.basic_auth.2']
-        self.assertEqual(len(basic_auth_2_perms), 2)  # 1 pub + 1 sub
+        self.assertEqual(len(basic_auth_2_perms), 1)  # 1 combined permission
 
         basic_auth_3_perms = [perm for perm in created if perm.sec_base.name == 'enmasse.basic_auth.3']
-        self.assertEqual(len(basic_auth_3_perms), 1)  # 0 pub + 1 sub
+        self.assertEqual(len(basic_auth_3_perms), 1)  # 1 sub permission
 
 # ################################################################################################################################
 
@@ -206,11 +196,9 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
         # Verify expected patterns exist
         expected_patterns = [
-            'enmasse.topic.1',  # basic_auth.1 pub
-            'enmasse.topic.2',  # basic_auth.1 pub and sub
-            'enmasse.topic.3',  # basic_auth.1 sub and basic_auth.3 sub
-            'enmasse.topic.*',  # basic_auth.2 pub
-            'enmasse.#'         # basic_auth.2 sub
+            'pub=enmasse.topic.1\npub=enmasse.topic.2\nsub=enmasse.topic.2\nsub=enmasse.topic.3',  # basic_auth.1 combined
+            'pub=enmasse.topic.*\nsub=enmasse.#',  # basic_auth.2 combined
+            'sub=enmasse.topic.3'  # basic_auth.3 sub only
         ]
 
         for expected_pattern in expected_patterns:
@@ -218,7 +206,7 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
 
         # Verify wildcard patterns
         wildcard_patterns = [perm for perm in created if '*' in perm.pattern or '#' in perm.pattern]
-        self.assertEqual(len(wildcard_patterns), 2)
+        self.assertEqual(len(wildcard_patterns), 1)
 
 # ################################################################################################################################
 
@@ -236,14 +224,14 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         self.importer.pubsub_permission_defs = self.pubsub_permission_importer.pubsub_permission_defs
 
         # Verify pubsub permission definitions were created
-        self.assertEqual(len(permission_created), 7)
+        self.assertEqual(len(permission_created), 3)
         self.assertEqual(len(permission_updated), 0)
 
         # Verify the pubsub permission definitions dictionary was populated
-        self.assertEqual(len(self.pubsub_permission_importer.pubsub_permission_defs), 7)
+        self.assertEqual(len(self.pubsub_permission_importer.pubsub_permission_defs), 3)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.pubsub_permission_defs), 7)
+        self.assertEqual(len(self.importer.pubsub_permission_defs), 3)
 
         # Verify all permissions are active by default
         for perm in permission_created:
