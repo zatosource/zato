@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass, field
-from http.client import OK
+from http.client import BAD_REQUEST, NOT_IMPLEMENTED, OK, UNAUTHORIZED
 
 # Zato
 from zato.common.api import PubSub
@@ -120,7 +120,7 @@ class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
     details: 'str' = 'Authentication failed'
-    status: 'str' = '401 Unauthorized'
+    status: 'str' = UNAUTHORIZED
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,7 +130,7 @@ class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
     details: 'str' = 'Invalid request data'
-    status: 'str' = '400 Bad Request'
+    status: 'str' = BAD_REQUEST
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,7 +140,7 @@ class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
     details: 'str' = 'Endpoint not implemented'
-    status: 'str' = '501 Not Implemented'
+    status: 'str' = NOT_IMPLEMENTED
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,7 +150,7 @@ class HealthCheckResponse:
     """ Health check response.
     """
     status: 'str' = 'ok'
-    status: 'str' = '200 OK'
+    status: 'str' = OK
 
 # ################################################################################################################################
 # ################################################################################################################################
