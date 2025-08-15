@@ -27,12 +27,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def test_full_path(self) -> 'None':
-        """ Test full path with enmasse configuration.
+    def _run_enmasse(self) -> 'None':
+        """ Run enmasse with the config path.
         """
-        # Skip auto-unsubscribe for this test
-        self.skip_auto_unsubscribe = True
-
         # sh
         from sh import ErrorReturnCode
 
@@ -61,6 +58,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             logger.error(f'Enmasse failed - stdout: {stdout}')
             logger.error(f'Enmasse failed - stderr: {stderr}')
             self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
+
+# ################################################################################################################################
+
+    def test_full_path(self) -> 'None':
+        """ Test full path with enmasse configuration.
+        """
+        # Skip auto-unsubscribe for this test
+        self.skip_auto_unsubscribe = True
+
+        # Run enmasse
+        self._run_enmasse()
 
 # ################################################################################################################################
 # ################################################################################################################################
