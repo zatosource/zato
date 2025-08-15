@@ -1174,7 +1174,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_broker_msg(body)
 
         # .. indicate the message has not been processed
-        except Exception:
+        except Exception as e:
+            logger.warning('Rejecting pub/sub message: %s', e)
             amqp_msg.reject(requeue=True)
 
         # .. otherwise, confirm it's been consumed.
