@@ -48,6 +48,14 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             # Invoke enmasse with the config path
             out = command('enmasse', TestConfig.server_location, '--import', '--input', self.config_path, '--verbose') # type: ignore
 
+            # Log the output
+            stdout = out.stdout.decode('utf8')
+            stderr = out.stderr.decode('utf8') if out.stderr else ''
+            
+            logger.info(f'Enmasse stdout: {stdout}')
+            if stderr:
+                logger.info(f'Enmasse stderr: {stderr}')
+
             # Check for successful import
             self.assertEqual(out.exit_code, 0)
 
