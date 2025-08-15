@@ -176,6 +176,10 @@ class Create(AdminService):
                     else:
                         topics.append(topic)
 
+                print()
+                print(555, input)
+                print()
+
                 # Create the subscription
                 sub = PubSubSubscription()
                 sub.sub_key = sub_key # type: ignore
@@ -235,6 +239,7 @@ class Create(AdminService):
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.delivery_type = input.delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 self.broker_client.publish(pubsub_msg)

@@ -380,6 +380,7 @@ class Backend:
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
                 'is_active': True,
+                'delivery_type': PubSub.Delivery_Type.Pull,
             }
 
             service_name = 'zato.pubsub.subscription.subscribe'
