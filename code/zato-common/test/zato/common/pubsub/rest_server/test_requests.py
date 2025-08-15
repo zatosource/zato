@@ -29,7 +29,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
 
-    def xtest_subscribe_publish_get_unsubscribe_flow(self):
+    def test_subscribe_publish_get_unsubscribe_flow(self):
         """ Test complete pub/sub flow: subscribe -> publish -> get messages -> unsubscribe.
         """
         topic_name = self.test_topics[0]  # demo.1
