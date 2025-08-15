@@ -212,45 +212,80 @@ class ConsumerBackend(Backend):
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
         is_active:'bool' = msg['is_active']
+        sec_name:'str' = msg['sec_name']
+        delivery_type:'str' = msg['delivery_type']
+        old_delivery_type:'str' = msg['old_delivery_type']
 
         topic_name_list:'strlist' = msg['topic_name_list']
         topic_name_list = sorted(topic_name_list)
 
-        # Do we have such a consumer ..
-        if consumer := self.consumers.get(sub_key):
+        # Check if we have an existing consumer
+        consumer = self.consumers.get(sub_key)
 
-            debug_msg = f'[{cid}] Found consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
-            logger.debug(debug_msg)
+        # Handle delivery type changes
+        if old_delivery_type != delivery_type:
 
-            # .. get a queue for that consumer ..
-            queue_name = consumer.config.queue
+            # Case 1: Changed from pull to push - need to start a new consumer
+            if old_delivery_type == PubSub.Delivery_Type.Pull and delivery_type == PubSub.Delivery_Type.Push:
+                logger.info(f'[{cid}] Delivery type changed from pull to push for sub_key: {sub_key}')
 
-            # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
-            _ = self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
+                # Start a new consumer for push delivery
+                _ = self.start_public_queue_consumer(
+                    cid,
+                    topic_name_list,
+                    sec_name,
+                    sub_key,
+                    is_active,
+                    self.worker_store.on_pubsub_public_message_callback
+                )
+                return
 
-            # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
+            # Case 2: Changed from push to pull - need to stop existing consumer
+            elif old_delivery_type == PubSub.Delivery_Type.Push and delivery_type == PubSub.Delivery_Type.Pull:
+                logger.info(f'[{cid}] Delivery type changed from push to pull for sub_key: {sub_key}')
 
-            if is_active:
-                if consumer.is_stopped:
+                if consumer:
+                    logger.info(f'[{cid}] Stopping consumer for sub_key: {sub_key} (changed to pull)')
+                    consumer.stop()
+                    self._remove_consumer(sub_key)
 
-                    # .. tell it should keep running - this is used in its .start methodd ..
-                    consumer.keep_running = True
+                return
 
-                    # .. log what we're about to do ..
-                    logger.info(f'[{cid}] Starting consumer for sub_key: {sub_key} -> {topic_name_list}')
+        # Handle existing consumer for push delivery type
+        if delivery_type == PubSub.Delivery_Type.Push:
 
-                    # .. do run it ..
-                    _ = spawn_greenlet(consumer.start)
+            if consumer:
+                debug_msg = f'[{cid}] Found consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
+                logger.debug(debug_msg)
+
+                # .. get a queue for that consumer ..
+                queue_name = consumer.config.queue
+
+                # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
+                _ = self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
+
+                # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
+
+                if is_active:
+                    if consumer.is_stopped:
+
+                        # .. tell it should keep running - this is used in its .start methodd ..
+                        consumer.keep_running = True
+
+                        # .. log what we're about to do ..
+                        logger.info(f'[{cid}] Starting consumer for sub_key: {sub_key} -> {topic_name_list}')
+
+                        # .. do run it ..
+                        _ = spawn_greenlet(consumer.start)
+
+                else:
+                    if not consumer.is_stopped:
+                        logger.info(f'[{cid}] Stopping consumer for sub_key: {sub_key} -> {topic_name_list}')
+                        consumer.stop()
 
             else:
-                if not consumer.is_stopped:
-                    logger.info(f'[{cid}] Stopping consumer for sub_key: {sub_key} -> {topic_name_list}')
-                    consumer.stop()
-
-        # .. no consumer = we cannot continue.
-        else:
-            err_msg = f'[{cid}] on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT: No such consumer by sub_key: {sub_key} -> {topic_name_list} -> {self.consumers}'
-            logger.warning(err_msg)
+                # No consumer exists but delivery type is push - this should not happen in normal flow
+                logger.warning(f'[{cid}] No consumer found for push delivery sub_key: {sub_key} -> {topic_name_list}')
 
 # ################################################################################################################################
 
