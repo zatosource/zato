@@ -68,7 +68,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
 
         self.rest_server.backend.subs_by_topic = {
             self.test_topic: {
-                self.test_username: subscription
+                'test_sec_def': subscription
             }
         }
 
@@ -145,8 +145,9 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Verify success response
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['data'], 'test message 1')
+        self.assertEqual(len(response.messages), 1)
+        self.assertEqual(response.message_count, 1)
+        self.assertEqual(response.messages[0]['data'], 'test message 1')
 
 # ################################################################################################################################
 
@@ -219,7 +220,8 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Verify success response with empty message list
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.data, [])
+        self.assertEqual(response.messages, [])
+        self.assertEqual(response.message_count, 0)
 
 # ################################################################################################################################
 
