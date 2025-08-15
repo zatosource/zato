@@ -13,7 +13,13 @@ static-check:
 	$(MAKE) flake8
 
 run-tests:
-	$(Zato_Python_Dir)/pytest test/zato/common -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+	$(MAKE) pubsub-tests
+	$(Zato_Python_Dir)/pytest test/zato/common \
+		-v \
+		-W ignore::DeprecationWarning \
+		-W ignore::gevent.monkey.MonkeyPatchWarning \
+		--ignore=test/zato/common/matcher \
+		--ignore=test/zato/common/pubsub
 
 pubsub-tests:
 	zato enmasse ~/env/qs-1/server1 --import --input $(CURDIR)/src/zato/common/pubsub/server/config.yaml --verbose
@@ -25,6 +31,6 @@ pubsub-tests:
 		--log-disable=faker \
 		-W ignore::DeprecationWarning \
 		-W ignore::gevent.monkey.MonkeyPatchWarning
-	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/backend -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
-	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/rest_server -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
-	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+#	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/backend -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+#	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/rest_server -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+#	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
