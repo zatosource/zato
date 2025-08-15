@@ -505,7 +505,7 @@ class BrokerClient:
         while not response.ready and utcnow() < end_time:
             sleep(sleep_time)
             time_left = (end_time - utcnow()).total_seconds()
-            logger.info(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
+            logger.debug(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
 
         # Handle timeout
         if not response.ready:
