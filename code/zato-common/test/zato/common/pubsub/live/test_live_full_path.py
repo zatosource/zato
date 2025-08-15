@@ -43,7 +43,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         while attempt < max_attempts:
             attempt += 1
-            logger.info(f'Checking diagnostics for topics (attempt {attempt}/{max_attempts})')
+            logger.info(f'Checking diagnostics for objects (attempt {attempt}/{max_attempts})')
 
             data = self._call_diagnostics()
             if not data:
@@ -51,25 +51,55 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                 time.sleep(0.5)
                 continue
 
-            topics_data = data.get('data', {}).get('topics', {})
-            if not topics_data:
-                logger.warning('No topics section in diagnostics data')
+            diagnostics_data = data.get('data', {})
+            if not diagnostics_data:
+                logger.warning('No data section in diagnostics response')
                 time.sleep(0.5)
                 continue
 
-            missing_topics = []
-            for topic_name in self.test_topics:
-                if topic_name not in topics_data:
-                    missing_topics.append(topic_name)
+            missing_objects = []
 
-            if not missing_topics:
-                logger.info(f'All test topics found in diagnostics: {self.test_topics}')
+            # Check topics
+            if 'pubsub_topic' in self.config:
+                topics_data = diagnostics_data.get('topics', {})
+                for topic_config in self.config['pubsub_topic']:
+                    topic_name = topic_config['name']
+                    if topic_name not in topics_data:
+                        missing_objects.append(f'topic:{topic_name}')
+
+            # Check users
+            if 'security' in self.config:
+                users_data = diagnostics_data.get('users', {})
+                for security_config in self.config['security']:
+                    username = security_config['username']
+                    if username not in users_data:
+                        missing_objects.append(f'user:{username}')
+
+            # Check permissions
+            if 'pubsub_permission' in self.config:
+                pattern_matcher_data = diagnostics_data.get('pattern_matcher', {})
+                clients_data = pattern_matcher_data.get('clients', {})
+                for permission_config in self.config['pubsub_permission']:
+                    username = permission_config['username']
+                    if username not in clients_data:
+                        missing_objects.append(f'permission:{username}')
+
+            # Check subscriptions
+            if 'pubsub_subscription' in self.config:
+                subscriptions_data = diagnostics_data.get('subscriptions', {})
+                for subscription_config in self.config['pubsub_subscription']:
+                    topic_name = subscription_config['topic_name']
+                    if topic_name not in subscriptions_data:
+                        missing_objects.append(f'subscription:{topic_name}')
+
+            if not missing_objects:
+                logger.info('All config objects found in diagnostics')
                 return data
             else:
-                logger.info(f'Missing topics: {missing_topics}, retrying in 0.1s')
+                logger.info(f'Missing objects: {missing_objects}, retrying in 0.5s')
                 time.sleep(0.5)
 
-        logger.error(f'Timeout waiting for topics to appear in diagnostics after {max_attempts} attempts')
+        logger.error(f'Timeout waiting for objects to appear in diagnostics after {max_attempts} attempts')
         return data
 
 # ################################################################################################################################
