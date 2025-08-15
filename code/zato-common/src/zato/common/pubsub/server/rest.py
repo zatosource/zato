@@ -249,7 +249,8 @@ class PubSubRESTServer(BaseRESTServer):
         response = APIResponse()
         response.is_ok = True
         response.cid = cid
-        response.data = messages
+        response.data = None
+        response.messages = messages if messages else []
         return response
 
 # ################################################################################################################################
