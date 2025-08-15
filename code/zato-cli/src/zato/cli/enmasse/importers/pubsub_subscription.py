@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
 from zato.common.util.api import new_sub_key
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -135,7 +136,7 @@ class PubSubSubscriptionImporter:
         instance.sub_key = new_sub_key(definition['username'])
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
-        instance.push_type = definition.get('push_type', 'pull')
+        instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
         instance.is_active = definition.get('is_active', True)
@@ -166,7 +167,7 @@ class PubSubSubscriptionImporter:
         instance = session.query(PubSubSubscription).filter_by(id=definition['id']).one()
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
-        instance.push_type = definition.get('push_type', 'pull')
+        instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
         instance.is_active = definition.get('is_active', True)
@@ -226,8 +227,8 @@ class PubSubSubscriptionImporter:
             return True
 
         # Compare push_type
-        yaml_push_type = yaml_def.get('push_type', 'pull')
-        db_push_type = db_def.get('push_type', 'pull')
+        yaml_push_type = yaml_def.get('push_type', PubSub.Push_Type.Service)
+        db_push_type = db_def.get('push_type', PubSub.Push_Type.Service)
         if yaml_push_type != db_push_type:
             logger.info('push_type differs: YAML=%s, DB=%s', yaml_push_type, db_push_type)
             return True
@@ -319,14 +320,14 @@ class PubSubSubscriptionImporter:
             }
 
             # Handle push-specific fields
-            if delivery_type == 'push':
+            if delivery_type == PubSub.Delivery_Type.Push:
                 if 'push_rest_endpoint' in yaml_def:
                     rest_endpoint_id = self.get_rest_endpoint_id_by_name(yaml_def['push_rest_endpoint'], session)
                     subscription_def['rest_push_endpoint_id'] = rest_endpoint_id
-                    subscription_def['push_type'] = 'rest'
+                    subscription_def['push_type'] = PubSub.Push_Type.REST
                 elif 'push_service' in yaml_def:
                     subscription_def['push_service_name'] = yaml_def['push_service']
-                    subscription_def['push_type'] = 'service'
+                    subscription_def['push_type'] = PubSub.Push_Type.Service
 
             # Add other opaque attributes
             for key, value in yaml_def.items():
