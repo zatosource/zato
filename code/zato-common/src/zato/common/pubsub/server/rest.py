@@ -141,7 +141,7 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _find_user_sub_key(self, cid:'str', username:'str') -> 'any_':
+    def _find_user_sub_key(self, cid:'str', username:'str') -> 'str | None':
         """ Find user's subscription key from topics.
         """
         # Get sec_name from username
@@ -151,13 +151,17 @@ class PubSubRESTServer(BaseRESTServer):
         for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
             if sec_name in subs_by_sec_name:
                 subscription = subs_by_sec_name[sec_name]
-                if subscription is None:
-                    logger.error(f'[{cid}] Malformed subscription data for user `{username}` in topic `{topic_name}`')
-                    return None, None
-                return subscription.sub_key, topic_name
 
-        logger.warning(f'[{cid}] No subscription found for user `{username}`')
-        return None, None
+                if subscription is None:
+                    msg = f'[{cid}] Malformed subscription data for user `{username}` in topic `{topic_name}`'
+                    raise Exception(msg)
+
+                return subscription.sub_key
+
+        else:
+            msg = f'[{cid}] No subscription found for user `{username}`'
+            logger.warning(msg)
+            return None
 
 # ################################################################################################################################
 
@@ -279,16 +283,11 @@ class PubSubRESTServer(BaseRESTServer):
 
         max_len, max_messages = self._validate_get_params(data)
 
-        sub_key, topic_name = self._find_user_sub_key(cid, username)
+        sub_key = self._find_user_sub_key(cid, username)
         if not sub_key:
             return self._build_error_response(cid, 'No subscription found for user')
 
-        logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}, topic={topic_name}')
-
-        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
-        if not permission_result.is_ok:
-            logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
-            raise UnauthorizedException(cid, 'Permission denied')
+        logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
 
         api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
 
