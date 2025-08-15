@@ -144,9 +144,13 @@ class PubSubRESTServer(BaseRESTServer):
     def _find_user_sub_key(self, cid:'str', username:'str') -> 'any_':
         """ Find user's subscription key from topics.
         """
+        # Get sec_name from username
+        config = self.get_user_config(username)
+        sec_name = config['sec_name']
+
         for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
-            if username in subs_by_sec_name:
-                subscription = subs_by_sec_name[username]
+            if sec_name in subs_by_sec_name:
+                subscription = subs_by_sec_name[sec_name]
                 return subscription.sub_key, topic_name
 
         logger.warning(f'[{cid}] No subscription found for user `{username}`')
