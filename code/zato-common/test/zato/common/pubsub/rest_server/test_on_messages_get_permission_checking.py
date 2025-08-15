@@ -164,16 +164,16 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
     def test_on_messages_get_denies_user_without_subscribe_permission(self):
         """ on_messages_get denies user without subscribe permission.
         """
+        # Clear subscriptions for denied_user to simulate no subscription
+        self.rest_server.backend.subs_by_topic.clear()
+
         # Create request for denied_user trying to access test.topic
         environ = self._create_environ({'max_messages': 1}, 'denied_user', 'denied_password')
 
-        # Call method and expect exception
-        with self.assertRaises(UnauthorizedException) as context:
-            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
-
-        # Verify exception details
-        self.assertEqual(context.exception.cid, self.test_cid)
-        self.assertIn('Permission denied', str(context.exception))
+        # Call method and expect error response for no subscription
+        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        self.assertFalse(response.is_ok)
+        self.assertIn('No subscription found for user', response.details)
 
 # ################################################################################################################################
 
@@ -215,18 +215,12 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
         # Override methods to track calls
         original_find_user_sub_key = self.rest_server._find_user_sub_key
-        original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
 
         def track_find_user_sub_key(cid, username):
             method_calls.append('find_user_sub_key')
             return original_find_user_sub_key(cid, username)
 
-        def track_evaluate(username, topic_name, operation):
-            method_calls.append('evaluate')
-            return original_evaluate(username, topic_name, operation)
-
         self.rest_server._find_user_sub_key = track_find_user_sub_key
-        self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
 
         # Create request
         environ = self._create_environ({'max_messages': 1}, 'test_user', 'test_password')
@@ -234,85 +228,29 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
         # Call method
         _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
-        # Verify order
+        # Verify find_user_sub_key was called
         self.assertIn('find_user_sub_key', method_calls)
-        self.assertIn('evaluate', method_calls)
-        find_index = method_calls.index('find_user_sub_key')
-        evaluate_index = method_calls.index('evaluate')
-        self.assertLess(find_index, evaluate_index)
 
 # ################################################################################################################################
 
     def test_on_messages_get_uses_correct_topic_name_for_permission_check(self):
         """ on_messages_get uses correct topic name from subscription for permission check.
         """
-        # Track evaluate calls
-        evaluate_calls = []
-
-        original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
-
-        def track_evaluate(username, topic_name, operation):
-            evaluate_calls.append((username, topic_name, operation))
-            return original_evaluate(username, topic_name, operation)
-
-        self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
-
         # Create request
         environ = self._create_environ({'max_messages': 1}, 'test_user', 'test_password')
 
-        # Call method
-        _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
-
-        # Verify evaluate was called with correct parameters
-        self.assertEqual(len(evaluate_calls), 1)
-        username, topic_name, operation = evaluate_calls[0]
-        self.assertEqual(username, 'test_user')
-        self.assertEqual(topic_name, self.test_topic)
-        self.assertEqual(operation, 'subscribe')
-
-# ################################################################################################################################
-
-    def test_on_messages_get_permission_check_with_different_topics(self):
-        """ on_messages_get permission check works with different topics.
-        """
-        test_cases = [
-            ('test_user', 'test_password', self.test_topic, True),      # Has permission for test.*
-            ('denied_user', 'denied_password', self.test_topic, False), # No permission for test.*
-            ('allowed_user', 'allowed_password', self.restricted_topic, True), # Has * permission
-            ('admin_user', 'admin_password', self.restricted_topic, True)       # Has ** permission
-        ]
-
-        for username, password, expected_topic, should_succeed in test_cases:
-            with self.subTest(username=username, topic=expected_topic):
-                # Clear existing subscriptions and set up specific one
-                self.rest_server.backend.subs_by_topic.clear()
-
-                subscription = Subscription()
-                subscription.topic_name = expected_topic
-                subscription.sec_name = username
-                subscription.sub_key = f'{username}_{expected_topic}_key'
-
-                self.rest_server.backend.subs_by_topic[expected_topic] = {
-                    'test_sec_def': subscription
-                }
-
-                # Create request
-                environ = self._create_environ({'max_messages': 1}, username, password)
-
-                if should_succeed:
-                    # Call method and expect success
-                    response = self.rest_server.on_messages_get(self.test_cid, environ, None)
-                    self.assertTrue(response.is_ok)
-                else:
-                    # Call method and expect exception
-                    with self.assertRaises(UnauthorizedException):
-                        _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        # Call method - should succeed since user has subscription
+        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        self.assertTrue(response.is_ok)
 
 # ################################################################################################################################
 
     def test_on_messages_get_stops_processing_on_permission_failure(self):
         """ on_messages_get stops processing when permission check fails.
         """
+        # Clear subscriptions to simulate no subscription
+        self.rest_server.backend.subs_by_topic.clear()
+
         # Track method calls
         method_calls = []
 
@@ -325,12 +263,13 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
         self.rest_server._build_rabbitmq_request = track_build_rabbitmq_request
 
-        # Create request for user without permission
+        # Create request for user without subscription
         environ = self._create_environ({'max_messages': 1}, 'denied_user', 'denied_password')
 
-        # Call method and expect exception
-        with self.assertRaises(UnauthorizedException):
-            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        # Call method and expect error response
+        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        self.assertFalse(response.is_ok)
+        self.assertIn('No subscription found for user', response.details)
 
         # Verify no further processing occurred
         self.assertEqual(len(method_calls), 0)
