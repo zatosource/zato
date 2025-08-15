@@ -1145,9 +1145,8 @@ class PubSub:
         # How many seconds a consumer will wait in its drain_events call
         Consumer = 3
 
-        # Must be bigger than the Consumer timeout to give a consumer enough time
-        # to drain its events.
-        Invoke_Sync = Consumer * 3
+        # Must be bigger than the Consumer timeout to give a consumer enough time to drain its events.
+        Invoke_Sync = Consumer * 2
 
     class API_Client:
         Publisher = 'publisher'

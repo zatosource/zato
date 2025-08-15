@@ -203,7 +203,7 @@ class RESTBackend(Backend):
 
         # Local aliases
         cid = msg['cid']
-        username = msg['name']
+        username = msg['username']
 
         # Remove the user
         if username in self.rest_server.users:

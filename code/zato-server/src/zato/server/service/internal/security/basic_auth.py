@@ -261,16 +261,25 @@ class Delete(AdminService):
                     one()
 
                 session.delete(auth)
-                session.commit()
+                # session.commit()
             except Exception:
                 self.logger.error('Could not delete HTTP Basic Auth definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
             else:
+
+                self.request.input.cid = self.cid
                 self.request.input.action = SECURITY.BASIC_AUTH_DELETE.value
+
+                # Note that we need both name and sec_name.
                 self.request.input.name = auth.name
+                self.request.input.sec_name = auth.name
+
+                self.request.input.username = auth.username
+
                 self.broker_client.publish(self.request.input)
+                self.broker_client.publish(self.request.input, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################
