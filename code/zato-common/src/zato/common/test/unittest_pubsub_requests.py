@@ -59,15 +59,15 @@ class PubSubRESTServerBaseTestCase(TestCase):
         """ Set up test configuration.
         """
         # Check if config environment variable exists
-        config_path = os.environ.get('Zato_PubSub_YAML_Config_File')
-        if not config_path:
+        cls.config_path = os.environ.get('Zato_PubSub_YAML_Config_File')
+        if not cls.config_path:
             cls.skip_tests = True
             return
 
         cls.skip_tests = False
 
         # Load configuration
-        with open(config_path, 'r') as f:
+        with open(cls.config_path, 'r') as f:
             cls.config = yaml_load(f, Loader=Loader)
 
         # Extract demo user credentials
