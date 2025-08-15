@@ -276,15 +276,20 @@ class PubSubRESTServer(BaseRESTServer):
     def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
         """ Get messages from the user's queue.
         """
+        logger.info(f'[{cid}] Processing messages/get request')
         username = self.authenticate(cid, environ)
+        logger.info(f'[{cid}] Authenticated user: {username}')
 
         request = Request(environ)
         data = self._parse_json(cid, request)
 
         max_len, max_messages = self._validate_get_params(data)
+        logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}')
 
         sub_key = self._find_user_sub_key(cid, username)
+        logger.info(f'[{cid}] Found sub_key: {sub_key}')
         if not sub_key:
+            logger.info(f'[{cid}] No sub_key found, returning error response')
             return self._build_error_response(cid, 'No subscription found for user')
 
         logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
