@@ -108,7 +108,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
-        self.assertGreater(len(messages_data['data']), 0)
+        self.assertGreater(len(messages_data['messages']), 0)
+        self.assertGreater(messages_data['message_count'], 0)
 
         # Check diagnostics after getting messages - subscription should still exist
         diagnostics_after_get = self._call_diagnostics()
@@ -122,7 +123,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertIn('demo_sec_def', subscriptions[topic_name])
 
         # Verify message content
-        message = messages_data['data'][0]
+        message = messages_data['messages'][0]
         self.assertEqual(message['data'], 'Test message for demo.1')
         self.assertEqual(message['topic_name'], topic_name)
         self.assertEqual(message['correl_id'], 'test-correlation-id')
@@ -266,7 +267,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         messages_data = response.json()
         self.assertTrue(messages_data['is_ok'])
-        self.assertGreaterEqual(len(messages_data['data']), 2)
+        self.assertGreaterEqual(len(messages_data['messages']), 2)
+        self.assertGreaterEqual(messages_data['message_count'], 2)
 
         # Check diagnostics after getting messages - subscriptions should still exist
         diagnostics_after_get = self._call_diagnostics()
@@ -282,7 +284,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertIn('demo_sec_def', subscriptions[topic2])
 
         # Verify we got messages from both topics
-        received_topics = {msg['topic_name'] for msg in messages_data['data']}
+        received_topics = {msg['topic_name'] for msg in messages_data['messages']}
         self.assertIn(topic1, received_topics)
         self.assertIn(topic2, received_topics)
 
