@@ -193,9 +193,10 @@ class BaseRESTServer(BaseServer):
         # .. drop the fields that may be empty ..
         fields_to_check = ['details', 'msg_id', 'data']
 
-        # .. only drop messages if it's None (because we don't want for empty messages to be dropped from the .get action) ..
-        if response_data.get('messages') is None:
-            fields_to_check.append('messages')
+        # .. add fields that should only be dropped if None ..
+        for field in ['messages', 'message_count']:
+            if response_data.get(field) is None:
+                fields_to_check.append(field)
 
         for key in fields_to_check:
             if not response_data.get(key):
