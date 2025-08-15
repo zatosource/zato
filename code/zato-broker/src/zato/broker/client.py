@@ -32,7 +32,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid, new_msg_id, utcnow, wait_for_predicate
+from zato.common.util.api import new_cid, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 
