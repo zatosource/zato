@@ -314,9 +314,12 @@ class Backend:
         sec_name: 'str'='',
         sub_key: 'str'='',
         should_create_bindings: 'bool'=True,
+        should_invoke_server=False,
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
+        # Reusable
+        response = StatusResponse()
 
         # Get sec_name from username or use directly if it's already sec_name
         if username:
@@ -368,29 +371,37 @@ class Backend:
             if should_create_bindings:
                 create_subscription_bindings(self.broker_client, cid, sub_key, ModuleCtx.Exchange_Name, topic_name)
 
-        # .. invoke the subscription service to update the database ..
-        request = {
-            'topic_name_list': [topic_name],
-            'sec_name': sec_name,
-            'is_active': True,
-        }
+        # .. we go here if we need to invoke the server, and we do only if the subscription was create via the REST API,
+        # .. as we don't want to invoke the server if we've just loaded the subscriptions from it ..
+        if should_invoke_server:
 
-        response = self.invoke_service_with_pubsub('zato.pubsub.subscription.subscribe', request, needs_root_elem=True)
+            # .. invoke the subscription service to update the database ..
+            request = {
+                'topic_name_list': [topic_name],
+                'sec_name': sec_name,
+                'is_active': True,
+            }
 
-        if error := response.get('error'):
-            is_ok = False
-            status = BAD_REQUEST
-            logger.error(f'[{cid}] Failed to create subscription in server: `{error}`')
+            service_name = 'zato.pubsub.subscription.subscribe'
+            service_response = self.invoke_service_with_pubsub(service_name, request, needs_root_elem=True)
+
+            if error := service_response.get('error'):
+                is_ok = False
+                status = BAD_REQUEST
+                logger.error(f'[{cid}] Failed to create subscription in server: `{error}`')
+            else:
+                is_ok = True
+                status = OK
+
+            # .. build our response ..
+            response.is_ok = is_ok
+            response.status = status
+
+        # .. we go here if we don't invoke the server, in which case we simply indicate success ..
         else:
-            is_ok = True
-            status = OK
+            response.is_ok = True
 
-        # .. build our response ..
-        response = StatusResponse()
-        response.is_ok = is_ok
-        response.status = status
-
-        # .. and return it to our caller.
+        # .. and now we can return it to our caller.
         return response
 
 # ################################################################################################################################

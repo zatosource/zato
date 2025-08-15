@@ -318,7 +318,7 @@ class PubSubRESTServer(BaseRESTServer):
             raise UnauthorizedException(cid, 'Permission denied')
 
         # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username=username)
+        result = self.backend.register_subscription(cid, topic_name, username=username, should_invoke_server=True)
 
         response = APIResponse()
         response.cid = cid
