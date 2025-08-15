@@ -207,7 +207,6 @@ class BrokerClient:
         # Publish the message
         with self.producer.acquire() as client:
             logger.debug(f'Producer connection acquired: {client}')
-            logger.warning('PUBLISH %s %s', msg, publish_kwargs)
             _ = client.publish(msg, **publish_kwargs)
 
 # ################################################################################################################################
