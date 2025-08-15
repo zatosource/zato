@@ -191,7 +191,13 @@ class BaseRESTServer(BaseServer):
         response_data = asdict(data)
 
         # .. drop the fields that may be empty ..
-        for key in ['details', 'msg_id', 'data']:
+        fields_to_check = ['details', 'msg_id', 'data']
+
+        # .. only drop messages if it's None (because we don't want for empty messages to be dropped from the .get action) ..
+        if response_data.get('messages') is None:
+            fields_to_check.append('messages')
+
+        for key in fields_to_check:
             if not response_data.get(key):
                 del response_data[key]
 
