@@ -286,6 +286,9 @@ class Edit(AdminService):
                 # Now get the actual subscription
                 sub = subscription_query.one()
 
+                # Store the old delivery type before updating
+                old_delivery_type = sub.delivery_type
+
                 sub.sec_base_id = input.sec_base_id
                 sub.delivery_type = input.delivery_type
 
@@ -369,6 +372,8 @@ class Edit(AdminService):
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.delivery_type = sub.delivery_type
+                pubsub_msg.old_delivery_type = old_delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 self.broker_client.publish(pubsub_msg)
