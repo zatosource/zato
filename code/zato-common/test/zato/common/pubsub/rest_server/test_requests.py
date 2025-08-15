@@ -37,10 +37,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         from zato.common.util.cli import get_zato_sh_command
         from zato.common.test.config import TestConfig
 
-        # Set environment variable to avoid requiring server
-        import os
-        os.environ['Zato_Needs_Config_Reload'] = 'False'
-
         try:
             # Get the command
             command = get_zato_sh_command()
@@ -51,7 +47,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             # Log the output
             stdout = out.stdout.decode('utf8')
             stderr = out.stderr.decode('utf8') if out.stderr else ''
-            
+
             logger.info(f'Enmasse stdout: {stdout}')
             if stderr:
                 logger.info(f'Enmasse stderr: {stderr}')
