@@ -353,24 +353,14 @@ class BrokerClient:
         # Create consumer for this specific reply queue
         consumer = Consumer(reply_config, self._on_reply)
 
-        # Start the consumer in its own greenlet
+        # Start the consumer in its own greenlet ..
         _ = spawn(consumer.start)
 
-        def is_consumer_connected():
-            return consumer.is_connected
-
-        # Wait for consumer to be ready using wait_for_predicate
-        connected = wait_for_predicate(
-            is_consumer_connected,
-            timeout=connect_timeout,
-            interval=0.01,
-            log_msg_details=f'reply consumer {queue_name} to connect',
-            needs_log=True,
-        )
+        # .. wait for it to connect ..
+        connected = consumer.wait_until_connected(timeout=connect_timeout)
 
         if not connected:
-            msg = f'Reply consumer for queue {queue_name} failed to connect within {connect_timeout}'
-            raise Exception(msg)
+            logger.error(f'Reply consumer for queue {queue_name} failed to connect within {connect_timeout}s')
 
         # Track this consumer
         with self.lock:
