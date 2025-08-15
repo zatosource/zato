@@ -151,6 +151,9 @@ class PubSubRESTServer(BaseRESTServer):
         for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
             if sec_name in subs_by_sec_name:
                 subscription = subs_by_sec_name[sec_name]
+                if subscription is None:
+                    logger.error(f'[{cid}] Malformed subscription data for user `{username}` in topic `{topic_name}`')
+                    return None, None
                 return subscription.sub_key, topic_name
 
         logger.warning(f'[{cid}] No subscription found for user `{username}`')

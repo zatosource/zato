@@ -262,7 +262,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         self.assertEqual(response.details, 'No subscription found for user')
 
     def test_on_messages_get_handles_malformed_subscription_data(self):
-        """ on_messages_get raises AttributeError when subscription object is malformed.
+        """ on_messages_get handles malformed subscription data gracefully.
         """
         # Set up users for authentication
         self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
@@ -278,9 +278,11 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         # Create request
         environ = self._create_environ({'max_messages': 1})
 
-        # Call method and expect AttributeError when accessing subscription.sub_key
-        with self.assertRaises(AttributeError):
-            _ = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        # Call method and expect error response instead of AttributeError
+        response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+        self.assertIsInstance(response, BadRequestResponse)
+        self.assertFalse(response.is_ok)
+        self.assertEqual(response.cid, self.test_cid)
 
     def test_on_messages_get_handles_parameter_validation_with_invalid_types(self):
         """ on_messages_get raises TypeError when parameter types are invalid in _validate_get_params.
