@@ -141,8 +141,7 @@ class PubSubSubscriptionImporter:
         instance.push_service_name = definition.get('push_service_name')
         instance.is_active = definition.get('is_active', True)
 
-        logger.info('Creating subscription: sub_key=%s, sec_base_id=%s, cluster_id=%s',
-                   instance.sub_key, instance.sec_base_id, instance.cluster_id)
+        logger.info('Creating subscription: sub_key=%s, sec_base_id=%s, cluster_id=%s', instance.sub_key, instance.sec_base_id, instance.cluster_id)
 
         set_instance_opaque_attrs(instance, definition)
         session.add(instance)
@@ -150,11 +149,10 @@ class PubSubSubscriptionImporter:
         logger.info('Subscription created with ID %s', instance.id)
 
         # Create subscription-topic associations
-        logger.info('Creating topic associations for subscription ID %s with topics %s',
-                   instance.id, definition['topic_id_list'])
+        logger.info('Creating topic associations for subscription ID %s with topics %s', instance.id, definition['topic_id_list'])
+
         for topic_id in definition['topic_id_list']:
-            logger.info('Adding topic association: subscription_id=%s, topic_id=%s, cluster_id=%s',
-                       instance.id, topic_id, self.importer.cluster_id)
+            logger.info('Adding topic association: subscription_id=%s, topic_id=%s, cluster_id=%s', instance.id, topic_id, self.importer.cluster_id)
 
             # Check if association already exists
             existing = session.query(PubSubSubscriptionTopic).filter(
@@ -164,8 +162,7 @@ class PubSubSubscriptionImporter:
             ).first()
 
             if existing:
-                logger.info('Topic association already exists: subscription_id=%s, topic_id=%s, cluster_id=%s',
-                           instance.id, topic_id, self.importer.cluster_id)
+                logger.info('Topic association already exists: subscription_id=%s, topic_id=%s, cluster_id=%s', instance.id, topic_id, self.importer.cluster_id)
                 continue
 
             sub_topic = PubSubSubscriptionTopic()
@@ -214,13 +211,17 @@ class PubSubSubscriptionImporter:
     def find_existing_subscription_for_security(self, db_defs:'anydict', sec_base_id:'int') -> 'stranydict':
         """ Finds existing subscription for a security definition. Returns None if not found.
         """
-        for db_def in db_defs.values():
+        logger.info('Searching for existing subscription with sec_base_id=%s in %d db_defs', sec_base_id, len(db_defs))
+        for sub_key, db_def in db_defs.items():
             db_sec_base_id = db_def.get('sec_base_id')
+            logger.info('Checking db_def sub_key=%s, sec_base_id=%s', sub_key, db_sec_base_id)
             if db_sec_base_id == sec_base_id:
+                logger.info('Found matching subscription: %s', db_def)
                 return db_def
         else:
             # If we are here, it means this security definition must have existed
             # but it doesn't have any subscriptions, so we can return an empty dict to indicate that.
+            logger.info('No existing subscription found for sec_base_id=%s', sec_base_id)
             return {}
 
 # ################################################################################################################################
@@ -228,11 +229,15 @@ class PubSubSubscriptionImporter:
     def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict', sec_base_id:'int') -> 'bool':
         """ Determines if a pubsub subscription definition should be created.
         """
+        logger.info('Checking if should create subscription for sec_base_id=%s', sec_base_id)
         # Check if any existing subscription exists for this security definition
         existing_subscription = self.find_existing_subscription_for_security(db_defs, sec_base_id)
+        logger.info('Found existing subscription: %s', existing_subscription)
         if existing_subscription:
+            logger.info('Should NOT create - existing subscription found')
             return False
 
+        logger.info('Should CREATE - no existing subscription found')
         return True
 
 # ################################################################################################################################
@@ -360,6 +365,7 @@ class PubSubSubscriptionImporter:
             key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
 
             should_create = self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id)
+            logger.info('Decision for security %s: should_create=%s', security_name, should_create)
 
             if should_create:
 

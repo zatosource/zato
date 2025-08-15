@@ -111,9 +111,9 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         # Process all pubsub subscription definitions
         created, updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_defs, self.session)
 
-        # Should have processed 2 definitions (create or update)
+        # Should have processed 3 definitions (create or update)
         total_processed = len(created) + len(updated)
-        self.assertEqual(total_processed, 2)
+        self.assertEqual(total_processed, 3)
 
         # Get all processed subscriptions
         all_subs = created + updated
@@ -273,7 +273,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
         # Verify we have the expected counts based on template (database state agnostic)
         total_count = pull_count + push_count
-        self.assertEqual(total_count, 2)
+        self.assertEqual(total_count, 3)
 
 # ################################################################################################################################
 
@@ -292,13 +292,13 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
         # Verify pubsub subscription definitions were processed
         total_processed = len(subscription_created) + len(subscription_updated)
-        self.assertEqual(total_processed, 2)
+        self.assertEqual(total_processed, 3)
 
         # Verify the pubsub subscription definitions dictionary was populated
-        self.assertEqual(len(self.pubsub_subscription_importer.pubsub_subscription_defs), 2)
+        self.assertEqual(len(self.pubsub_subscription_importer.pubsub_subscription_defs), 3)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.pubsub_subscription_defs), 2)
+        self.assertEqual(len(self.importer.pubsub_subscription_defs), 3)
 
         # Verify all subscriptions are active by default
         all_subs = subscription_created + subscription_updated
