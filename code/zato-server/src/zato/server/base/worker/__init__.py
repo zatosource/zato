@@ -32,7 +32,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -875,17 +875,21 @@ class WorkerStore(_WorkerStoreBase):
             sec_name = config['sec_name']
             sub_key = config['sub_key']
             is_active = config['is_active']
+            delivery_type = config['delivery_type']
 
-            _ = spawn_greenlet(
-                self.pubsub_consumer_backend.start_public_queue_consumer,
-                cid,
-                topic_name_list,
-                sec_name,
-                sub_key,
-                is_active,
-                self.on_pubsub_public_message_callback,
-                timeout=10
-            )
+            # Start a consumer only if we're to push the messages ourselves
+            if delivery_type == PubSub.Delivery_Type.Push:
+
+                _ = spawn_greenlet(
+                    self.pubsub_consumer_backend.start_public_queue_consumer,
+                    cid,
+                    topic_name_list,
+                    sec_name,
+                    sub_key,
+                    is_active,
+                    self.on_pubsub_public_message_callback,
+                    timeout=10
+                )
 
 # ################################################################################################################################
 
