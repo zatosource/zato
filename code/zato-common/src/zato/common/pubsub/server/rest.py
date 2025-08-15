@@ -251,6 +251,7 @@ class PubSubRESTServer(BaseRESTServer):
         response.cid = cid
         response.data = None
         response.messages = messages if messages else []
+        response.message_count = len(response.messages)
         return response
 
 # ################################################################################################################################
