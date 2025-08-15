@@ -17,7 +17,14 @@ run-tests:
 
 pubsub-tests:
 	zato enmasse ~/env/qs-1/server1 --import --input $(CURDIR)/src/zato/common/pubsub/server/config.yaml --verbose
-	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/live -v -s --log-cli-level=DEBUG --log-cli-format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s' --log-cli-date-format='%Y-%m-%d %H:%M:%S' --log-disable=faker -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
+	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/live \
+		-v -s \
+		--log-cli-level=DEBUG \
+		--log-cli-format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s' \
+		--log-cli-date-format='%Y-%m-%d %H:%M:%S' \
+		--log-disable=faker \
+		-W ignore::DeprecationWarning \
+		-W ignore::gevent.monkey.MonkeyPatchWarning
 #	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/backend -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 #	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/rest_server -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 #	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
