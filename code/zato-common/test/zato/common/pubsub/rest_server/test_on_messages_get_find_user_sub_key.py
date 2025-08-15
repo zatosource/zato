@@ -59,6 +59,13 @@ class RESTFindUserSubKeyTestCase(TestCase):
         self.test_topic = 'test.topic'
         self.test_sub_key = 'test_sub_key_123'
 
+        # Set up users for authentication
+        self.rest_server.users = {
+            'test_user': {'sec_name': 'test_user', 'password': 'test_password'},
+            'other_user': {'sec_name': 'other_user', 'password': 'other_password'},
+            'nonexistent_user': {'sec_name': 'nonexistent_user', 'password': 'nonexistent_password'}
+        }
+
         # Set up test subscription
         subscription = Subscription()
         subscription.topic_name = self.test_topic

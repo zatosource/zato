@@ -71,7 +71,8 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.data, test_messages)
+        self.assertEqual(response.messages, test_messages)
+        self.assertEqual(response.message_count, len(test_messages))
 
 # ################################################################################################################################
 
@@ -85,7 +86,8 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(response.data, [])
+        self.assertEqual(response.messages, [])
+        self.assertEqual(response.message_count, 0)
 
 # ################################################################################################################################
 
@@ -106,9 +108,10 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['msg_id'], 'single_msg_123')
-        self.assertEqual(response.data[0]['data'], 'single message content')
+        self.assertEqual(len(response.messages), 1)
+        self.assertEqual(response.message_count, 1)
+        self.assertEqual(response.messages[0]['msg_id'], 'single_msg_123')
+        self.assertEqual(response.messages[0]['data'], 'single message content')
 
 # ################################################################################################################################
 
@@ -137,8 +140,9 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data, test_messages)
+        self.assertEqual(len(response.messages), 2)
+        self.assertEqual(response.message_count, 2)
+        self.assertEqual(response.messages, test_messages)
 
 # ################################################################################################################################
 
@@ -158,9 +162,10 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(len(response.data), 10)
+        self.assertEqual(len(response.messages), 10)
+        self.assertEqual(response.message_count, 10)
 
-        for i, message in enumerate(response.data):
+        for i, message in enumerate(response.messages):
             self.assertEqual(message['msg_id'], f'msg_{i}')
             self.assertEqual(message['sequence'], i)
 
