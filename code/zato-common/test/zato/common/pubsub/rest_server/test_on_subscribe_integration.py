@@ -70,13 +70,13 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
         self.rest_server.users = {'test_user': {'sec_name': 'test_sec_def', 'password': 'test_password'}}
-        
+
         # Mock broker client invoke_sync to return dict with error key
         def mock_invoke_sync(service, request, timeout=None, needs_root_elem=False):
             if needs_root_elem:
                 return {'error': None}
             return []
-        
+
         self.broker_client.invoke_sync = mock_invoke_sync
 
         # Set up permissions for test_user
@@ -129,7 +129,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
             backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
@@ -160,7 +160,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         """ on_subscribe propagates backend response correctly.
         """
         # Mock backend to return specific response
-        def mock_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True):
+        def mock_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
 
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
