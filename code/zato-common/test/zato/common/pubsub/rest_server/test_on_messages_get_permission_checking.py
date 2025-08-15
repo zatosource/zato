@@ -15,6 +15,7 @@ import base64
 import json
 import warnings
 from unittest import main, TestCase
+from unittest.mock import Mock
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
@@ -242,6 +243,46 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
         # Call method - should succeed since user has subscription
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
         self.assertTrue(response.is_ok)
+
+# ################################################################################################################################
+
+    def test_on_messages_get_permission_check_with_different_topics(self):
+        """ on_messages_get permission check works with different topics.
+        """
+        test_cases = [
+            ('test_user', 'test_password', self.test_topic, True),      # Has subscription
+            ('denied_user', 'denied_password', self.test_topic, False), # No subscription
+        ]
+
+        for username, password, expected_topic, should_succeed in test_cases:
+            with self.subTest(username=username, topic=expected_topic):
+                if should_succeed:
+                    # Create subscription for this user/topic combination
+                    subscription = Mock()
+                    subscription.sec_name = username
+                    subscription.sub_key = f'{username}_{expected_topic}_key'
+
+                    self.rest_server.backend.subs_by_topic[expected_topic] = {
+                        'test_sec_def': subscription
+                    }
+
+                    # Create request
+                    environ = self._create_environ({'max_messages': 1}, username, password)
+
+                    # Call method and expect success
+                    response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+                    self.assertTrue(response.is_ok)
+                else:
+                    # Clear subscriptions to simulate no subscription
+                    self.rest_server.backend.subs_by_topic.clear()
+
+                    # Create request
+                    environ = self._create_environ({'max_messages': 1}, username, password)
+
+                    # Call method and expect error response
+                    response = self.rest_server.on_messages_get(self.test_cid, environ, None)
+                    self.assertFalse(response.is_ok)
+                    self.assertIn('No subscription found for user', response.details)
 
 # ################################################################################################################################
 
