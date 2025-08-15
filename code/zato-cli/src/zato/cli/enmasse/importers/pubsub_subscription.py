@@ -141,12 +141,33 @@ class PubSubSubscriptionImporter:
         instance.push_service_name = definition.get('push_service_name')
         instance.is_active = definition.get('is_active', True)
 
+        logger.info('Creating subscription: sub_key=%s, sec_base_id=%s, cluster_id=%s',
+                   instance.sub_key, instance.sec_base_id, instance.cluster_id)
+
         set_instance_opaque_attrs(instance, definition)
         session.add(instance)
         session.commit()
+        logger.info('Subscription created with ID %s', instance.id)
 
         # Create subscription-topic associations
+        logger.info('Creating topic associations for subscription ID %s with topics %s',
+                   instance.id, definition['topic_id_list'])
         for topic_id in definition['topic_id_list']:
+            logger.info('Adding topic association: subscription_id=%s, topic_id=%s, cluster_id=%s',
+                       instance.id, topic_id, self.importer.cluster_id)
+
+            # Check if association already exists
+            existing = session.query(PubSubSubscriptionTopic).filter(
+                PubSubSubscriptionTopic.subscription_id == instance.id,
+                PubSubSubscriptionTopic.topic_id == topic_id,
+                PubSubSubscriptionTopic.cluster_id == self.importer.cluster_id
+            ).first()
+
+            if existing:
+                logger.info('Topic association already exists: subscription_id=%s, topic_id=%s, cluster_id=%s',
+                           instance.id, topic_id, self.importer.cluster_id)
+                continue
+
             sub_topic = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
@@ -155,6 +176,7 @@ class PubSubSubscriptionImporter:
             session.add(sub_topic)
 
         session.commit()
+        logger.info('All topic associations committed for subscription ID %s', instance.id)
         return instance
 
 # ################################################################################################################################
