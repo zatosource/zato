@@ -82,20 +82,18 @@ class RESTFindUserSubKeyTestCase(TestCase):
     def test_find_user_sub_key_returns_key_when_found(self):
         """ _find_user_sub_key returns subscription key when user has subscription.
         """
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
         self.assertEqual(sub_key, self.test_sub_key)
-        self.assertEqual(topic_name, self.test_topic)
 
 # ################################################################################################################################
 
     def test_find_user_sub_key_returns_none_when_not_found(self):
         """ _find_user_sub_key returns None when user has no subscription.
         """
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, 'nonexistent_user')
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, 'nonexistent_user')
 
         self.assertIsNone(sub_key)
-        self.assertIsNone(topic_name)
 
 # ################################################################################################################################
 
@@ -116,10 +114,9 @@ class RESTFindUserSubKeyTestCase(TestCase):
             other_user: subscription
         }
 
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, other_user)
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, other_user)
 
         self.assertEqual(sub_key, other_sub_key)
-        self.assertEqual(topic_name, other_topic)
 
 # ################################################################################################################################
 
@@ -139,11 +136,10 @@ class RESTFindUserSubKeyTestCase(TestCase):
             self.test_username: other_subscription
         }
 
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
         # Should return one of the keys (implementation returns first found)
         self.assertIn(sub_key, [self.test_sub_key, other_sub_key])
-        self.assertIn(topic_name, [self.test_topic, other_topic])
 
 # ################################################################################################################################
 
@@ -153,10 +149,9 @@ class RESTFindUserSubKeyTestCase(TestCase):
         # Clear all topics
         self.rest_server.backend.subs_by_topic.clear()
 
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
         self.assertIsNone(sub_key)
-        self.assertIsNone(topic_name)
 
 # ################################################################################################################################
 
@@ -166,10 +161,9 @@ class RESTFindUserSubKeyTestCase(TestCase):
         # Clear subscriptions but keep topic
         self.rest_server.backend.subs_by_topic[self.test_topic] = {}
 
-        sub_key, topic_name = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
+        sub_key = self.rest_server._find_user_sub_key(self.test_cid, self.test_username)
 
         self.assertIsNone(sub_key)
-        self.assertIsNone(topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
