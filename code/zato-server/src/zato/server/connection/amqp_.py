@@ -25,7 +25,7 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
 from zato.common.version import get_version
-from zato.common.util.api import get_component_name, utcnow
+from zato.common.util.api import get_component_name, utcnow, wait_for_predicate
 from zato.common.typing_ import cast_
 from zato.server.connection.connector import Connector, Inactive
 
@@ -371,6 +371,26 @@ class Consumer:
 
             # If we get here it means that we did not stop in the time expected, raise an exception in that case.
             raise Exception('Consumer for channel `{}` did not stop in the expected time of {}s.'.format(self.name, delta))
+
+# ################################################################################################################################
+
+    def _is_connected(self) -> 'bool':
+        return self.is_connected
+
+# ################################################################################################################################
+
+    def wait_until_connected(self, timeout:'int'=1) -> 'bool':
+        """ Waits until the consumer is connected or timeout is reached.
+        """
+        connected = wait_for_predicate(
+            self._is_connected,
+            timeout=timeout,
+            interval=0.01,
+            log_msg_details=f'consumer {self.name} to connect',
+            needs_log=True,
+        )
+
+        return connected
 
 # ################################################################################################################################
 
