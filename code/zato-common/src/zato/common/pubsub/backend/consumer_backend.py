@@ -13,6 +13,7 @@ from logging import getLogger
 from gevent.lock import RLock
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.util.api import spawn_greenlet
 from zato.common.pubsub.backend.common import Backend, ModuleCtx as CommonModuleCtx
 from zato.common.pubsub.consumer import start_public_consumer
@@ -185,15 +186,23 @@ class ConsumerBackend(Backend):
         is_active:'bool' = msg['is_active']
         sec_name:'str' = msg['sec_name']
         topic_name_list:'strlist' = msg['topic_name_list']
+        delivery_type:'str' = msg['delivery_type']
 
-        _ = self.start_public_queue_consumer(
-            cid,
-            topic_name_list,
-            sec_name,
-            sub_key,
-            is_active,
-            self.worker_store.on_pubsub_public_message_callback
-        )
+        # Make sure we know what the delivery type is
+        if not delivery_type:
+            raise Exception(f'Invalid delivery_type in {repr(msg)}')
+
+        # Start the consumer if the delivery type is push, which means that we are pushing the messages to the subscribe
+        if delivery_type == PubSub.Delivery_Type.Push:
+
+            _ = self.start_public_queue_consumer(
+                cid,
+                topic_name_list,
+                sec_name,
+                sub_key,
+                is_active,
+                self.worker_store.on_pubsub_public_message_callback
+            )
 
 # ################################################################################################################################
 
