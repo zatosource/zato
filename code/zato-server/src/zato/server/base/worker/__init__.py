@@ -23,7 +23,7 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep
 
 # orjson
 from orjson import dumps
