@@ -43,7 +43,7 @@ cli-tests:
 openapi:
 	py -m zato.openapi.generator.cli $(filter-out $@,$(MAKECMDGOALS))
 
-run-openapi-server:
+openapi-server-run:
 	py $(CURDIR)/code/zato-openapi/src/zato/openapi/app/run.py
 
 %:
