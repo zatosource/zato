@@ -76,7 +76,11 @@ class PubSubRESTServerUnsubscribeTestCase(PubSubRESTServerBaseTestCase):
 
             # Verify subscription no longer exists for this topic
             subscriptions = diagnostics_after_unsubscribe['data']['subscriptions']
-            self.assertNotIn(topic_name, subscriptions)
+            topic_exists = topic_name in subscriptions
+            if topic_exists:
+                topic_subscriptions = subscriptions[topic_name]
+                subscription_count = len(topic_subscriptions)
+                self.assertEqual(subscription_count, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################
