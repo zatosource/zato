@@ -62,6 +62,9 @@ run-tests:
 	$(MAKE) cli-tests
 #	$(MAKE) cy-tests
 
+all-tests:
+	$(MAKE) run-tests
+
 unify:
 	mkdir -p $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2
 	printf 'def detect_encoding(readline):\n    return ("utf-8", [])\n' > $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/tokenize.py

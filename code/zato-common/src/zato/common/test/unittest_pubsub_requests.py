@@ -180,7 +180,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
                 logger.info(f'Diagnostics response:\n{pretty_json}')
                 return data
             else:
-                logger.warning(f'Diagnostics failed with status {response.status_code}: {response.text}')
+                logger.info(f'Diagnostics failed with status {response.status_code}: {response.text}')
         except Exception as e:
             logger.error(f'Error calling diagnostics: {e}')
 
