@@ -75,22 +75,28 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                     if username not in users_data:
                         missing_objects.append(f'user:{username}')
 
-            # Check permissions
+            # Check permissions - pattern_matcher clients use usernames
             if 'pubsub_permission' in self.config:
                 pattern_matcher_data = diagnostics_data.get('pattern_matcher', {})
                 clients_data = pattern_matcher_data.get('clients', {})
                 for permission_config in self.config['pubsub_permission']:
-                    username = permission_config['username']
-                    if username not in clients_data:
+                    security_name = permission_config['security']
+                    # Find the username that has this security definition
+                    username = None
+                    for user_config in self.config.get('security', []):
+                        if user_config.get('name') == security_name:
+                            username = user_config.get('username')
+                            break
+                    if username and username not in clients_data:
                         missing_objects.append(f'permission:{username}')
 
             # Check subscriptions
             if 'pubsub_subscription' in self.config:
                 subscriptions_data = diagnostics_data.get('subscriptions', {})
                 for subscription_config in self.config['pubsub_subscription']:
-                    topic_name = subscription_config['topic_name']
-                    if topic_name not in subscriptions_data:
-                        missing_objects.append(f'subscription:{topic_name}')
+                    for topic_name in subscription_config['topic_list']:
+                        if topic_name not in subscriptions_data:
+                            missing_objects.append(f'subscription:{topic_name}')
 
             if not missing_objects:
                 logger.info('All config objects found in diagnostics')
