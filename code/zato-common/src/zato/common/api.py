@@ -1137,13 +1137,13 @@ class PubSub:
     # About 3 years if we repeat delivery attempts once per second
     Max_Repeats = 100_000_000
 
-    # 90 days in seconds
+    # 1 year in seconds
     Max_Retry_Time = 365 * 24 * 3600
 
     class Timeout:
 
         # How many seconds a consumer will wait in its drain_events call
-        Consumer = 1 # 51224
+        Consumer = 3
 
         # Must be bigger than the Consumer timeout to give a consumer enough time
         # to drain its events.

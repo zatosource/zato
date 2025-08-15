@@ -176,13 +176,6 @@ class Consumer:
 
     def _on_amqp_message(self, body, msg):
 
-        print()
-        print(111, self.name)
-        print(222, body)
-        print(333, msg)
-        print(444, self.config)
-        print()
-
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
         except Exception:
