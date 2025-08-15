@@ -24,13 +24,15 @@ logger = logging.getLogger(__name__)
 class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
-    skip_auto_unsubscribe = True
 
 # ################################################################################################################################
 
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
+        # Skip auto-unsubscribe for this test
+        self.skip_auto_unsubscribe = True
+
         # sh
         from sh import ErrorReturnCode
 
