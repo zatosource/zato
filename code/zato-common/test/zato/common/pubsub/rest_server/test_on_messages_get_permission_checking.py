@@ -81,7 +81,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
             if self.test_topic not in self.rest_server.backend.subs_by_topic:
                 self.rest_server.backend.subs_by_topic[self.test_topic] = {}
-            self.rest_server.backend.subs_by_topic[self.test_topic][username] = subscription
+            self.rest_server.backend.subs_by_topic[self.test_topic]['test_sec_def'] = subscription
 
             # Subscription for restricted.topic
             restricted_subscription = Subscription()
@@ -91,7 +91,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
             if self.restricted_topic not in self.rest_server.backend.subs_by_topic:
                 self.rest_server.backend.subs_by_topic[self.restricted_topic] = {}
-            self.rest_server.backend.subs_by_topic[self.restricted_topic][username] = restricted_subscription
+            self.rest_server.backend.subs_by_topic[self.restricted_topic]['test_sec_def'] = restricted_subscription
 
         # Clear pattern matcher and set up permissions
         self.rest_server.backend.pattern_matcher._clients = {}
@@ -293,7 +293,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
                 subscription.sub_key = f'{username}_{expected_topic}_key'
 
                 self.rest_server.backend.subs_by_topic[expected_topic] = {
-                    username: subscription
+                    'test_sec_def': subscription
                 }
 
                 # Create request
