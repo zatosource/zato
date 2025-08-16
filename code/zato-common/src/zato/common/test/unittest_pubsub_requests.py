@@ -104,7 +104,6 @@ class PubSubRESTServerBaseTestCase(TestCase):
     def tearDown(self):
         """ Clean up after tests.
         """
-        return
         if self.skip_tests:
             return
 
