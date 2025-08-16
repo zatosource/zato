@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Zato Pub/Sub REST API allows external clients to unsubscribe from topics. This document explains how to use the unsubscribe endpoint.
+The Zato Pub/Sub REST API allows external clients to unsubscribe from topics. This document explains how to remove subscriptions and clean up resources.
 
 ## Authentication
 
@@ -19,6 +19,12 @@ POST /topic/{topic_name}/unsubscribe
 
 ### Parameters
 - `topic_name` - The name of the topic to unsubscribe from
+
+### Topic Name Restrictions
+Topic names must adhere to the following rules:
+- Maximum length: 200 characters
+- The "#" character is not allowed in topic names
+- Only ASCII characters are permitted
 
 ### Request Headers
 ```
@@ -50,12 +56,13 @@ No request body required.
 ```json
 {
   "is_ok": false,
-  "details": "Error message"
+  "details": "Topic name validation error"
 }
 ```
 
-### Example
+### Examples
 
+#### Unsubscribe from Order Events
 ```bash
 curl -X POST \
   http://localhost:17010/topic/orders.processed/unsubscribe \
@@ -63,22 +70,65 @@ curl -X POST \
   -H "Content-Type: application/json"
 ```
 
+#### Unsubscribe from Alert Topic
+```bash
+curl -X POST \
+  http://localhost:17010/topic/alerts.critical.system/unsubscribe \
+  -u username:password \
+  -H "Content-Type: application/json"
+```
+
+## Unsubscribe Behavior
+
+### Safe Operation
+- Unsubscribing from a topic you're not subscribed to is safe and returns success
+- The system recognizes non-existing subscriptions and handles them gracefully
+- No error is returned if you're already unsubscribed
+
+### Message Queue Impact
+- Your personal message queue remains active for other subscriptions (if any)
+- Only messages from the unsubscribed topic stop being delivered
+- Existing messages in your queue from that topic remain until retrieved
+
 ## Topic Permissions
 
-Your user account must have subscription permissions for the topics you want to unsubscribe from.
-Permissions are configured using pattern matching - see the pattern documentation for details on how topic patterns work.
+Your user account must have subscription permissions for the topics you want to unsubscribe from. The same permissions required for subscribing are needed for unsubscribing.
+
+### Permission Examples
+```
+sub=orders.*           # Can unsubscribe from orders.processed, orders.cancelled, etc.
+sub=alerts.**          # Can unsubscribe from any alerts topic at any depth
+sub=notifications.user.email  # Can only unsubscribe from this exact topic
+```
+
+See README.patterns.md for complete pattern matching documentation.
 
 ## Error Handling
 
 Common error scenarios:
-- **401 Unauthorized** - Invalid credentials or insufficient permissions
-- **400 Bad Request** - Invalid request format or parameters
-- **404 Not Found** - Topic does not exist or no active subscription
-- **500 Internal Server Error** - Server-side error
+
+### Authentication Errors
+- **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
+- **401 Permission denied** - Valid credentials but no subscribe permission for the topic
+
+### Topic Validation Errors
+- **400 Topic name validation** - Topic name violates restrictions (length, characters, etc.)
+
+### Server Errors
+- **500 Internal Server Error** - Unexpected server-side error during unsubscribe
+
+## Related Operations
+
+After unsubscribing:
+
+1. **Subscribe Again** - Use `POST /topic/{topic_name}/subscribe` to re-subscribe (see README.subscribe.md)
+2. **Check Messages** - Use `POST /messages/get` to retrieve any remaining messages (see README.pull.md)
+3. **Publish Messages** - Use `POST /topic/{topic_name}/publish` to send messages (see README.publish.md)
 
 ## Best Practices
 
 1. **Handle errors** - Always check the `is_ok` field in responses
 2. **Clean unsubscribe** - Unsubscribe from topics when no longer needed to free resources
-
-Returns `200 OK` with `{"status": "ok"}` if the service is healthy.
+3. **Check permissions** - Ensure your user has subscribe permissions for the topics
+4. **Monitor subscriptions** - Keep track of active subscriptions to avoid unnecessary unsubscribes
+5. **Retrieve remaining messages** - Call `/messages/get` after unsubscribing to get any pending messages
