@@ -443,6 +443,44 @@ class BrokerClient:
 
 # ################################################################################################################################
 
+    def _wait_for_response(
+        self,
+        ctx:'_InvokeWithCallbackCtx',
+        response:'any_',
+        timeout:'int | float',
+        sleep_time:'float',
+        cid:'str'
+    ) -> 'None':
+        """ Waits for a response from the broker within the specified timeout.
+        """
+
+        # We'll wait until that time ..
+        end_time = utcnow() + timedelta(seconds=timeout)
+
+        # .. open a new channel to the broker which we'll need to see if our queue still exists ..
+        with ctx.producer.connection.channel() as channel:
+
+            # .. do wait ..
+            while not response.ready and utcnow() < end_time:
+
+                # .. go and see if our queue has not been already deleted ..
+                try:
+                    channel.queue_declare(queue=response.reply_queue_name, passive=True)
+                except channel.connection.channel_errors:
+
+                    # .. if we're here, it means there's no such queue so we can break early ..
+                    logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
+                    break
+
+                # .. otherwise, continue waiting ..
+                else:
+                    sleep(sleep_time)
+                    time_left = (end_time - utcnow()).total_seconds()
+                    msg = f'Still waiting - queue: {response.reply_queue_name}, time left: {time_left:.1f}s'
+                    logger.debug(msg)
+
+# ################################################################################################################################
+
     def _invoke_sync(
         self,
         service:'str',
@@ -504,29 +542,8 @@ class BrokerClient:
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
         logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
 
-        # We'll wait until that time ..
-        end_time = utcnow() + timedelta(seconds=timeout)
-
-        # .. open a new channel to the broker which we'll need to see if our queue still exists ..
-        with ctx.producer.connection.channel() as channel:
-
-            # .. do wait ..
-            while not response.ready and utcnow() < end_time:
-
-                # .. go and see if our queue has not been already deleted ..
-                try:
-                    channel.queue_declare(queue=response.reply_queue_name, passive=True)
-                except channel.connection.channel_errors:
-
-                    # .. if we're here, it means there's no such queue so we can break early ..
-                    logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
-                    break
-
-                # .. otherwise, continue waiting ..
-                else:
-                    sleep(sleep_time)
-                    time_left = (end_time - utcnow()).total_seconds()
-                    logger.debug(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
+        # Wait for response
+        self._wait_for_response(ctx, response, timeout, sleep_time, cid)
 
         # .. handle timeouts and early exists (does not matter which one led us here)..
         if not response.ready:
