@@ -67,7 +67,7 @@ class _InvokeWithCallbackCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvocationTimeout(Exception):
+class NoResponseReceivedException(Exception):
     pass
 
 # ################################################################################################################################
@@ -504,20 +504,37 @@ class BrokerClient:
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
         logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
 
-        # Wait for the response
+        # We'll wait until that time ..
         end_time = utcnow() + timedelta(seconds=timeout)
-        while not response.ready and utcnow() < end_time:
-            sleep(sleep_time)
-            time_left = (end_time - utcnow()).total_seconds()
-            logger.debug(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
 
-        # Handle timeout
+        # .. open a new channel to the broker which we'll need to see if our queue still exists ..
+        with ctx.producer.connection.channel() as channel:
+
+            # .. do wait ..
+            while not response.ready and utcnow() < end_time:
+
+                # .. go and see if our queue has not been already deleted ..
+                try:
+                    channel.queue_declare(queue=response.reply_queue_name, passive=True)
+                except channel.connection.channel_errors:
+
+                    # .. if we're here, it means there's no such queue so we can break early ..
+                    logger.warning(f'No such QUEUE {response.reply_queue_name}')
+                    break
+
+                # .. otherwise, continue waiting ..
+                else:
+                    sleep(sleep_time)
+                    time_left = (end_time - utcnow()).total_seconds()
+                    logger.debug(f'Still waiting - sent to: components/server, reply from: {response.reply_queue_name}, time left: {time_left:.1f}s')
+
+        # .. handle timeouts and early exists (does not matter which one led us here)..
         if not response.ready:
 
-            # If timed out and we know the queue name, clean it up
+            # .. if we know the queue name, clean it up ..
             if response.reply_queue_name:
 
-                logger.info(f'Timeout reached - cleaning up reply queue {response.reply_queue_name}')
+                logger.info(f'No response - cleaning up reply queue {response.reply_queue_name}')
                 self._cleanup_reply_consumer(response.reply_queue_name)
 
                 # Also clean up the callback registration
@@ -529,8 +546,8 @@ class BrokerClient:
                     if cid in self.correlation_to_queue_map:
                         _ = self.correlation_to_queue_map.pop(cid, None)
 
-            exc_msg = f'Timeout waiting for response from service `{service}` after {timeout} second{"" if timeout == 1 else "s"}'
-            raise InvocationTimeout(exc_msg)
+            exc_msg = f'No response received from service `{service}`'
+            raise NoResponseReceivedException(exc_msg)
 
         if not needs_root_elem:
             data = response.data
@@ -553,7 +570,7 @@ class BrokerClient:
         while not response:
             try:
                 response = self._invoke_sync('demo.ping')
-            except InvocationTimeout as e:
+            except NoResponseReceivedException as e:
                 logger.info('Timeout: %s', e)
 
         # .. now, we can invoke the actual service.
