@@ -113,42 +113,69 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
+    def _publish_message(self, topic_name, message_data):
+        """ Publish a message to a topic.
+        """
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        publish_payload = {'data': message_data}
+        return requests.post(publish_url, json=publish_payload, auth=self.auth)
+
+    def _get_messages(self, max_messages=10, max_len=1000):
+        """ Get messages from user's queue.
+        """
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
+        get_payload = {'max_messages': max_messages, 'max_len': max_len}
+        return requests.post(get_messages_url, json=get_payload, auth=self.auth)
+
+    def _extract_publish_data(self, response):
+        """ Extract data from publish response.
+        """
+        return response.json()
+
+    def _extract_get_messages_data(self, response):
+        """ Extract data from get messages response.
+        """
+        return response.json()
+
+    def _assert_publish_success(self, response, data):
+        """ Assert that publish response is successful.
+        """
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data['is_ok'])
+        self.assertIn('msg_id', data)
+
+    def _assert_get_messages_success(self, response, data):
+        """ Assert that get messages response is successful.
+        """
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data['is_ok'])
+
+    def _assert_message_content(self, messages, expected_message, expected_msg_id):
+        """ Assert message content matches expectations.
+        """
+        self.assertEqual(len(messages), 1)
+        received_message = messages[0]
+        self.assertEqual(received_message['data'], expected_message)
+        self.assertEqual(received_message['msg_id'], expected_msg_id)
+
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
-        # Skip auto-unsubscribe for this test
         self.skip_auto_unsubscribe = True
-
-        # Run enmasse
         self._wait_for_objects_in_diagnostics()
 
-        # Test publish/get messages flow
         topic_name = 'demo.1'
         test_message = {'test': 'data', 'timestamp': '2025-01-01T00:00:00Z'}
 
-        # Publish message
-        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
-        publish_payload = {'data': test_message}
-        publish_response = requests.post(publish_url, json=publish_payload, auth=self.auth)
-        self.assertEqual(publish_response.status_code, 200)
-        publish_data = publish_response.json()
-        self.assertTrue(publish_data['is_ok'])
-        self.assertIn('msg_id', publish_data)
+        publish_response = self._publish_message(topic_name, test_message)
+        publish_data = self._extract_publish_data(publish_response)
+        self._assert_publish_success(publish_response, publish_data)
 
-        # Get messages
-        get_messages_url = f'{self.base_url}/pubsub/messages/get'
-        get_payload = {'max_messages': 10, 'max_len': 1000}
-        get_response = requests.post(get_messages_url, json=get_payload, auth=self.auth)
-        self.assertEqual(get_response.status_code, 200)
-        get_data = get_response.json()
-        self.assertTrue(get_data['is_ok'])
+        get_response = self._get_messages()
+        get_data = self._extract_get_messages_data(get_response)
+        self._assert_get_messages_success(get_response, get_data)
 
-        # Verify message content
-        messages = get_data['messages']
-        self.assertEqual(len(messages), 1)
-        received_message = messages[0]
-        self.assertEqual(received_message['data'], test_message)
-        self.assertEqual(received_message['msg_id'], publish_data['msg_id'])
+        self._assert_message_content(get_data['messages'], test_message, publish_data['msg_id'])
 
 # ################################################################################################################################
 # ################################################################################################################################
