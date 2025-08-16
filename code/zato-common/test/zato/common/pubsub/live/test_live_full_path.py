@@ -140,6 +140,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         """
         from zato.common.pubsub.util import get_broker_config
         from requests.auth import HTTPBasicAuth
+        import urllib.parse
 
         broker_config = get_broker_config()
         broker_host = broker_config.address.split(':')[0]
@@ -160,13 +161,43 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         if not user_queue_name:
             logger.error('Could not find user queue name, cannot proceed')
-            raise Exception('User queue name not found in diagnostics')
+            raise RuntimeError('User queue name not found in diagnostics')
+
+        logger.info(f'Looking for queue: {user_queue_name}')
+
+        # Use the Zato internal vhost
+        vhost_name = 'zato.internal'
+
+        # List all queues in the vhost to see what exists
+        encoded_vhost = urllib.parse.quote(vhost_name, safe='')
+        list_queues_url = f'http://{broker_host}:{management_port}/api/queues/{encoded_vhost}'
+        try:
+            response = requests.get(list_queues_url, auth=broker_auth)
+            if response.status_code == 200:
+                queues = response.json()
+                queue_names = [q['name'] for q in queues]
+                logger.info(f'Available queues in vhost {vhost_name}: {queue_names}')
+
+                # Find queue that contains our sub_key
+                matching_queue = None
+                for queue in queues:
+                    if user_queue_name in queue['name']:
+                        matching_queue = queue['name']
+                        break
+
+                if matching_queue:
+                    user_queue_name = matching_queue
+                    logger.info(f'Found matching queue: {user_queue_name}')
+                else:
+                    logger.error(f'No queue found containing {user_queue_name}')
+                    raise RuntimeError(f'Queue not found: {user_queue_name}')
+        except Exception as e:
+            logger.error(f'Error listing queues: {e}')
+            raise
 
         # Check RabbitMQ API for message count
-        # URL encode the queue name properly
-        import urllib.parse
         encoded_queue_name = urllib.parse.quote(user_queue_name, safe='')
-        api_url = f'http://{broker_host}:{management_port}/api/queues/%2F/{encoded_queue_name}'
+        api_url = f'http://{broker_host}:{management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
 
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -176,10 +207,11 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                     queue_info = response.json()
                     message_count = queue_info.get('messages', 0)
                     if message_count > 0:
-                        logger.info(f'Found {message_count} messages in queue {user_queue_name}')
+                        message_word = 'message' if message_count == 1 else 'messages'
+                        logger.info(f'Found {message_count} {message_word} in queue {user_queue_name}')
                         return
                     else:
-                        logger.info(f'No messages in queue {user_queue_name}, waiting...')
+                        logger.debug(f'No messages in queue {user_queue_name}, waiting...')
                 else:
                     logger.warning(f'Failed to check queue status: {response.status_code}')
             except Exception as e:
