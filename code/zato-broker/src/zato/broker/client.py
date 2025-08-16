@@ -519,7 +519,7 @@ class BrokerClient:
                 except channel.connection.channel_errors:
 
                     # .. if we're here, it means there's no such queue so we can break early ..
-                    logger.warning(f'No such QUEUE {response.reply_queue_name}')
+                    logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
                     break
 
                 # .. otherwise, continue waiting ..
