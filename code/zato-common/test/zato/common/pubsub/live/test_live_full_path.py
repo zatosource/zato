@@ -239,8 +239,16 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         get_data = self._extract_get_messages_data(get_response)
         self._assert_get_messages_success(get_response, get_data)
 
-        # .. verify that the retrieved message matches the second message we published.
+        # .. verify that the retrieved message matches the second message we published ..
         self._assert_message_content(get_data['messages'], test_message_2, publish_data_2['msg_id'])
+
+        # .. unsubscribe from demo.2 ..
+        unsubscribe_response_2 = self._unsubscribe_from_topic(topic_name_2)
+        unsubscribe_data_2 = self._extract_unsubscribe_data(unsubscribe_response_2)
+        self._assert_unsubscribe_success(unsubscribe_response_2, unsubscribe_data_2)
+
+        # .. verify that the user is no longer subscribed to demo.2.
+        self._assert_user_not_subscribed_to_topic(topic_name_2)
 
 # ################################################################################################################################
 # ################################################################################################################################
