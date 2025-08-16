@@ -175,6 +175,25 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(received_message['data'], expected_message)
         self.assertEqual(received_message['msg_id'], expected_msg_id)
 
+    def _assert_user_not_subscribed_to_topic(self, topic_name:'str') -> 'None':
+        """ Assert that the user is not subscribed to the given topic by checking diagnostics.
+        """
+        diagnostics_data = self._call_diagnostics()
+        self.assertIsNotNone(diagnostics_data)
+
+        data_section = diagnostics_data.get('data', {})
+        subscriptions = data_section.get('subscriptions', {})
+
+        # Check if topic exists in subscriptions
+        if topic_name in subscriptions:
+            topic_subscriptions = subscriptions[topic_name]
+
+            # Check if our user's security definition is not in the topic subscriptions
+            security_config = self.config['security']
+            first_security = security_config[0]
+            user_sec_name = first_security['name']
+            self.assertNotIn(user_sec_name, topic_subscriptions,  f'User should not be subscribed to topic {topic_name}')
+
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
@@ -206,6 +225,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         unsubscribe_response = self._unsubscribe_from_topic(topic_name_1)
         unsubscribe_data = self._extract_unsubscribe_data(unsubscribe_response)
         self._assert_unsubscribe_success(unsubscribe_response, unsubscribe_data)
+
+        # .. verify that the user is no longer subscribed to demo.1 ..
+        self._assert_user_not_subscribed_to_topic(topic_name_1)
 
         # .. publish second message to demo.2 and verify it was successful ..
         publish_response_2 = self._publish_message(topic_name_2, test_message_2)
