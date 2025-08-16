@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import dataclass
 from datetime import timedelta
 from http.client import OK
 from json import dumps, loads
@@ -54,6 +55,14 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _one_year_in_seconds = 31_536_000 # 365 days * 24 days * 3600 seconds in an hour
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _InvokeWithCallbackCtx:
+    producer: 'Producer'
+    correlation_id: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -382,7 +391,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _invoke_with_callback(self, msg:'anydict', callback:'callable_') -> 'strnone':
+    def _invoke_with_callback(self, msg:'anydict', callback:'callable_') -> '_InvokeWithCallbackCtx':
         """ Publishes a message and registers a callback to be invoked when a reply is received.
         """
         # Generate a unique correlation ID for this request
@@ -426,7 +435,11 @@ class BrokerClient:
                 reply_to=reply_queue
             )
 
-        return correlation_id
+        ctx = _InvokeWithCallbackCtx()
+        ctx.producer = client
+        ctx.correlation_id = correlation_id
+
+        return ctx
 
 # ################################################################################################################################
 
@@ -479,7 +492,8 @@ class BrokerClient:
         }
 
         # Get correlation ID and create reply queue via _invoke_with_callback
-        cid = self._invoke_with_callback(msg, response.set_response)
+        ctx = self._invoke_with_callback(msg, response.set_response)
+        cid = ctx.correlation_id
 
         # Store the reply queue name for possible cleanup in case of timeout
         with self.lock:
