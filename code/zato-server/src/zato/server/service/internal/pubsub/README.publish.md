@@ -20,6 +20,12 @@ POST /topic/{topic_name}/publish
 ### Parameters
 - `topic_name` - The name of the topic to publish to
 
+### Topic Name Restrictions
+Topic names must adhere to the following rules:
+- Maximum length: 200 characters
+- The "#" character is not allowed in topic names
+- Only ASCII characters are permitted
+
 ### Request Headers
 ```
 Content-Type: application/json
@@ -137,7 +143,7 @@ using pattern matching - see the pattern documentation for details on how topic 
 ### Expiration
 - Messages expire after the specified time in seconds
 - Expired messages are automatically removed from queues
-- Default expiration is 3600 seconds (1 hour)
+- Default expiration is 1 year
 - Set to 0 for messages that never expire
 
 ### Message ID
@@ -148,10 +154,21 @@ using pattern matching - see the pattern documentation for details on how topic 
 ## Error Handling
 
 Common error scenarios:
-- **401 Unauthorized** - Invalid credentials or insufficient permissions
-- **400 Bad Request** - Missing data field or invalid request format
-- **404 Not Found** - Topic does not exist
-- **500 Internal Server Error** - Server-side error
+
+### Authentication Errors
+- **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
+- **401 Permission Denied** - Valid credentials but no publish permission for the topic
+
+### Request Format Errors
+- **400 Input data missing** - No JSON body provided in the request
+- **400 Message data missing** - JSON body exists but missing required `data` field
+- **400 Invalid JSON** - Malformed JSON in request body
+
+### Topic Validation Errors
+- **400 Topic name validation** - Topic name violates restrictions (length, characters, etc.)
+
+### Server Errors
+- **500 Internal Server Error** - Unexpected server-side error during processing
 
 ## Best Practices
 
