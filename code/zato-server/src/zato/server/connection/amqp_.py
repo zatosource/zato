@@ -176,6 +176,7 @@ class Consumer:
 
     def _on_amqp_message(self, body, msg):
 
+        '''
         print()
         print(111, body)
         print(222, msg)
@@ -183,6 +184,7 @@ class Consumer:
         print(444, self.config)
         print(555, self.on_amqp_message)
         print()
+        '''
 
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
