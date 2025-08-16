@@ -127,6 +127,12 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         get_payload = {'max_messages': max_messages, 'max_len': max_len}
         return requests.post(get_messages_url, json=get_payload, auth=self.auth)
 
+    def _unsubscribe_from_topic(self, topic_name:'str') -> 'any_':
+        """ Unsubscribe from a topic.
+        """
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
+        return requests.post(unsubscribe_url, auth=self.auth)
+
     def _extract_publish_data(self, response:'any_') -> 'any_':
         """ Extract data from publish response.
         """
@@ -134,6 +140,11 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
     def _extract_get_messages_data(self, response:'any_') -> 'any_':
         """ Extract data from get messages response.
+        """
+        return response.json()
+
+    def _extract_unsubscribe_data(self, response:'any_') -> 'any_':
+        """ Extract data from unsubscribe response.
         """
         return response.json()
 
@@ -146,6 +157,12 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
     def _assert_get_messages_success(self, response:'any_', data:'any_') -> 'None':
         """ Assert that get messages response is successful.
+        """
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data['is_ok'])
+
+    def _assert_unsubscribe_success(self, response:'any_', data:'any_') -> 'None':
+        """ Assert that unsubscribe response is successful.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['is_ok'])
@@ -169,21 +186,33 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self._wait_for_objects_in_diagnostics()
 
         # .. prepare test data ..
-        topic_name = 'demo.1'
-        test_message = {'test': 'data', 'timestamp': '2025-01-01T00:00:00Z'}
+        topic_name_1 = 'demo.1'
+        topic_name_2 = 'demo.2'
+        test_message_1 = {'first': 'message', 'id': 1, 'timestamp': '2025-01-01T10:00:00Z'}
+        test_message_2 = {'second': 'message', 'id': 2, 'timestamp': '2025-01-01T11:00:00Z'}
 
-        # .. publish a message to the topic and verify it was successful ..
-        publish_response = self._publish_message(topic_name, test_message)
-        publish_data = self._extract_publish_data(publish_response)
-        self._assert_publish_success(publish_response, publish_data)
+        # .. publish first message to demo.1 and verify it was successful ..
+        publish_response_1 = self._publish_message(topic_name_1, test_message_1)
+        publish_data_1 = self._extract_publish_data(publish_response_1)
+        self._assert_publish_success(publish_response_1, publish_data_1)
+
+        # .. unsubscribe from demo.1 ..
+        unsubscribe_response = self._unsubscribe_from_topic(topic_name_1)
+        unsubscribe_data = self._extract_unsubscribe_data(unsubscribe_response)
+        self._assert_unsubscribe_success(unsubscribe_response, unsubscribe_data)
+
+        # .. publish second message to demo.2 and verify it was successful ..
+        publish_response_2 = self._publish_message(topic_name_2, test_message_2)
+        publish_data_2 = self._extract_publish_data(publish_response_2)
+        self._assert_publish_success(publish_response_2, publish_data_2)
 
         # .. retrieve messages from the user's queue and verify the operation was successful ..
         get_response = self._get_messages()
         get_data = self._extract_get_messages_data(get_response)
         self._assert_get_messages_success(get_response, get_data)
 
-        # .. verify that the retrieved message matches what we published.
-        self._assert_message_content(get_data['messages'], test_message, publish_data['msg_id'])
+        # .. verify that the retrieved message matches the second message we published.
+        self._assert_message_content(get_data['messages'], test_message_2, publish_data_2['msg_id'])
 
 # ################################################################################################################################
 # ################################################################################################################################
