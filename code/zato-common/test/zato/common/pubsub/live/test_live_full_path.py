@@ -121,6 +121,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         publish_response = requests.post(publish_url, json=publish_payload, auth=self.auth)
 
+        logger.info('Message published to %s', topic_name)
+
         # First check RabbitMQ to ensure there's at least one message in the queue ..
         self._wait_for_messages_in_queue()
 
@@ -141,6 +143,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def _wait_for_messages_in_queue(self, timeout:'int'=300_000_000) -> 'None':
         """ Wait for at least one message to appear in the user's queue via rabbitmqctl.
         """
+
+        logger.info('Checking stats')
 
         # Find the user's queue name by checking subscriptions
         user_queue_name = None
@@ -313,8 +317,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         publish_data = self._extract_publish_data(publish_response)
         self._assert_publish_success(publish_response, publish_data)
-
-        logger.info('Message published to %s', topic_name)
 
         # .. retrieve message from the user's queue and verify it was received ..
         get_response = self._get_messages()
