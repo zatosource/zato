@@ -11,6 +11,9 @@ import logging
 import time
 from unittest import main
 
+# Requests
+import requests
+
 # Zato
 from zato.common.test.unittest_pubsub_requests import PubSubRESTServerBaseTestCase
 
@@ -47,13 +50,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
             data = self._call_diagnostics()
             if not data:
-                logger.warning('No diagnostics data received')
+                logger.info('No diagnostics data received')
                 time.sleep(0.5)
                 continue
 
             diagnostics_data = data.get('data', {})
             if not diagnostics_data:
-                logger.warning('No data section in diagnostics response')
+                logger.info('No data section in diagnostics response')
                 time.sleep(0.5)
                 continue
 
@@ -119,7 +122,33 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Run enmasse
         self._wait_for_objects_in_diagnostics()
 
-        print(111)
+        # Test publish/get messages flow
+        topic_name = 'demo.1'
+        test_message = {'test': 'data', 'timestamp': '2025-01-01T00:00:00Z'}
+
+        # Publish message
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        publish_payload = {'data': test_message}
+        publish_response = requests.post(publish_url, json=publish_payload, auth=self.auth)
+        self.assertEqual(publish_response.status_code, 200)
+        publish_data = publish_response.json()
+        self.assertTrue(publish_data['is_ok'])
+        self.assertIn('msg_id', publish_data)
+
+        # Get messages
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
+        get_payload = {'max_messages': 10, 'max_len': 1000}
+        get_response = requests.post(get_messages_url, json=get_payload, auth=self.auth)
+        self.assertEqual(get_response.status_code, 200)
+        get_data = get_response.json()
+        self.assertTrue(get_data['is_ok'])
+
+        # Verify message content
+        messages = get_data['messages']
+        self.assertEqual(len(messages), 1)
+        received_message = messages[0]
+        self.assertEqual(received_message['data'], test_message)
+        self.assertEqual(received_message['msg_id'], publish_data['msg_id'])
 
 # ################################################################################################################################
 # ################################################################################################################################
