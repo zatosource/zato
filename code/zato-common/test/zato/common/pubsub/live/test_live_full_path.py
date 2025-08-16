@@ -10,12 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 from unittest import main
+import urllib.parse
 
 # Requests
 import requests
+from requests.auth import HTTPBasicAuth
 
 # Zato
 from zato.common.test.unittest_pubsub_requests import PubSubRESTServerBaseTestCase
+from zato.common.pubsub.util import get_broker_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,9 +141,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def _wait_for_messages_in_queue(self, timeout:'int'=30) -> 'None':
         """ Wait for at least one message to appear in the user's queue via RabbitMQ API.
         """
-        from zato.common.pubsub.util import get_broker_config
-        from requests.auth import HTTPBasicAuth
-        import urllib.parse
 
         broker_config = get_broker_config()
         broker_host = broker_config.address.split(':')[0]
@@ -152,7 +152,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         diagnostics_data = self._call_diagnostics()
         if diagnostics_data and 'data' in diagnostics_data:
             subscriptions = diagnostics_data['data'].get('subscriptions', {})
-            for topic_name, subs in subscriptions.items():
+            for subs in subscriptions.values():
                 user_sec_name = self.config['security'][0]['name']
                 if user_sec_name in subs:
                     subscription = subs[user_sec_name]
