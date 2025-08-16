@@ -11,6 +11,7 @@ Topic names must adhere to the following rules:
 - Maximum length: 200 characters
 - The "#" character is not allowed in topic names
 - Only ASCII characters are permitted
+- Cannot be empty
 
 ## Pattern Types
 
