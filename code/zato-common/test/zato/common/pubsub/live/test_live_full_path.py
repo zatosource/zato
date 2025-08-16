@@ -161,20 +161,28 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
+
+        # Skip auto-unsubscribe for this test since we want to control cleanup manually ..
         self.skip_auto_unsubscribe = True
+
+        # .. wait for all configuration objects to appear in diagnostics ..
         self._wait_for_objects_in_diagnostics()
 
+        # .. prepare test data ..
         topic_name = 'demo.1'
         test_message = {'test': 'data', 'timestamp': '2025-01-01T00:00:00Z'}
 
+        # .. publish a message to the topic and verify it was successful ..
         publish_response = self._publish_message(topic_name, test_message)
         publish_data = self._extract_publish_data(publish_response)
         self._assert_publish_success(publish_response, publish_data)
 
+        # .. retrieve messages from the user's queue and verify the operation was successful ..
         get_response = self._get_messages()
         get_data = self._extract_get_messages_data(get_response)
         self._assert_get_messages_success(get_response, get_data)
 
+        # .. verify that the retrieved message matches what we published.
         self._assert_message_content(get_data['messages'], test_message, publish_data['msg_id'])
 
 # ################################################################################################################################
