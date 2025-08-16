@@ -9,16 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import time
+import subprocess
 from unittest import main
-import urllib.parse
 
 # Requests
 import requests
-from requests.auth import HTTPBasicAuth
 
 # Zato
 from zato.common.test.unittest_pubsub_requests import PubSubRESTServerBaseTestCase
-from zato.common.pubsub.util import get_broker_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,13 +141,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 # ################################################################################################################################
 
     def _wait_for_messages_in_queue(self, timeout:'int'=300_000_000) -> 'None':
-        """ Wait for at least one message to appear in the user's queue via RabbitMQ API.
+        """ Wait for at least one message to appear in the user's queue via rabbitmqctl.
         """
-
-        broker_config = get_broker_config()
-        broker_host = broker_config.address.split(':')[0]
-        management_port = 15672
-        broker_auth = HTTPBasicAuth(broker_config.username, broker_config.password)
 
         # Find the user's queue name by checking subscriptions
         user_queue_name = None
@@ -165,60 +158,65 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         if not user_queue_name:
             logger.error('Could not find user queue name, cannot proceed')
-            raise RuntimeError('User queue name not found in diagnostics')
+            raise Exception('User queue name not found in diagnostics')
 
         logger.info(f'Looking for queue: {user_queue_name}')
 
         # Use the Zato internal vhost
         vhost_name = 'zato.internal'
 
-        # List all queues in the vhost to see what exists
-        encoded_vhost = urllib.parse.quote(vhost_name, safe='')
-        list_queues_url = f'http://{broker_host}:{management_port}/api/queues/{encoded_vhost}'
+        # First, list all queues to find the full queue name
         try:
-            response = requests.get(list_queues_url, auth=broker_auth)
-            if response.status_code == 200:
-                queues = response.json()
-                queue_names = [q['name'] for q in queues]
-                logger.info(f'Available queues in vhost {vhost_name}: {queue_names}')
+            result = subprocess.run(
+                ['sudo', 'rabbitmqctl', 'list_queues', '-p', vhost_name, 'name'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
 
-                # Find queue that contains our sub_key
-                matching_queue = None
-                for queue in queues:
-                    if user_queue_name in queue['name']:
-                        matching_queue = queue['name']
+            # Parse output to find matching queue
+            matching_queue = None
+            for line in result.stdout.strip().split('\n'):
+                if line and not line.startswith('Timeout:') and not line.startswith('Listing'):
+                    if user_queue_name in line:
+                        matching_queue = line.strip()
                         break
 
-                if matching_queue:
-                    user_queue_name = matching_queue
-                    logger.info(f'Found matching queue: {user_queue_name}')
-                else:
-                    logger.error(f'No queue found containing {user_queue_name}')
-                    raise RuntimeError(f'Queue not found: {user_queue_name}')
-        except Exception as e:
+            if matching_queue:
+                user_queue_name = matching_queue
+                logger.info(f'Found matching queue: {user_queue_name}')
+            else:
+                logger.error(f'No queue found containing {user_queue_name}')
+                raise Exception(f'Queue not found: {user_queue_name}')
+        except subprocess.CalledProcessError as e:
             logger.error(f'Error listing queues: {e}')
             raise
 
-        # Check RabbitMQ API for message count
-        encoded_queue_name = urllib.parse.quote(user_queue_name, safe='')
-        api_url = f'http://{broker_host}:{management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
-
+        # Check for messages in the queue
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                response = requests.get(api_url, auth=broker_auth)
-                if response.status_code == 200:
-                    queue_info = response.json()
-                    message_count = queue_info.get('messages', 0)
-                    if message_count > 0:
-                        message_word = 'message' if message_count == 1 else 'messages'
-                        logger.info(f'Found {message_count} {message_word} in queue {user_queue_name}')
-                        return
-                    else:
-                        logger.debug(f'No messages in queue {user_queue_name}, waiting...')
-                else:
-                    logger.warning(f'Failed to check queue status: {response.status_code}')
-            except Exception as e:
+                result = subprocess.run(
+                    ['sudo', 'rabbitmqctl', 'list_queues', '-p', vhost_name, 'name', 'messages'],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+
+                # Parse output to find our queue and its message count
+                for line in result.stdout.strip().split('\n'):
+                    if user_queue_name in line:
+                        parts = line.split('\t')
+                        if len(parts) >= 2:
+                            message_count = int(parts[1])
+                            if message_count > 0:
+                                message_word = 'message' if message_count == 1 else 'messages'
+                                logger.info(f'Found {message_count} {message_word} in queue {user_queue_name}')
+                                return
+                            else:
+                                logger.debug(f'No messages in queue {user_queue_name}, waiting...')
+                        break
+            except (subprocess.CalledProcessError, ValueError) as e:
                 logger.warning(f'Error checking queue status: {e}')
 
             time.sleep(0.5)
@@ -313,8 +311,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. publish message to topic and verify it was successful ..
         publish_response = self._publish_message(topic_name, test_message)
 
-        return
-
         publish_data = self._extract_publish_data(publish_response)
         self._assert_publish_success(publish_response, publish_data)
 
@@ -356,10 +352,10 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
         # .. run complete scenario for demo.2 ..
-        #self._run_complete_topic_scenario(topic_name_2, test_message_2)
+        self._run_complete_topic_scenario(topic_name_2, test_message_2)
 
         # .. run complete scenario for demo.3 ..
-        #self._run_complete_topic_scenario(topic_name_3, test_message_3)
+        self._run_complete_topic_scenario(topic_name_3, test_message_3)
 
 # ################################################################################################################################
 # ################################################################################################################################
