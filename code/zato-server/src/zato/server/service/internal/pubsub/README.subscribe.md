@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Zato Pub/Sub REST API allows external clients to subscribe to topics and receive messages. This document explains how to use the subscription endpoints.
+The Zato Pub/Sub REST API allows external clients to subscribe to topics to receive messages. This document explains how to subscribe to topics and manage your subscriptions.
 
 ## Authentication
 
@@ -20,10 +20,15 @@ POST /topic/{topic_name}/subscribe
 ### Parameters
 - `topic_name` - The name of the topic to subscribe to
 
+### Topic Name Restrictions
+Topic names must adhere to the following rules:
+- Maximum length: 200 characters
+- The "#" character is not allowed in topic names
+- Only ASCII characters are permitted
+
 ### Request Headers
 ```
 Content-Type: application/json
-
 ```
 
 ### Request Body
@@ -35,7 +40,8 @@ No request body required.
 ```json
 {
   "is_ok": true,
-  "cid": "correlation-id"
+  "cid": "correlation-id",
+  "status": "200 OK"
 }
 ```
 
@@ -51,12 +57,13 @@ No request body required.
 ```json
 {
   "is_ok": false,
-  "details": "Error message"
+  "details": "Topic name validation error"
 }
 ```
 
-### Example
+### Examples
 
+#### Subscribe to Order Events
 ```bash
 curl -X POST \
   http://localhost:17010/topic/orders.processed/subscribe \
@@ -64,137 +71,67 @@ curl -X POST \
   -H "Content-Type: application/json"
 ```
 
-## Unsubscribe from a Topic
-
-Remove subscription from a specific topic.
-
-### Endpoint
-```
-POST /topic/{topic_name}/unsubscribe
-```
-
-### Parameters
-- `topic_name` - The name of the topic to unsubscribe from
-
-### Request Headers
-```
-Content-Type: application/json
-
-```
-
-### Request Body
-No request body required.
-
-### Response
-
-#### Success (200 OK)
-```json
-{
-  "is_ok": true,
-  "cid": "correlation-id"
-}
-```
-
-### Example
-
+#### Subscribe to Wildcard Pattern Topic
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/orders.processed/unsubscribe \
+  http://localhost:17010/topic/alerts.critical.system/subscribe \
   -u username:password \
   -H "Content-Type: application/json"
 ```
 
-## Retrieve Messages
+### Topic Auto-Creation
+- Topics are automatically created when you subscribe to them if they don't exist
+- No pre-configuration of topics is required
 
-Get messages from your subscribed topics.
+### More About Subscriptions
+- Subscribing to the same topic multiple times is safe and has no effect
+- The system recognizes existing subscriptions and returns success without changes when you subscribe to the same topic twice or more
+- Subscriptions remain active until explicitly unsubscribed
 
-### Endpoint
-```
-POST /messages/get
-```
-
-### Request Headers
-```
-Content-Type: application/json
-
-```
-
-### Request Body
-```json
-{
-  "max_messages": 10,
-  "max_len": 1000000
-}
-```
-
-#### Parameters
-- `max_messages` (optional) - Maximum number of messages to retrieve (default: 1, max: 1000)
-- `max_len` (optional) - Maximum total length of message data (default: 5000000 bytes)
-
-### Response
-
-#### Success (200 OK)
-```json
-{
-  "is_ok": true,
-  "cid": "correlation-id",
-  "data": [
-    {
-      "data": "message content",
-      "msg_id": "unique-message-id",
-      "topic_name": "orders.processed",
-      "pub_time_iso": "2025-01-01T12:00:00",
-      "priority": 5,
-      "size": 123
-    }
-  ]
-}
-```
-
-#### Error Response
-```json
-{
-  "is_ok": false,
-  "details": "Error message"
-}
-```
-
-### Example
-
-```bash
-curl -X POST \
-  http://localhost:17010/messages/get \
-  -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"max_messages": 5, "max_len": 100000}'
-```
+### Message Queues
+- Each user gets a unique subscription key that identifies their own message queue
+- Messages from all subscribed topics are delivered to that one queue
+- Use the `/messages/get` endpoint to retrieve messages (see README.pull.md)
+- Delivery type is set to 'Pull' for REST API subscriptions
 
 ## Topic Permissions
 
-Your user account must have subscription permissions for the topics you want to subscribe to. Permissions
-are configured using pattern matching - see the pattern documentation for details on how topic patterns work.
+Your user account must have subscription permissions for the topics you want to subscribe to. Permissions are configured using pattern matching.
 
-## Message Format
+### Permission Examples
+```
+sub=orders.*           # Can subscribe to orders.processed, orders.cancelled, etc.
+sub=alerts.**          # Can subscribe to any alerts topic at any depth
+sub=notifications.user.email  # Can only subscribe to this exact topic
+```
 
-Retrieved messages contain:
-- `data` - The actual message content
-- `msg_id` - Unique message identifier
-- `topic_name` - Topic the message was published to
-- `pub_time_iso` - When the message was published (ISO format)
-- `priority` - Message priority (1-9, higher is more important)
-- `size` - Message size in bytes
+See README.patterns.md for complete pattern matching documentation.
 
 ## Error Handling
 
 Common error scenarios:
-- **401 Unauthorized** - Invalid credentials or insufficient permissions
-- **400 Bad Request** - Invalid request format or parameters
-- **404 Not Found** - Topic does not exist
-- **500 Internal Server Error** - Server-side error
 
-## Best Practices
+### Authentication Errors
+- **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
+- **401 Permission denied** - Valid credentials but no subscribe permission for the topic
 
-1. **Handle errors** - Always check the `is_ok` field in responses
-2. **Limit message retrieval** - Use appropriate `max_messages` and `max_len` values
-3. **Regular polling** - Call `/messages/get` regularly to retrieve new messages
-4. **Process messages promptly** - Retrieved messages are removed from your queue
+### Topic Validation Errors
+- **400 Topic name validation** - Topic name violates restrictions (length, characters, etc.)
+
+### Server Errors
+- **400 Failed to create subscription in server** - Database error during subscription creation
+- **500 Internal Server Error** - Unexpected server-side error
+
+## Technical Implementation
+
+### Subscription Keys
+- Each user receives a unique subscription key (sub_key)
+- The same sub_key is used no matter to how many topics you subscribe
+
+## Next Steps
+
+After subscribing to topics:
+
+1. **Retrieve Messages** - Use `POST /messages/get` to pull messages (see README.pull.md)
+2. **Unsubscribe** - Use `POST /topic/{topic_name}/unsubscribe` when done (see README.unsubscribe.md)
+3. **Publish Messages** - Use `POST /topic/{topic_name}/publish` to send messages (see README.publish.md)
