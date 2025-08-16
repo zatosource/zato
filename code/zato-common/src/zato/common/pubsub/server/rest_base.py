@@ -324,7 +324,7 @@ class BaseRESTServer(BaseServer):
 
         # Dump to logs in YAML format
         yaml_output = yaml_dump(diagnostics, default_flow_style=False)
-        logger.info(f'[{cid}] Admin diagnostics: \n{yaml_output}')
+        logger.debug(f'[{cid}] Admin diagnostics: \n{yaml_output}')
 
         # Return diagnostics data in response
         response = APIResponse()

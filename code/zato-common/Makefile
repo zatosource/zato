@@ -27,7 +27,7 @@ pubsub-tests:
 		-v -s \
 		--log-cli-level=DEBUG \
 		--log-cli-format='%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s' \
-		--log-cli-date-format='%Y-%m-%d %H:%M:%S' \
+		--log-cli-date-format='%Y-%m-%d %H:%M:%S,%f' \
 		--log-disable=faker \
 		-W ignore::DeprecationWarning \
 		-W ignore::gevent.monkey.MonkeyPatchWarning
