@@ -104,6 +104,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
     def tearDown(self):
         """ Clean up after tests.
         """
+        return
         if self.skip_tests:
             return
 
@@ -176,8 +177,8 @@ class PubSubRESTServerBaseTestCase(TestCase):
             response = requests.get(diagnostics_url, auth=self.auth)
             if response.status_code == 200:
                 data = response.json()
-                pretty_json = json.dumps(data, indent=2)
-                logger.info(f'Diagnostics response:\n{pretty_json}')
+                # pretty_json = json.dumps(data, indent=2)
+                # logger.info(f'Diagnostics response:\n{pretty_json}')
                 return data
             else:
                 logger.info(f'Diagnostics failed with status {response.status_code}: {response.text}')
