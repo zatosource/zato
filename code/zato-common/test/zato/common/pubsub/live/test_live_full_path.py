@@ -120,12 +120,16 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         publish_payload = {'data': message_data}
         return requests.post(publish_url, json=publish_payload, auth=self.auth)
 
+# ################################################################################################################################
+
     def _get_messages(self, max_messages:'int'=10, max_len:'int'=1000) -> 'any_':
         """ Get messages from user's queue.
         """
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_payload = {'max_messages': max_messages, 'max_len': max_len}
         return requests.post(get_messages_url, json=get_payload, auth=self.auth)
+
+# ################################################################################################################################
 
     def _unsubscribe_from_topic(self, topic_name:'str') -> 'any_':
         """ Unsubscribe from a topic.
@@ -138,10 +142,14 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         """
         return response.json()
 
+# ################################################################################################################################
+
     def _extract_get_messages_data(self, response:'any_') -> 'any_':
         """ Extract data from get messages response.
         """
         return response.json()
+
+# ################################################################################################################################
 
     def _extract_unsubscribe_data(self, response:'any_') -> 'any_':
         """ Extract data from unsubscribe response.
@@ -155,17 +163,23 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertTrue(data['is_ok'])
         self.assertIn('msg_id', data)
 
+# ################################################################################################################################
+
     def _assert_get_messages_success(self, response:'any_', data:'any_') -> 'None':
         """ Assert that get messages response is successful.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['is_ok'])
 
+# ################################################################################################################################
+
     def _assert_unsubscribe_success(self, response:'any_', data:'any_') -> 'None':
         """ Assert that unsubscribe response is successful.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['is_ok'])
+
+# ################################################################################################################################
 
     def _assert_message_content(self, messages:'any_', expected_message:'any_', expected_msg_id:'str') -> 'None':
         """ Assert message content matches expectations.
@@ -174,6 +188,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         received_message = messages[0]
         self.assertEqual(received_message['data'], expected_message)
         self.assertEqual(received_message['msg_id'], expected_msg_id)
+
+# ################################################################################################################################
 
     def _assert_user_not_subscribed_to_topic(self, topic_name:'str') -> 'None':
         """ Assert that the user is not subscribed to the given topic by checking diagnostics.
@@ -187,17 +203,41 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Check if topic exists in subscriptions
         if topic_name in subscriptions:
             topic_subscriptions = subscriptions[topic_name]
-
             # Check if our user's security definition is not in the topic subscriptions
             security_config = self.config['security']
             first_security = security_config[0]
             user_sec_name = first_security['name']
-            self.assertNotIn(user_sec_name, topic_subscriptions,  f'User should not be subscribed to topic {topic_name}')
+            self.assertNotIn(user_sec_name, topic_subscriptions, f'User should not be subscribed to topic {topic_name}')
+
+# ################################################################################################################################
+
+    def _run_complete_topic_scenario(self, topic_name:'str', test_message:'any_') -> 'None':
+        """ Run complete scenario for a topic: publish, get, unsubscribe, verify.
+        """
+        # .. publish message to topic and verify it was successful ..
+        publish_response = self._publish_message(topic_name, test_message)
+        publish_data = self._extract_publish_data(publish_response)
+        self._assert_publish_success(publish_response, publish_data)
+
+        # .. retrieve message from the user's queue and verify it was received ..
+        get_response = self._get_messages()
+        get_data = self._extract_get_messages_data(get_response)
+        self._assert_get_messages_success(get_response, get_data)
+        self._assert_message_content(get_data['messages'], test_message, publish_data['msg_id'])
+
+        # .. unsubscribe from topic ..
+        unsubscribe_response = self._unsubscribe_from_topic(topic_name)
+        unsubscribe_data = self._extract_unsubscribe_data(unsubscribe_response)
+        self._assert_unsubscribe_success(unsubscribe_response, unsubscribe_data)
+
+        # .. verify that the user is no longer subscribed to topic.
+        self._assert_user_not_subscribed_to_topic(topic_name)
+
+# ################################################################################################################################
 
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
-
         # Skip auto-unsubscribe for this test since we want to control cleanup manually ..
         self.skip_auto_unsubscribe = True
 
@@ -207,48 +247,15 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. prepare test data ..
         topic_name_1 = 'demo.1'
         topic_name_2 = 'demo.2'
+
         test_message_1 = {'first': 'message', 'id': 1, 'timestamp': '2025-01-01T10:00:00Z'}
         test_message_2 = {'second': 'message', 'id': 2, 'timestamp': '2025-01-01T11:00:00Z'}
 
-        # .. publish first message to demo.1 and verify it was successful ..
-        publish_response_1 = self._publish_message(topic_name_1, test_message_1)
-        publish_data_1 = self._extract_publish_data(publish_response_1)
-        self._assert_publish_success(publish_response_1, publish_data_1)
+        # .. run complete scenario for demo.1 ..
+        self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
-        # .. retrieve first message from the user's queue and verify it was received ..
-        get_response_1 = self._get_messages()
-        get_data_1 = self._extract_get_messages_data(get_response_1)
-        self._assert_get_messages_success(get_response_1, get_data_1)
-        self._assert_message_content(get_data_1['messages'], test_message_1, publish_data_1['msg_id'])
-
-        # .. unsubscribe from demo.1 ..
-        unsubscribe_response = self._unsubscribe_from_topic(topic_name_1)
-        unsubscribe_data = self._extract_unsubscribe_data(unsubscribe_response)
-        self._assert_unsubscribe_success(unsubscribe_response, unsubscribe_data)
-
-        # .. verify that the user is no longer subscribed to demo.1 ..
-        self._assert_user_not_subscribed_to_topic(topic_name_1)
-
-        # .. publish second message to demo.2 and verify it was successful ..
-        publish_response_2 = self._publish_message(topic_name_2, test_message_2)
-        publish_data_2 = self._extract_publish_data(publish_response_2)
-        self._assert_publish_success(publish_response_2, publish_data_2)
-
-        # .. retrieve messages from the user's queue and verify the operation was successful ..
-        get_response = self._get_messages()
-        get_data = self._extract_get_messages_data(get_response)
-        self._assert_get_messages_success(get_response, get_data)
-
-        # .. verify that the retrieved message matches the second message we published ..
-        self._assert_message_content(get_data['messages'], test_message_2, publish_data_2['msg_id'])
-
-        # .. unsubscribe from demo.2 ..
-        unsubscribe_response_2 = self._unsubscribe_from_topic(topic_name_2)
-        unsubscribe_data_2 = self._extract_unsubscribe_data(unsubscribe_response_2)
-        self._assert_unsubscribe_success(unsubscribe_response_2, unsubscribe_data_2)
-
-        # .. verify that the user is no longer subscribed to demo.2.
-        self._assert_user_not_subscribed_to_topic(topic_name_2)
+        # .. run complete scenario for demo.2.
+        self._run_complete_topic_scenario(topic_name_2, test_message_2)
 
 # ################################################################################################################################
 # ################################################################################################################################
