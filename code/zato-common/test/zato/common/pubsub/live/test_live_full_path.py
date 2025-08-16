@@ -196,6 +196,12 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         publish_data_1 = self._extract_publish_data(publish_response_1)
         self._assert_publish_success(publish_response_1, publish_data_1)
 
+        # .. retrieve first message from the user's queue and verify it was received ..
+        get_response_1 = self._get_messages()
+        get_data_1 = self._extract_get_messages_data(get_response_1)
+        self._assert_get_messages_success(get_response_1, get_data_1)
+        self._assert_message_content(get_data_1['messages'], test_message_1, publish_data_1['msg_id'])
+
         # .. unsubscribe from demo.1 ..
         unsubscribe_response = self._unsubscribe_from_topic(topic_name_1)
         unsubscribe_data = self._extract_unsubscribe_data(unsubscribe_response)
