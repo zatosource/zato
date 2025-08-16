@@ -82,6 +82,13 @@ This allows publishing to any user command topic, subscribing to direct user eve
 4. **Case Insensitive**: All matching is case-insensitive
 5. **No Partial Matches**: Patterns must match the complete topic name
 6. **Alphabetical Evaluation**: Patterns are evaluated in alphabetical order, and wildcards are evaluated last
+
+   Example: Given patterns `orders.*`, `orders.urgent`, `alerts.**`, `alerts.critical`, the evaluation order is:
+   1. `alerts.critical` (alphabetical, no wildcards)
+   2. `alerts.**` (alphabetical, has wildcards)
+   3. `orders.urgent` (alphabetical, no wildcards)
+   4. `orders.*` (alphabetical, has wildcards)
+
 7. **First Match Wins**: Evaluation stops at the first matching pattern
 
 ## FAQ
