@@ -247,15 +247,20 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. prepare test data ..
         topic_name_1 = 'demo.1'
         topic_name_2 = 'demo.2'
+        topic_name_3 = 'demo.3'
 
-        test_message_1 = {'first': 'message', 'id': 1, 'timestamp': '2025-01-01T10:00:00Z'}
-        test_message_2 = {'second': 'message', 'id': 2, 'timestamp': '2025-01-01T11:00:00Z'}
+        test_message_1 = {'first': 'message1', 'id': 1, 'timestamp': '2025-01-01T10:00:00Z'}
+        test_message_2 = {'second': 'message2', 'id': 2, 'timestamp': '2025-01-02T11:00:00Z'}
+        test_message_3 = {'third': 'message3', 'id': 3, 'timestamp': '2025-01-03T11:00:00Z'}
 
         # .. run complete scenario for demo.1 ..
         self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
-        # .. run complete scenario for demo.2.
+        # .. run complete scenario for demo.2 ..
         self._run_complete_topic_scenario(topic_name_2, test_message_2)
+
+        # .. run complete scenario for demo.3 ..
+        self._run_complete_topic_scenario(topic_name_3, test_message_3)
 
 # ################################################################################################################################
 # ################################################################################################################################
