@@ -143,7 +143,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def _wait_for_messages_in_queue(self, timeout:'int'=300_000_000) -> 'None':
         """ Wait for at least one message to appear in the user's queue via rabbitmqctl.
         """
-
         logger.info('Checking stats')
 
         # Find the user's queue name by checking subscriptions
