@@ -32,7 +32,9 @@ Content-Type: application/json
 
 #### Parameters
 - `max_messages` (optional) - Maximum number of messages to retrieve (default: 1, max: 1000)
-- `max_len` (optional) - Maximum total length of message data (default: 5000000 bytes)
+- `max_len` (optional) - Maximum total length of message data (default: 5,000,000 bytes, max: 5,000,000 bytes)
+
+**Note:** Parameters are automatically clamped to their maximum values if you specify higher numbers.
 
 ### Response
 
@@ -128,13 +130,28 @@ Messages are delivered in priority order (highest priority first), then by publi
 ### Filtering
 You receive messages from all topics you are subscribed to. The `topic_name` field identifies which topic each message came from.
 
+### Technical Implementation
+- Each user has a unique subscription key that identifies their message queue - all messages are published from the same consumer queue, no matter how many topics they were published to,
+  which means that we you consume messages, you will get messages from all the topics you subscribed to
+- The system automatically finds your subscription key based on your authenticated username
+- Empty responses (no messages) return successfully with an empty `messages` array
+
 ## Error Handling
 
 Common error scenarios:
-- **401 Unauthorized** - Invalid credentials
-- **400 Bad Request** - No active subscriptions for your user
-- **404 Not Found** - No messages available
-- **500 Internal Server Error** - Server-side error
+
+### Authentication Errors
+- **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
+
+### Request Format Errors
+- **400 Invalid JSON** - Malformed JSON in request body
+
+### Subscription Errors
+- **400 No subscription found for user** - User has no active subscriptions to any topics
+
+### Server Errors
+- **500 Internal error retrieving messages** - Unexpected error during message retrieval
+- **500 Subscription not found** - Internal error finding user's subscription queue
 
 ## Best Practices
 
