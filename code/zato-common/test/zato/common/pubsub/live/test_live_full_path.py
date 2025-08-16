@@ -126,9 +126,68 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def _get_messages(self, max_messages:'int'=10, max_len:'int'=1000) -> 'any_':
         """ Get messages from user's queue.
         """
+        # First check RabbitMQ to ensure there's at least one message in the queue
+        self._wait_for_messages_in_queue()
+
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_payload = {'max_messages': max_messages, 'max_len': max_len}
         return requests.post(get_messages_url, json=get_payload, auth=self.auth)
+
+# ################################################################################################################################
+
+    def _wait_for_messages_in_queue(self, timeout:'int'=30) -> 'None':
+        """ Wait for at least one message to appear in the user's queue via RabbitMQ API.
+        """
+        from zato.common.pubsub.util import get_broker_config
+        from requests.auth import HTTPBasicAuth
+
+        broker_config = get_broker_config()
+        broker_host = broker_config.address.split(':')[0]
+        management_port = 15672
+        broker_auth = HTTPBasicAuth(broker_config.username, broker_config.password)
+
+        # Find the user's queue name by checking subscriptions
+        user_queue_name = None
+        diagnostics_data = self._call_diagnostics()
+        if diagnostics_data and 'data' in diagnostics_data:
+            subscriptions = diagnostics_data['data'].get('subscriptions', {})
+            for topic_name, subs in subscriptions.items():
+                user_sec_name = self.config['security'][0]['name']
+                if user_sec_name in subs:
+                    subscription = subs[user_sec_name]
+                    user_queue_name = subscription.get('sub_key')
+                    break
+
+        if not user_queue_name:
+            logger.error('Could not find user queue name, cannot proceed')
+            raise Exception('User queue name not found in diagnostics')
+
+        # Check RabbitMQ API for message count
+        # URL encode the queue name properly
+        import urllib.parse
+        encoded_queue_name = urllib.parse.quote(user_queue_name, safe='')
+        api_url = f'http://{broker_host}:{management_port}/api/queues/%2F/{encoded_queue_name}'
+
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(api_url, auth=broker_auth)
+                if response.status_code == 200:
+                    queue_info = response.json()
+                    message_count = queue_info.get('messages', 0)
+                    if message_count > 0:
+                        logger.info(f'Found {message_count} messages in queue {user_queue_name}')
+                        return
+                    else:
+                        logger.info(f'No messages in queue {user_queue_name}, waiting...')
+                else:
+                    logger.warning(f'Failed to check queue status: {response.status_code}')
+            except Exception as e:
+                logger.warning(f'Error checking queue status: {e}')
+
+            time.sleep(0.1)
+
+        logger.warning(f'Timeout waiting for messages in queue {user_queue_name}')
 
 # ################################################################################################################################
 
