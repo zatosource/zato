@@ -113,44 +113,44 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def _publish_message(self, topic_name, message_data):
+    def _publish_message(self, topic_name:'str', message_data:'any_') -> 'any_':
         """ Publish a message to a topic.
         """
         publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         publish_payload = {'data': message_data}
         return requests.post(publish_url, json=publish_payload, auth=self.auth)
 
-    def _get_messages(self, max_messages=10, max_len=1000):
+    def _get_messages(self, max_messages:'int'=10, max_len:'int'=1000) -> 'any_':
         """ Get messages from user's queue.
         """
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_payload = {'max_messages': max_messages, 'max_len': max_len}
         return requests.post(get_messages_url, json=get_payload, auth=self.auth)
 
-    def _extract_publish_data(self, response):
+    def _extract_publish_data(self, response:'any_') -> 'any_':
         """ Extract data from publish response.
         """
         return response.json()
 
-    def _extract_get_messages_data(self, response):
+    def _extract_get_messages_data(self, response:'any_') -> 'any_':
         """ Extract data from get messages response.
         """
         return response.json()
 
-    def _assert_publish_success(self, response, data):
+    def _assert_publish_success(self, response:'any_', data:'any_') -> 'None':
         """ Assert that publish response is successful.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['is_ok'])
         self.assertIn('msg_id', data)
 
-    def _assert_get_messages_success(self, response, data):
+    def _assert_get_messages_success(self, response:'any_', data:'any_') -> 'None':
         """ Assert that get messages response is successful.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['is_ok'])
 
-    def _assert_message_content(self, messages, expected_message, expected_msg_id):
+    def _assert_message_content(self, messages:'any_', expected_message:'any_', expected_msg_id:'str') -> 'None':
         """ Assert message content matches expectations.
         """
         self.assertEqual(len(messages), 1)
