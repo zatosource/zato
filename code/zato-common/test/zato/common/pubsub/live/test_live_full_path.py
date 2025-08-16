@@ -106,7 +106,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                 logger.info('All config objects found in diagnostics')
                 return data
             else:
-                logger.info(f'Missing objects: {missing_objects}, retrying in sleep_times')
+                logger.info(f'Missing objects: {missing_objects}, retrying in {sleep_time}s')
                 time.sleep(sleep_time)
 
         logger.error(f'Timeout waiting for objects to appear in diagnostics after {max_attempts} attempts')
