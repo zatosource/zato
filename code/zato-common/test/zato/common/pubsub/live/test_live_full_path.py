@@ -36,8 +36,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     """ Test cases for the pub/sub REST server.
     """
 
-# ################################################################################################################################
-
     def _wait_for_objects_in_diagnostics(self) -> 'any_':
         """ Wait for all test objects to appear in diagnostics response.
         """
@@ -48,17 +46,17 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         while attempt < max_attempts:
             attempt += 1
-            logger.info(f'Checking diagnostics for objects (attempt {attempt}/{max_attempts})')
+            logger.debug(f'Checking diagnostics for objects (attempt {attempt}/{max_attempts})')
 
             data = self._call_diagnostics()
             if not data:
-                logger.info('No diagnostics data received')
+                logger.debug('No diagnostics data received')
                 time.sleep(sleep_time)
                 continue
 
             diagnostics_data = data.get('data', {})
             if not diagnostics_data:
-                logger.info('No data section in diagnostics response')
+                logger.debug('No data section in diagnostics response')
                 time.sleep(sleep_time)
                 continue
 
@@ -104,10 +102,10 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                             missing_objects.append(f'subscription:{topic_name}')
 
             if not missing_objects:
-                logger.info('All config objects found in diagnostics')
+                logger.debug('All config objects found in diagnostics')
                 return data
             else:
-                logger.info(f'Missing objects: {missing_objects}, retrying in {sleep_time}s')
+                logger.debug(f'Missing objects: {missing_objects}, retrying in {sleep_time}s')
                 time.sleep(sleep_time)
 
         logger.error(f'Timeout waiting for objects to appear in diagnostics after {max_attempts} attempts')
@@ -214,7 +212,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                                 logger.info(f'Found {message_count} {message_word} in queue {user_queue_name}')
                                 return
                             else:
-                                logger.debug(f'No messages in queue {user_queue_name}, waiting...')
+                                logger.info(f'Stats found no messages in queue {user_queue_name}, waiting...')
                         break
             except (subprocess.CalledProcessError, ValueError) as e:
                 logger.warning(f'Error checking queue status: {e}')
@@ -308,14 +306,20 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def _run_complete_topic_scenario(self, topic_name:'str', test_message:'any_') -> 'None':
         """ Run complete scenario for a topic: publish, get, unsubscribe, verify.
         """
-        # .. publish message to topic and verify it was successful ..
+        logger.info('Before publish to %s', topic_name)
+
+        # Publish message to topic and verify it was successful ..
         publish_response = self._publish_message(topic_name, test_message)
 
         publish_data = self._extract_publish_data(publish_response)
         self._assert_publish_success(publish_response, publish_data)
 
+        logger.info('Message published to %s', topic_name)
+
         # .. retrieve message from the user's queue and verify it was received ..
         get_response = self._get_messages()
+        logger.info('Message received')
+
         get_data = self._extract_get_messages_data(get_response)
         self._assert_get_messages_success(get_response, get_data)
         self._assert_message_content(get_data['messages'], test_message, publish_data['msg_id'])
