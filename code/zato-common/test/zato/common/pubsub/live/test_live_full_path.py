@@ -43,6 +43,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         max_attempts = 100_000_000
         attempt = 0
         data = None
+        sleep_time = 0.1
 
         while attempt < max_attempts:
             attempt += 1
@@ -51,13 +52,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             data = self._call_diagnostics()
             if not data:
                 logger.info('No diagnostics data received')
-                time.sleep(0.5)
+                time.sleep(sleep_time)
                 continue
 
             diagnostics_data = data.get('data', {})
             if not diagnostics_data:
                 logger.info('No data section in diagnostics response')
-                time.sleep(0.5)
+                time.sleep(sleep_time)
                 continue
 
             missing_objects = []
@@ -105,8 +106,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                 logger.info('All config objects found in diagnostics')
                 return data
             else:
-                logger.info(f'Missing objects: {missing_objects}, retrying in 0.5s')
-                time.sleep(0.5)
+                logger.info(f'Missing objects: {missing_objects}, retrying in sleep_times')
+                time.sleep(sleep_time)
 
         logger.error(f'Timeout waiting for objects to appear in diagnostics after {max_attempts} attempts')
         return data
