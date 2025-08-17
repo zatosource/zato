@@ -445,9 +445,13 @@ class Delete(AdminService):
                 filter(PubSubSubscription.id==self.request.input.id).\
                 one()
 
-            security_def = session.query(SecurityBase).\
+            sec_def = session.query(SecurityBase).\
                 filter(SecurityBase.id==sub.sec_base_id).\
                 one()
+
+            sec_def_name = sec_def.name
+            sec_def_username = sec_def.username
+
 
             session.delete(sub)
             session.commit()
@@ -464,8 +468,8 @@ class Delete(AdminService):
         pubsub_msg = Bunch()
         pubsub_msg.cid = self.cid
         pubsub_msg.sub_key = sub.sub_key
-        pubsub_msg.username = security_def.username
-        pubsub_msg.sec_name = security_def.name
+        pubsub_msg.username = sec_def_name
+        pubsub_msg.sec_name = sec_def_username
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
