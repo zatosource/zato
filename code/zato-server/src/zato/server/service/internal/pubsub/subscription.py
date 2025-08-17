@@ -141,7 +141,7 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
         output_required = 'id', 'sub_key', 'is_active', 'created', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
@@ -161,7 +161,7 @@ class Create(AdminService):
                 sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
                 # Generate a new subscription key
-                sub_key = new_sub_key(sec_base.username)
+                sub_key = input.sub_key or new_sub_key(sec_base.name)
 
                 # Get topics
                 topics = []
@@ -255,7 +255,7 @@ class Create(AdminService):
                 self.response.payload.topic_name_list = topic_name_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
-                self.logger.info('Subscription(s) created for %s -> %s', sec_base.name, topic_name_list)
+                self.logger.info('Subscription(s) created for %s -> %s (%s)', sec_base.name, topic_name_list, sub.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -311,6 +311,27 @@ class Edit(AdminService):
                 topic_name_list = input.get('topic_name_list') or []
                 topic_link_list = []
                 topics = []
+
+                # Check if no topics are provided - delete subscription if so
+                if not topic_name_list:
+                    self.logger.info('No topics provided for subscription %s, deleting subscription', sub.sub_key)
+
+                    # Invoke the Delete service to remove the subscription
+                    delete_request = Bunch()
+                    delete_request.id = sub.id
+
+                    _ = self.invoke('zato.pubsub.subscription.delete', delete_request)
+
+                    self.response.payload.id = sub.id
+                    self.response.payload.sub_key = sub.sub_key
+                    self.response.payload.is_active = False
+                    self.response.payload.sec_name = sec_base.name
+                    self.response.payload.delivery_type = sub.delivery_type
+                    self.response.payload.topic_name_list = []
+                    self.response.payload.topic_link_list = []
+
+                    # Return early since subscription was deleted
+                    return
 
                 if topic_name_list:
 
@@ -440,7 +461,7 @@ class _BaseModifyTopicList(AdminService):
     class SimpleIO(AdminSIO):
         input_required = AsIs('topic_name_list')
         input_optional = 'username', 'sec_name', 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', \
-            'push_service_name'
+            'push_service_name', 'sub_key'
         output_optional = AsIs('topic_name_list')
         response_elem = None
 
@@ -494,6 +515,7 @@ class _BaseModifyTopicList(AdminService):
 
                         # .. prepare our request ..
                         create_request = Bunch()
+                        create_request.sub_key = input.sub_key
                         create_request.cluster_id = cluster_id
                         create_request.topic_name_list = input.topic_name_list
                         create_request.sec_base_id = sec_base_id
