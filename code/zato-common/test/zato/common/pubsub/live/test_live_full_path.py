@@ -226,6 +226,14 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
+    def _subscribe_to_topic(self, topic_name:'str') -> 'any_':
+        """ Subscribe to a topic.
+        """
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
+        return requests.post(subscribe_url, auth=self.auth)
+
+# ################################################################################################################################
+
     def _unsubscribe_from_topic(self, topic_name:'str') -> 'any_':
         """ Unsubscribe from a topic.
         """
@@ -361,6 +369,12 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # .. run complete scenario for demo.3 ..
         self._run_complete_topic_scenario(topic_name_3, test_message_3)
+
+        # .. subscribe the user to topic demo.1 again ..
+        self._subscribe_to_topic(topic_name_1)
+
+        # .. run complete scenario for demo.1 again ..
+        self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
 # ################################################################################################################################
 # ################################################################################################################################
