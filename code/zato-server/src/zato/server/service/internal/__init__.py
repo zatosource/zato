@@ -72,6 +72,7 @@ class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
     output_optional = ('_meta',)
+    skip_before_handle = False
 
     class SimpleIO(AdminSIO):
         """ This empty definition is needed in case the service should be invoked through REST.
@@ -90,6 +91,10 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def before_handle(self):
+
+        # Do not run if the service explicitly tells us not to
+        if self.skip_before_handle:
+            return
 
         # Do not log BASE64-encoded messages
         if self.name == 'zato.service.invoke':

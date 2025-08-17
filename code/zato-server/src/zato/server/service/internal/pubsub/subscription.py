@@ -419,41 +419,58 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub subscription.
     """
+    skip_before_handle = True
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_delete_request'
         response_elem = 'zato_pubsub_subscription_delete_response'
         input_required = 'id',
-        input_optional = 'session',
+        input_optional = AsIs('session'),
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            try:
-                sub = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.id==self.request.input.id).\
-                    one()
 
-                security_def = session.query(SecurityBase).\
-                    filter(SecurityBase.id==sub.sec_base_id).\
-                    one()
+        has_input_session = bool(self.request.input.session)
+        needs_new_session = not has_input_session
 
-                session.delete(sub)
-                session.commit()
+        # Use provided session or create new one
+        if has_input_session:
+            session = self.request.input.session
+        else:
+            session = self.odb.session()
 
-            except Exception:
-                self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
-                session.rollback()
-                raise
-            else:
+        try:
+            sub = session.query(PubSubSubscription).\
+                filter(PubSubSubscription.id==self.request.input.id).\
+                one()
 
-                pubsub_msg = Bunch()
-                pubsub_msg.cid = self.cid
-                pubsub_msg.sub_key = sub.sub_key
-                pubsub_msg.username = security_def.username
-                pubsub_msg.sec_name = security_def.name
-                pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
+            security_def = session.query(SecurityBase).\
+                filter(SecurityBase.id==sub.sec_base_id).\
+                one()
 
-                self.broker_client.publish(pubsub_msg)
-                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+            session.delete(sub)
+            session.commit()
+
+        except Exception:
+            self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
+            session.rollback()
+            raise
+        finally:
+            if needs_new_session:
+                session.close()
+
+        # Send broker notification (only for the pub/sub server) ..
+        pubsub_msg = Bunch()
+        pubsub_msg.cid = self.cid
+        pubsub_msg.sub_key = sub.sub_key
+        pubsub_msg.username = security_def.username
+        pubsub_msg.sec_name = security_def.name
+        pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
+
+        # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
+        self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+
+        # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
+        self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
 # ################################################################################################################################
 # ################################################################################################################################

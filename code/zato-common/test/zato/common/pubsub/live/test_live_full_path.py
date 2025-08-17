@@ -370,11 +370,14 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. run complete scenario for demo.3 ..
         self._run_complete_topic_scenario(topic_name_3, test_message_3)
 
-        # .. subscribe the user to topic demo.1 again ..
-        self._subscribe_to_topic(topic_name_1)
+        # .. run the full cycle with one topic first ..
+        for _ in range(3):
 
-        # .. run complete scenario for demo.1 again ..
-        self._run_complete_topic_scenario(topic_name_1, test_message_1)
+            # .. subscribe the user to topic demo.1 again ..
+            self._subscribe_to_topic(topic_name_1)
+
+            # .. run complete scenario for demo.1 again ..
+            self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
 # ################################################################################################################################
 # ################################################################################################################################
