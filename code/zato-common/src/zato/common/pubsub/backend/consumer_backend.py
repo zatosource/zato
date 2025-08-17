@@ -132,6 +132,8 @@ class ConsumerBackend(Backend):
         # Get the consumer for this subscription ..
         if consumer := self.consumers.get(sub_key):
 
+            logger.info(f'[{cid}] Deleting consumer for `{sub_key}`')
+
             # .. first, stop it ..
             consumer.stop()
             self._remove_consumer(sub_key)
@@ -143,9 +145,6 @@ class ConsumerBackend(Backend):
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, cid:'str', sub_key:'str') -> 'None':
 
-        # Log what we're about to do
-        logger.info(f'[{cid}] Deleting consumer for `{sub_key}`')
-
         # Get all the bindings for that consumer ..
         bindings = self.broker_client.get_bindings_by_queue(cid, sub_key, CommonModuleCtx.Exchange_Name)
 
@@ -153,7 +152,7 @@ class ConsumerBackend(Backend):
         topic_names = [item['routing_key'] for item in bindings] # type: ignore
         topic_names.sort()
 
-        logger.info(f'[{cid}] Consumer for `{sub_key}` is subscribed to {topic_names}')
+        logger.info(f'[{cid}] Deleting topic bindings for `{sub_key}` -> {topic_names}')
 
         # .. go through all of them ..
         for topic_name in topic_names:
@@ -172,9 +171,6 @@ class ConsumerBackend(Backend):
 
         # .. and delete its now-no-longer-in-use queue ..
         self.broker_client.delete_queue(sub_key)
-
-        # .. and log success.
-        logger.info(f'[{cid}] Deleted consumer for `{sub_key}`')
 
 # ################################################################################################################################
 
