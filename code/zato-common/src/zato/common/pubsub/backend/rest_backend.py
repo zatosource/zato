@@ -327,6 +327,9 @@ class RESTBackend(Backend):
         sec_name = msg['sec_name']
         topic_name_list = msg['topic_name_list']
 
+        if not sub_key:
+            raise Exception(f'No sub_key in `{msg}`')
+
         with self._main_lock:
             # Remove existing subscription by sub_key from all topics
             _ = self._remove_subscriptions_by_sub_key(sub_key)
@@ -335,7 +338,7 @@ class RESTBackend(Backend):
         for topic_name in topic_name_list:
             _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
 
-        logger.info(f'[{cid}] Updated subscription {sub_key} for {sec_name} to topics: {topic_name_list}')
+        logger.info(f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list}')
 
 # ################################################################################################################################
 
