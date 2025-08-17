@@ -345,17 +345,13 @@ class Backend:
             for topic_subs in self.subs_by_topic.values():
                 if sec_name in topic_subs:
                     sub_key = topic_subs[sec_name].sub_key
-
-                    logger.info(f'[{cid}] **************** Using an existing sub_key %s for %s', sub_key, sec_name)
-
+                    logger.info(f'[{cid}] Using an existing subscription for {sec_name} to topic {topic_name} (sk={sub_key})')
                     break
             else:
                 # No existing sub_key found, generate new one
                 sub_key = new_sub_key(sec_name)
 
-                logger.info('**************** Created new sub_key %s for %s', sub_key, sec_name)
-
-                logger.info(f'[{cid}] **************** Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
+                logger.info(f'[{cid}] New subscription for {sec_name} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
         with self._main_lock:
@@ -435,13 +431,13 @@ class Backend:
         with self._main_lock:
             subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
             if sec_name not in subs_by_sec_name:
-                logger.info(f'[{cid}] User `{username}` not subscribed to topic `{topic_name}` - no action needed')
+                logger.info(f'[{cid}] Sec. def. `{sec_name}` not subscribed to topic `{topic_name}` - no action needed')
                 response = StatusResponse()
                 response.is_ok = True
                 return response
 
         # Log what we're doing ..
-        logger.info(f'[{cid}] Unsubscribing `{username}` from topic `{topic_name}`')
+        logger.info(f'[{cid}] Unsubscribing `{sec_name}` from topic `{topic_name}`')
 
         # .. this is optional because we may have been called from self.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE ..
         # .. in which case the server has already deleted the subscription so we don't need to notify it about it ..
@@ -467,7 +463,7 @@ class Backend:
                             del self.subs_by_topic[topic_name]
 
         # .. log what happened ..
-        logger.info(f'[{cid}] Successfully unsubscribed `{username}` from `{topic_name}`')
+        logger.info(f'[{cid}] Successfully unsubscribed `{sec_name}` from `{topic_name}`')
 
         # .. build are OK response ..
         response = StatusResponse()
