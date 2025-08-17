@@ -346,6 +346,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
+        # Local variables
+        max_loops = 3
+
         # Skip auto-unsubscribe for this test since we want to control cleanup manually ..
         self.skip_auto_unsubscribe = True
 
@@ -362,7 +365,24 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         test_message_3 = {'third': 'message3', 'id': 3, 'timestamp': '2025-01-03T11:00:00Z'}
 
         # .. run complete scenarios in a loop ..
-        for _ in range(3):
+        for idx in range(1, max_loops+1):
+
+
+            import time
+
+            self._unsubscribe_from_topic(topic_name_1)
+
+            print('Sleeping')
+            time.sleep(30011)
+
+            # .. log progress ..
+            logger.info('Loop %s/%s', idx, max_loops)
+
+            # .. if this is not the first iteration, we need to subscribe our client to all the topics ..
+            # .. because in the first iteration we have unbuscribed from them all ..
+            self._subscribe_to_topic(topic_name_1)
+            self._subscribe_to_topic(topic_name_2)
+            self._subscribe_to_topic(topic_name_3)
 
             # .. run complete scenario for demo.1 ..
             self._run_complete_topic_scenario(topic_name_1, test_message_1)
@@ -374,7 +394,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             self._run_complete_topic_scenario(topic_name_3, test_message_3)
 
             # .. run the full cycle with one topic only now ..
-            for _ in range(3):
+            for _ in range(max_loops):
 
                 # .. subscribe the user to topic demo.1 again ..
                 self._subscribe_to_topic(topic_name_1)

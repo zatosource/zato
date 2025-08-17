@@ -641,6 +641,83 @@ class BrokerClient:
 
 # ################################################################################################################################
 
+    def get_queue_list(
+        self,
+        cid: 'str',
+        prefix: 'str' = '',
+        exclude_list: 'strlist' = None,
+    ) -> 'dictlist':
+        """ Get list of queues from RabbitMQ Management API.
+        """
+        exclude_list = exclude_list or []
+
+        logger.debug(f'[{cid}] Getting queue list with prefix={prefix}, exclude_list={exclude_list}')
+
+        # Get broker configuration
+        broker_config = get_broker_config()
+
+        # Extract host information
+        host, _ = broker_config.address.split(':')
+
+        # Default management API port
+        rabbitmq_api_port = 15672
+
+        # The management API URL includes the vhost encoded as %2F for default vhost
+        vhost_encoded = broker_config.vhost.replace('/', '%2F')
+
+        # Construct the API URL for queues
+        api_url = f'http://{host}:{rabbitmq_api_port}/api/queues/{vhost_encoded}'
+
+        # Make the request to the RabbitMQ API
+        response = requests.get(
+            api_url,
+            auth=HTTPBasicAuth(broker_config.username, broker_config.password),
+            headers={'Content-Type': 'application/json'},
+            timeout=200_000
+        )
+
+        if not response.status_code == OK:
+            msg = f'[{cid}] Failed to get queue list: API returned: {response.text}'
+            raise Exception(msg)
+
+        # Parse queues from response
+        queues_data = response.json()
+        filtered_queues = []
+
+        for queue in queues_data:
+            queue_name = queue['name']
+
+            # Apply prefix filter if specified
+            if prefix and not queue_name.startswith(prefix):
+                continue
+
+            # Apply exclude list filter
+            should_exclude = False
+            for exclude_prefix in exclude_list:
+                if queue_name.startswith(exclude_prefix):
+                    should_exclude = True
+                    break
+
+            if should_exclude:
+                continue
+
+            filtered_queues.append({
+                'name': queue_name,
+                'messages': queue.get('messages', 0),
+                'consumers': queue.get('consumers', 0),
+                'state': queue.get('state', 'unknown'),
+                'vhost': queue.get('vhost', ''),
+                'durable': queue.get('durable', False),
+                'auto_delete': queue.get('auto_delete', False),
+            })
+
+        queue_count = len(filtered_queues)
+        queue_text = 'queue' if queue_count == 1 else 'queues'
+        logger.debug(f'[{cid}] Found {queue_count} {queue_text} matching criteria')
+        return filtered_queues
+
+# ################################################################################################################################
+
     def get_bindings(
         self,
         cid: 'str',

@@ -218,6 +218,11 @@ class ConsumerBackend(Backend):
         # Check if we have an existing consumer
         consumer = self.consumers.get(sub_key)
 
+        print()
+        print(111, consumer)
+        print(222, msg)
+        print()
+
         # Handle delivery type changes
         if old_delivery_type != delivery_type:
 
