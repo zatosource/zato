@@ -367,22 +367,15 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. run complete scenarios in a loop ..
         for idx in range(1, max_loops+1):
 
-
-            import time
-
-            self._unsubscribe_from_topic(topic_name_1)
-
-            print('Sleeping')
-            time.sleep(30011)
-
             # .. log progress ..
             logger.info('Loop %s/%s', idx, max_loops)
 
             # .. if this is not the first iteration, we need to subscribe our client to all the topics ..
             # .. because in the first iteration we have unbuscribed from them all ..
-            self._subscribe_to_topic(topic_name_1)
-            self._subscribe_to_topic(topic_name_2)
-            self._subscribe_to_topic(topic_name_3)
+            if idx > 1:
+                self._subscribe_to_topic(topic_name_1)
+                self._subscribe_to_topic(topic_name_2)
+                self._subscribe_to_topic(topic_name_3)
 
             # .. run complete scenario for demo.1 ..
             self._run_complete_topic_scenario(topic_name_1, test_message_1)
@@ -394,7 +387,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
             self._run_complete_topic_scenario(topic_name_3, test_message_3)
 
             # .. run the full cycle with one topic only now ..
-            for _ in range(max_loops):
+            for sub_idx in range(max_loops):
+
+                logger.info('Sub-loop %s/%s/%s', idx, max_loops, sub_idx)
 
                 # .. subscribe the user to topic demo.1 again ..
                 self._subscribe_to_topic(topic_name_1)
