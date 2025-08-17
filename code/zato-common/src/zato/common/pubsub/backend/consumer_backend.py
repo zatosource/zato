@@ -218,10 +218,17 @@ class ConsumerBackend(Backend):
         # Check if we have an existing consumer
         consumer = self.consumers.get(sub_key)
 
-        print()
-        print(111, consumer)
-        print(222, msg)
-        print()
+        # We need to find all the queues matching this prefix because it is these queues (almost certainly only one)
+        # to which the messages are being delivered, but we cannot know their names upfront, only that it starts with the sub key
+        # so that's why we're getting this list ..
+        queue_list = self.broker_client.get_queue_list(cid, prefix=sub_key)
+
+        # .. now we need to update the bindings on the exchange for that queue(s), giving a new list of topics to route ..
+        # .. the messages for, and note that we're doing it here upfront, no matter if it's push or pull ..
+        # .. because the delivery_type does not matter, all it matters is the bindings should exist only for our input topics.
+        for queue_info in queue_list:
+            queue_name = queue_info['name']
+            _ = self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
 
         # Handle delivery type changes
         if old_delivery_type != delivery_type:
@@ -261,9 +268,6 @@ class ConsumerBackend(Backend):
 
                 # .. get a queue for that consumer ..
                 queue_name = consumer.config.queue
-
-                # .. first off, update all the bindings pointing to it = update all the topics pointing to it ..
-                _ = self.broker_client.update_bindings(cid, sub_key, 'pubsubapi', queue_name, topic_name_list)
 
                 # .. now, make sure the consumer is started or stopped, depending on what the is_active flag tells us ..
 
