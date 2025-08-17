@@ -361,23 +361,26 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         test_message_2 = {'second': 'message2', 'id': 2, 'timestamp': '2025-01-02T11:00:00Z'}
         test_message_3 = {'third': 'message3', 'id': 3, 'timestamp': '2025-01-03T11:00:00Z'}
 
-        # .. run complete scenario for demo.1 ..
-        self._run_complete_topic_scenario(topic_name_1, test_message_1)
-
-        # .. run complete scenario for demo.2 ..
-        self._run_complete_topic_scenario(topic_name_2, test_message_2)
-
-        # .. run complete scenario for demo.3 ..
-        self._run_complete_topic_scenario(topic_name_3, test_message_3)
-
-        # .. run the full cycle with one topic first ..
+        # .. run complete scenarios in a loop ..
         for _ in range(3):
 
-            # .. subscribe the user to topic demo.1 again ..
-            self._subscribe_to_topic(topic_name_1)
-
-            # .. run complete scenario for demo.1 again ..
+            # .. run complete scenario for demo.1 ..
             self._run_complete_topic_scenario(topic_name_1, test_message_1)
+
+            # .. run complete scenario for demo.2 ..
+            self._run_complete_topic_scenario(topic_name_2, test_message_2)
+
+            # .. run complete scenario for demo.3 ..
+            self._run_complete_topic_scenario(topic_name_3, test_message_3)
+
+            # .. run the full cycle with one topic only now ..
+            for _ in range(3):
+
+                # .. subscribe the user to topic demo.1 again ..
+                self._subscribe_to_topic(topic_name_1)
+
+                # .. run complete scenario for demo.1 again ..
+                self._run_complete_topic_scenario(topic_name_1, test_message_1)
 
 # ################################################################################################################################
 # ################################################################################################################################
