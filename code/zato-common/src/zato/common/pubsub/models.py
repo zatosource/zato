@@ -171,9 +171,9 @@ class User:
 class Subscription:
     """ Model representing a subscription to a topic.
     """
-    topic_name: 'str'
-    username: 'str'
-    sub_key: 'str'
+    topic_name: 'str' = ''
+    username: 'str' = ''
+    sub_key: 'str' = ''
     creation_time: 'datetime'
     is_active: 'bool' = True
 

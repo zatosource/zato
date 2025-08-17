@@ -84,7 +84,10 @@ def create_pool(engine_params, ping_query, query_class=None):
     # .. we are using SQLite ..
     else:
         conect_args = {
-            'check_same_thread': False
+            'check_same_thread': False,
+
+            # Use a long timeout to let multiple services wait if one of them writes to the database
+            'connect_timeout': 365 * 24 * 3600 # One year in seconds
         }
 
     engine = create_engine(get_engine_url(engine_params), conect_args=conect_args, **engine_params.get('extra', {}))
