@@ -338,16 +338,24 @@ class Backend:
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         if not sub_key:
+
+            logger.info('Subs by topic: %s', self.subs_by_topic)
+
             # Look for existing sub_key for this user across all topics
             for topic_subs in self.subs_by_topic.values():
                 if sec_name in topic_subs:
                     sub_key = topic_subs[sec_name].sub_key
+
+                    logger.info(f'[{cid}] **************** Using an existing sub_key %s for %s', sub_key, sec_name)
+
                     break
             else:
                 # No existing sub_key found, generate new one
                 sub_key = new_sub_key(sec_name)
 
-        logger.info(f'[{cid}] Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
+                logger.info('**************** Created new sub_key %s for %s', sub_key, sec_name)
+
+                logger.info(f'[{cid}] **************** Subscribing {sec_name} to topic {topic_name} (sk={sub_key})')
 
         # Create topic if it doesn't exist ..
         with self._main_lock:
@@ -377,6 +385,7 @@ class Backend:
 
             # .. invoke the subscription service to update the database ..
             request = {
+                'sub_key': sub_key,
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
                 'is_active': True,
