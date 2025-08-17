@@ -312,16 +312,19 @@ class Edit(AdminService):
                 topic_link_list = []
                 topics = []
 
-                # Check if no topics are provided - delete subscription if so
+                # If we go here, it means we don't have any other topics for that subscription ..
                 if not topic_name_list:
                     self.logger.info('No topics provided for subscription %s, deleting subscription', sub.sub_key)
 
-                    # Invoke the Delete service to remove the subscription
+                    # .. so we can prepare a request to delete that subscription ..
                     delete_request = Bunch()
                     delete_request.id = sub.id
+                    delete_request.session = session
 
+                    # .. do delete it ..
                     _ = self.invoke('zato.pubsub.subscription.delete', delete_request)
 
+                    # .. produce the response for our caller ..
                     self.response.payload.id = sub.id
                     self.response.payload.sub_key = sub.sub_key
                     self.response.payload.is_active = False
@@ -330,9 +333,10 @@ class Edit(AdminService):
                     self.response.payload.topic_name_list = []
                     self.response.payload.topic_link_list = []
 
-                    # Return early since subscription was deleted
+                    # .. and return early since the subscription was deleted.
                     return
 
+                # If we are here, it means there is at least one topic for that subscription ..
                 if topic_name_list:
 
                     # Create new topic associations
@@ -419,6 +423,7 @@ class Delete(AdminService):
         request_elem = 'zato_pubsub_subscription_delete_request'
         response_elem = 'zato_pubsub_subscription_delete_response'
         input_required = 'id',
+        input_optional = 'session',
 
     def handle(self):
         with closing(self.odb.session()) as session:
