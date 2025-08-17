@@ -176,10 +176,6 @@ class Create(AdminService):
                     else:
                         topics.append(topic)
 
-                print()
-                print(555, input)
-                print()
-
                 # Create the subscription
                 sub = PubSubSubscription()
                 sub.sub_key = sub_key # type: ignore
@@ -231,7 +227,7 @@ class Create(AdminService):
                 raise
             else:
 
-                # Notify broker about the creation of a new subscription
+                # Notify our process and the pub/sub server about the creation of a new subscription ..
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
@@ -242,7 +238,10 @@ class Create(AdminService):
                 pubsub_msg.delivery_type = input.delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
-                self.broker_client.publish(pubsub_msg)
+                # .. our own process we invoke directly ..
+                self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
+
+                # .. and the pub/sub server is invoked in background.
                 self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
@@ -389,7 +388,7 @@ class Edit(AdminService):
 
                 topic_name_list.sort()
 
-                # Notify broker about the update
+                # Notify our process and the pub/sub server about the creation of a new subscription ..
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
@@ -401,8 +400,11 @@ class Edit(AdminService):
                 pubsub_msg.old_delivery_type = old_delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
-                self.broker_client.publish(pubsub_msg)
-                # self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                # .. our own process we invoke directly ..
+                self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
+
+                # .. and the pub/sub server is invoked in background.
+                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
