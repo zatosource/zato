@@ -43,6 +43,10 @@ class SnowflakeGenerator:
 
     def generate_id(self) -> 'str':
         """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-rrrr-mmm.
+
+        Where:
+            rrrr = 4-character hexadecimal sequence counter
+            mmm = variable-length machine/instance identifier
         """
         with self.lock:
 
@@ -135,7 +139,10 @@ class SnowflakeGenerator:
 def new_snowflake(machine_id:'str'='') -> 'str':
     """ Generate a new human-readable snowflake ID.
 
-    Format: YYYYMMDD-HHMMSS-ssss-rrrr-mmm (29 characters)
+    Format: YYYYMMDD-HHMMSS-ssss-rrrr-mmm
+    Where:
+        rrrr = 4-character hexadecimal sequence counter
+        mmm = variable-length machine/instance identifier
 
     Args:
         machine_id: Machine identifier (3-character string). If None, auto-detected.
