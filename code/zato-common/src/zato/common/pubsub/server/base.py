@@ -26,7 +26,7 @@ from werkzeug.routing import Map, Rule
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid, utcnow
+from zato.common.util.api import new_cid_pubsub, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 
 # ################################################################################################################################
@@ -429,7 +429,7 @@ class BaseServer:
     def setup(self) -> 'None':
         """ Set up the server, loading users, topics, and subscriptions from YAML config.
         """
-        cid = new_cid()
+        cid = new_cid_pubsub()
 
         # For later use ..
         start = utcnow()

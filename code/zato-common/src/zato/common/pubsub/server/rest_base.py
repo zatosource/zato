@@ -37,7 +37,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid_pubsub
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
     UnauthorizedResponse
 from zato.common.pubsub.server.base import BaseServer
@@ -220,7 +220,7 @@ class BaseRESTServer(BaseServer):
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
         # We always need our own new Correlation ID ..
-        cid = new_cid()
+        cid = new_cid_pubsub()
 
         # .. log what we're doing ..
         logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
@@ -278,7 +278,7 @@ class BaseRESTServer(BaseServer):
         """
         response = HealthCheckResponse()
         response.is_ok = True
-        response.cid = new_cid()
+        response.cid = new_cid_pubsub()
 
         return response
 

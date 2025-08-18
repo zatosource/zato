@@ -109,6 +109,8 @@ from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
 from zato.common.util.logging_ import ColorFormatter
 from zato.common.util.open_ import open_r, open_w
+from zato.common.util.snowflake import new_snowflake
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 
@@ -312,33 +314,64 @@ def to_form(_object):
 
 # ################################################################################################################################
 
-def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=random.getrandbits) -> 'str':
-    """ Returns a new 96-bit correlation identifier. It is not safe to use the ID
-    for any cryptographical purposes; it is only meant to be used as a conveniently
-    formatted ticket attached to each of the requests processed by Zato servers.
+def new_cid(prefix:'str'='0') -> 'str':
+    """ Returns a new correlation identifier using snowflake format.
+
+    Args:
+        prefix: Single character prefix for the snowflake sequence
+
+    Returns:
+        Snowflake-based correlation identifier
     """
-    # Note that we need to convert bytes to bits here ..
-    out = hex(_random(bytes * 8))[2:]
-
-    # .. and that we optionally ensure it is always 24 characters on output ..
-    if needs_padding:
-        out = out.ljust(24, 'a')
-
-    # .. return the output to the caller.
-    return out
+    return new_snowflake(prefix)
 
 # ################################################################################################################################
 
-def new_sub_key(username:'str') -> 'str':
-    cid = new_cid()
-    sub_key = f'zpsk.{cid}.{username}'
-    return sub_key
+def new_cid_server() -> 'str':
+    """ Returns a new correlation identifier for server components.
+    """
+    return new_cid('a')
+
+# ################################################################################################################################
+
+def new_cid_pubsub() -> 'str':
+    """ Returns a new correlation identifier for pub/sub components.
+    """
+    return new_cid('b')
+
+# ################################################################################################################################
+
+def new_cid_cli() -> 'str':
+    """ Returns a new correlation identifier for CLI components.
+    """
+    return new_cid('c')
+
+# ################################################################################################################################
+
+def new_cid_scheduler() -> 'str':
+    """ Returns a new correlation identifier for scheduler components.
+    """
+    return new_cid('d')
+
+# ################################################################################################################################
+
+def new_cid_broker_client() -> 'str':
+    """ Returns a new correlation identifier for broker client components.
+    """
+    return new_cid('e')
 
 # ################################################################################################################################
 
 def new_msg_id() -> 'str':
-    cid = new_cid()
+    cid = new_cid('f')
     sub_key = f'zpsm.{cid}'
+    return sub_key
+
+# ################################################################################################################################
+
+def new_sub_key(username:'str') -> 'str':
+    cid = new_cid('g')
+    sub_key = f'zpsk.{cid}.{username}'
     return sub_key
 
 # ################################################################################################################################
@@ -755,21 +788,6 @@ def from_utc_to_local(dt, tz_name):
     local_tz = pytz.timezone(tz_name)
     dt = local_tz.normalize(dt.astimezone(local_tz))
     return dt
-
-# ################################################################################################################################
-
-def _utcnow(_utc_zone=timezone.utc):
-    """ See zato.common.util.utcnow for docstring.
-    """
-    return datetime.now(_utc_zone)
-
-# ################################################################################################################################
-
-def utcnow():
-    """ A thin wrapper around datetime.utcnow added so that tests can mock it
-    out and return their own timestamps at will.
-    """
-    return _utcnow()
 
 # ################################################################################################################################
 

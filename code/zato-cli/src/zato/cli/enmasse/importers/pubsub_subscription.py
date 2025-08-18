@@ -131,9 +131,13 @@ class PubSubSubscriptionImporter:
         """
         logger.info('Creating pubsub subscription definition: %s', definition)
 
+        print()
+        print(111, definition)
+        print()
+
         instance = PubSubSubscription()
         instance.cluster_id = self.importer.cluster_id
-        instance.sub_key = new_sub_key(definition['username'])
+        instance.sub_key = new_sub_key(definition['name'])
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
         instance.push_type = definition.get('push_type')

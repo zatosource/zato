@@ -40,7 +40,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid, parse_datetime, rebuild_subscription_dict_list, \
+from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, rebuild_subscription_dict_list, \
     spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
@@ -862,7 +862,7 @@ class WorkerStore(_WorkerStoreBase):
     def init_pubsub(self):
 
         # Local aliases
-        cid = new_cid()
+        cid = new_cid_server()
 
         pubsub_subs = self.worker_config.pubsub_subs.values()
         pubsub_subs = rebuild_subscription_dict_list(pubsub_subs)
@@ -1156,7 +1156,7 @@ class WorkerStore(_WorkerStoreBase):
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
-            'cid': new_cid(),
+            'cid': new_cid_server(),
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
@@ -1215,7 +1215,7 @@ class WorkerStore(_WorkerStoreBase):
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
             cb_msg['payload'] = response if skip_response_elem else service.response.payload
-            cb_msg['cid'] = new_cid()
+            cb_msg['cid'] = new_cid_server()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
             cb_msg['transport'] = transport
@@ -1516,7 +1516,7 @@ class WorkerStore(_WorkerStoreBase):
         *args,   # type: any_
         **kwargs # type: any_
     ) -> 'any_':
-        msg.cid = new_cid()
+        msg.cid = new_cid_server()
         msg.service = service
         msg.payload = payload
         return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args, **kwargs)

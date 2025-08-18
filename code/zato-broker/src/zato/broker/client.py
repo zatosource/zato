@@ -33,7 +33,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid, new_msg_id, utcnow
+from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 
@@ -514,7 +514,7 @@ class BrokerClient:
         response = ResponseHolder()
 
         # Generate a new CID for this request
-        cid = new_cid()
+        cid = new_cid_broker_client()
 
         # Store service and CID in response holder for logging when response arrives
         response.service = service
@@ -791,7 +791,7 @@ class BrokerClient:
     ) -> 'None':
 
         # Make sure we have a cid
-        cid = cid or new_cid()
+        cid = cid or new_cid_broker_client()
 
         # Get broker connection from input or build a new one
         if conn:
