@@ -19,7 +19,7 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid_server
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +50,7 @@ class HTTPHandler:
         self:'ParallelServer', # type: ignore
         wsgi_environ,     # type: stranydict
         start_response,   # type: callable_
-        _new_cid=new_cid, # type: callable_
+        _new_cid=new_cid_server, # type: callable_
         _local_zone=get_localzone(), # type: BaseTzInfo
         _utcnow=datetime.utcnow, # type: callable_
         _INFO=INFO, # type: int
@@ -66,7 +66,7 @@ class HTTPHandler:
         user_agent = wsgi_environ.get('HTTP_USER_AGENT', '(None)')
 
         # We need a correlation ID first ..
-        cid = kwargs.get('cid', _new_cid(needs_padding=True))
+        cid = kwargs.get('cid', _new_cid())
 
         # .. this is a timestamp of when the request was received ..
         request_ts_utc = _utcnow()

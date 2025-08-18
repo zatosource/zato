@@ -14,7 +14,7 @@ import string
 from threading import RLock
 
 # Zato
-from zato.common.util.api import utcnow
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,12 +49,16 @@ class SnowflakeGenerator:
 
 # ################################################################################################################################
 
-    def generate_id(self) -> 'str':
-        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-rrrr-mmm.
+    def generate_id(self, prefix:'str') -> 'str':
+        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-[prefix]rrrr-mmm.
 
         Where:
             rrrr = 4-character hexadecimal sequence counter
             mmm = variable-length machine/instance identifier
+            prefix = prefix for sequence component
+
+        Args:
+            prefix: Prefix to prepend to sequence counter
         """
         with self.lock:
 
@@ -95,8 +99,8 @@ class SnowflakeGenerator:
             # .. use the machine ID directly ..
             machine_part = self.machine_id
 
-            # .. format the final sequence part ..
-            sequence_part = f'{self.sequence:04x}'
+            # .. format the final sequence part with optional prefix ..
+            sequence_part = f'{prefix}{self.sequence:04x}'
 
             # .. and return the complete ID to our caller.
             return f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}-{machine_part}'
@@ -164,16 +168,18 @@ def create_snowflake_generator(machine_id:'str'='') -> 'SnowflakeGenerator':
 
 # ################################################################################################################################
 
-def new_snowflake(machine_id:'str'='') -> 'str':
+def new_snowflake(prefix:'str', machine_id:'str'='') -> 'str':
     """ Generate a new human-readable snowflake ID.
 
-    Format: YYYYMMDD-HHMMSS-ssss-rrrr-mmm
+    Format: YYYYMMDD-HHMMSS-ssss-[prefix]rrrr-mmm
     Where:
         rrrr = 4-character hexadecimal sequence counter
         mmm = variable-length machine/instance identifier
+        prefix = prefix for sequence component
 
     Args:
-        machine_id: Machine identifier (3-character string). If None, auto-detected.
+        machine_id: Machine identifier. If empty, auto-detected.
+        prefix: Prefix to prepend to sequence counter
 
     Returns:
         Snowflake ID string
@@ -190,7 +196,7 @@ def new_snowflake(machine_id:'str'='') -> 'str':
         generator = _generators[thread_id]
 
     # .. and return the ID to our caller.
-    return generator.generate_id()
+    return generator.generate_id(prefix)
 
 # ################################################################################################################################
 

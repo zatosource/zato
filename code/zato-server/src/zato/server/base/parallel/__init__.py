@@ -45,7 +45,7 @@ from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
-    fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
+    fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
@@ -211,15 +211,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
-
-        # This is used to generate correlation IDs
-        machine_id = SnowflakeGenerator.get_machine_id()
-        self.snowflake_generator = SnowflakeGenerator(machine_id)
-        self.new_cid = self.snowflake_generator.generate_id
-
-        print()
-        print(111, self.new_cid())
-        print()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -796,7 +787,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid_server())
 
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
@@ -967,7 +958,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. notify the pub/sub server too ..
         pubsub_msg = Bunch()
-        pubsub_msg.cid = new_cid()
+        pubsub_msg.cid = new_cid_server()
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. publish the message for pub/sub ..

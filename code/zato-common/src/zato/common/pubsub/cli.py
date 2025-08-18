@@ -27,7 +27,7 @@ import gevent
 # Zato
 from zato.common.pubsub.server.rest import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
-from zato.common.util.api import as_bool, new_cid
+from zato.common.util.api import as_bool, new_cid_cli
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -199,7 +199,7 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
     """
     try:
 
-        cid = new_cid()
+        cid = new_cid_cli()
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
         # Create a temporary server instance to use its list_connections method
