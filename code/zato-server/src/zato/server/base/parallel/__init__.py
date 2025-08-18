@@ -53,6 +53,7 @@ from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
+from zato.common.util.snowflake import SnowflakeGenerator
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -210,6 +211,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
+
+        # This is used to generate correlation IDs
+        machine_id = SnowflakeGenerator.get_machine_id()
+        self.snowflake_generator = SnowflakeGenerator(machine_id)
+        self.new_cid = self.snowflake_generator.generate_id
+
+        print()
+        print(111, self.new_cid())
+        print()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
