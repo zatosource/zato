@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+import socket
 import string
 import threading
 
@@ -25,7 +27,7 @@ if 0:
 class SnowflakeGenerator:
     """ Human-readable snowflake ID generator with fixed 28-character format.
     """
-    def __init__(self, machine_id:'int') -> 'None':
+    def __init__(self, machine_id:'str') -> 'None':
 
         # Store the machine ID ..
         self.machine_id = machine_id
@@ -35,7 +37,7 @@ class SnowflakeGenerator:
 
         # .. initialize timestamp and sequence tracking.
         self.last_timestamp = 0
-        self.sequence = 0
+        self.sequence = 1
 
 # ################################################################################################################################
 
@@ -60,7 +62,7 @@ class SnowflakeGenerator:
             else:
 
                 # .. we are in a new millisecond so reset the sequence ..
-                self.sequence = 0
+                self.sequence = 1
                 self.last_timestamp = current_timestamp
 
             # Generate date component ..
@@ -78,13 +80,8 @@ class SnowflakeGenerator:
             subsecond = now.microsecond // 100
             time_subsecond_part = f'{time_part}{subsecond:04d}'
 
-            # .. encode the machine ID as base-36 ..
-            chars = string.digits + string.ascii_lowercase
-            machine_part = ''
-            temp_id = self.machine_id
-            for _ in range(3):
-                temp_id, remainder = divmod(temp_id, 36)
-                machine_part = chars[remainder] + machine_part
+            # .. use the machine ID directly ..
+            machine_part = self.machine_id
 
             # .. format the final sequence part ..
             sequence_part = f'{self.sequence:04x}'
@@ -95,23 +92,23 @@ class SnowflakeGenerator:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_snowflake(machine_id:'int'=0) -> 'str':
+def new_snowflake(machine_id:'str') -> 'str':
     """ Generate a new human-readable snowflake ID.
     
     Format: YYYYMMDD-HHMMSSssss-mmm-rrrr (28 characters)
     
     Args:
-        machine_id: Machine identifier (0-46655), defaults to 0
+        machine_id: Machine identifier (3-character string)
         
     Returns:
         Snowflake ID string
         
     Raises:
-        Exception: If sequence overflows or machine_id is out of range
+        Exception: If sequence overflows
     """
     # Create a new generator instance and generate the ID ..
     generator = SnowflakeGenerator(machine_id)
-    
+
     # .. and return the ID to our caller.
     return generator.generate_id()
 
