@@ -132,13 +132,13 @@ class SnowflakeGenerator:
 
 # ################################################################################################################################
 
-def new_snowflake(machine_id:'str') -> 'str':
+def new_snowflake(machine_id:'str'='') -> 'str':
     """ Generate a new human-readable snowflake ID.
 
     Format: YYYYMMDD-HHMMSSssss-mmm-rrrr (28 characters)
 
     Args:
-        machine_id: Machine identifier (3-character string)
+        machine_id: Machine identifier (3-character string). If None, auto-detected.
 
     Returns:
         Snowflake ID string
@@ -146,6 +146,10 @@ def new_snowflake(machine_id:'str') -> 'str':
     Raises:
         Exception: If sequence overflows
     """
+    # Use auto-detected machine ID if not provided ..
+    if not machine_id:
+        machine_id = get_machine_id()
+
     # Create a new generator instance and generate the ID ..
     generator = SnowflakeGenerator(machine_id)
 
