@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import socket
 import string
-import threading
+from threading import RLock
 
 # Zato
 from zato.common.util.api import utcnow
@@ -33,7 +33,7 @@ class SnowflakeGenerator:
         self.machine_id = machine_id
 
         # .. create a reentrant lock for thread safety ..
-        self.lock = threading.RLock()
+        self.lock = RLock()
 
         # .. initialize timestamp and sequence tracking.
         self.last_timestamp = 0
@@ -90,19 +90,59 @@ class SnowflakeGenerator:
             return f'{date_part}-{time_subsecond_part}-{machine_part}-{sequence_part}'
 
 # ################################################################################################################################
+
+    @staticmethod
+    def _hostname_to_machine_id(hostname:'str') -> 'str':
+        """ Convert hostname to 3-character machine ID using digits and lowercase letters.
+        """
+        # Create hash from hostname ..
+        hostname_hash = hash(hostname)
+
+        # .. ensure it's positive ..
+        if hostname_hash < 0:
+            hostname_hash = -hostname_hash
+
+        # .. convert to base-36 using digits and lowercase letters ..
+        chars = string.digits + string.ascii_lowercase
+        result = []
+
+        for _ in range(3):
+            hostname_hash, remainder = divmod(hostname_hash, 36)
+            result.append(chars[remainder])
+
+        # .. and return the result as a string.
+        return ''.join(reversed(result))
+
+# ################################################################################################################################
+
+    @staticmethod
+    def get_machine_id() -> 'str':
+        """ Get machine ID from environment variable or hostname.
+        """
+        # Check for environment variable first ..
+        machine_id = os.environ.get('Zato_Instance_Name')
+
+        if machine_id:
+            # .. use it directly if available ..
+            return machine_id
+        else:
+            # .. otherwise get hostname and convert it ..
+            hostname = socket.gethostname()
+            return SnowflakeGenerator._hostname_to_machine_id(hostname)
+
 # ################################################################################################################################
 
 def new_snowflake(machine_id:'str') -> 'str':
     """ Generate a new human-readable snowflake ID.
-    
+
     Format: YYYYMMDD-HHMMSSssss-mmm-rrrr (28 characters)
-    
+
     Args:
         machine_id: Machine identifier (3-character string)
-        
+
     Returns:
         Snowflake ID string
-        
+
     Raises:
         Exception: If sequence overflows
     """
@@ -111,6 +151,13 @@ def new_snowflake(machine_id:'str') -> 'str':
 
     # .. and return the ID to our caller.
     return generator.generate_id()
+
+# ################################################################################################################################
+
+def get_machine_id() -> 'str':
+    """ Get machine ID from environment variable or hostname.
+    """
+    return SnowflakeGenerator.get_machine_id()
 
 # ################################################################################################################################
 # ################################################################################################################################
