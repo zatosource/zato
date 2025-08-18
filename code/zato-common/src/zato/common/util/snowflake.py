@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import _thread
 import os
 import platform
 import string
@@ -19,7 +20,14 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    pass
+    from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Module-level storage for OS thread generators
+_generators:'anydict' = {}
+_generators_lock = _thread.allocate_lock()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,6 +144,26 @@ class SnowflakeGenerator:
 
 # ################################################################################################################################
 
+def create_snowflake_generator(machine_id:'str'='') -> 'SnowflakeGenerator':
+    """ Create and cache a generator for the current OS thread.
+
+    Args:
+        machine_id: Machine identifier. If empty, auto-detected.
+
+    Returns:
+        SnowflakeGenerator instance for current OS thread
+    """
+    thread_id = _thread.get_ident()
+
+    with _generators_lock:
+        if thread_id not in _generators:
+            if not machine_id:
+                machine_id = get_machine_id()
+            _generators[thread_id] = SnowflakeGenerator(machine_id)
+        return _generators[thread_id]
+
+# ################################################################################################################################
+
 def new_snowflake(machine_id:'str'='') -> 'str':
     """ Generate a new human-readable snowflake ID.
 
@@ -153,12 +181,13 @@ def new_snowflake(machine_id:'str'='') -> 'str':
     Raises:
         Exception: If sequence overflows
     """
-    # Use auto-detected machine ID if not provided ..
-    if not machine_id:
-        machine_id = get_machine_id()
+    # Get OS thread-local generator ..
+    thread_id = _thread.get_ident()
 
-    # Create a new generator instance and generate the ID ..
-    generator = SnowflakeGenerator(machine_id)
+    if thread_id not in _generators:
+        generator = create_snowflake_generator(machine_id)
+    else:
+        generator = _generators[thread_id]
 
     # .. and return the ID to our caller.
     return generator.generate_id()
