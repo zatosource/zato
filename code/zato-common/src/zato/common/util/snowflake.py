@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import socket
+import platform
 import string
 from threading import RLock
 
@@ -42,7 +42,7 @@ class SnowflakeGenerator:
 # ################################################################################################################################
 
     def generate_id(self) -> 'str':
-        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSSssss-mmm-rrrr.
+        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-rrrr-mmm.
         """
         with self.lock:
 
@@ -78,7 +78,7 @@ class SnowflakeGenerator:
             # .. or 50000 microseconds becomes 500 ..
             # .. or 999999 microseconds becomes 9999 ..
             subsecond = now.microsecond // 100
-            time_subsecond_part = f'{time_part}{subsecond:04d}'
+            subsecond_part = f'{subsecond:04d}'
 
             # .. use the machine ID directly ..
             machine_part = self.machine_id
@@ -87,7 +87,7 @@ class SnowflakeGenerator:
             sequence_part = f'{self.sequence:04x}'
 
             # .. and return the complete ID to our caller.
-            return f'{date_part}-{time_subsecond_part}-{machine_part}-{sequence_part}'
+            return f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}-{machine_part}'
 
 # ################################################################################################################################
 
@@ -127,15 +127,15 @@ class SnowflakeGenerator:
             return machine_id
         else:
             # .. otherwise get hostname and convert it ..
-            hostname = socket.gethostname()
-            return SnowflakeGenerator._hostname_to_machine_id(hostname)
+            hostname = platform.node()
+            return hostname
 
 # ################################################################################################################################
 
 def new_snowflake(machine_id:'str'='') -> 'str':
     """ Generate a new human-readable snowflake ID.
 
-    Format: YYYYMMDD-HHMMSSssss-mmm-rrrr (28 characters)
+    Format: YYYYMMDD-HHMMSS-ssss-rrrr-mmm (29 characters)
 
     Args:
         machine_id: Machine identifier (3-character string). If None, auto-detected.
