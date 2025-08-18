@@ -385,7 +385,7 @@ class BrokerClient:
         The broker will create it on demand when the first message is sent there.
         """
         # Generate a unique queue name for this request
-        unique_queue_name = f'zato-reply-{uuid4().hex}'
+        unique_queue_name = f'zato-reply-{new_cid_broker_client()}'
         logger.debug(f'Created unique reply queue name: {unique_queue_name}')
         return unique_queue_name
 
@@ -395,7 +395,7 @@ class BrokerClient:
         """ Publishes a message and registers a callback to be invoked when a reply is received.
         """
         # Generate a unique correlation ID for this request
-        correlation_id = uuid4().hex
+        correlation_id = new_cid_broker_client()
 
         # Create a unique reply queue name for this specific request
         reply_queue = self._create_reply_queue()
