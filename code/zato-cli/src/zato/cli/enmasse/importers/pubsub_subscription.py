@@ -131,10 +131,6 @@ class PubSubSubscriptionImporter:
         """
         logger.info('Creating pubsub subscription definition: %s', definition)
 
-        print()
-        print(111, definition)
-        print()
-
         instance = PubSubSubscription()
         instance.cluster_id = self.importer.cluster_id
         instance.sub_key = new_sub_key(definition['name'])
@@ -347,7 +343,8 @@ class PubSubSubscriptionImporter:
                 'delivery_type': delivery_type,
                 'topic_id_list': topic_id_list,
                 'is_active': yaml_def.get('is_active', True),
-                'username': security_name
+                'username': security_name,
+                'name': yaml_def.get('name', security_name)
             }
 
             # Handle push-specific fields
