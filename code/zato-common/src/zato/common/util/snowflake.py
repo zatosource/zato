@@ -63,16 +63,16 @@ class SnowflakeGenerator:
 
 # ################################################################################################################################
 
-    def generate_id(self, prefix:'str') -> 'str':
-        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-[prefix]rrrr-mmm.
+    def generate_id(self, suffix:'str') -> 'str':
+        """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-rrrrrrrr[suffix]-mmm.
 
         Where:
-            rrrr = 4-character random alphanumeric sequence
+            rrrrrrrr = 8-character random hexadecimal
             mmm = variable-length machine/instance identifier
-            prefix = prefix for sequence component
+            suffix = suffix for random component
 
         Args:
-            prefix: Prefix to prepend to sequence component
+            suffix: Suffix to append to random component
         """
         with self.lock:
 
@@ -120,11 +120,11 @@ class SnowflakeGenerator:
             # .. use the machine ID directly ..
             machine_part = self.machine_id
 
-            # .. format the final sequence part with optional prefix ..
-            sequence_part = f'{prefix}{sequence}'
+            # .. format the final random part with optional suffix ..
+            random_part = f'{sequence}{suffix}'
 
             # .. build the complete ID ..
-            result = f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}'
+            result = f'{date_part}-{time_part}-{subsecond_part}-{random_part}'
 
             if machine_part:
                 result += f'-{machine_part}'
@@ -195,24 +195,24 @@ def create_snowflake_generator(machine_id:'str'='') -> 'SnowflakeGenerator':
 
 # ################################################################################################################################
 
-def new_snowflake(prefix:'str', needs_machine_id:'bool'=True) -> 'str':
+def new_snowflake(suffix:'str', needs_machine_id:'bool'=True) -> 'str':
     """ Generate a new human-readable snowflake ID.
 
-    Format: YYYYMMDD-HHMMSS-ssss-[prefix]rrrr[-mmm]
+    Format: YYYYMMDD-HHMMSS-ssss-rrrrrrrr[suffix][-mmm]
     Where:
-        rrrr = 4-character random alphanumeric sequence
+        rrrrrrrr = 8-character random hexadecimal
         mmm = variable-length machine/instance identifier (optional)
-        prefix = prefix for sequence component
+        suffix = suffix for random component
 
     Args:
-        prefix: Prefix to prepend to sequence component
+        suffix: Suffix to append to random component
         needs_machine_id: If True, include machine ID. If False, omit machine ID.
 
     Returns:
         Snowflake ID string
 
     Raises:
-        Exception: If sequence collision occurs
+        Exception: If random collision occurs
     """
     # Handle machine_id parameter ..
     if needs_machine_id:
@@ -229,7 +229,7 @@ def new_snowflake(prefix:'str', needs_machine_id:'bool'=True) -> 'str':
         generator = _generators[thread_id]
 
     # .. and return the ID to our caller.
-    return generator.generate_id(prefix)
+    return generator.generate_id(suffix)
 
 # ################################################################################################################################
 
