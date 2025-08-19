@@ -36,7 +36,7 @@ if 0:
     from kombu.connection import Connection as KombuAMQPConnection
     from kombu.messaging import Producer as KombuProducer
     from kombu.pools import ProducerPool as KombuProducerPool
-    from zato.common.typing_ import any_, callable_, strdictnone, strtuple, type_
+    from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple, type_
     Bunch = Bunch
 
 # ################################################################################################################################
@@ -193,7 +193,12 @@ class Consumer:
 
 # ################################################################################################################################
 
-    def _get_consumer(self, _no_ack=no_ack, _gevent_sleep=sleep):
+    def _get_consumer(
+        self,
+        always_log_when_connected:'bool'=False,
+        _no_ack:'strdict'=no_ack,
+        _gevent_sleep:'callable_'=sleep,
+    ) -> 'Consumer | None':
         """ Creates a new connection and consumer to an AMQP broker.
         """
 
@@ -234,9 +239,16 @@ class Consumer:
                 if self.keep_running:
                     _gevent_sleep(2)
 
-        if err_conn_attempts > 0:
-            noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-            logger.info('Created an AMQP consumer for channel `%s` after %s %s', self.name, err_conn_attempts, noun)
+        has_errors = err_conn_attempts > 0
+
+        if always_log_when_connected or has_errors:
+
+            base_msg = 'Created an AMQP consumer for channel `%s`'
+            if has_errors:
+                noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
+                logger.info(base_msg + ' after %s failed %s', self.name, err_conn_attempts, noun)
+            else:
+                logger.info(base_msg, self.name)
 
         return consumer
 
@@ -284,7 +296,7 @@ class Consumer:
                             logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', connection.as_uri(), e.message)
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
-                except Exception:
+                except Exception as e:
                     try:
 
                         # .. this flag is to ensure we don't log too much ..
@@ -298,7 +310,7 @@ class Consumer:
                                 'Closing and reconnecting a lost connection for queue=%s -> `%s` -> %s',
                                 self.config.queue,
                                 connection.as_uri(),
-                                format_exc(),
+                                e,
                             )
 
                             # .. indicate we've already logged a message about it ..
@@ -317,7 +329,7 @@ class Consumer:
                             )
 
                         # .. and connect again ..
-                        consumer = self._get_consumer()
+                        consumer = self._get_consumer(always_log_when_connected=True)
 
                     except Exception:
 
