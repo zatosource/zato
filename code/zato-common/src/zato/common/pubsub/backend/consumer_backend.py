@@ -170,7 +170,7 @@ class ConsumerBackend(Backend):
         self.stop_public_queue_consumer(cid, sub_key)
 
         # .. and delete its now-no-longer-in-use queue ..
-        self.broker_client.delete_queue(sub_key)
+        self.broker_client.delete_queue(cid, sub_key)
 
 # ################################################################################################################################
 

@@ -170,6 +170,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
+        self.process_cid = new_cid_server()
         self.worker_id = ''
         self.worker_pid = -1
         self.cluster_id = -1
@@ -787,7 +788,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid_server())
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
 
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
@@ -883,7 +884,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Delete the queue to remove any message we don't want to read since they were published when we were not running,
         # and then create it all again so we have a fresh start.
-        self.broker_client.delete_queue('server')
+        self.broker_client.delete_queue(self.process_cid, 'server')
         self.broker_client.create_internal_queue('server')
 
         # Configure internal pub/sub
