@@ -375,7 +375,7 @@ class BrokerClient:
         with self.lock:
             self.reply_consumers[queue_name] = consumer
 
-        logger.warning(f'Started reply consumer for queue: {queue_name}')
+        logger.debug(f'Started reply consumer for queue: {queue_name}')
         return consumer
 
 # ################################################################################################################################
