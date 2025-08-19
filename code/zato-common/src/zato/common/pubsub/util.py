@@ -15,6 +15,7 @@ from urllib.parse import quote
 import requests
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.common import BrokerConfig
 
 # ################################################################################################################################
@@ -183,7 +184,7 @@ def cleanup_broker_impl(
 ) -> 'dict':
     """ Clean up AMQP bindings and queues implementation.
     """
-    prefixes = ['zpsk', 'zato-reply']
+    prefixes = ['zpsk', PubSub.Prefix.Reply_Queue]
 
     # Extract host from address (remove port if present)
     host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address

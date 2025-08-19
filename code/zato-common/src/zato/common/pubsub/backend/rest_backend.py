@@ -55,7 +55,7 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
-    def _remove_subscriptions_by_username(self, sec_name:'str') -> 'list':
+    def _remove_subscriptions_by_username(self, sec_name:'str', cid:'str') -> 'list':
         """ Remove all subscriptions for a specific username and clean up empty topics.
         Returns list of topics that had subscriptions removed.
         """
@@ -71,7 +71,7 @@ class RESTBackend(Backend):
 
         # Delete queues and bindings for unique sub_keys
         for sub_key in sub_keys_to_delete:
-            self.broker_client.delete_queue(sub_key)
+            self.broker_client.delete_queue(cid, sub_key)
 
         # Clean up empty topic entries
         for topic_name in topics_to_clean:
@@ -223,7 +223,7 @@ class RESTBackend(Backend):
             logger.info(f'[{cid}] Removed all permissions for deleted user `{username}`')
 
             # Remove all subscriptions for this user
-            topics_to_clean = self._remove_subscriptions_by_username(sec_name)
+            topics_to_clean = self._remove_subscriptions_by_username(sec_name, cid)
 
             if topics_to_clean:
                 logger.info(f'[{cid}] Removed subscriptions for deleted user `{username}` from topics: {topics_to_clean}')
