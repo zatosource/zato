@@ -314,65 +314,67 @@ def to_form(_object):
 
 # ################################################################################################################################
 
-def new_cid(prefix:'str'='0') -> 'str':
+def _new_cid(prefix:'str'='0', needs_machine_id:'bool'=True) -> 'str':
     """ Returns a new correlation identifier using snowflake format.
-
-    Args:
-        prefix: Single character prefix for the snowflake sequence
-
-    Returns:
-        Snowflake-based correlation identifier
     """
     return new_snowflake(prefix)
 
 # ################################################################################################################################
 
-def new_cid_server() -> 'str':
+def new_cid_server(needs_machine_id:'bool'=True) -> 'str':
     """ Returns a new correlation identifier for server components.
     """
-    return new_cid('a')
+    return new_cid('a', needs_machine_id)
 
 # ################################################################################################################################
 
 def new_cid_pubsub() -> 'str':
     """ Returns a new correlation identifier for pub/sub components.
     """
-    return new_cid('b')
+    return _new_cid('b')
 
 # ################################################################################################################################
 
 def new_cid_cli() -> 'str':
     """ Returns a new correlation identifier for CLI components.
     """
-    return new_cid('c')
+    return _new_cid('c')
 
 # ################################################################################################################################
 
 def new_cid_scheduler() -> 'str':
     """ Returns a new correlation identifier for scheduler components.
     """
-    return new_cid('d')
+    return _new_cid('d')
 
 # ################################################################################################################################
 
 def new_cid_broker_client() -> 'str':
     """ Returns a new correlation identifier for broker client components.
     """
-    return new_cid('e')
+    return _new_cid('e')
 
 # ################################################################################################################################
 
 def new_msg_id() -> 'str':
-    cid = new_cid('f')
+    cid = _new_cid('f')
     sub_key = f'zpsm.{cid}'
     return sub_key
 
 # ################################################################################################################################
 
 def new_sub_key(username:'str') -> 'str':
-    cid = new_cid('g')
+    cid = _new_cid('g')
     sub_key = f'zpsk.{cid}.{username}'
     return sub_key
+
+# ################################################################################################################################
+
+def make_cid_public(cid:'str') -> 'str':
+    pub_cid = cid.split('-')
+    pub_cid = pub_cid[:_cid_components_no]
+    pub_cid = '-'.join(pub_cid)
+    return pub_cid
 
 # ################################################################################################################################
 

@@ -19,7 +19,7 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
-from zato.common.util.api import new_cid_server
+from zato.common.util.api import make_cid_public
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +57,7 @@ class HTTPHandler:
         _UTC=UTC,   # type: any_
         _Access_Log_Date_Time_Format=Access_Log_Date_Time_Format, # type: str
         _no_remote_address=NO_REMOTE_ADDRESS, # type: str
+        _cid_components_no=4,
         **kwargs:'any_'
     ) -> 'list_[bytes]':
         """ Handles incoming HTTP requests.
@@ -81,7 +82,14 @@ class HTTPHandler:
 
         # .. but returning X-Zato-CID is optional ..
         if self.needs_x_zato_cid:
-            wsgi_environ['zato.http.response.headers']['X-Zato-CID'] = cid
+
+            # .. and also note, we don't return the instance name at all ..
+            # .. for instance a full CID may be like these ..
+            # .. 20250819-045128-1434-e0002-mynode ..
+            # .. 20250819-045128-1434-e0002-mynode-name ..
+            # .. and we don't include the initial parts, up to the instance name ..
+            pub_cid = make_cid_public(cid)
+            wsgi_environ['zato.http.response.headers']['X-Zato-CID'] = pub_cid
 
         # .. try to extract a remote address ..
         remote_addr = _no_remote_address
