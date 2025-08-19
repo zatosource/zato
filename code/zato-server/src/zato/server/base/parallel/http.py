@@ -19,7 +19,7 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
-from zato.common.util.api import make_cid_public
+from zato.common.util.api import new_cid_server
 
 # ################################################################################################################################
 # ################################################################################################################################

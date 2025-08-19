@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import _thread
 import os
 import platform
-import random
 import string
 from threading import RLock
+from uuid import uuid4
 
 # Zato
 from zato.common.util.time_ import utcnow
@@ -30,8 +30,7 @@ if 0:
 _Timestamp_Precision_Multiplier = 10000
 
 # Random sequence configuration
-_Sequence_Length = 4
-_Sequence_Chars = string.digits + string.ascii_lowercase
+_Sequence_Length = 8
 
 # Module-level storage for OS thread generators
 _generators:'anydict' = {}
@@ -58,9 +57,9 @@ class SnowflakeGenerator:
 # ################################################################################################################################
 
     def _generate_sequence(self) -> 'str':
-        """ Generate a random 4-character alphanumeric sequence.
+        """ Generate a random sequence using UUID4 hex.
         """
-        return ''.join(random.choice(_Sequence_Chars) for _ in range(_Sequence_Length))
+        return uuid4().hex[:_Sequence_Length]
 
 # ################################################################################################################################
 
