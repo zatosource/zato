@@ -25,6 +25,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Timestamp precision multiplier for 100-microsecond granularity
+_Timestamp_Precision_Multiplier = 10000
+
 # Module-level storage for OS thread generators
 _generators:'anydict' = {}
 _generators_lock = _thread.allocate_lock()
@@ -64,9 +67,11 @@ class SnowflakeGenerator:
 
             # Get the current time ..
             now = utcnow()
-            current_timestamp = int(now.timestamp() * 1000)
 
-            # .. check if we are in the same millisecond as the last call ..
+            # Use 100-microsecond precision for timestamp comparison
+            current_timestamp = int(now.timestamp() * _Timestamp_Precision_Multiplier)
+
+            # .. check if we are in the same 100-microsecond window as the last call ..
             if current_timestamp == self.last_timestamp:
 
                 # .. if so, increment the sequence ..
@@ -74,10 +79,10 @@ class SnowflakeGenerator:
 
                 # .. but raise an exception if it overflows ..
                 if self.sequence > 65535:
-                    raise Exception('Sequence overflow: too many IDs generated in same millisecond')
+                    raise Exception('Sequence overflow: too many IDs generated in same 100-microsecond window')
             else:
 
-                # .. we are in a new millisecond so reset the sequence ..
+                # .. we are in a new 100-microsecond window so reset the sequence ..
                 self.sequence = 1
                 self.last_timestamp = current_timestamp
 

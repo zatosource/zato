@@ -20,7 +20,7 @@ from bunch import Bunch, bunchify
 from zato.common.api import SECRET_SHADOW
 from zato.common.dispatch import dispatcher
 from zato.common.exception import Inactive
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid_server
 
 # ################################################################################################################################
 
@@ -247,7 +247,7 @@ class BaseConnPoolStore:
 
     def dispatcher_callback(self, event, ctx, **opaque):
         self.dispatcher_backlog.append(bunchify({
-            'event_id': new_cid(),
+            'event_id': new_cid_server(),
             'event': event,
             'ctx': ctx,
             'opaque': opaque

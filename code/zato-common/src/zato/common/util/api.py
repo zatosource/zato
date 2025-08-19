@@ -319,6 +319,8 @@ def _new_cid(prefix:'str'='0', needs_machine_id:'bool'=True) -> 'str':
     """
     return new_snowflake(prefix)
 
+new_cid = _new_cid
+
 # ################################################################################################################################
 
 def new_cid_server(needs_machine_id:'bool'=True) -> 'str':

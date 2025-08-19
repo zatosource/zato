@@ -12,7 +12,7 @@ import logging
 # Zato
 from zato.common.api import ZATO_NONE
 from zato.common.broker_message import SERVICE
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid_broker_client
 from zato.common.util.config import resolve_env_variables
 from zato.broker.message_handler import handle_broker_msg
 
@@ -48,7 +48,7 @@ class BrokerMessageReceiver:
     worker_store: 'WorkerStore'
 
     def __init__(self):
-        self.broker_client_id = '{}-{}'.format(ZATO_NONE, new_cid())
+        self.broker_client_id = '{}-{}'.format(ZATO_NONE, new_cid_broker_client())
         self.broker_callbacks = {}
         self.broker_messages = []
 
