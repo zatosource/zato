@@ -60,16 +60,16 @@ class RESTBackend(Backend):
         Returns list of topics that had subscriptions removed.
         """
         topics_to_clean = []
-        sub_keys_to_delete = []
+        sub_keys_to_delete = set()
 
         for topic_name, subs_by_sec_name in self.subs_by_topic.items():
             if sec_name in subs_by_sec_name:
                 subscription = subs_by_sec_name[sec_name]
-                sub_keys_to_delete.append(subscription.sub_key)
+                sub_keys_to_delete.add(subscription.sub_key)
                 _ = subs_by_sec_name.pop(sec_name, None)
                 topics_to_clean.append(topic_name)
 
-        # Delete queues and bindings for collected sub_keys
+        # Delete queues and bindings for unique sub_keys
         for sub_key in sub_keys_to_delete:
             self.broker_client.delete_queue(sub_key)
 
