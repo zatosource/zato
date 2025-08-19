@@ -346,10 +346,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
-        return
-
         # Local variables
-        max_loops = 3
+        max_loops = 1
 
         # Skip auto-unsubscribe for this test since we want to control cleanup manually ..
         self.skip_auto_unsubscribe = True

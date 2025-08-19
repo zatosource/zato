@@ -166,7 +166,6 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             'topic_id_list': topic_id_list,
             'is_active': subscription_def.get('is_active', True),
             'max_retry_time': subscription_def.get('max_retry_time', '365d'),
-            'username': subscription_def['username'],
             'name': subscription_def['security']
         }
 
