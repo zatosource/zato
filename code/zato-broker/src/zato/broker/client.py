@@ -872,7 +872,7 @@ class BrokerClient:
             channel = conn.channel()
 
             channel.queue_delete(queue=queue_name)
-            logger.debug(f'Deleted queue: {queue_name}')
+            logger.info(f'Deleted queue: {queue_name}')
 
         except Exception as e:
             logger.warning(f'Error deleting queue `{queue_name}` -> {e}')
