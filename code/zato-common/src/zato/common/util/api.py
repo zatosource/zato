@@ -373,6 +373,13 @@ def new_sub_key(username:'str') -> 'str':
 # ################################################################################################################################
 
 def make_cid_public(cid:'str') -> 'str':
+
+    # .. A full CID may be like these ..
+    # .. 20250819-145128-8074-a20830546-mynode ..
+    # .. 20250819-154302-0137-bfb1036b3-mynode-name ..
+    # .. and we only include the initial parts, up to the instance name ..
+    _cid_components_no = 4
+
     pub_cid = cid.split('-')
     pub_cid = pub_cid[:_cid_components_no]
     pub_cid = '-'.join(pub_cid)
