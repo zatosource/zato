@@ -1164,6 +1164,7 @@ class PubSub:
     class Prefix:
         Msg_ID = 'zpsm'
         Sub_Key = 'zpsk.rest'
+        Reply_Queue = 'zato-reply'
 
     class REST_Server:
         Default_Port = 44556
@@ -1176,10 +1177,6 @@ class PubSub:
 
     class Repeats:
         Max = 500
-
-    class Prefix:
-        Sub_Key = 'zpsk'
-        Reply_Queue = 'zato-reply'
 
 # ################################################################################################################################
 # ################################################################################################################################
