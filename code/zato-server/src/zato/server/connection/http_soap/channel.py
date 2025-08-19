@@ -751,7 +751,11 @@ class RequestHandler:
         service_instance:'Service',
         service_invoker_name:'str'=ServiceConst.ServiceInvokerName
         ) -> 'bool':
-        return isinstance(service_instance, AdminService) and service_instance.name != service_invoker_name
+
+        is_admin_service = isinstance(service_instance, AdminService)
+        is_admin_ignored = service_instance.name not in {service_invoker_name, 'zato.ping'}
+
+        return is_admin_service and not (is_admin_ignored)
 
 # ################################################################################################################################
 

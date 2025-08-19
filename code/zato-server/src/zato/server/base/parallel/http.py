@@ -84,10 +84,6 @@ class HTTPHandler:
         if self.needs_x_zato_cid:
 
             # .. and also note, we don't return the instance name at all ..
-            # .. for instance a full CID may be like these ..
-            # .. 20250819-045128-1434-e0002-mynode ..
-            # .. 20250819-045128-1434-e0002-mynode-name ..
-            # .. and we don't include the initial parts, up to the instance name ..
             pub_cid = make_cid_public(cid)
             wsgi_environ['zato.http.response.headers']['X-Zato-CID'] = pub_cid
 

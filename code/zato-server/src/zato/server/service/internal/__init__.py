@@ -20,7 +20,7 @@ from zato.common.py23_.past.builtins import basestring
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster
-from zato.common.util.api import get_response_value
+from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Bool, Int, Service
 
@@ -196,7 +196,8 @@ class Ping(AdminService):
 
     def handle(self):
         # self.logger.warning('PING invoked %s', self.request.raw_request)
-        self.response.payload = '{"pong":"zato"}'
+        pub_cid = make_cid_public(self.cid)
+        self.response.payload = f'{{"is_ok":true, "cid":"{pub_cid}"}}'
 
 # ################################################################################################################################
 
