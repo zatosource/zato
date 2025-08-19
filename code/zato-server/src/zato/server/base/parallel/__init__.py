@@ -53,7 +53,6 @@ from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
-from zato.common.util.snowflake import SnowflakeGenerator
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -1176,8 +1175,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_broker_msg(body)
 
         # .. indicate the message has not been processed
-        except Exception as e:
-            logger.warning('Rejecting pub/sub message: %s', e)
+        except Exception:
+            logger.warning('Rejecting pub/sub message: %s', format_exc())
             amqp_msg.reject(requeue=True)
 
         # .. otherwise, confirm it's been consumed.
