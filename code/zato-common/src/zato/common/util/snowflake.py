@@ -102,8 +102,14 @@ class SnowflakeGenerator:
             # .. format the final sequence part with optional prefix ..
             sequence_part = f'{prefix}{self.sequence:04x}'
 
-            # .. and return the complete ID to our caller.
-            return f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}-{machine_part}'
+            # .. build the complete ID ..
+            result = f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}'
+
+            if machine_part:
+                result += f'-{machine_part}'
+
+            # .. and return it to our caller.
+            return result
 
 # ################################################################################################################################
 
@@ -168,18 +174,18 @@ def create_snowflake_generator(machine_id:'str'='') -> 'SnowflakeGenerator':
 
 # ################################################################################################################################
 
-def new_snowflake(prefix:'str', machine_id:'str'='') -> 'str':
+def new_snowflake(prefix:'str', needs_machine_id:'bool'=True) -> 'str':
     """ Generate a new human-readable snowflake ID.
 
-    Format: YYYYMMDD-HHMMSS-ssss-[prefix]rrrr-mmm
+    Format: YYYYMMDD-HHMMSS-ssss-[prefix]rrrr[-mmm]
     Where:
         rrrr = 4-character hexadecimal sequence counter
-        mmm = variable-length machine/instance identifier
+        mmm = variable-length machine/instance identifier (optional)
         prefix = prefix for sequence component
 
     Args:
-        machine_id: Machine identifier. If empty, auto-detected.
         prefix: Prefix to prepend to sequence counter
+        needs_machine_id: If True, include machine ID. If False, omit machine ID.
 
     Returns:
         Snowflake ID string
@@ -187,6 +193,12 @@ def new_snowflake(prefix:'str', machine_id:'str'='') -> 'str':
     Raises:
         Exception: If sequence overflows
     """
+    # Handle machine_id parameter ..
+    if needs_machine_id:
+        machine_id = get_machine_id()
+    else:
+        machine_id = ''
+
     # Get OS thread-local generator ..
     thread_id = _thread.get_ident()
 
