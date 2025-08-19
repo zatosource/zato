@@ -231,24 +231,21 @@ class Consumer:
             except Exception as e:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-                logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far), e:`%s`',
-                    self.name, err_conn_attempts, noun, e)
+                logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far) for queue=%s -> `%s`, e:`%s`',
+                    self.name, err_conn_attempts, noun, self.config.queue, self.config.conn_url, e)
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
                 # to the server at all, which will likely mean that it is down,
                 if self.keep_running:
                     _gevent_sleep(2)
 
-        has_errors = err_conn_attempts > 0
-
-        if always_log_when_connected or has_errors:
-
-            base_msg = 'Created an AMQP consumer for channel `%s`'
-            if has_errors:
+        if always_log_when_connected or err_conn_attempts > 0:
+            base_msg = 'Created an AMQP consumer for channel `%s` for queue=%s -> `%s`'
+            if err_conn_attempts > 0:
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-                logger.info(base_msg + ' after %s failed %s', self.name, err_conn_attempts, noun)
+                logger.info(base_msg + ' after %s failed %s', self.name, self.config.queue, self.config.conn_url, err_conn_attempts, noun)
             else:
-                logger.info(base_msg, self.name)
+                logger.info(base_msg, self.name, self.config.queue, self.config.conn_url)
 
         return consumer
 
