@@ -13,7 +13,7 @@ from http.client import OK
 from json import dumps, loads
 from logging import getLogger
 from threading import RLock
-from uuid import uuid4
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -280,7 +280,7 @@ class BrokerClient:
 
             # Immediately delete the queue and clean up the consumer
             if queue_name:
-                _ = spawn(self._cleanup_reply_consumer, queue_name)
+                _ = spawn(self._cleanup_reply_consumer, correlation_id, queue_name)
         else:
             logger.warning(f'No callback found for correlation ID: {correlation_id}')
 
@@ -289,7 +289,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _cleanup_reply_consumer(self, queue_name:'str', delay_seconds:'int'=0) -> 'None':
+    def _cleanup_reply_consumer(self, cid:'str', queue_name:'str', delay_seconds:'int'=0) -> 'None':
         """ Cleans up a reply consumer after waiting for specified delay.
         Explicitly deletes the queue after stopping the consumer.
         """
@@ -303,9 +303,9 @@ class BrokerClient:
                     try:
                         # Stop the consumer's main loop first
                         consumer.stop()
-                        logger.debug(f'Stopped consumer for {queue_name}')
-                    except Exception as e:
-                        logger.warning(f'Error stopping consumer for {queue_name}: {str(e)}')
+                        logger.debug(f'Stopped consumer for `{queue_name}`')
+                    except Exception:
+                        logger.warning(f'Error stopping consumer for `{queue_name}`: {format_exc()}')
 
                     # Wait a brief moment to ensure consumer loop has exited
                     sleep(0.1) # type: ignore
@@ -314,11 +314,11 @@ class BrokerClient:
                     _ = self.reply_consumers.pop(queue_name, None)
 
                 # Delete the queue
-                self.delete_queue(queue_name)
+                self.delete_queue(cid, queue_name)
 
                 logger.debug(f'Completed cleanup for queue: {queue_name}')
-        except Exception as e:
-            logger.warning(f'Error during cleanup for {queue_name}: {str(e)}')
+        except Exception:
+            logger.warning(f'Error during cleanup for `{queue_name}`: {format_exc()}')
 
 # ################################################################################################################################
 
@@ -352,7 +352,7 @@ class BrokerClient:
         reply_config = bunchify(dict(self.consumer_config, **{
             'name': f'reply-consumer-{queue_name}',
             'queue': queue_name,
-            'consumer_tag_prefix': 'zato-reply',
+            'consumer_tag_prefix': PubSub.Prefix.Reply_Queue,
             'queue_opts': {
                 'auto_delete': True,
                 'durable': False,
@@ -385,7 +385,7 @@ class BrokerClient:
         The broker will create it on demand when the first message is sent there.
         """
         # Generate a unique queue name for this request
-        unique_queue_name = f'zato-reply-{new_cid_broker_client()}'
+        unique_queue_name = f'{PubSub.Prefix.Reply_Queue}-{new_cid_broker_client()}'
         logger.debug(f'Created unique reply queue name: {unique_queue_name}')
         return unique_queue_name
 
@@ -552,7 +552,7 @@ class BrokerClient:
             if response.reply_queue_name:
 
                 logger.info(f'No response - cleaning up reply queue {response.reply_queue_name}')
-                self._cleanup_reply_consumer(response.reply_queue_name)
+                self._cleanup_reply_consumer(ctx, response.reply_queue_name)
 
                 # Also clean up the callback registration
                 with self.lock:
@@ -863,7 +863,7 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def delete_queue(self, queue_name:'str') -> 'None':
+    def delete_queue(self, cid:'str', queue_name:'str') -> 'None':
         """ Explicitly deletes a queue from the broker.
         """
         try:
@@ -872,10 +872,13 @@ class BrokerClient:
             channel = conn.channel()
 
             channel.queue_delete(queue=queue_name)
-            logger.info(f'Deleted queue: {queue_name}')
 
-        except Exception as e:
-            logger.warning(f'Error deleting queue `{queue_name}` -> {e}')
+            # Log only if it's not a reply to queue - there are too many of them to do it
+            if not queue_name.startswith(PubSub.Prefix.Reply_Queue):
+                logger.info(f'[{cid}] Deleted queue: {queue_name}')
+
+        except Exception:
+            logger.warning(f'[{cid}] Error deleting queue `{queue_name}` -> {format_exc()}')
             raise
 
 # ################################################################################################################################
