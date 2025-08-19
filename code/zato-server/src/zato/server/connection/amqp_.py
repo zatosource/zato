@@ -231,21 +231,26 @@ class Consumer:
             except Exception as e:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-                logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far) for queue=%s -> `%s`, e:`%s`',
-                    self.name, err_conn_attempts, noun, self.config.queue, self.config.conn_url, e)
+                logger.info(
+                    f'Could not create an AMQP consumer for channel `{self.name}` '
+                    f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> '
+                    f'`{self.config.conn_url}`, e:`{e}`'
+                )
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
                 # to the server at all, which will likely mean that it is down,
                 if self.keep_running:
                     _gevent_sleep(2)
 
-        if always_log_when_connected or err_conn_attempts > 0:
-            base_msg = 'Created an AMQP consumer for channel `%s` for queue=%s -> `%s`'
-            if err_conn_attempts > 0:
+        has_errors = err_conn_attempts > 0
+
+        if always_log_when_connected or has_errors:
+            base_msg = f'Created an AMQP consumer for channel `{self.name}` -> queue=`{self.config.queue}` -> `{self.config.conn_url}`'
+            if has_errors:
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-                logger.info(base_msg + ' after %s failed %s', self.name, self.config.queue, self.config.conn_url, err_conn_attempts, noun)
+                logger.info(f'{base_msg} after {err_conn_attempts} failed {noun}')
             else:
-                logger.info(base_msg, self.name, self.config.queue, self.config.conn_url)
+                logger.info(base_msg)
 
         return consumer
 
@@ -304,7 +309,8 @@ class Consumer:
 
                             # .. if yes, first log what'we doing ..
                             logger.info(
-                                'Closing and reconnecting a lost connection for queue=%s -> `%s` -> %s',
+                                'Closing and reconnecting a lost connection for channel=`%s` -> queue=`%s` -> `%s` -> %s',
+                                self.name,
                                 self.config.queue,
                                 connection.as_uri(),
                                 e,
