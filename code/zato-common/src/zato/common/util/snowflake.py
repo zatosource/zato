@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import _thread
 import os
 import platform
+import random
 import string
 from threading import RLock
 
@@ -27,6 +28,10 @@ if 0:
 
 # Timestamp precision multiplier for 100-microsecond granularity
 _Timestamp_Precision_Multiplier = 10000
+
+# Random sequence configuration
+_Sequence_Length = 4
+_Sequence_Chars = string.digits + string.ascii_lowercase
 
 # Module-level storage for OS thread generators
 _generators:'anydict' = {}
@@ -46,9 +51,16 @@ class SnowflakeGenerator:
         # .. create a reentrant lock for thread safety ..
         self.lock = RLock()
 
-        # .. initialize timestamp and sequence tracking.
+        # .. initialize timestamp and random sequence tracking.
         self.last_timestamp = 0
-        self.sequence = 1
+        self.used_sequences = set()
+
+# ################################################################################################################################
+
+    def _generate_sequence(self) -> 'str':
+        """ Generate a random 4-character alphanumeric sequence.
+        """
+        return ''.join(random.choice(_Sequence_Chars) for _ in range(_Sequence_Length))
 
 # ################################################################################################################################
 
@@ -56,12 +68,12 @@ class SnowflakeGenerator:
         """ Generate a new snowflake ID in format YYYYMMDD-HHMMSS-ssss-[prefix]rrrr-mmm.
 
         Where:
-            rrrr = 4-character hexadecimal sequence counter
+            rrrr = 4-character random alphanumeric sequence
             mmm = variable-length machine/instance identifier
             prefix = prefix for sequence component
 
         Args:
-            prefix: Prefix to prepend to sequence counter
+            prefix: Prefix to prepend to sequence component
         """
         with self.lock:
 
@@ -74,16 +86,21 @@ class SnowflakeGenerator:
             # .. check if we are in the same 100-microsecond window as the last call ..
             if current_timestamp == self.last_timestamp:
 
-                # .. if so, increment the sequence ..
-                self.sequence += 1
-
-                # .. but raise an exception if it overflows ..
-                if self.sequence > 65535:
-                    raise Exception('Sequence overflow: too many IDs generated in same 100-microsecond window')
+                # .. generate a unique random sequence for this window ..
+                max_attempts = 1000
+                for _ in range(max_attempts):
+                    sequence = self._generate_sequence()
+                    if sequence not in self.used_sequences:
+                        self.used_sequences.add(sequence)
+                        break
+                else:
+                    raise Exception('Sequence collision: unable to generate unique sequence in 100-microsecond window')
             else:
 
-                # .. we are in a new 100-microsecond window so reset the sequence ..
-                self.sequence = 1
+                # .. we are in a new 100-microsecond window so reset the used sequences ..
+                self.used_sequences.clear()
+                sequence = self._generate_sequence()
+                self.used_sequences.add(sequence)
                 self.last_timestamp = current_timestamp
 
             # Generate date component ..
@@ -105,7 +122,7 @@ class SnowflakeGenerator:
             machine_part = self.machine_id
 
             # .. format the final sequence part with optional prefix ..
-            sequence_part = f'{prefix}{self.sequence:04x}'
+            sequence_part = f'{prefix}{sequence}'
 
             # .. build the complete ID ..
             result = f'{date_part}-{time_part}-{subsecond_part}-{sequence_part}'
@@ -184,19 +201,19 @@ def new_snowflake(prefix:'str', needs_machine_id:'bool'=True) -> 'str':
 
     Format: YYYYMMDD-HHMMSS-ssss-[prefix]rrrr[-mmm]
     Where:
-        rrrr = 4-character hexadecimal sequence counter
+        rrrr = 4-character random alphanumeric sequence
         mmm = variable-length machine/instance identifier (optional)
         prefix = prefix for sequence component
 
     Args:
-        prefix: Prefix to prepend to sequence counter
+        prefix: Prefix to prepend to sequence component
         needs_machine_id: If True, include machine ID. If False, omit machine ID.
 
     Returns:
         Snowflake ID string
 
     Raises:
-        Exception: If sequence overflows
+        Exception: If sequence collision occurs
     """
     # Handle machine_id parameter ..
     if needs_machine_id:
