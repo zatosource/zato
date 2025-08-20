@@ -89,6 +89,34 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
+def _close_amqp_transport(connection:'PyAMQPConnection') -> 'bool':
+    """ Closes the underlying AMQP transport.
+    """
+    if connection._transport:
+        connection._transport.close()
+
+    # Clear channels
+    if connection.channels:
+
+        # Make a copy because we'll be modifying a dictionary during iteration
+        channels = [item for item in connection.channels.values() if item is not connection]
+
+        for channel in channels:
+            try:
+                channel.collect()
+            except Exception:
+                pass
+
+    # If we're here, it means there was no exception above, which means we really can indicate the connection is closed.
+    connection._transport = None
+    connection.connection = None
+    connection.channels = None
+
+    # .. tell our caller that everything went fine.
+    return True
+
+# ################################################################################################################################
+
 def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') -> 'None':
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
@@ -112,12 +140,11 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
             logger.warning('BBB-3 %s', is_closed)
             try:
                 logger.warning('BBB-4 %s', is_closed)
-                raise Exception('CCC')
-                #connection.transport.close_connection(connection._connection)
+                # raise Exception('CCC')
+                is_closed = _close_amqp_transport(connection._connection)
                 logger.warning('BBB-5 %s', is_closed)
-                is_closed = True
                 logger.warning('BBB-6 %s', is_closed)
-            except (Exception, OSError, BrokenPipeError) as e:
+            except Exception:
                 logger.warning('BBB-7 %s', is_closed)
                 tb = ''.join(format_tb(sys.exc_info()[2]))
                 logger.warning('BBB-8 %s', is_closed)
