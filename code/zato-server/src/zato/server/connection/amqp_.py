@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import sys
 from datetime import timedelta
 from logging import getLogger
 from socket import error as socket_error
-from traceback import format_exc
+from traceback import format_exc, format_tb
 
 # amqp
 from amqp.exceptions import ConsumerCancelled
@@ -88,7 +89,7 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
-def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int') -> 'None':
+def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') -> 'None':
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
 
@@ -98,7 +99,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int'
 
     if connection._connection:
         start_time = utcnow()
-        until = start_time + timedelta(seconds=timeout)
+        until = start_time + timedelta(seconds=max_wait_time)
         attempt = 0
 
         while utcnow() < until:
@@ -106,8 +107,10 @@ def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int'
             try:
                 connection.transport.close_connection(connection._connection)
                 break
-            except (Exception, OSError):
-                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), format_exc())
+            except (Exception, OSError, BrokenPipeError) as e:
+                tb = ''.join(format_tb(sys.exc_info()[2]))
+                tb += repr(e)
+                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), tb)
                 sleep(5)
                 continue
 
@@ -115,13 +118,18 @@ def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int'
 
 # ################################################################################################################################
 
-def close_connection(connection:'KombuAMQPConnection', timeout:'float | int'=5.0) -> 'None':
+def close_connection(connection:'KombuAMQPConnection', max_wait_time:'int'=100_00_000) -> 'None':
     """ Closes a kombu Connection.
     """
-    _do_close_connection(connection, timeout)
+    logger.warning('AAA-1')
+    _do_close_connection(connection, max_wait_time)
+    logger.warning('AAA-2')
     connection._do_close_transport()
+    logger.warning('AAA-3')
     connection._debug('closed')
+    logger.warning('AAA-4')
     connection._closed = True
+    logger.warning('AAA-5')
 
 # ################################################################################################################################
 
