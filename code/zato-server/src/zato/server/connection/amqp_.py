@@ -88,7 +88,7 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
-def _do_close_connection(connection:'KombuAMQPConnection', timeout) -> 'None':
+def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int') -> 'None':
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
 
@@ -115,7 +115,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', timeout) -> 'None':
 
 # ################################################################################################################################
 
-def close_connection(connection:'KombuAMQPConnection', timeout:'float'=5.0) -> 'None':
+def close_connection(connection:'KombuAMQPConnection', timeout:'float | int'=5.0) -> 'None':
     """ Closes a kombu Connection.
     """
     _do_close_connection(connection, timeout)
@@ -357,7 +357,7 @@ class Consumer:
                             had_log = True
 
                             # .. now close it ..
-                            _ = connection.close()
+                            close_connection(connection)
 
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
@@ -399,7 +399,7 @@ class Consumer:
                 logger.debug('Closing connection for `%s`', consumer)
 
                 # .. and do close it ..
-                connection.close()
+                close_connection(connection)
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
@@ -490,7 +490,7 @@ class ConnectorAMQP(Connector):
         # that the connection will work now but then it won't when it's needed but this is unrelated to the fact
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
-        test_conn.close()
+        close_connection(test_conn)
 
 # ################################################################################################################################
 
