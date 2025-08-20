@@ -92,8 +92,15 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 def _close_amqp_transport(connection:'PyAMQPConnection') -> 'bool':
     """ Closes the underlying AMQP transport.
     """
+    print()
+    print('CCC-1', connection)
+    print('CCC-2', type(connection))
+    print()
+
     if connection._transport:
         connection._transport.close()
+
+    print('CCC-1', connection)
 
     # Clear channels
     if connection.channels:
@@ -106,14 +113,6 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'bool':
                 channel.collect()
             except Exception:
                 pass
-
-    # If we're here, it means there was no exception above, which means we really can indicate the connection is closed.
-    connection._transport = None
-    connection.connection = None
-    connection.channels = None
-
-    # .. tell our caller that everything went fine.
-    return True
 
 # ################################################################################################################################
 
@@ -141,10 +140,10 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
             try:
                 logger.warning('BBB-4 %s', is_closed)
                 # raise Exception('CCC')
-                is_closed = _close_amqp_transport(connection._connection)
+                _close_amqp_transport(connection._connection)
                 logger.warning('BBB-5 %s', is_closed)
                 logger.warning('BBB-6 %s', is_closed)
-            except Exception:
+            except Exception as e:
                 logger.warning('BBB-7 %s', is_closed)
                 tb = ''.join(format_tb(sys.exc_info()[2]))
                 logger.warning('BBB-8 %s', is_closed)
@@ -154,6 +153,14 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
                 logger.warning('BBB-10 %s', is_closed)
                 sleep(1)
                 logger.warning('BBB-11 %s', is_closed)
+            else:
+
+                # If we're here, it means there was no exception above, which means we really can indicate the connection is closed.
+                logger.warning('BBB-11-01 %s', is_closed)
+                connection._transport = None
+                connection.connection = None
+                connection.channels = None
+                logger.warning('BBB-11-02 %s', is_closed)
 
         logger.warning('BBB-12 %s', is_closed)
         connection._connection = None
