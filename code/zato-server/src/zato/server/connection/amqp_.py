@@ -106,7 +106,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', timeout:'float | int'
             try:
                 connection.transport.close_connection(connection._connection)
                 break
-            except connection.connection_errors + (AttributeError, socket_error) as e:
+            except (Exception, OSError):
                 logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), format_exc())
                 sleep(5)
                 continue
