@@ -34,6 +34,7 @@ from zato.server.connection.connector import Connector, Inactive
 # ################################################################################################################################
 
 if 0:
+    from amqp.transport import TCPTransport
     from bunch import Bunch
     from kombu.connection import Connection as KombuAMQPConnection
     from kombu.messaging import Producer as KombuProducer
@@ -93,7 +94,15 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
     """ Closes the underlying AMQP transport.
     """
+    # Local variables
+    transport:'TCPTransport | None' = connection._transport
+
     connection.is_closing = True
+
+    print()
+    print('DDD-1', transport)
+    print('DDD-2', type(transport))
+    print()
 
     # Send close method to broker
     argsig = 'BsBB'
@@ -101,15 +110,18 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
     reply_text = 'Normal shutdown'
     method_sig = (0, 0)
 
-    _ = connection.send_method(
-        spec.Connection.Close, argsig,
-        (reply_code, reply_text, method_sig[0], method_sig[1]),
-        wait=spec.Connection.CloseOk,
-    )
+    try:
+        _ = connection.send_method(
+            spec.Connection.Close, argsig,
+            (reply_code, reply_text, method_sig[0], method_sig[1]),
+            wait=spec.Connection.CloseOk,
+        )
+    except BrokenPipeError:
+        pass
 
     # Close transport
-    if connection._transport:
-        connection._transport.close()
+    if transport:
+        transport.close()
 
     # Close channels
     if connection.channels:
@@ -149,7 +161,8 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
             try:
                 logger.warning('BBB-4 %s', is_closed)
                 # raise Exception('CCC')
-                _close_amqp_transport(connection._connection)
+                # _close_amqp_transport(connection._connection)
+                connection._connection.close()
                 logger.warning('BBB-5 %s', is_closed)
                 logger.warning('BBB-6 %s', is_closed)
             except Exception as e:
@@ -175,6 +188,8 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
         logger.warning('BBB-12 %s', is_closed)
         connection._connection = None
         logger.warning('BBB-13 %s', is_closed)
+
+_close_amqp_transport = _close_amqp_transport
 
 # ################################################################################################################################
 
@@ -320,9 +335,19 @@ class Consumer:
                 break
 
             try:
-                conn = self.config.conn_class(self.config.conn_url)
+                conn:'KombuAMQPConnection' = self.config.conn_class(self.config.conn_url)
+
+                print()
+                print('NNN-1', conn)
+                print('NNN-2', type(conn))
+                print()
+
 
                 tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer'))
+
+                print()
+                print('VVV-1')
+                print()
 
                 consumer = KombuConsumer(
                     conn,
@@ -331,15 +356,24 @@ class Consumer:
                     no_ack=_no_ack[self.config.ack_mode],
                     tag_prefix=tag_prefix
                 )
+                print()
+                print('VVV-2')
+                print()
                 _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
+                print()
+                print('VVV-3')
+                print()
                 consumer.consume()
+                print()
+                print('VVV-4')
+                print()
             except Exception as e:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info(
                     f'Could not create an AMQP consumer for channel `{self.name}` ' +
                     f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> ' +
-                    f'`{self.config.conn_url}`, e:`{e}`'
+                    f'`{self.config.conn_url}`, e:`{format_exc()}`'
                 )
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
@@ -425,7 +459,8 @@ class Consumer:
                             had_log = True
 
                             # .. now close it ..
-                            close_connection(connection)
+                            # close_connection(connection)
+                            _ = connection.close()
 
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
@@ -467,7 +502,8 @@ class Consumer:
                 logger.debug('Closing connection for `%s`', consumer)
 
                 # .. and do close it ..
-                close_connection(connection)
+                # close_connection(connection)
+                _ = connection.close()
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
@@ -547,7 +583,7 @@ class ConnectorAMQP(Connector):
 
         self.is_connected = True
 
-        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
+        test_conn:'KombuAMQPConnection' = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
         _ = test_conn.connect()
         self.is_connected = test_conn.connected
 
@@ -558,7 +594,9 @@ class ConnectorAMQP(Connector):
         # that the connection will work now but then it won't when it's needed but this is unrelated to the fact
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
-        close_connection(test_conn)
+
+        # close_connection(test_conn)
+        _ = test_conn.close()
 
 # ################################################################################################################################
 
