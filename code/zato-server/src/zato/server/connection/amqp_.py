@@ -232,8 +232,8 @@ class Consumer:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info(
-                    f'Could not create an AMQP consumer for channel `{self.name}` '
-                    f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> '
+                    f'Could not create an AMQP consumer for channel `{self.name}` ' +
+                    f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> ' +
                     f'`{self.config.conn_url}`, e:`{e}`'
                 )
 
@@ -252,7 +252,7 @@ class Consumer:
             else:
                 logger.info(base_msg)
 
-        return consumer
+        return consumer # type: ignore
 
 # ################################################################################################################################
 
