@@ -93,6 +93,8 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
 
+    is_closed = False
+
     connection.declared_entities.clear() # type: ignore
     if connection._default_channel:
         connection.maybe_close_channel(connection._default_channel)
@@ -102,19 +104,33 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
         until = start_time + timedelta(seconds=max_wait_time)
         attempt = 0
 
-        while utcnow() < until:
-            attempt += 1
-            try:
-                connection.transport.close_connection(connection._connection)
-                break
-            except (Exception, OSError, BrokenPipeError) as e:
-                tb = ''.join(format_tb(sys.exc_info()[2]))
-                tb += repr(e)
-                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), tb)
-                sleep(5)
-                continue
+        logger.warning('BBB-1 Will retry until %s (start is %s)', until, start_time)
 
+        while not is_closed:
+            logger.warning('BBB-2 %s', is_closed)
+            attempt += 1
+            logger.warning('BBB-3 %s', is_closed)
+            try:
+                logger.warning('BBB-4 %s', is_closed)
+                raise Exception('CCC')
+                #connection.transport.close_connection(connection._connection)
+                logger.warning('BBB-5 %s', is_closed)
+                is_closed = True
+                logger.warning('BBB-6 %s', is_closed)
+            except (Exception, OSError, BrokenPipeError) as e:
+                logger.warning('BBB-7 %s', is_closed)
+                tb = ''.join(format_tb(sys.exc_info()[2]))
+                logger.warning('BBB-8 %s', is_closed)
+                tb += repr(e)
+                logger.warning('BBB-9 %s', is_closed)
+                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), tb)
+                logger.warning('BBB-10 %s', is_closed)
+                sleep(1)
+                logger.warning('BBB-11 %s', is_closed)
+
+        logger.warning('BBB-12 %s', is_closed)
         connection._connection = None
+        logger.warning('BBB-13 %s', is_closed)
 
 # ################################################################################################################################
 
