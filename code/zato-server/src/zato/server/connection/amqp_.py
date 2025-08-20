@@ -88,6 +88,21 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
+def _do_close_connection(connection:'KombuAMQPConnection') -> 'None':
+    pass
+
+# ################################################################################################################################
+
+def close_connection(connection:'KombuAMQPConnection') -> 'None':
+    """ Closes a kombu Connection.
+    """
+    _do_close_connection(connection)
+    connection._do_close_transport()
+    connection._debug('closed')
+    connection._closed = True
+
+# ################################################################################################################################
+
 class _AMQPMessage:
     __slots__ = ('body', 'impl')
 
@@ -290,10 +305,10 @@ class Consumer:
                     while self.keep_running:
                         try:
                             connection.drain_events(timeout=self.timeout)
-                        except TimeoutError:
+                        except TimeoutError as e:
                             # .. this is as expected and we can ignore it, because we just haven't received anything
                             # .. from the underlying TCP socket within timeout seconds ..
-                            pass
+                            logger.warning('TIME OUT timeout=%s %s', self.timeout, e)
                         except ConsumerCancelled as e:
                             logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', connection.as_uri(), e.message)
 
@@ -313,7 +328,7 @@ class Consumer:
                                 self.name,
                                 self.config.queue,
                                 connection.as_uri(),
-                                e,
+                                format_exc(),
                             )
 
                             # .. indicate we've already logged a message about it ..
