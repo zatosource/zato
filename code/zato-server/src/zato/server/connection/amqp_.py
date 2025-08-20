@@ -88,15 +88,37 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
-def _do_close_connection(connection:'KombuAMQPConnection') -> 'None':
-    pass
+def _do_close_connection(connection:'KombuAMQPConnection', timeout) -> 'None':
+    """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
+    """
+
+    connection.declared_entities.clear() # type: ignore
+    if connection._default_channel:
+        connection.maybe_close_channel(connection._default_channel)
+
+    if connection._connection:
+        start_time = utcnow()
+        until = start_time + timedelta(seconds=timeout)
+        attempt = 0
+
+        while utcnow() < until:
+            attempt += 1
+            try:
+                connection.transport.close_connection(connection._connection)
+                break
+            except connection.connection_errors + (AttributeError, socket_error) as e:
+                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), format_exc())
+                sleep(5)
+                continue
+
+        connection._connection = None
 
 # ################################################################################################################################
 
-def close_connection(connection:'KombuAMQPConnection') -> 'None':
+def close_connection(connection:'KombuAMQPConnection', timeout:'float'=5.0) -> 'None':
     """ Closes a kombu Connection.
     """
-    _do_close_connection(connection)
+    _do_close_connection(connection, timeout)
     connection._do_close_transport()
     connection._debug('closed')
     connection._closed = True
