@@ -3,6 +3,7 @@ apispec==6.8.2
 arrow==1.3.0
 asn1crypto==1.5.1
 atlassian-python-api==4.0.4
+beautifulsoup4==4.13.4
 boto3==1.38.18
 cffi==1.17.1
 chardet==5.2.0
