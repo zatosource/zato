@@ -137,6 +137,10 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
 
+    # Local aliases
+    conn_as_uri = connection.as_uri()
+
+    # When set to True, it will indicate that we managed to close the connection
     is_closed = False
 
     connection.declared_entities.clear() # type: ignore
@@ -157,7 +161,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
             except Exception as e:
                 tb = ''.join(format_tb(sys.exc_info()[2]))
                 tb += repr(e)
-                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), tb)
+                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, conn_as_uri, tb)
                 sleep(1)
             else:
 
