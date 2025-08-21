@@ -302,7 +302,7 @@ class Consumer:
         """ Creates a new connection and consumer to an AMQP broker.
         """
 
-        logger.debug('Creating a new consumer -> %s', self.config.conn_url)
+        logger.debug(f'Creating a new consumer -> {self.config.conn_url}')
 
         # First, close any previous consumers we may have created and which are left over,
         # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
@@ -407,9 +407,9 @@ class Consumer:
                             # .. from the underlying TCP socket within timeout seconds, but if there's an errno to show, ..
                             # .. it means the connection really was broken, so we can log that ..
                             if e.errno:
-                                logger.info('Timeout error in %s -> %s', conn_as_uri, e.message)
+                                logger.info(f'Timeout error in {conn_as_uri} -> {e.message}')
                         except ConsumerCancelled as e:
-                            logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', conn_as_uri, e.message)
+                            logger.info(f'Consumer cancelled, closing connection to `{conn_as_uri}` -> `{e.message}`')
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
                 except Exception as e:
@@ -423,11 +423,7 @@ class Consumer:
 
                             # .. if yes, first log what'we doing ..
                             logger.info(
-                                'Closing and reconnecting a lost connection for channel=`%s` -> queue=`%s` -> `%s` -> %s',
-                                self.name,
-                                self.config.queue,
-                                conn_as_uri,
-                                format_exc(),
+                                f'Closing and reconnecting a lost connection for channel=`{self.name}` -> queue=`{self.config.queue}` -> `{conn_as_uri}` -> {format_exc()}'
                             )
 
                             # .. indicate we've already logged a message about it ..
@@ -440,10 +436,7 @@ class Consumer:
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
                             logger.info(
-                                'Reconnecting to queue=%s -> `%s` -> %s',
-                                self.config.queue,
-                                format_exc(),
-                                conn_as_uri,
+                                f'Reconnecting to queue={self.config.queue} -> `{format_exc()}` -> {conn_as_uri}'
                             )
 
                         # .. and connect again ..
@@ -474,7 +467,7 @@ class Consumer:
             if connection:
 
                 # .. log what we're about to do ..
-                logger.debug('Closing connection for `%s`', consumer)
+                logger.debug(f'Closing connection for `{consumer}`')
 
                 # .. and do close it ..
                 # close_connection(connection)
@@ -483,7 +476,7 @@ class Consumer:
             self.is_stopped = True # Set to True if we break out of the main loop.
 
         except Exception:
-            logger.warning('Unrecoverable exception in consumer, e:`%s`', format_exc())
+            logger.warning(f'Unrecoverable exception in consumer, e:`{format_exc()}`')
 
 # ################################################################################################################################
 
@@ -511,7 +504,7 @@ class Consumer:
                 return
 
             # If we get here it means that we did not stop in the time expected, raise an exception in that case.
-            raise Exception('Consumer for channel `{}` did not stop in the expected time of {}s.'.format(self.name, delta))
+            raise Exception(f'Consumer for channel `{self.name}` did not stop in the expected time of {delta}s.')
 
 # ################################################################################################################################
 
@@ -689,9 +682,9 @@ class ConnectorAMQP(Connector):
             try:
                 producer.stop()
             except Exception:
-                logger.warning('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc())
+                logger.warning(f'Could not stop AMQP producer `{producer.name}`, e:`{format_exc()}`')
             else:
-                logger.info('Stopped producer for outconn `%s` in AMQP connector `%s`', producer.name, self.config.name)
+                logger.info(f'Stopped producer for outconn `{producer.name}` in AMQP connector `{self.config.name}`')
 
 # ################################################################################################################################
 
@@ -712,7 +705,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._create_channel(config)
 
-        logger.info('Started AMQP channel `%s` -> %s', config.name, self.get_log_details())
+        logger.info(f'Started AMQP channel `{config.name}` -> {self.get_log_details()}')
 
 # ################################################################################################################################
 
@@ -723,8 +716,8 @@ class ConnectorAMQP(Connector):
             self._delete_channel(config)
             self._create_channel(config)
 
-        old_name = ' ({})'.format(config.old_name) if config.old_name != config.name else ''
-        logger.info('Updated AMQP channel `%s` -> `%s` -> %s', old_name or config.name, config.name, self.get_log_details())
+        old_name = f' ({config.old_name})' if config.old_name != config.name else ''
+        logger.info(f'Updated AMQP channel `{old_name or config.name}` -> `{config.name}` -> {self.get_log_details()}')
 
 # ################################################################################################################################
 
@@ -746,11 +739,9 @@ class ConnectorAMQP(Connector):
                 if idx % progress_after == 0:
                     if idx != total:
                         logger.info(
-                            'Stopped %s/%s %s for channel `%s` in AMQP connector `%s`', idx, total, noun, config.name,
-                            self.config.name)
+                            f'Stopped {idx}/{total} {noun} for channel `{config.name}` in AMQP connector `{self.config.name}`')
 
-            logger.info('Stopped %s/%s %s for channel `%s` in AMQP connector `%s`',
-                total, total, noun, config.name, self.config.name)
+            logger.info(f'Stopped {total}/{total} {noun} for channel `{config.name}` in AMQP connector `{self.config.name}`')
 
             del self._consumers[config.name]
 
@@ -767,7 +758,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._delete_channel(config)
 
-        logger.info('Deleted AMQP channel `%s` -> `%s`', config.name, self.get_log_details())
+        logger.info(f'Deleted AMQP channel `{config.name}` -> `{self.get_log_details()}`')
 
 # ################################################################################################################################
 
@@ -785,7 +776,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._create_outconn(config)
 
-        logger.info('Added outconn `%s` to AMQP connector `%s`', config.name, self.config.name)
+        logger.info(f'Added outconn `{config.name}` to AMQP connector `{self.config.name}`')
 
 # ################################################################################################################################
 
@@ -796,8 +787,8 @@ class ConnectorAMQP(Connector):
             self._delete_outconn(config)
             self._create_outconn(config)
 
-        old_name = ' ({})'.format(config.old_name) if config.old_name != config.name else ''
-        logger.info('Updated outconn `%s`%s in AMQP connector `%s`', config.name, old_name, config.def_name)
+        old_name = f' ({config.old_name})' if config.old_name != config.name else ''
+        logger.info(f'Updated outconn `{config.name}`{old_name} in AMQP connector `{config.def_name}`')
 
 # ################################################################################################################################
 
@@ -819,7 +810,7 @@ class ConnectorAMQP(Connector):
         with self.lock:
             self._delete_outconn(config)
 
-        logger.info('Deleted outconn `%s` from AMQP connector `%s`', config.name, self.config.name)
+        logger.info(f'Deleted outconn `{config.name}` from AMQP connector `{self.config.name}`')
 
 # ################################################################################################################################
 
@@ -841,7 +832,7 @@ class ConnectorAMQP(Connector):
 
         # Don't do anything if this connection is not active
         if not outconn_config['is_active']:
-            raise Inactive('Connection is inactive `{}` ({})'.format(out_name, self._get_conn_string(False)))
+            raise Inactive(f'Connection is inactive `{out_name}` ({self._get_conn_string(False)})')
 
         acquire_block = kwargs.pop('acquire_block', True)
         acquire_timeout = kwargs.pop('acquire_block', None)
