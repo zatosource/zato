@@ -309,11 +309,11 @@ class ConsumerManager:
         self.host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
         self.management_port = 15672
         self.auth = (broker_config.username, broker_config.password)
+        self.ignore_prefixes = ['zato-reply']
 
     def get_consumers(self, queue_name: 'str') -> 'list':
         """ Get the list of consumers for a given queue.
         """
-        logger.info(f'[{self.cid}] get_consumers called for queue: {queue_name}')
 
         # URL encode the vhost and queue name
         encoded_vhost = quote(self.broker_config.vhost, safe='')
@@ -329,11 +329,12 @@ class ConsumerManager:
                 queue_info = response.json()
                 consumers = queue_info['consumer_details']
                 consumer_count = len(consumers)
-                consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: {queue_name}')
+                if consumer_count > 0:
+                    consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
+                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: {queue_name}')
                 return consumers
             elif response.status_code == NOT_FOUND:
-                logger.info(f'[{self.cid}] No consumers found for queue: {queue_name}')
+                logger.debug(f'[{self.cid}] No consumers found for queue: {queue_name}')
                 return []
             else:
                 error_msg = f'[{self.cid}] Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
@@ -350,10 +351,15 @@ class ConsumerManager:
     def close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
-        consumers = self.get_consumers(queue_name)
 
+        for prefix in self.ignore_prefixes:
+            if queue_name.startswith(prefix):
+                logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: {queue_name}')
+                return
+
+        consumers = self.get_consumers(queue_name)
         if not consumers:
-            logger.info(f'[{self.cid}] No consumers to close for queue: {queue_name}')
+            logger.debug(f'[{self.cid}] No consumers to close for queue: {queue_name}')
             return
 
         for consumer in consumers:
