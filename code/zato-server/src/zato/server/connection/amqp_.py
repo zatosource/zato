@@ -152,7 +152,7 @@ def _do_close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_t
         until = start_time + timedelta(seconds=max_wait_time)
         attempt = 0
 
-        logger.debug('Will retry until %s (start is %s)', until, start_time)
+        logger.debug(f'Will retry until {until} (start is {start_time})')
 
         while not is_closed:
             attempt += 1
@@ -161,7 +161,7 @@ def _do_close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_t
             except Exception as e:
                 tb = ''.join(format_tb(sys.exc_info()[2]))
                 tb += repr(e)
-                logger.info('[%s], Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', cid, attempt, conn_as_uri, tb)
+                logger.info(f'[{cid}], Could not close AMQP connection ({attempt} attempt so far) -> `{conn_as_uri}`, e:`{tb}`')
                 sleep(1)
             else:
 
