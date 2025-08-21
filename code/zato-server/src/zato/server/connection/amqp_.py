@@ -423,7 +423,8 @@ class Consumer:
 
                             # .. if yes, first log what'we doing ..
                             logger.info(
-                                f'Closing and reconnecting a lost connection for channel=`{self.name}` -> queue=`{self.config.queue}` -> `{conn_as_uri}` -> {format_exc()}'
+                                f'Closing and reconnecting a lost connection for channel=`{self.name}` -> ' +
+                                f'queue=`{self.config.queue}` -> `{conn_as_uri}` -> {format_exc()}'
                             )
 
                             # .. indicate we've already logged a message about it ..
@@ -436,7 +437,8 @@ class Consumer:
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
                             logger.info(
-                                f'Reconnecting to queue={self.config.queue} -> `{format_exc()}` -> {conn_as_uri}'
+                                f'Reconnecting to queue={self.config.queue} -> ' +
+                                f'`{format_exc()}` -> {conn_as_uri}'
                             )
 
                         # .. and connect again ..
