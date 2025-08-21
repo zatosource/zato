@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import NO_CONTENT, OK
+from http.client import NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
 from urllib.parse import quote
 
@@ -329,6 +329,9 @@ class ConsumerManager:
                 consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
                 logger.info(f'Found {consumer_count} {consumer_word} for queue: {queue_name}')
                 return consumers
+            elif response.status_code == NOT_FOUND:
+                logger.info(f'No consumers found for queue: {queue_name}')
+                return []
             else:
                 error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
                 logger.error(error_msg)
