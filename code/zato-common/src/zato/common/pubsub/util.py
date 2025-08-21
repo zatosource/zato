@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from http.client import NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
-from traceback import format_exc
 from urllib.parse import quote
 
 # Requests
@@ -20,12 +19,13 @@ from requests.exceptions import RequestException
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.common import BrokerConfig
-from zato.common.util.api import utcnow, wait_for_predicate
+from zato.common.util.api import as_bool, utcnow, wait_for_predicate
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,7 +177,8 @@ def evaluate_pattern_match(session, sec_base_name:'str', sec_base_id:'int', clus
 def create_subscription_bindings(broker_client, cid:'str', sub_key:'str', exchange_name:'str', topic_name:'str') -> 'None':
     """ Create AMQP bindings for a subscription.
     """
-    logger.debug(f'[{cid}] Creating AMQP bindings: sub_key={sub_key}, exchange={exchange_name}, topic={topic_name}')
+    if _needs_details:
+        logger.info(f'[{cid}] Creating AMQP bindings: sub_key={sub_key}, exchange={exchange_name}, topic={topic_name}')
     broker_client.create_bindings(cid, sub_key, exchange_name, sub_key, topic_name)
 
 # ################################################################################################################################
@@ -330,18 +331,23 @@ class ConsumerManager:
         try:
             response = requests.get(api_url, auth=self.auth, timeout=self.request_timeout)
 
-            logger.info(f'[{self.cid}] Get Consumers response -> {response.json()}')
+            if _needs_details:
+                logger.info(f'[{self.cid}] Get Consumers response -> {response.json()}')
 
             if response.status_code == OK:
                 queue_info = response.json()
                 consumers = queue_info['consumer_details']
                 consumer_count = len(consumers)
+
                 if consumer_count > -1:
                     consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}`')
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}`')
                 return consumers
+
             elif response.status_code == NOT_FOUND:
-                logger.debug(f'[{self.cid}] No consumers found for queue: `{queue_name}`')
+                if _needs_details:
+                    logger.info(f'[{self.cid}] No consumers found for queue: `{queue_name}`')
                 return []
             else:
                 error_msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}`: {response.status_code}, `{response.text}`'
@@ -361,13 +367,15 @@ class ConsumerManager:
 
         for prefix in self.ignore_prefixes:
             if queue_name.startswith(prefix):
-                logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
+                if _needs_details:
+                    logger.info(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
         consumers = self.get_consumers_by_rest_api(queue_name)
 
         if not consumers:
-            logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
+            if _needs_details:
+                logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
             return
 
         for consumer in consumers:
@@ -376,8 +384,9 @@ class ConsumerManager:
             consumer_tag = consumer['consumer_tag']
 
             if not connection_name:
-                msg = f'[{self.cid}] No connection_name in channel_details for consumer `{consumer_tag}` in queue `{queue_name}`'
-                logger.debug(msg)
+                if _needs_details:
+                    msg = f'[{self.cid}] No connection_name in channel_details for consumer `{consumer_tag}` in queue `{queue_name}`'
+                    logger.info(msg)
                 continue
 
             # URL encode the connection name
@@ -415,20 +424,24 @@ class ConsumerManager:
             """
             nonlocal first_response_time
 
-            logger.debug(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
+            if _needs_details:
+                logger.info(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
 
             try:
                 consumers = self.get_consumers_by_rest_api(queue_name)
-                logger.debug(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
+                if _needs_details:
+                    logger.info(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
 
                 if first_response_time is None:
                     first_response_time = utcnow()
-                    logger.debug(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
 
                 if consumers:
                     logger.info(f'[{self.cid}] Calling _close_consumers for queue: `{queue_name}`')
                     self._close_consumers(queue_name)
-                    logger.debug(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
                     return True
                 else:
 
@@ -436,14 +449,18 @@ class ConsumerManager:
                     time_diff = current_time - first_response_time
                     elapsed_seconds = time_diff.total_seconds()
 
-                    logger.debug(f'[{self.cid}] No consumers, elapsed: {elapsed_seconds}s for queue: `{queue_name}`')
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] No consumers, elapsed: {elapsed_seconds}s for queue: `{queue_name}`')
 
                     if elapsed_seconds > max_wait_time:
                         msg = f'[{self.cid}] No consumers after {max_wait_time} seconds, stopping retry for: `{queue_name}`'
-                        logger.debug(msg)
+                        if _needs_details:
+                            logger.info(msg)
                         return True
 
-                    logger.debug(f'[{self.cid}] Returning False, will retry for queue: `{queue_name}`')
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] Returning False, will retry for queue: `{queue_name}`')
+
                     return False
 
             except Exception as e:
