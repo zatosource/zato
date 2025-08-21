@@ -303,7 +303,7 @@ class ConsumerManager:
     """ Manages consumers for AMQP queues via RabbitMQ Management API.
     """
 
-    def __init__(self, broker_config:'BrokerConfig', cid:'str'=''):
+    def __init__(self, cid:'str', broker_config:'BrokerConfig'):
         self.broker_config = broker_config
         self.cid = cid
         self.host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
