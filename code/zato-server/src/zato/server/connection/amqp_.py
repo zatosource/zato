@@ -738,14 +738,15 @@ class ConnectorAMQP(Connector):
             progress_after = int(round(total * 0.05)) if total > 10 else 1
             noun = 'consumer' if total == 1 else 'consumers'
 
+            log_msg = f'Stopped {{idx}}/{total} {noun} for channel `{config.name}` in AMQP connector `{self.config.name}`'
+
             for idx, consumer in enumerate(consumers, 1):
                 consumer.stop()
                 if idx % progress_after == 0:
                     if idx != total:
-                        logger.info(
-                            f'Stopped {idx}/{total} {noun} for channel `{config.name}` in AMQP connector `{self.config.name}`')
+                        logger.info(log_msg.format(idx=idx))
 
-            logger.info(f'Stopped {total}/{total} {noun} for channel `{config.name}` in AMQP connector `{self.config.name}`')
+            logger.info(log_msg.format(idx=total))
 
             del self._consumers[config.name]
 
