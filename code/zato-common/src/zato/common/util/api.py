@@ -1651,6 +1651,9 @@ def wait_for_predicate(
     **kwargs # type: any_
 ) -> 'bool':
 
+    # Extract jitter from kwargs, default to 0.3
+    jitter = kwargs.pop('jitter', 0.3)
+
     # Try out first, perhaps it already fulfilled
     is_fulfilled = bool(predicate_func(*args, **kwargs))
 
@@ -1680,8 +1683,14 @@ def wait_for_predicate(
         # Keep looping until the predicate is fulfilled ..
         while not is_fulfilled:
 
+            # Calculate actual interval with jitter
+            random_factor = random.random()
+            jitter_multiplier = jitter * interval
+            jitter_amount = random_factor * jitter_multiplier
+            actual_interval = interval + jitter_amount
+
             # .. sleep for a moment ..
-            gevent_sleep(interval)
+            gevent_sleep(actual_interval)
 
             # .. for later use ..
             now = datetime.utcnow()
