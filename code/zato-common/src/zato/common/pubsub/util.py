@@ -355,7 +355,85 @@ class ConsumerManager:
 # ################################################################################################################################
 
     def get_consumers_by_web_scraping(self, queue_name: 'str') -> 'list':
-        pass
+        """ Get the list of consumers for a given queue by web scraping the management console.
+        """
+        from bs4 import BeautifulSoup
+
+        # URL encode the vhost and queue name
+        encoded_vhost = quote(self.broker_config.vhost, safe='')
+        encoded_queue_name = quote(queue_name, safe='')
+
+        # Build management console URL
+        console_url = f'http://{self.host}:{self.management_port}/#/queues/{encoded_vhost}/{encoded_queue_name}'
+
+        try:
+            response = requests.get(console_url, auth=self.auth, timeout=self.request_timeout)
+
+            if response.status_code == OK:
+                soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Find the consumers table
+                consumers_table = soup.find('table', {'id': 'consumers'})
+                if not consumers_table:
+                    error_msg = f'[{self.cid}] No consumers table found for queue: `{queue_name}`'
+                    logger.warning(error_msg)
+                    raise Exception(error_msg)
+
+                # Find tbody
+                tbody = consumers_table.find('tbody')
+                if not tbody:
+                    error_msg = f'[{self.cid}] No consumers tbody found for queue: `{queue_name}`'
+                    logger.warning(error_msg)
+                    raise Exception(error_msg)
+
+                consumers = []
+                rows = tbody.find_all('tr')
+
+                for row in rows:
+                    cells = row.find_all('td')
+                    if len(cells) >= 2:
+                        # Extract channel link and consumer tag
+                        channel_link = cells[0].find('a')
+                        if channel_link:
+                            channel_href = channel_link.get('href', '')
+                            channel_text = channel_link.get_text(strip=True)
+
+                            # Extract connection name from href
+                            if channel_href.startswith('#/channels/'):
+                                connection_name = channel_href.replace('#/channels/', '')
+                            else:
+                                connection_name = channel_text
+
+                            consumer_tag = cells[1].get_text(strip=True)
+
+                            # Create consumer dict in same format as REST API
+                            consumer = {
+                                'consumer_tag': consumer_tag,
+                                'channel_details': {
+                                    'connection_name': connection_name
+                                }
+                            }
+                            consumers.append(consumer)
+
+                consumer_count = len(consumers)
+                if consumer_count > 0:
+                    consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
+                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}` (web scraping)')
+
+                return consumers
+
+            elif response.status_code == NOT_FOUND:
+                logger.debug(f'[{self.cid}] No consumers found for queue: `{queue_name}` (web scraping)')
+                return []
+            else:
+                error_msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}` via web scraping: {response.status_code}, `{response.text}`'
+                logger.error(error_msg)
+                raise Exception(error_msg)
+
+        except RequestException as e:
+            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}` via web scraping: `{e}`'
+            logger.error(error_msg)
+            raise Exception(error_msg)
 
 # ################################################################################################################################
 
@@ -368,7 +446,9 @@ class ConsumerManager:
                 logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
-        consumers = self.get_consumers_by_rest_api(queue_name)
+        # consumers = self.get_consumers_by_rest_api(queue_name)
+        consumers = self.get_consumers_by_web_scraping(queue_name)
+
         if not consumers:
             logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
             return
