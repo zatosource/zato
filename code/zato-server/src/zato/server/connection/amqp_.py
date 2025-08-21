@@ -324,6 +324,16 @@ class Consumer:
 
         logger.debug('Creating a new consumer -> %s', self.config.conn_url)
 
+        from zato.common.pubsub.util import get_broker_config, get_consumers
+
+        config = get_broker_config()
+
+        response = get_consumers(config, self.config.queue)
+
+        print()
+        print('RRR-1', response)
+        print()
+
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
         # because we run in our own greenlet.
