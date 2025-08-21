@@ -19,7 +19,7 @@ from requests.exceptions import RequestException
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.common import BrokerConfig
-from zato.common.util.api import wait_for_predicate
+from zato.common.util.api import utcnow, wait_for_predicate
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -354,65 +354,6 @@ class ConsumerManager:
 
 # ################################################################################################################################
 
-    def get_consumers_by_web_scraping(self, queue_name: 'str') -> 'list':
-        """ Get the list of consumers for a given queue by calling curl subprocess.
-        """
-        import subprocess
-        import json
-
-        # URL encode the vhost and queue name
-        encoded_vhost = quote(self.broker_config.vhost, safe='')
-        encoded_queue_name = quote(queue_name, safe='')
-
-        # Build API URL with query parameters
-        base_url = f'http://{self.host}:{self.management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
-        params = '?lengths_age=60&lengths_incr=5&msg_rates_age=60&msg_rates_incr=5&data_rates_age=60&data_rates_incr=5'
-        api_url = base_url + params
-
-        # Build curl command
-        curl_cmd = [
-            'curl', '-s', '-u', f'{self.broker_config.username}:{self.broker_config.password}',
-            '-H', 'Accept: application/json',
-            '-H', f'x-vhost: {self.broker_config.vhost}',
-            api_url
-        ]
-
-        try:
-
-            logger.info('Calling curl with %s', api_url)
-
-            result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=self.request_timeout)
-
-            logger.info('Result %s', result.stdout)
-
-            if result.returncode == 0:
-                queue_info = json.loads(result.stdout)
-                consumers = queue_info.get('consumer_details', [])
-                consumer_count = len(consumers)
-                if consumer_count > 0:
-                    consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}` (web scraping)')
-                return consumers
-            else:
-                error_msg = f'[{self.cid}] Curl failed for queue `{queue_name}`: {result.stderr}'
-                logger.error(error_msg)
-                raise Exception(error_msg)
-
-        except subprocess.TimeoutExpired:
-            error_msg = f'[{self.cid}] Curl timeout for queue `{queue_name}`'
-            logger.error(error_msg)
-            raise Exception(error_msg)
-        except json.JSONDecodeError as e:
-            error_msg = f'[{self.cid}] JSON decode error for queue `{queue_name}`: {e}'
-            logger.error(error_msg)
-            raise Exception(error_msg)
-        except Exception as e:
-            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}` via web scraping: {e}'
-            logger.error(error_msg)
-            raise Exception(error_msg)
-
-# ################################################################################################################################
-
     def _close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
@@ -461,17 +402,37 @@ class ConsumerManager:
     def close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels with retry logic.
         """
+        first_response_time = None
+        max_wait_time = 60
 
         def _predicate_close_consumers() -> 'bool':
             """ Predicate function that returns True if _close_consumers succeeds without exception.
             """
+            nonlocal first_response_time
+
             try:
-                self._close_consumers(queue_name)
-                return True
+                consumers = self.get_consumers_by_rest_api(queue_name)
+
+                if first_response_time is None:
+                    first_response_time = utcnow()
+
+                if consumers:
+                    self._close_consumers(queue_name)
+                    return True
+                else:
+                    current_time = utcnow()
+                    time_diff = current_time - first_response_time
+                    elapsed_seconds = time_diff.total_seconds()
+                    if elapsed_seconds > max_wait_time:
+                        msg = f'[{self.cid}] No consumers after {max_wait_time} seconds, stopping retry for: `{queue_name}`'
+                        logger.info(msg)
+                        return True
+                    return False
+
             except Exception:
                 return False
 
-        wait_for_predicate(
+        _ = wait_for_predicate(
             _predicate_close_consumers,
             100_000_000,
             1.0,
