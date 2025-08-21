@@ -202,6 +202,7 @@ class _AMQPMessage:
 
 # ################################################################################################################################
 
+
 class Producer:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one Producer object assigned.
@@ -318,7 +319,7 @@ class Consumer:
 
         # First, close any previous consumers we may have created and which are left over,
         # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
-        self.consumer_manager.close_consumers(self.config.queue)
+         self.consumer_manager.close_consumers(self.config.queue)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
