@@ -363,8 +363,8 @@ class ConsumerManager:
         encoded_vhost = quote(self.broker_config.vhost, safe='')
         encoded_queue_name = quote(queue_name, safe='')
 
-        # Build management console URL
-        console_url = f'http://{self.host}:{self.management_port}/#/queues/{encoded_vhost}/{encoded_queue_name}'
+        # Build management console URL - remove the hash fragment as it's handled by JS
+        console_url = f'http://{self.host}:{self.management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
 
         try:
             response = requests.get(console_url, auth=self.auth, timeout=self.request_timeout)
@@ -375,14 +375,14 @@ class ConsumerManager:
                 # Find the consumers table
                 consumers_table = soup.find('table', {'id': 'consumers'})
                 if not consumers_table:
-                    error_msg = f'[{self.cid}] No consumers table found for queue: `{queue_name}`'
+                    error_msg = f'[{self.cid}] No consumers table found for queue: `{queue_name}`. Full HTML: {response.text}'
                     logger.warning(error_msg)
                     raise Exception(error_msg)
 
                 # Find tbody
                 tbody = consumers_table.find('tbody')
                 if not tbody:
-                    error_msg = f'[{self.cid}] No consumers tbody found for queue: `{queue_name}`'
+                    error_msg = f'[{self.cid}] No consumers tbody found for queue: `{queue_name}`. Full HTML: {response.text}'
                     logger.warning(error_msg)
                     raise Exception(error_msg)
 
@@ -446,8 +446,8 @@ class ConsumerManager:
                 logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
-        # consumers = self.get_consumers_by_rest_api(queue_name)
-        consumers = self.get_consumers_by_web_scraping(queue_name)
+        consumers = self.get_consumers_by_rest_api(queue_name)
+        # consumers = self.get_consumers_by_web_scraping(queue_name)
 
         if not consumers:
             logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
