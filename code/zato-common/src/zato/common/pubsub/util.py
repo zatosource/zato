@@ -313,7 +313,9 @@ class ConsumerManager:
         self.ignore_prefixes = ['zato-reply']
         self.request_timeout = 1
 
-    def get_consumers(self, queue_name: 'str') -> 'list':
+# ################################################################################################################################
+
+    def get_consumers_by_rest_api(self, queue_name: 'str') -> 'list':
         """ Get the list of consumers for a given queue.
         """
 
@@ -327,11 +329,13 @@ class ConsumerManager:
         try:
             response = requests.get(api_url, auth=self.auth, timeout=self.request_timeout)
 
+            logger.info(f'[{self.cid}] Get Consumers response -> {response.json()}')
+
             if response.status_code == OK:
                 queue_info = response.json()
                 consumers = queue_info['consumer_details']
                 consumer_count = len(consumers)
-                if consumer_count > 0:
+                if consumer_count > -1:
                     consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
                     logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}`')
                 return consumers
@@ -350,6 +354,11 @@ class ConsumerManager:
 
 # ################################################################################################################################
 
+    def get_consumers_by_page_parsin(self, queue_name: 'str') -> 'list':
+        pass
+
+# ################################################################################################################################
+
     def _close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
@@ -359,9 +368,9 @@ class ConsumerManager:
                 logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
-        consumers = self.get_consumers(queue_name)
+        consumers = self.get_consumers_by_rest_api(queue_name)
         if not consumers:
-            logger.debug(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
+            logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
             return
 
         for consumer in consumers:
