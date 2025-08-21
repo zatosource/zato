@@ -399,7 +399,7 @@ class ConsumerManager:
                 response = requests.delete(api_url, auth=self.auth, timeout=self.request_timeout)
 
                 if response.status_code in (OK, NO_CONTENT):
-                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` -> {connection_name} (`{queue_name}`)')
+                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` -> `{connection_name}` (`{queue_name}`)')
                 else:
                     msg = f'[{self.cid}] Failed to close channel `{connection_name}` for consumer `{consumer_tag}` ' + \
                            f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
@@ -407,7 +407,7 @@ class ConsumerManager:
                     raise Exception(msg)
 
             except RequestException as e:
-                msg = f'[{self.cid}] HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
+                msg = f'[{self.cid}] HTTP error closing `{connection_name}` for consumer `{consumer_tag}` ({queue_name}): {e}'
                 logger.warning(msg)
                 raise Exception(msg)
 
