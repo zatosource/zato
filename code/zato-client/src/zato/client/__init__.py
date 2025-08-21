@@ -285,6 +285,13 @@ class ServiceInvokeResponse(JSONSIOResponse):
 
     def set_data(self, payload, has_zato_env):
 
+        if keys := list(payload.keys()):
+            if len(keys) == 1:
+                root = keys[0]
+                response = payload[root]
+                payload = response['response']
+                has_zato_env = True
+
         if has_zato_env:
             payload = b64decode(payload)
             payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
