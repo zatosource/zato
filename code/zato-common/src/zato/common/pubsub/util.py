@@ -321,7 +321,9 @@ def get_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'list':
         if response.status_code == OK:
             queue_info = response.json()
             consumers = queue_info['consumer_details']
-            logger.info(f'Found {len(consumers)} consumers for queue: {queue_name}')
+            consumer_count = len(consumers)
+            consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
+            logger.info(f'Found {consumer_count} {consumer_word} for queue: {queue_name}')
             return consumers
         else:
             error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
@@ -363,8 +365,8 @@ def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
         # URL encode the connection name
         encoded_connection_name = quote(connection_name, safe='')
 
-        # Build API URL to close the channel
-        api_url = f'http://{host}:{management_port}/api/channels/{encoded_vhost}/{encoded_connection_name}/{channel_number}'
+        # Build API URL to close the connection (which closes all its channels)
+        api_url = f'http://{host}:{management_port}/api/connections/{encoded_connection_name}'
 
         try:
             response = requests.delete(api_url, auth=auth)
