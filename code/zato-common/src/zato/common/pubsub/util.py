@@ -8,11 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http.client import NO_CONTENT, OK
 from logging import getLogger
 from urllib.parse import quote
 
 # Requests
 import requests
+from requests.exceptions import RequestException
 
 # Zato
 from zato.common.api import PubSub
@@ -27,7 +29,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class ModuleCtx:
-    Max_Length = 200
+    Max_Length = OK
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -206,7 +208,7 @@ def cleanup_broker_impl(
         queues_url = f'{api_base_url}/queues/{encoded_vhost}'
         response = requests.get(queues_url, auth=auth)
 
-        if response.status_code == 200:
+        if response.status_code == OK:
             all_queues = response.json()
 
             # Process each prefix
@@ -231,7 +233,7 @@ def cleanup_broker_impl(
                         params={'if-unused': 'false', 'if-empty': 'false'}
                     )
 
-                    if delete_response.status_code in (200, 204):
+                    if delete_response.status_code in (OK, NO_CONTENT):
                         logger.info(f'Successfully removed queue: {queue_name}')
                         result['queues_removed'] += 1
                     else:
@@ -254,7 +256,7 @@ def cleanup_broker_impl(
         bindings_url = f'{api_base_url}/exchanges/{encoded_vhost}/pubsubapi/bindings/source'
         response = requests.get(bindings_url, auth=auth)
 
-        if response.status_code == 200:
+        if response.status_code == OK:
             bindings = response.json()
             binding_count = len(bindings)
             if binding_count == 1:
@@ -276,7 +278,7 @@ def cleanup_broker_impl(
                     unbind_url = f'{api_base_url}/bindings/{encoded_vhost}/e/pubsubapi/q/{queue_name}/{quote(routing_key, safe="")}'
                     delete_response = requests.delete(unbind_url, auth=auth)
 
-                    if delete_response.status_code in (200, 204):
+                    if delete_response.status_code in (OK, NO_CONTENT):
                         logger.info(f'Successfully removed binding for queue: {queue_name}')
                         result['bindings_removed'] += 1
                     else:
@@ -294,6 +296,90 @@ def cleanup_broker_impl(
         result['errors'].append(error_msg)
 
     return result
+
+# ################################################################################################################################
+
+def get_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'list':
+    """ Get the list of consumers for a given queue.
+    """
+    # Extract host from address (remove port if present)
+    host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
+
+    # URL encode the vhost and queue name
+    encoded_vhost = quote(broker_config.vhost, safe='')
+    encoded_queue_name = quote(queue_name, safe='')
+
+    # Build HTTP API URL for queue consumers
+    # Default management port is 15672
+    management_port = 15672
+    api_url = f'http://{host}:{management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
+    auth = (broker_config.username, broker_config.password)
+
+    try:
+        response = requests.get(api_url, auth=auth)
+
+        if response.status_code == OK:
+            queue_info = response.json()
+            consumers = queue_info['consumer_details']
+            logger.info(f'Found {len(consumers)} consumers for queue: {queue_name}')
+            return consumers
+        else:
+            error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
+            logger.error(error_msg)
+            raise Exception(error_msg)
+
+    except RequestException as e:
+        error_msg = f'Error getting consumers for queue {queue_name}: {e}'
+        logger.error(error_msg)
+        raise Exception(error_msg)
+
+# ################################################################################################################################
+
+def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
+    """ Close all consumers for a given queue by closing their channels.
+    """
+    consumers = get_consumers(broker_config, queue_name)
+
+    if not consumers:
+        logger.info(f'No consumers found for queue: {queue_name}')
+        return
+
+    # Extract host from address (remove port if present)
+    host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
+
+    # URL encode the vhost
+    encoded_vhost = quote(broker_config.vhost, safe='')
+
+    # Default management port is 15672
+    management_port = 15672
+    auth = (broker_config.username, broker_config.password)
+
+    for consumer in consumers:
+        channel_details = consumer['channel_details']
+        connection_name = channel_details['connection_name']
+        channel_number = channel_details['number']
+        consumer_tag = consumer['consumer_tag']
+
+        # URL encode the connection name
+        encoded_connection_name = quote(connection_name, safe='')
+
+        # Build API URL to close the channel
+        api_url = f'http://{host}:{management_port}/api/channels/{encoded_vhost}/{encoded_connection_name}/{channel_number}'
+
+        try:
+            response = requests.delete(api_url, auth=auth)
+
+            if response.status_code in (OK, NO_CONTENT):
+                logger.info(f'Successfully closed channel for consumer: {consumer_tag}')
+            else:
+                error_msg = f'Failed to close channel for consumer {consumer_tag}: {response.status_code}, {response.text}'
+                logger.error(error_msg)
+                raise Exception(error_msg)
+
+        except RequestException as e:
+            error_msg = f'Error closing channel for consumer {consumer_tag}: {e}'
+            logger.error(error_msg)
+            raise Exception(error_msg)
 
 # ################################################################################################################################
 
