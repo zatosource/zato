@@ -289,7 +289,7 @@ class Consumer:
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
         except Exception:
-            logger.warning(format_exc())
+            logger.warning(f'[{self.cid}] {format_exc()}')
 
 # ################################################################################################################################
 
@@ -302,12 +302,12 @@ class Consumer:
         """ Creates a new connection and consumer to an AMQP broker.
         """
 
-        logger.debug(f'Creating a new consumer -> {self.config.conn_url}')
+        logger.debug(f'[{self.cid}] Creating a new consumer -> {self.config.conn_url}')
 
         # First, close any previous consumers we may have created and which are left over,
         # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
         broker_config = get_broker_config()
-        consumer_manager = ConsumerManager(broker_config)
+        consumer_manager = ConsumerManager(broker_config, self.cid)
         consumer_manager.close_consumers(self.config.queue)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
@@ -340,7 +340,7 @@ class Consumer:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info(
-                    f'Could not create an AMQP consumer for channel `{self.name}` ' +
+                    f'[{self.cid}] Could not create an AMQP consumer for channel `{self.name}` ' +
                     f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> ' +
                     f'`{self.config.conn_url}`, e:`{e}`'
                 )
@@ -353,7 +353,7 @@ class Consumer:
         has_errors = err_conn_attempts > 0
 
         if always_log_when_connected or has_errors:
-            base_msg = f'Created an AMQP consumer for channel `{self.name}` -> queue=`{self.config.queue}` -> `{self.config.conn_url}`'
+            base_msg = f'[{self.cid}] Created an AMQP consumer for channel `{self.name}` -> queue=`{self.config.queue}` -> `{self.config.conn_url}`'
             if has_errors:
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info(f'{base_msg} after {err_conn_attempts} {noun}')
@@ -407,9 +407,9 @@ class Consumer:
                             # .. from the underlying TCP socket within timeout seconds, but if there's an errno to show, ..
                             # .. it means the connection really was broken, so we can log that ..
                             if e.errno:
-                                logger.info(f'Timeout error in {conn_as_uri} -> {e.message}')
+                                logger.info(f'[{self.cid}] Timeout error in {conn_as_uri} -> {e}')
                         except ConsumerCancelled as e:
-                            logger.info(f'Consumer cancelled, closing connection to `{conn_as_uri}` -> `{e.message}`')
+                            logger.info(f'[{self.cid}] Consumer cancelled, closing connection to `{conn_as_uri}` -> `{e.message}`')
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
                 except Exception as e:
@@ -423,7 +423,7 @@ class Consumer:
 
                             # .. if yes, first log what'we doing ..
                             logger.info(
-                                f'Closing and reconnecting a lost connection for channel=`{self.name}` -> ' +
+                                f'[{self.cid}] Closing and reconnecting a lost connection for channel=`{self.name}` -> ' +
                                 f'queue=`{self.config.queue}` -> `{conn_as_uri}` -> {format_exc()}'
                             )
 
@@ -437,7 +437,7 @@ class Consumer:
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
                             logger.info(
-                                f'Reconnecting to queue={self.config.queue} -> ' +
+                                f'[{self.cid}] Reconnecting to queue={self.config.queue} -> ' +
                                 f'`{format_exc()}` -> {conn_as_uri}'
                             )
 
@@ -469,7 +469,7 @@ class Consumer:
             if connection:
 
                 # .. log what we're about to do ..
-                logger.debug(f'Closing connection for `{consumer}`')
+                logger.debug(f'[{self.cid}] Closing connection for `{consumer}`')
 
                 # .. and do close it ..
                 # close_connection(connection)
@@ -478,7 +478,7 @@ class Consumer:
             self.is_stopped = True # Set to True if we break out of the main loop.
 
         except Exception:
-            logger.warning(f'Unrecoverable exception in consumer, e:`{format_exc()}`')
+            logger.warning(f'[{self.cid}] Unrecoverable exception in consumer, e:`{format_exc()}`')
 
 # ################################################################################################################################
 
@@ -506,7 +506,7 @@ class Consumer:
                 return
 
             # If we get here it means that we did not stop in the time expected, raise an exception in that case.
-            raise Exception(f'Consumer for channel `{self.name}` did not stop in the expected time of {delta}s.')
+            raise Exception(f'[{self.cid}] Consumer for channel `{self.name}` did not stop in the expected time of {delta}s.')
 
 # ################################################################################################################################
 

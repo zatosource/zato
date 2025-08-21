@@ -303,8 +303,9 @@ class ConsumerManager:
     """ Manages consumers for AMQP queues via RabbitMQ Management API.
     """
 
-    def __init__(self, broker_config: 'BrokerConfig'):
+    def __init__(self, broker_config: 'BrokerConfig', cid: 'str' = ''):
         self.broker_config = broker_config
+        self.cid = cid
         self.host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
         self.management_port = 15672
         self.auth = (broker_config.username, broker_config.password)
@@ -327,18 +328,18 @@ class ConsumerManager:
                 consumers = queue_info['consumer_details']
                 consumer_count = len(consumers)
                 consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                logger.info(f'Found {consumer_count} {consumer_word} for queue: {queue_name}')
+                logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: {queue_name}')
                 return consumers
             elif response.status_code == NOT_FOUND:
-                logger.info(f'No consumers found for queue: {queue_name}')
+                logger.info(f'[{self.cid}] No consumers found for queue: {queue_name}')
                 return []
             else:
-                error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
+                error_msg = f'[{self.cid}] Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
         except RequestException as e:
-            error_msg = f'Error getting consumers for queue {queue_name}: {e}'
+            error_msg = f'[{self.cid}] Error getting consumers for queue {queue_name}: {e}'
             logger.error(error_msg)
             raise Exception(error_msg)
 
@@ -350,7 +351,7 @@ class ConsumerManager:
         consumers = self.get_consumers(queue_name)
 
         if not consumers:
-            logger.info(f'No consumers found for queue: {queue_name}')
+            logger.info(f'[{self.cid}] No consumers found for queue: {queue_name}')
             return
 
         for consumer in consumers:
@@ -368,15 +369,15 @@ class ConsumerManager:
                 response = requests.delete(api_url, auth=self.auth)
 
                 if response.status_code in (OK, NO_CONTENT):
-                    logger.info(f'Closed consumer: {consumer_tag} ({queue_name})')
+                    logger.info(f'[{self.cid}] Closed consumer: {consumer_tag} ({queue_name})')
                 else:
-                    error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag} ' + \
+                    error_msg = f'[{self.cid}] Failed to close channel {connection_name} for consumer {consumer_tag} ' + \
                            f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
                     logger.error(error_msg)
                     raise Exception(error_msg)
 
             except RequestException as e:
-                error_msg = f'HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
+                error_msg = f'[{self.cid}] HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
