@@ -311,6 +311,7 @@ class ConsumerManager:
         self.management_port = 15672
         self.auth = (broker_config.username, broker_config.password)
         self.ignore_prefixes = ['zato-reply']
+        self.request_timeout = 1
 
     def get_consumers(self, queue_name: 'str') -> 'list':
         """ Get the list of consumers for a given queue.
@@ -324,7 +325,7 @@ class ConsumerManager:
         api_url = f'http://{self.host}:{self.management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
 
         try:
-            response = requests.get(api_url, auth=self.auth)
+            response = requests.get(api_url, auth=self.auth, timeout=self.request_timeout)
 
             if response.status_code == OK:
                 queue_info = response.json()
@@ -375,7 +376,7 @@ class ConsumerManager:
             api_url = f'http://{self.host}:{self.management_port}/api/connections/{encoded_connection_name}'
 
             try:
-                response = requests.delete(api_url, auth=self.auth)
+                response = requests.delete(api_url, auth=self.auth, timeout=self.request_timeout)
 
                 if response.status_code in (OK, NO_CONTENT):
                     logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` (`{queue_name}`)')
@@ -408,8 +409,8 @@ class ConsumerManager:
         wait_for_predicate(
             _predicate_close_consumers,
             100_000_000,
-            5.0,
-            jitter=2.0
+            1.0,
+            jitter=0.2
         )
 
 # ################################################################################################################################
