@@ -355,8 +355,11 @@ class ConsumerManager:
 # ################################################################################################################################
 
     def get_consumers_by_web_scraping(self, queue_name: 'str') -> 'list':
-        """ Get the list of consumers for a given queue by calling the API with query parameters.
+        """ Get the list of consumers for a given queue by calling curl subprocess.
         """
+        import subprocess
+        import json
+
         # URL encode the vhost and queue name
         encoded_vhost = quote(self.broker_config.vhost, safe='')
         encoded_queue_name = quote(queue_name, safe='')
@@ -366,29 +369,45 @@ class ConsumerManager:
         params = '?lengths_age=60&lengths_incr=5&msg_rates_age=60&msg_rates_incr=5&data_rates_age=60&data_rates_incr=5'
         api_url = base_url + params
 
+        # Build curl command
+        curl_cmd = [
+            'curl', '-s', '-u', f'{self.broker_config.username}:{self.broker_config.password}',
+            '-H', 'Accept: application/json',
+            '-H', f'x-vhost: {self.broker_config.vhost}',
+            api_url
+        ]
+
         try:
-            response = requests.get(api_url, auth=self.auth, timeout=self.request_timeout)
 
-            logger.info(f'[{self.cid}] Consumers response -> {response.json()}')
+            logger.info('Calling curl with %s', api_url)
 
-            if response.status_code == OK:
-                queue_info = response.json()
+            result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=self.request_timeout)
+
+            logger.info('Result %s', result.stdout)
+
+            if result.returncode == 0:
+                queue_info = json.loads(result.stdout)
                 consumers = queue_info.get('consumer_details', [])
                 consumer_count = len(consumers)
                 if consumer_count > 0:
                     consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
                     logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}` (web scraping)')
                 return consumers
-            elif response.status_code == NOT_FOUND:
-                logger.debug(f'[{self.cid}] No consumers found for queue: `{queue_name}` (web scraping)')
-                return []
             else:
-                error_msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}` via web scraping: {response.status_code}, `{response.text}`'
+                error_msg = f'[{self.cid}] Curl failed for queue `{queue_name}`: {result.stderr}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
-        except RequestException as e:
-            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}` via web scraping: `{e}`'
+        except subprocess.TimeoutExpired:
+            error_msg = f'[{self.cid}] Curl timeout for queue `{queue_name}`'
+            logger.error(error_msg)
+            raise Exception(error_msg)
+        except json.JSONDecodeError as e:
+            error_msg = f'[{self.cid}] JSON decode error for queue `{queue_name}`: {e}'
+            logger.error(error_msg)
+            raise Exception(error_msg)
+        except Exception as e:
+            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}` via web scraping: {e}'
             logger.error(error_msg)
             raise Exception(error_msg)
 
