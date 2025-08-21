@@ -372,6 +372,13 @@ def new_sub_key(username:'str') -> 'str':
 
 # ################################################################################################################################
 
+def new_cid_queue_consumer() -> 'str':
+    """ Returns a new correlation identifier for broker queue consumers.
+    """
+    return _new_cid('q')
+
+# ################################################################################################################################
+
 def make_cid_public(cid:'str') -> 'str':
 
     # .. A full CID may be like these ..
