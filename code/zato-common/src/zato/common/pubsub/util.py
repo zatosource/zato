@@ -19,6 +19,7 @@ from requests.exceptions import RequestException
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.common import BrokerConfig
+from zato.common.util.api import wait_for_predicate
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -331,35 +332,35 @@ class ConsumerManager:
                 consumer_count = len(consumers)
                 if consumer_count > 0:
                     consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: {queue_name}')
+                    logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}`')
                 return consumers
             elif response.status_code == NOT_FOUND:
-                logger.debug(f'[{self.cid}] No consumers found for queue: {queue_name}')
+                logger.debug(f'[{self.cid}] No consumers found for queue: `{queue_name}`')
                 return []
             else:
-                error_msg = f'[{self.cid}] Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
+                error_msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}`: {response.status_code}, `{response.text}`'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
         except RequestException as e:
-            error_msg = f'[{self.cid}] Error getting consumers for queue {queue_name}: {e}'
+            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}`: `{e}`'
             logger.error(error_msg)
             raise Exception(error_msg)
 
 # ################################################################################################################################
 
-    def close_consumers(self, queue_name: 'str') -> 'None':
+    def _close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
 
         for prefix in self.ignore_prefixes:
             if queue_name.startswith(prefix):
-                logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: {queue_name}')
+                logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
         consumers = self.get_consumers(queue_name)
         if not consumers:
-            logger.debug(f'[{self.cid}] No consumers to close for queue: {queue_name}')
+            logger.debug(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
             return
 
         for consumer in consumers:
@@ -377,17 +378,38 @@ class ConsumerManager:
                 response = requests.delete(api_url, auth=self.auth)
 
                 if response.status_code in (OK, NO_CONTENT):
-                    logger.info(f'[{self.cid}] Closed consumer: {consumer_tag} ({queue_name})')
+                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` (`{queue_name}`)')
                 else:
-                    error_msg = f'[{self.cid}] Failed to close channel {connection_name} for consumer {consumer_tag} ' + \
+                    msg = f'[{self.cid}] Failed to close channel `{connection_name}` for consumer `{consumer_tag}` ' + \
                            f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
-                    logger.error(error_msg)
-                    raise Exception(error_msg)
+                    logger.warning(msg)
+                    raise Exception(msg)
 
             except RequestException as e:
-                error_msg = f'[{self.cid}] HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
-                logger.error(error_msg)
-                raise Exception(error_msg)
+                msg = f'[{self.cid}] HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
+                logger.warning(msg)
+                raise Exception(msg)
+
+# ################################################################################################################################
+
+    def close_consumers(self, queue_name: 'str') -> 'None':
+        """ Close all consumers for a given queue by closing their channels with retry logic.
+        """
+
+        def _predicate_close_consumers() -> 'bool':
+            """ Predicate function that returns True if _close_consumers succeeds without exception.
+            """
+            try:
+                self._close_consumers(queue_name)
+                return True
+            except Exception:
+                return False
+
+        wait_for_predicate(
+            _predicate_close_consumers,
+            100_000_000,
+            1.0
+        )
 
 # ################################################################################################################################
 
