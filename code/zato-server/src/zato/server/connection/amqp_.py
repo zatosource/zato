@@ -334,7 +334,7 @@ class Consumer:
                 logger.info(
                     f'Could not create an AMQP consumer for channel `{self.name}` ' +
                     f'({err_conn_attempts} {noun} so far) for queue=`{self.config.queue}` -> ' +
-                    f'`{self.config.conn_url}`, e:`{format_exc()}`'
+                    f'`{self.config.conn_url}`, e:`{e}`'
                 )
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
