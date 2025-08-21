@@ -349,9 +349,6 @@ def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
     # Extract host from address (remove port if present)
     host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
 
-    # URL encode the vhost
-    encoded_vhost = quote(broker_config.vhost, safe='')
-
     # Default management port is 15672
     management_port = 15672
     auth = (broker_config.username, broker_config.password)
@@ -359,7 +356,6 @@ def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
     for consumer in consumers:
         channel_details = consumer['channel_details']
         connection_name = channel_details['connection_name']
-        channel_number = channel_details['number']
         consumer_tag = consumer['consumer_tag']
 
         # URL encode the connection name

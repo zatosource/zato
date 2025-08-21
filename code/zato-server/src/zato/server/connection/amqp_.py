@@ -26,9 +26,10 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
-from zato.common.version import get_version
-from zato.common.util.api import get_component_name, utcnow, wait_for_predicate
+from zato.common.pubsub.util import close_consumers, get_broker_config
 from zato.common.typing_ import cast_
+from zato.common.util.api import get_component_name, utcnow, wait_for_predicate
+from zato.common.version import get_version
 from zato.server.connection.connector import Connector, Inactive
 
 # ################################################################################################################################
@@ -99,11 +100,6 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
 
     connection.is_closing = True
 
-    print()
-    print('DDD-1', transport)
-    print('DDD-2', type(transport))
-    print()
-
     # Send close method to broker
     argsig = 'BsBB'
     reply_code = 0
@@ -155,56 +151,33 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
         logger.warning('BBB-1 Will retry until %s (start is %s)', until, start_time)
 
         while not is_closed:
-            logger.warning('BBB-2 %s', is_closed)
             attempt += 1
-            logger.warning('BBB-3 %s', is_closed)
             try:
-                logger.warning('BBB-4 %s', is_closed)
-                # raise Exception('CCC')
-                # _close_amqp_transport(connection._connection)
-                connection._connection.close()
-                logger.warning('BBB-5 %s', is_closed)
-                logger.warning('BBB-6 %s', is_closed)
+                _close_amqp_transport(connection._connection)
             except Exception as e:
-                logger.warning('BBB-7 %s', is_closed)
                 tb = ''.join(format_tb(sys.exc_info()[2]))
-                logger.warning('BBB-8 %s', is_closed)
                 tb += repr(e)
-                logger.warning('BBB-9 %s', is_closed)
                 logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, connection.as_uri(), tb)
-                logger.warning('BBB-10 %s', is_closed)
                 sleep(1)
-                logger.warning('BBB-11 %s', is_closed)
             else:
 
                 # If we're here, it means there was no exception above, which means we really can indicate the connection is closed.
-                logger.warning('BBB-11-01 %s', is_closed)
                 is_closed = True
                 connection._transport = None
                 connection.connection = None
                 connection.channels = None
-                logger.warning('BBB-11-02 %s', is_closed)
 
-        logger.warning('BBB-12 %s', is_closed)
         connection._connection = None
-        logger.warning('BBB-13 %s', is_closed)
-
-_close_amqp_transport = _close_amqp_transport
 
 # ################################################################################################################################
 
 def close_connection(connection:'KombuAMQPConnection', max_wait_time:'int'=100_00_000) -> 'None':
     """ Closes a kombu Connection.
     """
-    logger.warning('AAA-1')
     _do_close_connection(connection, max_wait_time)
-    logger.warning('AAA-2')
     connection._do_close_transport()
-    logger.warning('AAA-3')
     connection._debug('closed')
-    logger.warning('AAA-4')
     connection._closed = True
-    logger.warning('AAA-5')
 
 # ################################################################################################################################
 
@@ -324,15 +297,10 @@ class Consumer:
 
         logger.debug('Creating a new consumer -> %s', self.config.conn_url)
 
-        from zato.common.pubsub.util import close_consumers, get_broker_config
-
-        config = get_broker_config()
-
-        response = close_consumers(config, self.config.queue)
-
-        print()
-        print('RRR-1', response)
-        print()
+        # First, cloes any previous consumers we may have created and which are left over,
+        # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
+        broker_config = get_broker_config()
+        close_consumers(broker_config, self.config.queue)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
@@ -347,17 +315,7 @@ class Consumer:
             try:
                 conn:'KombuAMQPConnection' = self.config.conn_class(self.config.conn_url)
 
-                print()
-                print('NNN-1', conn)
-                print('NNN-2', type(conn))
-                print()
-
-
                 tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer'))
-
-                print()
-                print('VVV-1')
-                print()
 
                 consumer = KombuConsumer(
                     conn,
@@ -366,18 +324,11 @@ class Consumer:
                     no_ack=_no_ack[self.config.ack_mode],
                     tag_prefix=tag_prefix
                 )
-                print()
-                print('VVV-2')
-                print()
                 _ = consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
-                print()
-                print('VVV-3')
-                print()
                 consumer.consume()
-                print()
-                print('VVV-4')
-                print()
+
             except Exception as e:
+                e = e
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info(
