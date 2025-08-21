@@ -372,12 +372,12 @@ def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
             if response.status_code in (OK, NO_CONTENT):
                 logger.info(f'Successfully closed channel for consumer: {consumer_tag}')
             else:
-                error_msg = f'Failed to close channel for consumer {consumer_tag}: {response.status_code}, {response.text}'
+                error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag}: {response.status_code}, {response.text}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
         except RequestException as e:
-            error_msg = f'Error closing channel for consumer {consumer_tag}: {e}'
+            error_msg = f'Error closing channel {connection_name} for consumer {consumer_tag}: {e}'
             logger.error(error_msg)
             raise Exception(error_msg)
 
