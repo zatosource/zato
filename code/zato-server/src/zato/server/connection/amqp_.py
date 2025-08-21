@@ -324,11 +324,11 @@ class Consumer:
 
         logger.debug('Creating a new consumer -> %s', self.config.conn_url)
 
-        from zato.common.pubsub.util import get_broker_config, get_consumers
+        from zato.common.pubsub.util import close_consumers, get_broker_config
 
         config = get_broker_config()
 
-        response = get_consumers(config, self.config.queue)
+        response = close_consumers(config, self.config.queue)
 
         print()
         print('RRR-1', response)
