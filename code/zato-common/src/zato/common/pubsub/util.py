@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from http.client import NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
+from traceback import format_exc
 from urllib.parse import quote
 
 # Requests
@@ -363,8 +364,7 @@ class ConsumerManager:
                 logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
 
-        # consumers = self.get_consumers_by_rest_api(queue_name)
-        consumers = self.get_consumers_by_web_scraping(queue_name)
+        consumers = self.get_consumers_by_rest_api(queue_name)
 
         if not consumers:
             logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
@@ -403,33 +403,42 @@ class ConsumerManager:
         """ Close all consumers for a given queue by closing their channels with retry logic.
         """
         first_response_time = None
-        max_wait_time = 60
+        max_wait_time = 10
 
         def _predicate_close_consumers() -> 'bool':
             """ Predicate function that returns True if _close_consumers succeeds without exception.
             """
             nonlocal first_response_time
 
+            logger.info(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
+
             try:
                 consumers = self.get_consumers_by_rest_api(queue_name)
+                logger.info(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
 
                 if first_response_time is None:
                     first_response_time = utcnow()
+                    logger.info(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
 
                 if consumers:
+                    logger.info(f'[{self.cid}] Calling _close_consumers for queue: `{queue_name}`')
                     self._close_consumers(queue_name)
+                    logger.info(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
                     return True
                 else:
                     current_time = utcnow()
                     time_diff = current_time - first_response_time
                     elapsed_seconds = time_diff.total_seconds()
+                    logger.info(f'[{self.cid}] No consumers, elapsed: {elapsed_seconds}s for queue: `{queue_name}`')
                     if elapsed_seconds > max_wait_time:
                         msg = f'[{self.cid}] No consumers after {max_wait_time} seconds, stopping retry for: `{queue_name}`'
                         logger.info(msg)
                         return True
+                    logger.info(f'[{self.cid}] Returning False, will retry for queue: `{queue_name}`')
                     return False
 
             except Exception:
+                logger.info(f'[{self.cid}] Exception in predicate: queue: `{queue_name}` -> {format_exc()}')
                 return False
 
         _ = wait_for_predicate(
