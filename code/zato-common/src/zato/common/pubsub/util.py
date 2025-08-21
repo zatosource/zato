@@ -350,14 +350,14 @@ class ConsumerManager:
                     logger.info(f'[{self.cid}] No consumers found for queue: `{queue_name}`')
                 return []
             else:
-                error_msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}`: {response.status_code}, `{response.text}`'
-                logger.error(error_msg)
-                raise Exception(error_msg)
+                msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}`: {response.status_code}, `{response.text}`'
+                logger.error(msg)
+                raise Exception(msg)
 
         except RequestException as e:
-            error_msg = f'[{self.cid}] Error getting consumers for queue `{queue_name}`: `{e}`'
-            logger.error(error_msg)
-            raise Exception(error_msg)
+            msg = f'[{self.cid}] Could not get consumers for queue `{queue_name}`: `{e}`'
+            logger.warning(msg)
+            raise Exception(msg)
 
 # ################################################################################################################################
 
@@ -399,7 +399,7 @@ class ConsumerManager:
                 response = requests.delete(api_url, auth=self.auth, timeout=self.request_timeout)
 
                 if response.status_code in (OK, NO_CONTENT):
-                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` (`{queue_name}`)')
+                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` -> {connection_name} (`{queue_name}`)')
                 else:
                     msg = f'[{self.cid}] Failed to close channel `{connection_name}` for consumer `{consumer_tag}` ' + \
                            f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
@@ -433,15 +433,22 @@ class ConsumerManager:
                     logger.info(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
 
                 if first_response_time is None:
+
                     first_response_time = utcnow()
+
                     if _needs_details:
                         logger.info(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
 
                 if consumers:
-                    logger.info(f'[{self.cid}] Calling _close_consumers for queue: `{queue_name}`')
+
+                    if _needs_details:
+                        logger.info(f'[{self.cid}] Calling _close_consumers for queue: `{queue_name}`')
+
                     self._close_consumers(queue_name)
+
                     if _needs_details:
                         logger.info(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
+
                     return True
                 else:
 
