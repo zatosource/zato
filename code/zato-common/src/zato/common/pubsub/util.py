@@ -313,6 +313,8 @@ class ConsumerManager:
     def get_consumers(self, queue_name: 'str') -> 'list':
         """ Get the list of consumers for a given queue.
         """
+        logger.info(f'[{self.cid}] get_consumers called for queue: {queue_name}')
+
         # URL encode the vhost and queue name
         encoded_vhost = quote(self.broker_config.vhost, safe='')
         encoded_queue_name = quote(queue_name, safe='')
@@ -351,7 +353,7 @@ class ConsumerManager:
         consumers = self.get_consumers(queue_name)
 
         if not consumers:
-            logger.info(f'[{self.cid}] No consumers found for queue: {queue_name}')
+            logger.info(f'[{self.cid}] No consumers to close for queue: {queue_name}')
             return
 
         for consumer in consumers:
