@@ -368,14 +368,14 @@ def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
             response = requests.delete(api_url, auth=auth)
 
             if response.status_code in (OK, NO_CONTENT):
-                logger.info(f'Successfully closed channel for consumer: {consumer_tag}')
+                logger.info(f'Closed consumer: {consumer_tag} ({queue_name})')
             else:
-                error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag}: {response.status_code}, {response.text}'
+                error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag} ({queue_name}): {response.status_code}, {repr(response.text)}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
         except RequestException as e:
-            error_msg = f'Error closing channel {connection_name} for consumer {consumer_tag}: {e}'
+            error_msg = f'HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
             logger.error(error_msg)
             raise Exception(error_msg)
 
