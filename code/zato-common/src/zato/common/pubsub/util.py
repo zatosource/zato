@@ -299,85 +299,83 @@ def cleanup_broker_impl(
 
 # ################################################################################################################################
 
-def get_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'list':
-    """ Get the list of consumers for a given queue.
+class ConsumerManager:
+    """ Manages consumers for AMQP queues via RabbitMQ Management API.
     """
-    # Extract host from address (remove port if present)
-    host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
 
-    # URL encode the vhost and queue name
-    encoded_vhost = quote(broker_config.vhost, safe='')
-    encoded_queue_name = quote(queue_name, safe='')
+    def __init__(self, broker_config: 'BrokerConfig'):
+        self.broker_config = broker_config
+        self.host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
+        self.management_port = 15672
+        self.auth = (broker_config.username, broker_config.password)
 
-    # Build HTTP API URL for queue consumers
-    # Default management port is 15672
-    management_port = 15672
-    api_url = f'http://{host}:{management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
-    auth = (broker_config.username, broker_config.password)
+    def get_consumers(self, queue_name: 'str') -> 'list':
+        """ Get the list of consumers for a given queue.
+        """
+        # URL encode the vhost and queue name
+        encoded_vhost = quote(self.broker_config.vhost, safe='')
+        encoded_queue_name = quote(queue_name, safe='')
 
-    try:
-        response = requests.get(api_url, auth=auth)
-
-        if response.status_code == OK:
-            queue_info = response.json()
-            consumers = queue_info['consumer_details']
-            consumer_count = len(consumers)
-            consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-            logger.info(f'Found {consumer_count} {consumer_word} for queue: {queue_name}')
-            return consumers
-        else:
-            error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
-            logger.error(error_msg)
-            raise Exception(error_msg)
-
-    except RequestException as e:
-        error_msg = f'Error getting consumers for queue {queue_name}: {e}'
-        logger.error(error_msg)
-        raise Exception(error_msg)
-
-# ################################################################################################################################
-
-def close_consumers(broker_config: 'BrokerConfig', queue_name: 'str') -> 'None':
-    """ Close all consumers for a given queue by closing their channels.
-    """
-    consumers = get_consumers(broker_config, queue_name)
-
-    if not consumers:
-        logger.info(f'No consumers found for queue: {queue_name}')
-        return
-
-    # Extract host from address (remove port if present)
-    host = broker_config.address.split(':')[0] if ':' in broker_config.address else broker_config.address
-
-    # Default management port is 15672
-    management_port = 15672
-    auth = (broker_config.username, broker_config.password)
-
-    for consumer in consumers:
-        channel_details = consumer['channel_details']
-        connection_name = channel_details['connection_name']
-        consumer_tag = consumer['consumer_tag']
-
-        # URL encode the connection name
-        encoded_connection_name = quote(connection_name, safe='')
-
-        # Build API URL to close the connection (which closes all its channels)
-        api_url = f'http://{host}:{management_port}/api/connections/{encoded_connection_name}'
+        # Build HTTP API URL for queue consumers
+        api_url = f'http://{self.host}:{self.management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
 
         try:
-            response = requests.delete(api_url, auth=auth)
+            response = requests.get(api_url, auth=self.auth)
 
-            if response.status_code in (OK, NO_CONTENT):
-                logger.info(f'Closed consumer: {consumer_tag} ({queue_name})')
+            if response.status_code == OK:
+                queue_info = response.json()
+                consumers = queue_info['consumer_details']
+                consumer_count = len(consumers)
+                consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
+                logger.info(f'Found {consumer_count} {consumer_word} for queue: {queue_name}')
+                return consumers
             else:
-                error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag} ({queue_name}): {response.status_code}, {repr(response.text)}'
+                error_msg = f'Failed to get consumers for queue {queue_name}: {response.status_code}, {response.text}'
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
         except RequestException as e:
-            error_msg = f'HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
+            error_msg = f'Error getting consumers for queue {queue_name}: {e}'
             logger.error(error_msg)
             raise Exception(error_msg)
+
+# ################################################################################################################################
+
+    def close_consumers(self, queue_name: 'str') -> 'None':
+        """ Close all consumers for a given queue by closing their channels.
+        """
+        consumers = self.get_consumers(queue_name)
+
+        if not consumers:
+            logger.info(f'No consumers found for queue: {queue_name}')
+            return
+
+        for consumer in consumers:
+            channel_details = consumer['channel_details']
+            connection_name = channel_details['connection_name']
+            consumer_tag = consumer['consumer_tag']
+
+            # URL encode the connection name
+            encoded_connection_name = quote(connection_name, safe='')
+
+            # Build API URL to close the connection (which closes all its channels)
+            api_url = f'http://{self.host}:{self.management_port}/api/connections/{encoded_connection_name}'
+
+            try:
+                response = requests.delete(api_url, auth=self.auth)
+
+                if response.status_code in (OK, NO_CONTENT):
+                    logger.info(f'Closed consumer: {consumer_tag} ({queue_name})')
+                else:
+                    error_msg = f'Failed to close channel {connection_name} for consumer {consumer_tag} ' + \
+                           f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+
+            except RequestException as e:
+                error_msg = f'HTTP error closing channel {connection_name} for consumer {consumer_tag} ({queue_name}): {e}'
+                logger.error(error_msg)
+                raise Exception(error_msg)
 
 # ################################################################################################################################
 

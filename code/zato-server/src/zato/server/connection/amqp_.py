@@ -26,9 +26,9 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
-from zato.common.pubsub.util import close_consumers, get_broker_config
+from zato.common.pubsub.util import ConsumerManager, get_broker_config
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_component_name, utcnow, wait_for_predicate
+from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
 from zato.server.connection.connector import Connector, Inactive
 
@@ -234,6 +234,9 @@ class Consumer:
     """
     def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
 
+        # A single correlation ID for the while lifetime of this consumer, no matter how many it (re-)connects to the broker
+        self.cid = new_cid_queue_consumer()
+
         # Public pub/sub queues require special configuration
         if config.queue.startswith('zpsk') or config.queue in {'server', 'pubsub', 'scheduler'}:
             queue_arguments={'x-queue-type': config.queue_type, 'x-delivery-limit': config.max_repeats}
@@ -297,10 +300,11 @@ class Consumer:
 
         logger.debug('Creating a new consumer -> %s', self.config.conn_url)
 
-        # First, cloes any previous consumers we may have created and which are left over,
+        # First, close any previous consumers we may have created and which are left over,
         # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
         broker_config = get_broker_config()
-        close_consumers(broker_config, self.config.queue)
+        consumer_manager = ConsumerManager(broker_config)
+        consumer_manager.close_consumers(self.config.queue)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
