@@ -133,7 +133,7 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
 
 # ################################################################################################################################
 
-def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') -> 'None':
+def _do_close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_time:'int') -> 'None':
     """ Overridden from kombu.connection.Connection._do_close_self to handle repeated close attempts.
     """
 
@@ -161,7 +161,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
             except Exception as e:
                 tb = ''.join(format_tb(sys.exc_info()[2]))
                 tb += repr(e)
-                logger.info('Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', attempt, conn_as_uri, tb)
+                logger.info('[%s], Could not close AMQP connection (%s attempt so far) -> `%s`, e:`%s`', cid, attempt, conn_as_uri, tb)
                 sleep(1)
             else:
 
@@ -175,10 +175,10 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
 
 # ################################################################################################################################
 
-def close_connection(connection:'KombuAMQPConnection', max_wait_time:'int'=100_00_000) -> 'None':
+def close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_time:'int'=100_00_000) -> 'None':
     """ Closes a kombu Connection.
     """
-    _do_close_connection(connection, max_wait_time)
+    _do_close_connection(cid, connection, max_wait_time)
     connection._do_close_transport()
     connection._debug('closed')
     connection._closed = True
@@ -260,7 +260,7 @@ class Consumer:
         self.timeout = config.get('consumer_drain_events_timeout') or PubSub.Timeout.Consumer
 
         broker_config = get_broker_config()
-        self.consumer_manager = ConsumerManager(broker_config, self.cid)
+        self.consumer_manager = ConsumerManager(self.cid, broker_config)
 
         # This is set to True the first time self.start is called.
         self.start_called = False
@@ -433,8 +433,8 @@ class Consumer:
                             had_log = True
 
                             # .. now close it ..
-                            # close_connection(connection)
-                            _ = connection.close()
+                            close_connection(self.cid, connection)
+                            # _ = connection.close()
 
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
@@ -474,8 +474,8 @@ class Consumer:
                 logger.debug(f'[{self.cid}] Closing connection for `{consumer}`')
 
                 # .. and do close it ..
-                # close_connection(connection)
-                _ = connection.close()
+                close_connection(self.cid, connection)
+                # _ = connection.close()
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
@@ -567,8 +567,8 @@ class ConnectorAMQP(Connector):
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
 
-        # close_connection(test_conn)
-        _ = test_conn.close()
+        close_connection(self.cid, test_conn)
+        # _ = test_conn.close()
 
 # ################################################################################################################################
 
