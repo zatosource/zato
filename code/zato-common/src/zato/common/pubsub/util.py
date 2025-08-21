@@ -371,9 +371,14 @@ class ConsumerManager:
             return
 
         for consumer in consumers:
-            channel_details = consumer['channel_details']
-            connection_name = channel_details['connection_name']
+            channel_details = consumer.get('channel_details', {})
+            connection_name = channel_details.get('connection_name')
             consumer_tag = consumer['consumer_tag']
+
+            if not connection_name:
+                msg = f'[{self.cid}] No connection_name in channel_details for consumer `{consumer_tag}` in queue `{queue_name}`'
+                logger.debug(msg)
+                continue
 
             # URL encode the connection name
             encoded_connection_name = quote(connection_name, safe='')
@@ -410,41 +415,45 @@ class ConsumerManager:
             """
             nonlocal first_response_time
 
-            logger.info(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
+            logger.debug(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
 
             try:
                 consumers = self.get_consumers_by_rest_api(queue_name)
-                logger.info(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
+                logger.debug(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
 
                 if first_response_time is None:
                     first_response_time = utcnow()
-                    logger.info(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
+                    logger.debug(f'[{self.cid}] Set first_response_time for queue: `{queue_name}`')
 
                 if consumers:
                     logger.info(f'[{self.cid}] Calling _close_consumers for queue: `{queue_name}`')
                     self._close_consumers(queue_name)
-                    logger.info(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
+                    logger.debug(f'[{self.cid}] Called _close_consumers, returning True for queue: `{queue_name}`')
                     return True
                 else:
+
                     current_time = utcnow()
                     time_diff = current_time - first_response_time
                     elapsed_seconds = time_diff.total_seconds()
-                    logger.info(f'[{self.cid}] No consumers, elapsed: {elapsed_seconds}s for queue: `{queue_name}`')
+
+                    logger.debug(f'[{self.cid}] No consumers, elapsed: {elapsed_seconds}s for queue: `{queue_name}`')
+
                     if elapsed_seconds > max_wait_time:
                         msg = f'[{self.cid}] No consumers after {max_wait_time} seconds, stopping retry for: `{queue_name}`'
-                        logger.info(msg)
+                        logger.debug(msg)
                         return True
-                    logger.info(f'[{self.cid}] Returning False, will retry for queue: `{queue_name}`')
+
+                    logger.debug(f'[{self.cid}] Returning False, will retry for queue: `{queue_name}`')
                     return False
 
-            except Exception:
-                logger.info(f'[{self.cid}] Exception in predicate: queue: `{queue_name}` -> {format_exc()}')
+            except Exception as e:
+                logger.info(f'[{self.cid}] Exception caught: queue: `{queue_name}` -> {e}')
                 return False
 
         _ = wait_for_predicate(
             _predicate_close_consumers,
             100_000_000,
-            1.0,
+            2.0,
             jitter=0.2
         )
 
