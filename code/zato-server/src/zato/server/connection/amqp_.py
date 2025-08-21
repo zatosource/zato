@@ -148,7 +148,7 @@ def _do_close_connection(connection:'KombuAMQPConnection', max_wait_time:'int') 
         until = start_time + timedelta(seconds=max_wait_time)
         attempt = 0
 
-        logger.warning('BBB-1 Will retry until %s (start is %s)', until, start_time)
+        logger.debug('Will retry until %s (start is %s)', until, start_time)
 
         while not is_closed:
             attempt += 1
@@ -352,7 +352,7 @@ class Consumer:
             base_msg = f'Created an AMQP consumer for channel `{self.name}` -> queue=`{self.config.queue}` -> `{self.config.conn_url}`'
             if has_errors:
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
-                logger.info(f'{base_msg} after {err_conn_attempts} failed {noun}')
+                logger.info(f'{base_msg} after {err_conn_attempts} {noun}')
             else:
                 logger.info(base_msg)
 
@@ -375,6 +375,7 @@ class Consumer:
 
             # For type hints
             connection = cast_('KombuAMQPConnection', None)
+            conn_as_uri:'str' = ''
 
             # .. try to connection initially ..
             consumer = self._get_consumer()
@@ -390,16 +391,21 @@ class Consumer:
                     # .. we have a consumer so we can get its connection too ..
                     connection = cast_('KombuAMQPConnection', consumer.connection) # type: ignore
 
+                    # .. it'll be an empty string the first time around (per what we assigned to it above) ..
+                    conn_as_uri = conn_as_uri or connection.as_uri()
+
                     # .. keep consuming the events from our queue ..
                     while self.keep_running:
                         try:
                             connection.drain_events(timeout=self.timeout)
                         except TimeoutError as e:
-                            # .. this is as expected and we can ignore it, because we just haven't received anything
-                            # .. from the underlying TCP socket within timeout seconds ..
-                            logger.warning('TIME OUT timeout=%s %s', self.timeout, e)
+                            # .. this is as expected and we can normally ignore it, because we just haven't received anything ..
+                            # .. from the underlying TCP socket within timeout seconds, but if there's an errno to show, ..
+                            # .. it means the connection really was broken, so we can log that ..
+                            if e.errno:
+                                logger.info('Timeout error in %s -> %s', conn_as_uri, e.message)
                         except ConsumerCancelled as e:
-                            logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', connection.as_uri(), e.message)
+                            logger.info('Consumer cancelled, closing connection to `%s` -> `%s`', conn_as_uri, e.message)
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
                 except Exception as e:
@@ -416,7 +422,7 @@ class Consumer:
                                 'Closing and reconnecting a lost connection for channel=`%s` -> queue=`%s` -> `%s` -> %s',
                                 self.name,
                                 self.config.queue,
-                                connection.as_uri(),
+                                conn_as_uri,
                                 format_exc(),
                             )
 
@@ -433,7 +439,7 @@ class Consumer:
                                 'Reconnecting to queue=%s -> `%s` -> %s',
                                 self.config.queue,
                                 format_exc(),
-                                connection.as_uri(),
+                                conn_as_uri,
                             )
 
                         # .. and connect again ..
