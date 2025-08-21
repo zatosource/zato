@@ -11,6 +11,7 @@ import sys
 from datetime import timedelta
 from logging import getLogger
 from socket import error as socket_error
+from ssl import SSLError
 from traceback import format_exc, format_tb
 
 # amqp
@@ -112,7 +113,7 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
             (reply_code, reply_text, method_sig[0], method_sig[1]),
             wait=spec.Connection.CloseOk,
         )
-    except BrokenPipeError:
+    except(OSError, SSLError):
         pass
 
     # Close transport
@@ -176,12 +177,19 @@ def _do_close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_t
 # ################################################################################################################################
 
 def close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_time:'int'=100_00_000) -> 'None':
-    """ Closes a kombu Connection.
+    """ Closes a Kombu connection.
     """
-    _do_close_connection(cid, connection, max_wait_time)
-    connection._do_close_transport()
-    connection._debug('closed')
-    connection._closed = True
+
+    # We always go here ..
+    if True:
+        connection.close()
+
+    # .. this is left for debugging purposes.
+    else:
+        _do_close_connection(cid, connection, max_wait_time)
+        connection._do_close_transport()
+        connection._debug('closed')
+        connection._closed = True
 
 # ################################################################################################################################
 
@@ -434,7 +442,6 @@ class Consumer:
 
                             # .. now close it ..
                             close_connection(self.cid, connection)
-                            # _ = connection.close()
 
                         # .. log what we're about to do but only if we haven't logged anything earlier ..
                         if not had_log:
@@ -475,7 +482,6 @@ class Consumer:
 
                 # .. and do close it ..
                 close_connection(self.cid, connection)
-                # _ = connection.close()
 
             self.is_stopped = True # Set to True if we break out of the main loop.
 
@@ -568,7 +574,6 @@ class ConnectorAMQP(Connector):
         # can be logged as early as possible.
 
         close_connection(self.cid, test_conn)
-        # _ = test_conn.close()
 
 # ################################################################################################################################
 
