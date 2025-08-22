@@ -364,13 +364,6 @@ class ConsumerManager:
     def _close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
-
-        for prefix in self.ignore_prefixes:
-            if queue_name.startswith(prefix):
-                if _needs_details:
-                    logger.info(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
-                return
-
         consumers = self.get_consumers_by_rest_api(queue_name)
 
         if not consumers:
@@ -416,6 +409,17 @@ class ConsumerManager:
     def close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels with retry logic.
         """
+
+        # No need to do anything if we know this queue should be ignored
+        for prefix in self.ignore_prefixes:
+            if queue_name.startswith(prefix):
+                if _needs_details:
+                    logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
+                return
+            else:
+                logger.debug(f'[{self.cid}] Prefix did not match `{prefix}`: `{queue_name}`')
+
+        # Local variables
         first_response_time = None
         max_wait_time = 10
 
