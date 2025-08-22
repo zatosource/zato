@@ -414,10 +414,11 @@ class ConsumerManager:
         for prefix in self.ignore_prefixes:
             if queue_name.startswith(prefix):
                 if _needs_details:
-                    logger.debug(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
+                    logger.info(f'[{self.cid}] Ignoring queue with prefix `{prefix}`: `{queue_name}`')
                 return
             else:
-                logger.debug(f'[{self.cid}] Prefix did not match `{prefix}`: `{queue_name}`')
+                if _needs_details:
+                    logger.info(f'[{self.cid}] Prefix did not match `{prefix}`: `{queue_name}`')
 
         # Local variables
         first_response_time = None
