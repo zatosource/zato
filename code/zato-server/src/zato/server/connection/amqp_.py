@@ -531,7 +531,7 @@ class Consumer:
             self._is_connected,
             timeout=timeout,
             interval=0.01,
-            log_msg_details=f'consumer {self.name} to connect',
+            log_msg_details=f'consumer `{self.name}` to connect',
             needs_log=True,
         )
 
