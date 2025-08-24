@@ -4,6 +4,14 @@ security:
     username: demo
     password: demo
 
+outgoing_rest:
+
+  - name: demo.outgoing.rest.1
+    host: https://example.com:443
+    url_path: /demo
+    data_format: json
+    timeout: 60
+
 pubsub_topic:
   - name: demo.1
     description: Demo topic 1
@@ -24,7 +32,10 @@ pubsub_permission:
 pubsub_subscription:
   - security: demo_sec_def
     delivery_type: pull
-    max_retry_time: 365d
+#    delivery_type: push
+#    push_service: demo.outgoing.rest.1
+#    push_rest_endpoint: demo.outgoing.rest.1
+#    max_retry_time: 365d
     topic_list:
       - demo.1
       - demo.2
