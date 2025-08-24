@@ -266,11 +266,13 @@ $(document).ready(function() {
                 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
 
                 // Populate REST endpoints regardless of delivery type to avoid a flicker
-                // when switching to push, but they'll remain hidden if not push type
-                var currentRestEndpointId = instance.rest_push_endpoint_id || '';
-                var currentServiceName = instance.push_service_name || '';
                 console.log('DEBUG requestAnimationFrame: calling populateRestEndpoints and populateServices');
-                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, true);
+                console.log('DEBUG requestAnimationFrame: DOM elements check - rest endpoint span exists: ' + $('#rest-endpoint-edit').length);
+                console.log('DEBUG requestAnimationFrame: DOM elements check - rest endpoint select exists: ' + $('#id_edit-rest_push_endpoint_id').length);
+                console.log('DEBUG requestAnimationFrame: DOM elements check - all form elements: ' + $('#edit-form [id]').map(function() { return this.id; }).get().join(', '));
+                var currentEndpointId = instance.rest_push_endpoint_id !== 'None' ? instance.rest_push_endpoint_id : null;
+                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentEndpointId, true);
+                var currentServiceName = instance.push_service_name !== 'None' ? instance.push_service_name : null;
                 $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
 
                 // Load topics for the current security definition in edit mode
@@ -365,13 +367,17 @@ $(document).ready(function() {
 
 // Function to populate REST endpoints
 $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, selectedId, showSpan) {
-    console.log('DEBUG populateRestEndpoints: Starting, form_type:', form_type, 'selectedId:', selectedId, 'showSpan:', showSpan);
+    var endpointSelectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
+    var endpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
 
-    var endpointSelectId = form_type === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit_rest_push_endpoint_id';
+    console.log('DEBUG populateRestEndpoints: Starting, form_type: ' + form_type + ' selectedId: ' + selectedId + ' showSpan: ' + showSpan);
+
     var $endpointSelect = $(endpointSelectId);
-
-    if (!$endpointSelect.length) {
-        console.log('DEBUG populateRestEndpoints: Endpoint select not found:', endpointSelectId);
+    console.log('DEBUG populateRestEndpoints: Looking for element with ID: ' + endpointSelectId);
+    console.log('DEBUG populateRestEndpoints: Element found: ' + ($endpointSelect.length > 0));
+    console.log('DEBUG populateRestEndpoints: All elements with similar IDs: ' + $('[id*="rest_push_endpoint_id"]').map(function() { return this.id; }).get().join(', '));
+    if ($endpointSelect.length === 0) {
+        console.log('DEBUG populateRestEndpoints: Endpoint select not found: ' + endpointSelectId);
         return;
     }
 
@@ -397,30 +403,56 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             // Remove loading spinner
             $container.find('.loading-spinner').remove();
 
-            if (response.endpoints && response.endpoints.length > 0) {
-                console.log('DEBUG populateRestEndpoints: Populating', response.endpoints.length, 'endpoints');
-                $.each(response.endpoints, function(index, endpoint) {
+            console.log('DEBUG populateRestEndpoints: select element before population - visible:', $endpointSelect.is(':visible'));
+            console.log('DEBUG populateRestEndpoints: select element before population - display:', $endpointSelect.css('display'));
+            console.log('DEBUG populateRestEndpoints: select element before population - parent visible:', $endpointSelect.parent().is(':visible'));
+            console.log('DEBUG populateRestEndpoints: select element before population - options count:', $endpointSelect.find('option').length);
+
+            if (response.rest_endpoints && response.rest_endpoints.length > 0) {
+                console.log('DEBUG populateRestEndpoints: Populating', response.rest_endpoints.length, 'endpoints');
+                $.each(response.rest_endpoints, function(index, endpoint) {
                     var option = $('<option></option>')
                         .attr('value', endpoint.id)
                         .text(endpoint.name);
                     if (selectedId && endpoint.id == selectedId) {
                         option.prop('selected', true);
+                        console.log('DEBUG populateRestEndpoints: Selected endpoint:', endpoint.name, 'with id:', endpoint.id);
                     }
                     $endpointSelect.append(option);
+                    console.log('DEBUG populateRestEndpoints: Added option:', endpoint.name, 'with id:', endpoint.id);
                 });
             } else {
                 console.log('DEBUG populateRestEndpoints: No endpoints found');
                 $endpointSelect.append('<option value="">No endpoints available</option>');
             }
 
+            console.log('DEBUG populateRestEndpoints: select element after population - options count:', $endpointSelect.find('option').length);
+            console.log('DEBUG populateRestEndpoints: select element after population - HTML:', $endpointSelect.html());
+
             // Refresh Chosen if it's initialized
             if ($endpointSelect.hasClass('chosen-select')) {
+                console.log('DEBUG populateRestEndpoints: Triggering chosen:updated');
                 $endpointSelect.trigger('chosen:updated');
+            } else {
+                console.log('DEBUG populateRestEndpoints: No chosen-select class found');
+                console.log('DEBUG populateRestEndpoints: Select element classes: ' + $endpointSelect.attr('class'));
+                console.log('DEBUG populateRestEndpoints: Checking if Chosen is already initialized');
+                var chosenId = form_type === 'create' ? '#id_rest_push_endpoint_id_chosen' : '#id_edit_rest_push_endpoint_id_chosen';
+                var $chosenExists = $(chosenId);
+                console.log('DEBUG populateRestEndpoints: Chosen container exists: ' + $chosenExists.length);
+                if ($chosenExists.length > 0) {
+                    console.log('DEBUG populateRestEndpoints: Chosen exists but select lacks chosen-select class, triggering update anyway');
+                    $endpointSelect.trigger('chosen:updated');
+                }
             }
+
+            console.log('DEBUG populateRestEndpoints: select element final state - visible:', $endpointSelect.is(':visible'));
+            console.log('DEBUG populateRestEndpoints: select element final state - display:', $endpointSelect.css('display'));
 
             // Show the span if requested
             if (showSpan) {
                 var spanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
+                console.log('DEBUG populateRestEndpoints: Showing span:', spanId);
                 $(spanId).show();
             }
         },
@@ -788,15 +820,40 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
         }
 
         // Now show/hide the appropriate spans based on the push type
+        console.log('DEBUG toggleEndpointTypeVisibility: showing/hiding spans for pushTypeValue=' + JSON.stringify(pushTypeValue));
         if (pushTypeValue === 'rest') {
             // Hide service span first to prevent layout shift
             $serviceSpan.hide();
+            console.log('DEBUG toggleEndpointTypeVisibility: showing REST endpoint span');
+            console.log('DEBUG toggleEndpointTypeVisibility: REST span before show - visible: ' + $restEndpointSpan.is(':visible') + ', display: ' + $restEndpointSpan.css('display'));
+
+            var $restSelect = form_type === 'create' ? $('#id_rest_push_endpoint_id') : $('#id_edit-rest_push_endpoint_id');
+            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - visible: ' + $restSelect.is(':visible') + ', display: ' + $restSelect.css('display'));
+            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - options count: ' + $restSelect.find('option').length);
+            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - HTML: ' + $restSelect.html());
+
             $restEndpointSpan.show();
+            console.log('DEBUG toggleEndpointTypeVisibility: REST span after show - visible: ' + $restEndpointSpan.is(':visible') + ', display: ' + $restEndpointSpan.css('display'));
+            console.log('DEBUG toggleEndpointTypeVisibility: REST span CSS width: ' + $restEndpointSpan.css('width') + ', height: ' + $restEndpointSpan.css('height'));
+            console.log('DEBUG toggleEndpointTypeVisibility: REST span parent visible: ' + $restEndpointSpan.parent().is(':visible'));
+            console.log('DEBUG toggleEndpointTypeVisibility: REST select element after show - visible: ' + $restSelect.is(':visible') + ', display: ' + $restSelect.css('display'));
+            console.log('DEBUG toggleEndpointTypeVisibility: REST select element after show - options count: ' + $restSelect.find('option').length);
+
+            // Check if Chosen is initialized and working
+            var $chosenContainer = form_type === 'create' ? $('#id_rest_push_endpoint_id_chosen') : $('#id_edit_rest_push_endpoint_id_chosen');
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container exists: ' + $chosenContainer.length);
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container visible: ' + $chosenContainer.is(':visible'));
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container display: ' + $chosenContainer.css('display'));
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container HTML: ' + $chosenContainer.html());
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen single span text: ' + $chosenContainer.find('.chosen-single span').text());
+            console.log('DEBUG toggleEndpointTypeVisibility: Chosen dropdown options: ' + $chosenContainer.find('.chosen-drop .chosen-results li').length);
         } else if (pushTypeValue === 'service') {
             // Hide REST span first to prevent layout shift
             $restEndpointSpan.hide();
+            console.log('DEBUG toggleEndpointTypeVisibility: showing service span');
             $serviceSpan.show();
         } else {
+            console.log('DEBUG toggleEndpointTypeVisibility: hiding both spans');
             $restEndpointSpan.hide();
             $serviceSpan.hide();
         }
