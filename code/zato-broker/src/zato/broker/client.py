@@ -54,7 +54,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_one_year_in_seconds = 31_536_000 # 365 days * 24 days * 3600 seconds in an hour
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,11 +170,21 @@ class BrokerClient:
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
 
+        # Extract the optional properties
+        priority = msg.get('priority') or _default_priority
+        expiration = msg.get('expiration') or _default_expiration
+
+        print()
+        print('BBB-1', priority)
+        print('BBB-2', expiration)
+        print()
+
         with self.producer.acquire() as client:
 
-            # Make sure we are connected
+            # Make sure we are connected ..
             _ = client.connection.ensure_connection() # type: ignore
 
+            # .. and publish the message now.
             _ = client.publish(
                 msg,
                 exchange=exchange,
@@ -181,6 +192,8 @@ class BrokerClient:
                 content_type='application/json',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
                 retry=True,
+                priority=priority,
+                expiration=expiration,
                 headers={
                     'zato_msg_id': new_msg_id(),
                     'zato_pub_time': utcnow().isoformat()
@@ -424,7 +437,15 @@ class BrokerClient:
         # Convert message to JSON
         msg_str = dumps(msg) # type: ignore
 
-        # Send message with the reply_to and correlation_id properties
+        # Extract the optional properties
+        priority = msg.get('priority') or _default_priority
+        expiration = msg.get('expiration') or _default_expiration
+
+        print()
+        print('CCC-1', priority)
+        print('CCC-2', expiration)
+        print()
+
         with self.producer.acquire() as client:
             _ = client.publish(
                 msg_str,
@@ -432,7 +453,9 @@ class BrokerClient:
                 routing_key='server',
                 content_type='text/plain',
                 delivery_mode=PERSISTENT_DELIVERY_MODE,
-                reply_to=reply_queue
+                reply_to=reply_queue,
+                priority=priority,
+                expiration=expiration,
             )
 
         ctx = _InvokeWithCallbackCtx()
