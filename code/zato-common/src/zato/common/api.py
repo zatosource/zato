@@ -1172,7 +1172,9 @@ class PubSub:
         Default_Threads = 1
 
     class Message:
-        Default_Priority = 5
+        Priority_Min = 0
+        Priority_Max = 9
+        Priority_Default = 5
         Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
 
     class Repeats:

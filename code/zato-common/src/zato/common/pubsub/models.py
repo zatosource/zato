@@ -29,7 +29,7 @@ class PubMessage:
     """ Model representing a message to be published to a topic.
     """
     data: 'any_'
-    priority: 'int' = PubSub.Message.Default_Priority
+    priority: 'int' = PubSub.Message.Priority_Default
     expiration: 'int' = PubSub.Message.Default_Expiration
     correl_id: 'str' = ''
     in_reply_to: 'str' = ''
@@ -59,7 +59,7 @@ class Message:
     msg_id: 'str'
     correl_id: 'str' = ''
     in_reply_to: 'str' = ''
-    priority: 'int' = PubSub.Message.Default_Priority
+    priority: 'int' = PubSub.Message.Priority_Default
     mime_type: 'str' = 'application/json'
     ext_client_id: 'str' = ''
     pub_time_iso: 'str' = ''

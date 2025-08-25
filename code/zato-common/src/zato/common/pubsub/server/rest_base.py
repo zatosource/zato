@@ -57,7 +57,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_priority = PubSub.Message.Default_Priority
+_default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 _max_messages_limit = 1000
 _max_len_limit = 5_000_000

@@ -143,7 +143,7 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['data'], 'minimal message')
         self.assertEqual(message['msg_id'], '')
         self.assertEqual(message['correl_id'], '')
-        self.assertEqual(message['priority'], PubSub.Message.Default_Priority)
+        self.assertEqual(message['priority'], PubSub.Message.Priority_Default)
         self.assertEqual(message['mime_type'], 'application/json')
         self.assertEqual(message['expiration'], '0')
 
