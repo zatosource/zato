@@ -68,7 +68,6 @@ class Message:
     expiration: 'int' = PubSub.Message.Default_Expiration
     expiration_time_iso: 'str' = ''
     size: 'int' = 0
-    delivery_count: 'int' = 0
     sub_key: 'str' = ''
 
 # ################################################################################################################################

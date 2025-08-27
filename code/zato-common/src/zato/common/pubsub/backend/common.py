@@ -277,18 +277,23 @@ class Backend:
             'data': msg.data,
             'topic_name': topic_name,
             'msg_id': msg_id,
-            'correl_id': msg.correl_id,
-            'in_reply_to': msg.in_reply_to,
             'priority': msg.priority,
-            'ext_client_id': msg.ext_client_id,
             'pub_time_iso': pub_time_iso,
             'recv_time_iso': pub_time_iso,  # Same as pub_time for direct API calls
             'expiration': msg.expiration,
             'expiration_time_iso': expiration_time_iso,
             'size': size,
-            'delivery_count': 0,
             'publisher': username,
         }
+
+        if msg.ext_client_id:
+            message['ext_client_id'] = msg.ext_client_id
+
+        if msg.correl_id:
+            message['correl_id'] = msg.correl_id
+
+        if msg.in_reply_to:
+            message['in_reply_to'] = msg.in_reply_to
 
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 

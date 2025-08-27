@@ -1556,7 +1556,7 @@ class PubSubMessage:
     recv_time_iso: 'str'
 
     priority: 'int'
-    delivery_count: 'int'=0
+    delivery_count: 'int' = 0 # This will be updated by the HandleDelivery service right before the delivery
 
     expiration: 'int'
     expiration_time_iso: 'str'
