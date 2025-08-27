@@ -259,9 +259,12 @@ class Backend:
 
         # Set timestamps
         now = utcnow()
-        pub_time_iso = now.isoformat()
+        recv_time_iso = now.isoformat()
         expiration_time = now + timedelta(seconds=msg.expiration)
         expiration_time_iso = expiration_time.isoformat()
+
+        # This is optional on input so we need to our own timestamp if not given
+        pub_time_iso = msg.pub_time or recv_time_iso
 
         # Create message object
         message = {
@@ -270,7 +273,7 @@ class Backend:
             'msg_id': msg_id,
             'priority': msg.priority,
             'pub_time_iso': pub_time_iso,
-            'recv_time_iso': pub_time_iso,  # Same as pub_time for direct API calls
+            'recv_time_iso': recv_time_iso,  # Same as pub_time for direct API calls
             'expiration': msg.expiration,
             'expiration_time_iso': expiration_time_iso,
             'size': size,
