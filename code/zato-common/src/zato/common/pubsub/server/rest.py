@@ -216,8 +216,13 @@ class PubSubRESTServer(BaseRESTServer):
             actual_data = payload.get('data', payload_data)
             msg_id = payload.get('msg_id', '')
             priority = payload.get('priority', _default_priority)
+
             pub_time_iso = payload.get('pub_time_iso', '')
+            pub_time_iso = pub_time_iso.replace('Z', '+00:00')
+
             recv_time_iso = payload.get('recv_time_iso', '')
+            recv_time_iso = recv_time_iso.replace('Z', '+00:00')
+
             expiration = payload.get('expiration', _default_expiration)
             topic_name = payload.get('topic_name', '')
             expiration_time_iso = payload.get('expiration_time_iso', '')
@@ -234,11 +239,12 @@ class PubSubRESTServer(BaseRESTServer):
             in_reply_to = payload.get('in_reply_to', '')
 
             # Calculate time deltas
-            pub_dt = datetime.fromisoformat(pub_time_iso.replace('Z', '+00:00'))
-            time_since_pub = str(current_time - pub_dt)
 
-            recv_dt = datetime.fromisoformat(recv_time_iso.replace('Z', '+00:00'))
-            time_since_recv = str(current_time - recv_dt)
+            pub_timestamp = datetime.fromisoformat(pub_time_iso)
+            time_since_pub = str(current_time - pub_timestamp)
+
+            recv_timestamp = datetime.fromisoformat(recv_time_iso)
+            time_since_recv = str(current_time - recv_timestamp)
 
             # We want for the keys to be serialized in a specific order ..
             message = {
