@@ -12,7 +12,6 @@ from http.client import BAD_REQUEST, OK
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
-from uuid import uuid4
 
 # gevent
 from gevent.lock import RLock
@@ -22,7 +21,7 @@ from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
 from zato.common.pubsub.util import create_subscription_bindings
-from zato.common.util.api import new_sub_key, utcnow
+from zato.common.util.api import new_msg_id, new_sub_key, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,14 +52,6 @@ topic_subs = 'dict_[str, subs_by_sec_name]'   # topic_name -> {sec_name -> Subsc
 
 class ModuleCtx:
     Exchange_Name = 'pubsubapi'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def generate_msg_id() -> 'str':
-    """ Generate a unique message ID with prefix.
-    """
-    return f'{_prefix.Msg_ID}{uuid4().hex}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -262,7 +253,7 @@ class Backend:
             self.create_topic(cid, 'publish', topic_name)
 
         # Generate message ID and calculate size
-        msg_id = generate_msg_id()
+        msg_id = new_msg_id()
         data_str = dumps(msg.data) if not isinstance(msg.data, str) else msg.data
         size = len(data_str.encode('utf-8'))
 
