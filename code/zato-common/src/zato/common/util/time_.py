@@ -114,11 +114,14 @@ class TimeUtil:
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
+
         if delta:
             now = now + delta
+
         if needs_format:
             return now.format(format)
-        return now
+
+        return now # type: ignore
 
 # ################################################################################################################################
 
