@@ -49,7 +49,10 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_min_priority = PubSub.Message.Priority_Min
+_max_priority = PubSub.Message.Priority_Max
 _default_priority = PubSub.Message.Priority_Default
+
 _default_expiration = PubSub.Message.Default_Expiration
 
 _max_messages_limit = 1000
@@ -108,6 +111,22 @@ class PubSubRESTServer(BaseRESTServer):
         correl_id = data.get('correl_id', '') or cid
         in_reply_to=data.get('in_reply_to', '')
 
+        # .. this is optional ..
+        pub_time = data.get('pub_time', '')
+
+        # .. make sure it's valid if given on input ..
+        if pub_time:
+            _ = datetime.fromisoformat(pub_time)
+
+        # .. make sure the priority is valid ..
+        if priority < _min_priority or priority > _max_priority:
+            priority = _default_priority
+
+        # .. make sure the expiration is valid ..
+        expiration = round(expiration)
+        if expiration < 1:
+            expiration = 1
+
         # .. build a business message ..
         msg = PubMessage()
         msg.data = msg_data
@@ -115,6 +134,7 @@ class PubSubRESTServer(BaseRESTServer):
         msg.expiration = expiration
         msg.correl_id = correl_id
         msg.ext_client_id = ext_client_id
+        msg.pub_time = pub_time
         msg.in_reply_to = in_reply_to
 
         # .. let the backend handle it ..
