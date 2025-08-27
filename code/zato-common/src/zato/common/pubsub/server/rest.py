@@ -208,45 +208,61 @@ class PubSubRESTServer(BaseRESTServer):
 
             # Parse the payload to extract the original data
             if isinstance(payload_data, str):
-                payload_obj = loads(payload_data)
+                payload = loads(payload_data)
             else:
-                payload_obj = payload_data
+                payload = payload_data
 
-            actual_data = payload_obj.get('data', payload_data)
-            msg_id = payload_obj.get('msg_id', '')
-            correl_id = payload_obj.get('correl_id', '')
-            priority = payload_obj.get('priority', _default_priority)
-            pub_time_iso = payload_obj.get('pub_time_iso', '')
-            recv_time_iso = payload_obj.get('recv_time_iso', '')
-            expiration = payload_obj.get('expiration', _default_expiration)
-            topic_name = payload_obj.get('topic_name', '')
-            ext_client_id = payload_obj.get('ext_client_id', '')
-            expiration_time_iso = payload_obj.get('expiration_time_iso', '')
-            in_reply_to = payload_obj.get('in_reply_to', '')
-            size = payload_obj.get('size', len(str(actual_data).encode('utf-8')))
+            actual_data = payload.get('data', payload_data)
+            msg_id = payload.get('msg_id', '')
+            priority = payload.get('priority', _default_priority)
+            pub_time_iso = payload.get('pub_time_iso', '')
+            recv_time_iso = payload.get('recv_time_iso', '')
+            expiration = payload.get('expiration', _default_expiration)
+            topic_name = payload.get('topic_name', '')
+            expiration_time_iso = payload.get('expiration_time_iso', '')
+            size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
-            mime_type = properties.get('content_type', 'application/json')
-            ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
+            # Disabled until added to publishers
+            # mime_type = properties.get('content_type', 'application/json')
+            # ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
 
+            correl_id = payload.get('correl_id', '')
+            ext_client_id = payload.get('ext_client_id', '')
+            in_reply_to = payload.get('in_reply_to', '')
+
+            # We want for the keys to be serialized in a specific order ..
             message = {
-                'data': actual_data,
+                'topic_name': topic_name,
+                'size': size,
+                'priority': priority,
+                'expiration': expiration,
                 'msg_id': msg_id,
                 'correl_id': correl_id,
-                'priority': priority,
-                'mime_type': mime_type,
+
+                # Disabled until added to publishers
+                # 'mime_type': mime_type,
+                # 'ext_pub_time_iso': ext_pub_time_iso,
+
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
-                'expiration': expiration,
-                'topic_name': topic_name,
-                'ext_client_id': ext_client_id,
-                'ext_pub_time_iso': ext_pub_time_iso,
-                'in_reply_to': in_reply_to,
                 'expiration_time_iso': expiration_time_iso,
-                'size': size,
             }
 
+            # .. this is optional ..
+            if ext_client_id := payload.get('ext_client_id'):
+                message['ext_client_id'] = ext_client_id
+
+            # .. so is this ..
+            if in_reply_to := payload.get('in_reply_to'):
+                message['in_reply_to'] = in_reply_to
+
+            # .. finally, we can add our actual data ..
+            message['data'] = actual_data
+
+            # .. OK, the message is ready ..
             messages.append(message)
 
+        # .. and now we can return them all.
         return messages
 
 # ################################################################################################################################
