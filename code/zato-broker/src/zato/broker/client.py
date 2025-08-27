@@ -451,11 +451,6 @@ class BrokerClient:
         priority = msg.get('priority') or _default_priority
         expiration = msg.get('expiration') or _default_expiration
 
-        print()
-        print('CCC-1', priority)
-        print('CCC-2', expiration)
-        print()
-
         with self.producer.acquire() as client:
             _ = client.publish(
                 msg_str,
