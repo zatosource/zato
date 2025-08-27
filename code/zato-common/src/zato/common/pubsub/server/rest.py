@@ -202,8 +202,6 @@ class PubSubRESTServer(BaseRESTServer):
 
         for msg in messages_data:
 
-            properties = msg.get('properties', {})
-            headers = properties.get('headers', {})
             payload_data = msg.get('payload', '')
 
             # Parse the payload to extract the original data
@@ -223,6 +221,8 @@ class PubSubRESTServer(BaseRESTServer):
             size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
             # Disabled until added to publishers
+            # headers = properties.get('headers', {})
+            # properties = msg.get('properties', {})
             # mime_type = properties.get('content_type', 'application/json')
             # ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
 
