@@ -223,7 +223,7 @@ class PubSubRESTServer(BaseRESTServer):
             expiration_time_iso = payload.get('expiration_time_iso', '')
             size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
-            # Disabled until added to publishers
+            # Disabled until it's added to publishers
             # headers = properties.get('headers', {})
             # properties = msg.get('properties', {})
             # mime_type = properties.get('content_type', 'application/json')
@@ -246,18 +246,20 @@ class PubSubRESTServer(BaseRESTServer):
                 'size': size,
                 'priority': priority,
                 'expiration': expiration,
+
+                'time_since_pub': time_since_pub,
+                'time_since_recv': time_since_recv,
+
                 'msg_id': msg_id,
                 'correl_id': correl_id,
 
-                # Disabled until added to publishers
+                # Disabled until it's added to publishers
                 # 'mime_type': mime_type,
                 # 'ext_pub_time_iso': ext_pub_time_iso,
 
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
                 'expiration_time_iso': expiration_time_iso,
-                'time_since_pub': time_since_pub,
-                'time_since_recv': time_since_recv,
             }
 
             # .. this is optional ..
