@@ -164,20 +164,30 @@ class BrokerClient:
         """ Publishes a message to the AMQP broker.
         """
 
-        if not isinstance(msg, str):
+        # We're given an already serialized message ..
+        if isinstance(msg, str):
+
+            # .. so we need to assume the defaults ..
+            priority = _default_priority
+            expiration = _default_expiration
+
+        # .. otherwise, it's not serialized ..
+        else:
+
+            # .. we can try to extract the optional parameters ourselves ..
+            priority = msg.get('priority') or _default_priority
+            expiration = msg.get('expiration') or _default_expiration
+
+            # .. and now we can serialize the message too ..
             msg = dumps(msg)
-
-        exchange    = kwargs.get('exchange') or 'components'
-        routing_key = kwargs.get('routing_key') or 'server'
-
-        # Extract the optional properties
-        priority = msg.get('priority') or _default_priority
-        expiration = msg.get('expiration') or _default_expiration
 
         print()
         print('BBB-1', priority)
         print('BBB-2', expiration)
         print()
+
+        exchange    = kwargs.get('exchange') or 'components'
+        routing_key = kwargs.get('routing_key') or 'server'
 
         with self.producer.acquire() as client:
 
@@ -575,7 +585,7 @@ class BrokerClient:
             if response.reply_queue_name:
 
                 logger.info(f'No response - cleaning up reply queue {response.reply_queue_name}')
-                self._cleanup_reply_consumer(ctx, response.reply_queue_name)
+                self._cleanup_reply_consumer(cid, response.reply_queue_name)
 
                 # Also clean up the callback registration
                 with self.lock:
@@ -668,7 +678,7 @@ class BrokerClient:
         self,
         cid: 'str',
         prefix: 'str' = '',
-        exclude_list: 'strlist' = None,
+        exclude_list: 'strlist | None' = None,
     ) -> 'dictlist':
         """ Get list of queues from RabbitMQ Management API.
         """
