@@ -42,7 +42,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
+_epoch = datetime.fromtimestamp(0, timezone.utc) # Start of UNIX epoch
 local_tz = get_localzone()
 local_tz_zone = str(local_tz)
 
@@ -198,7 +198,7 @@ class TimeUtil:
 # ################################################################################################################################
 
     def isoutcnow(self, needs_format=True, _format=ModuleCtx.Timestamp_Format):
-        return self.utc_now(_format, needs_format)
+        return self.now(_format, 'UTC', needs_format)
 
 # ################################################################################################################################
 
