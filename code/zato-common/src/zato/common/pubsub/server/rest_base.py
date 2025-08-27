@@ -15,6 +15,7 @@ from dataclasses import asdict
 from http.client import responses as http_responses
 from json import dumps, loads
 from logging import getLogger
+from traceback import format_exc
 
 # PyYAML
 from yaml import dump as yaml_dump
@@ -169,8 +170,7 @@ class BaseRESTServer(BaseServer):
                 return {}
 
         except Exception as e:
-            logger.error(f'[{cid}] Error parsing JSON: {e}, raw data: {raw_data}')
-            raise
+            raise BadRequestException(cid, f'JSON parsing error: `{format_exc()}`')
 
 # ################################################################################################################################
 
@@ -352,7 +352,7 @@ class BaseRESTServer(BaseServer):
         response = requests.get(connections_url, auth=self._broker_auth)
 
         if response.status_code != OK:
-            logger.error(f'Failed to list connections: {response.status_code}, {response.text}')
+            logger.warning(f'Failed to list connections: {response.status_code}, {response.text}')
             return {'status': 'error', 'error': response.text, 'status_code': response.status_code}
 
         connections = response.json()
