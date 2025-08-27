@@ -11,6 +11,7 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+from datetime import datetime
 from json import loads
 from http.client import OK
 from logging import getLogger
@@ -20,6 +21,7 @@ import requests
 
 # Zato
 from zato.common.typing_ import any_, anydict
+from zato.common.util.api import utcnow
 
 # gunicorn
 from gunicorn.app.base import BaseApplication
@@ -198,6 +200,7 @@ class PubSubRESTServer(BaseRESTServer):
     def _transform_messages(self, messages_data:'list') -> 'list':
         """ Convert RabbitMQ format to Zato API format.
         """
+        current_time = utcnow()
         messages = []
 
         for msg in messages_data:
@@ -230,6 +233,13 @@ class PubSubRESTServer(BaseRESTServer):
             ext_client_id = payload.get('ext_client_id', '')
             in_reply_to = payload.get('in_reply_to', '')
 
+            # Calculate time deltas
+            pub_dt = datetime.fromisoformat(pub_time_iso.replace('Z', '+00:00'))
+            time_since_pub = str(current_time - pub_dt)
+
+            recv_dt = datetime.fromisoformat(recv_time_iso.replace('Z', '+00:00'))
+            time_since_recv = str(current_time - recv_dt)
+
             # We want for the keys to be serialized in a specific order ..
             message = {
                 'topic_name': topic_name,
@@ -246,6 +256,8 @@ class PubSubRESTServer(BaseRESTServer):
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
                 'expiration_time_iso': expiration_time_iso,
+                'time_since_pub': time_since_pub,
+                'time_since_recv': time_since_recv,
             }
 
             # .. this is optional ..
