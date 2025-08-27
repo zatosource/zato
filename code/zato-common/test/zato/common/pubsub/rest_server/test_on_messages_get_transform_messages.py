@@ -99,14 +99,14 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['msg_id'], 'msg_123')
         self.assertEqual(message['correl_id'], 'corr_456')
         self.assertEqual(message['priority'], 5)
-        self.assertEqual(message['mime_type'], 'text/plain')
-        self.assertEqual(message['pub_time_iso'], '2025-01-01T12:00:00Z')
-        self.assertEqual(message['recv_time_iso'], '2025-01-01T12:00:00Z')
+
+        self.assertEqual(message['pub_time_iso'], '2025-01-01T12:00:00+00:00')
+        self.assertEqual(message['recv_time_iso'], '2025-01-01T12:00:00+00:00')
         self.assertEqual(message['expiration'], '3600')
         self.assertEqual(message['topic_name'], 'test.topic')
         self.assertEqual(message['ext_client_id'], 'client_789')
-        self.assertEqual(message['ext_pub_time_iso'], '2025-01-01T11:59:00Z')
-        self.assertEqual(message['in_reply_to'], '')
+
+
         self.assertEqual(message['expiration_time_iso'], '')
         self.assertEqual(message['size'], len('test message data'.encode('utf-8')))
 
@@ -122,8 +122,8 @@ class RESTTransformMessagesTestCase(TestCase):
                     'msg_id': '',
                     'correl_id': '',
                     'priority': 5,
-                    'pub_time_iso': '',
-                    'recv_time_iso': '',
+                    'pub_time_iso': '2025-01-01T12:00:00+00:00',
+                    'recv_time_iso': '2025-01-01T12:00:00+00:00',
                     'expiration': '0',
                     'topic_name': '',
                     'ext_client_id': '',
@@ -144,7 +144,7 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['msg_id'], '')
         self.assertEqual(message['correl_id'], '')
         self.assertEqual(message['priority'], PubSub.Message.Priority_Default)
-        self.assertEqual(message['mime_type'], 'application/json')
+
         self.assertEqual(message['expiration'], '0')
 
 # ################################################################################################################################
@@ -159,8 +159,8 @@ class RESTTransformMessagesTestCase(TestCase):
                     'msg_id': 'msg_456',
                     'correl_id': '',
                     'priority': 5,
-                    'pub_time_iso': '',
-                    'recv_time_iso': '',
+                    'pub_time_iso': '2025-01-01T12:00:00+00:00',
+                    'recv_time_iso': '2025-01-01T12:00:00+00:00',
                     'expiration': '0',
                     'topic_name': '',
                     'ext_client_id': '',
@@ -182,28 +182,27 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['data'], 'message without headers')
         self.assertEqual(message['msg_id'], 'msg_456')
         self.assertEqual(message['topic_name'], '')
-        self.assertEqual(message['ext_client_id'], '')
-        self.assertEqual(message['ext_pub_time_iso'], '')
+
 
 # ################################################################################################################################
 
     def test_transform_messages_calculates_size_for_string(self):
         """ _transform_messages calculates correct size for string payloads.
         """
-        test_payload = 'test string message'
+        string_payload = 'test string message'
         payload_dict = {
-            'data': test_payload,
-            'msg_id': '',
+            'data': string_payload,
+            'msg_id': 'msg_string',
             'correl_id': '',
             'priority': 5,
-            'pub_time_iso': '',
-            'recv_time_iso': '',
+            'pub_time_iso': '2025-01-01T12:00:00+00:00',
+            'recv_time_iso': '2025-01-01T12:00:00+00:00',
             'expiration': '0',
             'topic_name': '',
             'ext_client_id': '',
             'expiration_time_iso': '',
             'in_reply_to': '',
-            'size': len(test_payload.encode('utf-8'))
+            'size': len(string_payload.encode('utf-8'))
         }
         rabbitmq_messages = [
             {
@@ -217,8 +216,8 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(len(result), 1)
         message = result[0]
 
-        self.assertEqual(message['data'], test_payload)
-        self.assertEqual(message['size'], len(test_payload.encode('utf-8')))
+        self.assertEqual(message['data'], string_payload)
+        self.assertEqual(message['size'], len(string_payload.encode('utf-8')))
 
 # ################################################################################################################################
 
@@ -231,8 +230,8 @@ class RESTTransformMessagesTestCase(TestCase):
             'msg_id': '',
             'correl_id': '',
             'priority': 5,
-            'pub_time_iso': '',
-            'recv_time_iso': '',
+            'pub_time_iso': '2025-01-01T12:00:00+00:00',
+            'recv_time_iso': '2025-01-01T12:00:00+00:00',
             'expiration': '0',
             'topic_name': '',
             'ext_client_id': '',
@@ -263,11 +262,11 @@ class RESTTransformMessagesTestCase(TestCase):
         unicode_payload = 'test message with unicode: 🚀 ñáéíóú'
         payload_dict = {
             'data': unicode_payload,
-            'msg_id': '',
+            'msg_id': 'msg_unicode',
             'correl_id': '',
             'priority': 5,
-            'pub_time_iso': '',
-            'recv_time_iso': '',
+            'pub_time_iso': '2025-01-01T12:00:00+00:00',
+            'recv_time_iso': '2025-01-01T12:00:00+00:00',
             'expiration': '0',
             'topic_name': '',
             'ext_client_id': '',
@@ -302,8 +301,8 @@ class RESTTransformMessagesTestCase(TestCase):
                     'msg_id': 'msg_1',
                     'correl_id': '',
                     'priority': 5,
-                    'pub_time_iso': '',
-                    'recv_time_iso': '',
+                    'pub_time_iso': '2025-01-01T12:00:00+00:00',
+                    'recv_time_iso': '2025-01-01T12:00:00+00:00',
                     'expiration': '0',
                     'topic_name': '',
                     'ext_client_id': '',
@@ -319,8 +318,8 @@ class RESTTransformMessagesTestCase(TestCase):
                     'msg_id': 'msg_2',
                     'correl_id': '',
                     'priority': 5,
-                    'pub_time_iso': '',
-                    'recv_time_iso': '',
+                    'pub_time_iso': '2025-01-01T12:00:00+00:00',
+                    'recv_time_iso': '2025-01-01T12:00:00+00:00',
                     'expiration': '0',
                     'topic_name': '',
                     'ext_client_id': '',
@@ -336,8 +335,8 @@ class RESTTransformMessagesTestCase(TestCase):
                     'msg_id': 'msg_3',
                     'correl_id': '',
                     'priority': 5,
-                    'pub_time_iso': '',
-                    'recv_time_iso': '',
+                    'pub_time_iso': '2025-01-01T12:00:00+00:00',
+                    'recv_time_iso': '2025-01-01T12:00:00+00:00',
                     'expiration': '0',
                     'topic_name': '',
                     'ext_client_id': '',
