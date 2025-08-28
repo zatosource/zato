@@ -1561,8 +1561,8 @@ class PubSubMessage:
     expiration: 'int'
     expiration_time_iso: 'str'
 
-    ext_client_id: 'str'
-    in_reply_to: 'str'
+    ext_client_id: 'str' = ''
+    in_reply_to: 'str' = ''
 
     sub_key: 'str'
     topic_name: 'str'
