@@ -40,8 +40,9 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
-from zato.common.util.api import fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, rebuild_subscription_dict_list, \
-    spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
+    rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \
+    wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -75,7 +76,7 @@ if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, stranydict, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -90,6 +91,7 @@ if 0:
 # ################################################################################################################################
 
 _data_format_dict = DATA_FORMAT.DICT
+_needs_details = asbool(os.environ.get('Zato_Needs_Details'))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -315,7 +317,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _config_to_dict(self, config_list:'anylist', key:'str'='name') -> 'stranydict':
+    def _config_to_dict(self, config_list:'anylist', key:'str'='name') -> 'strdict':
         """ Converts a list of dictionaries produced by ConfigDict instances to a dictionary keyed with 'key' elements.
         """
         out = {}
@@ -528,7 +530,7 @@ class WorkerStore(_WorkerStoreBase):
         """
         '''
         def _name_matches(def_name:'str') -> 'callable_':
-            def _inner(config:'stranydict') -> 'bool':
+            def _inner(config:'strdict') -> 'bool':
                 return config['def_name']==def_name
             return _inner
 
@@ -748,53 +750,22 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _handle_pubsub_public_message(self, body:'any_', msg:'KombuMessage', delivery_count:'int', name:'str', config:'strdict') -> 'None':
+    def _handle_pubsub_public_message(
+        self,
+        body:'any_',
+        delivery_count:'int',
+        config:'strdict'
+    ) -> 'None':
 
-        '''
-        print()
-        print(111, repr(body))
-        print(222, repr(msg))
-        # print(333, repr(name))
-        # print(444, repr(config))
-        print(555, msg.headers)
-        print(666, msg.properties)
-        print(777, msg.delivery_info)
-        print()
-        '''
-
-        '''
-        # Local objects
-        service_msg = {}
-
-        # The name of the queue that the message was taken from is the same as the subscription key of the consumer ..
-        sub_key = config.queue
-
-        # .. enrich the message for the service ..
-        if '2' in body:
-            body['sub_key'] = sub_key
-
-            # .. turn that message into a form that a service can be invoked with ..
-            service_msg['action'] = _service_publish
-            service_msg['payload'] = body
-            service_msg['cid'] = body.get('correl_id') or body.msg_id
-            service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
-        '''
-
-        # .. push that message to the server ..
-        # self.broker_client.invoke_async(service_msg)
-
-        # Enrich the body with our own metadata
+        # Enrich the body with our own metadata ..
         _zato_meta = body['_zato_meta'] = {}
         _zato_meta['sub_key'] = config.queue
-        _zato_meta['delivery_count'] = config.queue
+        _zato_meta['delivery_count'] = delivery_count
 
-        logger.info('😀 ******** BOD BOD BOD %s', body)
-        logger.info('😀 ******** MSG MSG MSG %s', msg)
-        logger.info('😀 ******** NAM NAM NAM %s', name)
-        logger.info('😀 ******** CON CON CON %s', config)
-
+        # .. our delivery service - it will decide how to deliver the message ..
         service = 'zato.pubsub.subscription.handle-delivery'
 
+        # .. do invoke it now.
         _ = self.invoke(service, body)
 
 # ################################################################################################################################
@@ -814,7 +785,7 @@ class WorkerStore(_WorkerStoreBase):
         try:
 
             # .. invoke the callback ..
-            self._handle_pubsub_public_message(body, msg, delivery_count, sec_name, config)
+            self._handle_pubsub_public_message(body, delivery_count, config)
 
             # .. if we are here, it means everything went fine so we can acknoledge the message with the broker ..
             msg.ack()

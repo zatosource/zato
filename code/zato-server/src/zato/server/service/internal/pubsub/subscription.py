@@ -687,7 +687,7 @@ class Unsubscribe(_BaseModifyTopicList):
 
 class HandleDelivery(Service):
 
-    def build_business_message(self, input:'strdict') -> 'PubSubMessage':
+    def build_business_message(self, input:'strdict', sub_key:'str', delivery_count:'int') -> 'PubSubMessage':
 
         msg = PubSubMessage()
 
@@ -703,16 +703,20 @@ class HandleDelivery(Service):
         msg.recv_time_iso = input['recv_time_iso']
 
         msg.priority = input['priority']
-        msg.delivery_count = input['delivery_count']
+        msg.delivery_count = delivery_count
 
         msg.expiration = input['expiration']
         msg.expiration_time_iso = input['expiration_time_iso']
 
-        msg.ext_client_id = input['ext_client_id']
-        msg.in_reply_to = input['in_reply_to']
-
-        msg.sub_key = input['sub_key']
+        msg.sub_key = sub_key
         msg.topic_name = input['topic_name']
+
+        # These are optional
+        if ext_client_id := input.get('ext_client_id'):
+            msg.ext_client_id = ext_client_id
+
+        if in_reply_to := input.get('in_reply_to'):
+            msg.in_reply_to = in_reply_to
 
         return msg
 
@@ -764,8 +768,12 @@ class HandleDelivery(Service):
         # Extract the metadata - and delete it from input because we don't want to deliver it
         meta = input.pop('_zato_meta')
 
+        # Get the individual variables
+        sub_key = meta['sub_key']
+        delivery_count = meta['delivery_count']
+
         # Get the detailed configuration of the subscriber ..
-        config = self.server.worker_store.get_pubsub_sub_config(meta['sub_key'])
+        config = self.server.worker_store.get_pubsub_sub_config(sub_key)
 
         # .. we go here if we're to invoke a specific service
         if config.push_type == _push_type.Service:
@@ -774,7 +782,7 @@ class HandleDelivery(Service):
             service_name = config['push_service_name']
 
             # .. turn the incoming message into a business one ..
-            msg = self.build_business_message(input)
+            msg = self.build_business_message(input, sub_key, delivery_count)
 
             # .. now, we can invoke our push service
             _ = self.invoke(service_name, msg)
