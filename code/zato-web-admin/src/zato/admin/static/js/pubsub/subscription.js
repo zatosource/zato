@@ -292,18 +292,6 @@ $(document).ready(function() {
                 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
                 console.log('DEBUG requestAnimationFrame: setupDeliveryTypeVisibility completed');
 
-                // Populate REST endpoints regardless of delivery type to avoid a flicker
-                var currentRestEndpointId = instance.rest_push_endpoint_id;
-                console.log('DEBUG requestAnimationFrame: populating REST endpoints with currentRestEndpointId=' + JSON.stringify(currentRestEndpointId));
-                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, false);
-                console.log('DEBUG requestAnimationFrame: populateRestEndpoints completed');
-
-                // Populate services regardless of delivery type to avoid a flicker
-                var currentServiceName = instance.push_service_name;
-                console.log('DEBUG requestAnimationFrame: populating services with currentServiceName=' + JSON.stringify(currentServiceName));
-                $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
-                console.log('DEBUG requestAnimationFrame: populateServices completed');
-
                 // Load topics for the current security definition in edit mode
                 if(instance.sec_base_id) {
                     console.log('DEBUG requestAnimationFrame: loading topics for sec_base_id=' + instance.sec_base_id);
@@ -437,10 +425,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             console.log('DEBUG populateRestEndpoints: select element before population - display:', $endpointSelect.css('display'));
             console.log('DEBUG populateRestEndpoints: select element before population - parent visible:', $endpointSelect.parent().is(':visible'));
             console.log('DEBUG populateRestEndpoints: select element before population - options count:', $endpointSelect.find('option').length);
-
-            // Clear existing options except the first one
-            $endpointSelect.find('option:not(:first)').remove();
-            console.log('DEBUG populateRestEndpoints: cleared existing options, remaining count:', $endpointSelect.find('option').length);
 
             if (response.rest_endpoints && response.rest_endpoints.length > 0) {
                 console.log('DEBUG populateRestEndpoints: Populating', response.rest_endpoints.length, 'endpoints');
