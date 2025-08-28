@@ -748,7 +748,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _handle_pubsub_public_message(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+    def _handle_pubsub_public_message(self, body:'any_', msg:'KombuMessage', delivery_count:'int', name:'str', config:'strdict') -> 'None':
 
         '''
         print()
@@ -784,8 +784,9 @@ class WorkerStore(_WorkerStoreBase):
         # self.broker_client.invoke_async(service_msg)
 
         # Enrich the body with our own metadata
-        body['_zato_meta'] = {}
-        body['_zato_meta']['sub_key'] = config.queue
+        _zato_meta = body['_zato_meta'] = {}
+        _zato_meta['sub_key'] = config.queue
+        _zato_meta['delivery_count'] = config.queue
 
         logger.info('😀 ******** BOD BOD BOD %s', body)
         logger.info('😀 ******** MSG MSG MSG %s', msg)
@@ -798,13 +799,22 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
+    def on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', sec_name:'str', config:'strdict') -> 'None':
 
-        # Try to deliver our message ..
+        # Local variables
+        application_headers = msg.properties['application_headers']
+
+        # .. this will be increasing ..
+        delivery_count = application_headers.get('x-delivery-count') or 0
+
+        # .. but we count from 0 so we need to add 1 to get a human-friendly number ..
+        delivery_count += 1
+
+        # .. try to deliver our message ..
         try:
 
             # .. invoke the callback ..
-            self._handle_pubsub_public_message(body, msg, name, config)
+            self._handle_pubsub_public_message(body, msg, delivery_count, sec_name, config)
 
             # .. if we are here, it means everything went fine so we can acknoledge the message with the broker ..
             msg.ack()
@@ -817,9 +827,6 @@ class WorkerStore(_WorkerStoreBase):
 
             # OK, we have an exception so we will potentially retry the delivery ..
 
-            # Extract our headers ..
-            application_headers = msg.properties['application_headers']
-
             # .. topic name is the same as the routing key for this message ..
             topic_name = msg.delivery_info['routing_key']
 
@@ -829,12 +836,6 @@ class WorkerStore(_WorkerStoreBase):
             subscriber = subscriber[0]
             subscriber = subscriber.split('.')
             subscriber = subscriber[0]
-
-            # .. this will be increasing ..
-            delivery_count = application_headers.get('x-delivery-count') or 0
-
-            # .. but we count from 0 so we need to add 1 to get a human-friendly number ..
-            delivery_count += 1
 
             # .. this may be missing in case someone sent a message manually ..
             msg_id = application_headers.get('zato_msg_id') or 'zpsm.NotGiven'
