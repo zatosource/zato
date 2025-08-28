@@ -438,6 +438,10 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             console.log('DEBUG populateRestEndpoints: select element before population - parent visible:', $endpointSelect.parent().is(':visible'));
             console.log('DEBUG populateRestEndpoints: select element before population - options count:', $endpointSelect.find('option').length);
 
+            // Clear existing options except the first one
+            $endpointSelect.find('option:not(:first)').remove();
+            console.log('DEBUG populateRestEndpoints: cleared existing options, remaining count:', $endpointSelect.find('option').length);
+
             if (response.rest_endpoints && response.rest_endpoints.length > 0) {
                 console.log('DEBUG populateRestEndpoints: Populating', response.rest_endpoints.length, 'endpoints');
                 $.each(response.rest_endpoints, function(index, endpoint) {
