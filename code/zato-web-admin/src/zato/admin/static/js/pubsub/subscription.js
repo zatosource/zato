@@ -29,7 +29,8 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
         htmlContent = data.responseText;
         console.log('DEBUG populate_sec_def_topics_callback: received responseText HTML data, length=' + data.responseText.length);
     } else {
-        console.log('DEBUG populate_sec_def_topics_callback: unexpected data format, data=' + JSON.stringify(data));
+        var dataJson = JSON.stringify(data);
+        console.log('DEBUG populate_sec_def_topics_callback: unexpected data format, data=' + dataJson);
         return;
     }
 
@@ -426,7 +427,8 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             cluster_id: $('#cluster_id').val() || $('#id_edit-cluster_id').val()
         },
         success: function(response) {
-            console.log('DEBUG populateRestEndpoints: AJAX success, response:', response);
+            var responseJson = JSON.stringify(response);
+            console.log('DEBUG populateRestEndpoints: AJAX success, response:', responseJson);
 
             // Remove loading spinner
             $container.find('.loading-spinner').remove();
@@ -523,12 +525,11 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
         form_type: form_type
     })
     .done(function(response) {
-        if ($serviceSelect.length === 0) {
-            return;
-        }
+        var responseJson = JSON.stringify(response);
+        console.log('DEBUG populateServices: Services loaded successfully, response:', responseJson);
 
-        $serviceSelect.empty();
-        $serviceSelect.append('<option value="">Select a service</option>');
+        // Clear existing options except the first one
+        $serviceSelect.find('option:not(:first)').remove();
 
         if (response.services && response.services.length > 0) {
             response.services.forEach(function(service) {
@@ -685,7 +686,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     console.log('DEBUG edit: opening edit form for instance_id=' + JSON.stringify(instance_id));
 
     var instance = $.fn.zato.data_table.data[instance_id];
-    console.log('DEBUG edit: instance data=' + JSON.stringify(instance));
+    var instanceJson = JSON.stringify(instance);
+    console.log('DEBUG edit: instance data=' + instanceJson);
     console.log('DEBUG edit: instance.delivery_type=' + JSON.stringify(instance.delivery_type));
     console.log('DEBUG edit: instance.push_type=' + JSON.stringify(instance.push_type));
     console.log('DEBUG edit: instance.rest_push_endpoint_id=' + JSON.stringify(instance.rest_push_endpoint_id));
