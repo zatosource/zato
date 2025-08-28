@@ -335,7 +335,10 @@ class WorkerStore(_WorkerStoreBase):
     def after_broker_client_set(self) -> 'None':
 
         # Create the container that will start all the queue listeners
-        self.pubsub_consumer_backend = ConsumerBackend(self, self.broker_client)
+        self.pubsub_consumer_backend = ConsumerBackend(
+            self,
+            self.broker_client # type: ignore
+        )
 
         # Pub/sub
         self.init_pubsub()
@@ -797,6 +800,7 @@ class WorkerStore(_WorkerStoreBase):
         except Exception as e:
 
             # OK, we have an exception so we will potentially retry the delivery ..
+            e = e
 
             # .. topic name is the same as the routing key for this message ..
             topic_name = msg.delivery_info['routing_key']
@@ -1494,7 +1498,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'strdict | None':
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
         except Exception as e:
