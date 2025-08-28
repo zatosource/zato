@@ -348,7 +348,7 @@ $(document).ready(function() {
             return false;
         }
 
-        // Validate push delivery type
+        // Validate push delivery type and clear conflicting fields
         var deliveryTypeId = action === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
         var pushTypeId = action === 'create' ? '#id_push_type' : '#id_edit-push_type';
         var restEndpointId = action === 'create' ? '#id_rest_push_endpoint_id' : '#id_edit-rest_push_endpoint_id';
@@ -356,8 +356,6 @@ $(document).ready(function() {
 
         var deliveryType = $(deliveryTypeId).val();
         var pushType = $(pushTypeId).val();
-        var restEndpoint = $(restEndpointId).val();
-        var service = $(serviceId).val();
 
         console.log('DEBUG on_submit: deliveryType=' + JSON.stringify(deliveryType) + ', pushType=' + JSON.stringify(pushType));
 
@@ -365,6 +363,17 @@ $(document).ready(function() {
             console.log('DEBUG on_submit: validation failed - push type required');
             $.fn.zato.user_message(true, 'Push type is required when delivery type is push');
             return false;
+        }
+
+        // Clear conflicting fields based on push type
+        if (deliveryType === 'push') {
+            if (pushType === 'rest') {
+                console.log('DEBUG on_submit: clearing service field for REST push type');
+                $(serviceId).val('');
+            } else if (pushType === 'service') {
+                console.log('DEBUG on_submit: clearing REST endpoint field for service push type');
+                $(restEndpointId).val('');
+            }
         }
 
         // Call original on_submit if validation passes
