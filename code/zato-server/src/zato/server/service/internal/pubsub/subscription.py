@@ -19,8 +19,8 @@ from zato.common.broker_message import PUBSUB
 from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
-from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition
-from zato.common.util.api import new_sub_key
+from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
+from zato.common.util.api import new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -711,6 +711,12 @@ class HandleDelivery(Service):
         msg.sub_key = sub_key
         msg.topic_name = input['topic_name']
 
+        # Calculate and set time deltas
+        current_time = utcnow()
+        set_time_since(input, input['pub_time_iso'], input['recv_time_iso'], current_time)
+        msg.time_since_pub = input['time_since_pub']
+        msg.time_since_recv = input['time_since_recv']
+
         # These are optional
         if ext_client_id := input.get('ext_client_id'):
             msg.ext_client_id = ext_client_id
@@ -754,6 +760,10 @@ class HandleDelivery(Service):
             # .. assign all the other parameters ..
             else:
                 out_msg[input_key] = input_value
+
+        # .. calculate and set time deltas ..
+        current_time = utcnow()
+        set_time_since(out_msg, input['pub_time_iso'], input['recv_time_iso'], current_time)
 
         # .. and finally return the message to our caller.
         return out_msg
