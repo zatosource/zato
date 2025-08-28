@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 from http.client import NO_CONTENT, NOT_FOUND, OK
 from logging import getLogger
 from urllib.parse import quote
@@ -518,6 +519,20 @@ def get_security_definition(session, cluster_id, username=None, sec_name=None):
         raise Exception(f'Security definition not found for {lookup_field} `{lookup_value}`')
 
     return sec_def, lookup_field, lookup_value
+
+# ################################################################################################################################
+
+def set_time_since(message:'dict', pub_time_iso:'str', recv_time_iso:'str', current_time:'datetime') -> 'None':
+    """ Calculate and set time_since_pub and time_since_recv on the message.
+    """
+    pub_timestamp = datetime.fromisoformat(pub_time_iso)
+    time_since_pub = str(current_time - pub_timestamp)
+
+    recv_timestamp = datetime.fromisoformat(recv_time_iso)
+    time_since_recv = str(current_time - recv_timestamp)
+
+    message['time_since_pub'] = time_since_pub
+    message['time_since_recv'] = time_since_recv
 
 # ################################################################################################################################
 # ################################################################################################################################
