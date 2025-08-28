@@ -246,7 +246,6 @@ class Backend:
         ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
-        logger.info(f'[{cid}] Publishing message to topic {topic_name} from {username}')
 
         # Create topic if it doesn't exist
         if not self._has_topic(topic_name):
