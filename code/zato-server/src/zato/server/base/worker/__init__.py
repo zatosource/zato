@@ -948,12 +948,21 @@ class WorkerStore(_WorkerStoreBase):
 
     def get_pubsub_sub_config(self, sub_key:'str') -> 'strdict':
 
-        if config := self.worker_config.pubsub_subs.get(sub_key):
+        # Local variables
+        not_applicable = {}
+
+        for topic_name, config in self.worker_config.pubsub_subs.items():
             config = config['config']
-            return config
+            config_sub_key = config['sub_key']
+            print('SSS-2', config)
+            print()
+            if config_sub_key == sub_key:
+                return config
+            else:
+                not_applicable[config_sub_key] = topic_name
         else:
-            sub_keys = sorted(self.worker_config.pubsub_subs.keys())
-            msg = f'No such sub_key `{sub_key}` among `{sub_keys}`'
+            subs = sorted(not_applicable.items())
+            msg = f'No such sub_key `{sub_key}` among `{subs}`'
             raise Exception(msg)
 
 # ################################################################################################################################
