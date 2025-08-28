@@ -241,39 +241,67 @@ $(document).ready(function() {
             // Use requestAnimationFrame to ensure dialog is painted before making changes
             requestAnimationFrame(function() {
                 console.log('DEBUG requestAnimationFrame: starting edit dialog initialization for instance_id=' + instance_id);
+                console.log('DEBUG requestAnimationFrame: instance.delivery_type=' + JSON.stringify(instance.delivery_type));
+                console.log('DEBUG requestAnimationFrame: instance.push_type=' + JSON.stringify(instance.push_type));
+
+                // Check initial span visibility before any changes
+                console.log('DEBUG requestAnimationFrame: initial span visibility - rest-endpoint-edit=' + $('#rest-endpoint-edit').is(':visible'));
+                console.log('DEBUG requestAnimationFrame: initial span visibility - push-service-edit=' + $('#push-service-edit').is(':visible'));
+                console.log('DEBUG requestAnimationFrame: initial span visibility - push-type-edit=' + $('#push-type-edit').is(':visible'));
 
                 // Immediately hide REST endpoint span if not push to prevent flicker
-                var currentDeliveryType = $('#id_edit-delivery_type').val();
-                console.log('DEBUG requestAnimationFrame: currentDeliveryType=' + currentDeliveryType);
-                if (currentDeliveryType !== 'push') {
+                if (instance.delivery_type !== 'push') {
+                    console.log('DEBUG requestAnimationFrame: delivery type is not push, hiding all push-related spans');
                     $('#rest-endpoint-edit').hide();
-                }
+                    $('#push-service-edit').hide();
+                    $('#push-type-edit').hide();
+                    console.log('DEBUG requestAnimationFrame: hidden push-related spans for non-push delivery type');
+                } else {
+                    console.log('DEBUG requestAnimationFrame: delivery type is push, handling push type visibility');
+                    // For push delivery, show push type but conditionally show endpoint spans
+                    $('#push-type-edit').show();
+                    console.log('DEBUG requestAnimationFrame: showing push type for push delivery');
 
-                // Set the correct push_type value from instance data
-                if(instance.push_type) {
-                    console.log('DEBUG requestAnimationFrame: setting push_type=' + instance.push_type);
-                    $('#id_edit-push_type').val(instance.push_type);
-
-                    // If push type is service, set the service name in the dropdown
-                    if(instance.push_type === 'service' && instance.push_service_name) {
-                        $('#id_edit-push_service_name').val(instance.push_service_name);
-                        $('#id_edit_push_service_name_chosen span').text(instance.push_service_name);
+                    if (instance.push_type === 'rest') {
+                        console.log('DEBUG requestAnimationFrame: push type is REST, showing REST endpoint span');
+                        $('#rest-endpoint-edit').show();
+                        $('#push-service-edit').hide();
+                        console.log('DEBUG requestAnimationFrame: showing REST endpoint for REST push type');
+                    } else if (instance.push_type === 'service') {
+                        console.log('DEBUG requestAnimationFrame: push type is service, showing service span');
+                        $('#rest-endpoint-edit').hide();
+                        $('#push-service-edit').show();
+                        console.log('DEBUG requestAnimationFrame: showing service for service push type');
+                    } else {
+                        console.log('DEBUG requestAnimationFrame: push type is unknown (' + JSON.stringify(instance.push_type) + '), hiding both spans');
+                        $('#rest-endpoint-edit').hide();
+                        $('#push-service-edit').hide();
+                        console.log('DEBUG requestAnimationFrame: hiding both endpoint spans for unknown push type');
                     }
                 }
 
+                // Check span visibility after changes
+                console.log('DEBUG requestAnimationFrame: after visibility changes - rest-endpoint-edit=' + $('#rest-endpoint-edit').is(':visible'));
+                console.log('DEBUG requestAnimationFrame: after visibility changes - push-service-edit=' + $('#push-service-edit').is(':visible'));
+                console.log('DEBUG requestAnimationFrame: after visibility changes - push-type-edit=' + $('#push-type-edit').is(':visible'));
+
                 // Setup delivery type visibility first, then conditionally populate REST endpoints
                 console.log('DEBUG requestAnimationFrame: calling setupDeliveryTypeVisibility');
+                console.log('DEBUG requestAnimationFrame: about to call setupDeliveryTypeVisibility with form_type=edit, instance_id=' + JSON.stringify(instance_id));
                 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
+                console.log('DEBUG requestAnimationFrame: setupDeliveryTypeVisibility completed');
 
                 // Populate REST endpoints regardless of delivery type to avoid a flicker
-                console.log('DEBUG requestAnimationFrame: calling populateRestEndpoints and populateServices');
-                console.log('DEBUG requestAnimationFrame: DOM elements check - rest endpoint span exists: ' + $('#rest-endpoint-edit').length);
-                console.log('DEBUG requestAnimationFrame: DOM elements check - rest endpoint select exists: ' + $('#id_edit-rest_push_endpoint_id').length);
-                console.log('DEBUG requestAnimationFrame: DOM elements check - all form elements: ' + $('#edit-form [id]').map(function() { return this.id; }).get().join(', '));
-                var currentEndpointId = instance.rest_push_endpoint_id !== 'None' ? instance.rest_push_endpoint_id : null;
-                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentEndpointId, true);
-                var currentServiceName = instance.push_service_name !== 'None' ? instance.push_service_name : null;
+                var currentRestEndpointId = instance.rest_push_endpoint_id;
+                console.log('DEBUG requestAnimationFrame: populating REST endpoints with currentRestEndpointId=' + JSON.stringify(currentRestEndpointId));
+                $.fn.zato.pubsub.subscription.populateRestEndpoints('edit', currentRestEndpointId, false);
+                console.log('DEBUG requestAnimationFrame: populateRestEndpoints completed');
+
+                // Populate services regardless of delivery type to avoid a flicker
+                var currentServiceName = instance.push_service_name;
+                console.log('DEBUG requestAnimationFrame: populating services with currentServiceName=' + JSON.stringify(currentServiceName));
                 $.fn.zato.pubsub.subscription.populateServices('edit', currentServiceName, true);
+                console.log('DEBUG requestAnimationFrame: populateServices completed');
 
                 // Load topics for the current security definition in edit mode
                 if(instance.sec_base_id) {
@@ -658,6 +686,11 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     var instance = $.fn.zato.data_table.data[instance_id];
     console.log('DEBUG edit: instance data=' + JSON.stringify(instance));
+    console.log('DEBUG edit: instance.delivery_type=' + JSON.stringify(instance.delivery_type));
+    console.log('DEBUG edit: instance.push_type=' + JSON.stringify(instance.push_type));
+    console.log('DEBUG edit: instance.rest_push_endpoint_id=' + JSON.stringify(instance.rest_push_endpoint_id));
+    console.log('DEBUG edit: instance.push_service_name=' + JSON.stringify(instance.push_service_name));
+
     var form = $('#edit-form');
 
     let is_active = $.fn.zato.like_bool(instance.is_active)
@@ -666,13 +699,18 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     // alert(is_active);
     // alert(instance.is_active);
 
-
+    console.log('DEBUG edit: setting form field values');
     form.find('#id_edit-sub_key').val(instance.sub_key);
     form.find('#id_edit-is_active').prop('checked',  is_active);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
     form.find('#id_edit-push_service_name').val(instance.push_service_name);
+
+    console.log('DEBUG edit: form field values set - delivery_type=' + form.find('#id_edit-delivery_type').val());
+    console.log('DEBUG edit: form field values set - push_type=' + form.find('#id_edit-push_type').val());
+    console.log('DEBUG edit: form field values set - rest_push_endpoint_id=' + form.find('#id_edit-rest_push_endpoint_id').val());
+    console.log('DEBUG edit: form field values set - push_service_name=' + form.find('#id_edit-push_service_name').val());
 
     // Handle security definition display as link instead of select
     var $container = $('#edit-sec-def-container');
@@ -704,11 +742,15 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     }
 
     // Hide REST endpoint span immediately to prevent flicker during form population
+    console.log('DEBUG edit: hiding REST endpoint span');
     $('#rest-endpoint-edit').hide();
+    console.log('DEBUG edit: REST endpoint span hidden - visible=' + $('#rest-endpoint-edit').is(':visible'));
 
     // Store the instance_id for the dialog open callback
     $.fn.zato.pubsub.subscription._current_edit_instance_id = instance_id;
+    console.log('DEBUG edit: stored current edit instance_id=' + JSON.stringify(instance_id));
 
+    console.log('DEBUG edit: calling _create_edit to open dialog');
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub subscription', instance_id, false, false);
 }
 
@@ -765,6 +807,19 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 }
 
 $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, instance_id) {
+    console.log('DEBUG setupDeliveryTypeVisibility: form_type=' + JSON.stringify(form_type) + ', instance_id=' + JSON.stringify(instance_id));
+
+    var $deliveryType = form_type === 'create' ? $('#id_delivery_type') : $('#id_edit-delivery_type');
+    var $pushType = form_type === 'create' ? $('#id_push_type') : $('#id_edit-push_type');
+    var $pushTypeSpan = form_type === 'create' ? $('#push-type-create') : '#push-type-edit';
+    var $restEndpointSpan = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
+    var $serviceSpan = form_type === 'create' ? '#push-service-create' : '#push-service-edit';
+
+    console.log('DEBUG setupDeliveryTypeVisibility: delivery type value=' + $deliveryType.val());
+    console.log('DEBUG setupDeliveryTypeVisibility: push type value=' + $pushType.val());
+    console.log('DEBUG setupDeliveryTypeVisibility: spans found - pushType=' + $($pushTypeSpan).length + ', restEndpoint=' + $($restEndpointSpan).length + ', service=' + $($serviceSpan).length);
+    console.log('DEBUG setupDeliveryTypeVisibility: initial span visibility - pushType=' + $($pushTypeSpan).is(':visible') + ', restEndpoint=' + $($restEndpointSpan).is(':visible') + ', service=' + $($serviceSpan).is(':visible'));
+
     var deliveryTypeId = form_type === 'create' ? '#id_delivery_type' : '#id_edit-delivery_type';
     var pushTypeSpanId = form_type === 'create' ? '#push-type-create' : '#push-type-edit';
     var pushTypeId = form_type === 'create' ? '#id_push_type' : '#id_edit-push_type';
@@ -789,77 +844,74 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
     function togglePushAndEndpointVisibility() {
         var deliveryTypeValue = $deliveryType.val();
         console.log('DEBUG togglePushAndEndpointVisibility: deliveryTypeValue=' + JSON.stringify(deliveryTypeValue));
+        console.log('DEBUG togglePushAndEndpointVisibility: before changes - pushTypeSpan visible=' + $pushTypeSpan.is(':visible') + ', restEndpointSpan visible=' + $restEndpointSpan.is(':visible') + ', serviceSpan visible=' + $serviceSpan.is(':visible'));
 
         if (deliveryTypeValue === 'push') {
+            console.log('DEBUG togglePushAndEndpointVisibility: showing push type span');
             $pushTypeSpan.show();
+            console.log('DEBUG togglePushAndEndpointVisibility: push type span shown, calling toggleEndpointTypeVisibility');
             toggleEndpointTypeVisibility();
         } else {
+            console.log('DEBUG togglePushAndEndpointVisibility: hiding push-related spans');
             $pushTypeSpan.hide();
             $restEndpointSpan.hide();
             $serviceSpan.hide();
+            console.log('DEBUG togglePushAndEndpointVisibility: all push-related spans hidden');
         }
+
+        console.log('DEBUG togglePushAndEndpointVisibility: after changes - pushTypeSpan visible=' + $pushTypeSpan.is(':visible') + ', restEndpointSpan visible=' + $restEndpointSpan.is(':visible') + ', serviceSpan visible=' + $serviceSpan.is(':visible'));
     }
 
     function toggleEndpointTypeVisibility() {
         var pushTypeValue = $pushType.val();
         console.log('DEBUG toggleEndpointTypeVisibility: pushTypeValue=' + JSON.stringify(pushTypeValue));
+        console.log('DEBUG toggleEndpointTypeVisibility: before changes - restEndpointSpan visible=' + $restEndpointSpan.is(':visible') + ', serviceSpan visible=' + $serviceSpan.is(':visible'));
 
-        // Preload both REST endpoints and services to avoid flicker when switching
-        if (!window.endpointsLoaded) {
-            var selectedId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null;
-            console.log('DEBUG toggleEndpointTypeVisibility: loading REST endpoints for selectedId=' + JSON.stringify(selectedId));
-            $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedId, false);
-            window.endpointsLoaded = true;
+        // Load REST endpoints if not already loaded
+        if (!window.restEndpointsLoaded) {
+            var selectedEndpointId = form_type === 'create' ? null : (instance_id ? $.fn.zato.data_table.data[instance_id].rest_push_endpoint_id : null);
+            console.log('DEBUG toggleEndpointTypeVisibility: loading REST endpoints for selectedEndpointId=' + JSON.stringify(selectedEndpointId));
+            $.fn.zato.pubsub.subscription.populateRestEndpoints(form_type, selectedEndpointId, false);
+            window.restEndpointsLoaded = true;
+            console.log('DEBUG toggleEndpointTypeVisibility: REST endpoints loaded');
         }
 
+        // Load services if not already loaded
         if (!window.servicesLoaded) {
-            var selectedServiceId = form_type === 'edit' ? $.fn.zato.data_table.data[instance_id].push_service_name : null;
+            var selectedServiceId = form_type === 'create' ? null : (instance_id ? $.fn.zato.data_table.data[instance_id].push_service_name : null);
             console.log('DEBUG toggleEndpointTypeVisibility: loading services for selectedServiceId=' + JSON.stringify(selectedServiceId));
             $.fn.zato.pubsub.subscription.populateServices(form_type, selectedServiceId, false);
             window.servicesLoaded = true;
+            console.log('DEBUG toggleEndpointTypeVisibility: services loaded');
         }
 
         // Now show/hide the appropriate spans based on the push type
         console.log('DEBUG toggleEndpointTypeVisibility: showing/hiding spans for pushTypeValue=' + JSON.stringify(pushTypeValue));
         if (pushTypeValue === 'rest') {
             // Hide service span first to prevent layout shift
+            console.log('DEBUG toggleEndpointTypeVisibility: hiding service span for REST push type');
             $serviceSpan.hide();
             console.log('DEBUG toggleEndpointTypeVisibility: showing REST endpoint span');
-            console.log('DEBUG toggleEndpointTypeVisibility: REST span before show - visible: ' + $restEndpointSpan.is(':visible') + ', display: ' + $restEndpointSpan.css('display'));
-
-            var $restSelect = form_type === 'create' ? $('#id_rest_push_endpoint_id') : $('#id_edit-rest_push_endpoint_id');
-            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - visible: ' + $restSelect.is(':visible') + ', display: ' + $restSelect.css('display'));
-            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - options count: ' + $restSelect.find('option').length);
-            console.log('DEBUG toggleEndpointTypeVisibility: REST select before show - HTML: ' + $restSelect.html());
-
             $restEndpointSpan.show();
-            console.log('DEBUG toggleEndpointTypeVisibility: REST span after show - visible: ' + $restEndpointSpan.is(':visible') + ', display: ' + $restEndpointSpan.css('display'));
-            console.log('DEBUG toggleEndpointTypeVisibility: REST span CSS width: ' + $restEndpointSpan.css('width') + ', height: ' + $restEndpointSpan.css('height'));
-            console.log('DEBUG toggleEndpointTypeVisibility: REST span parent visible: ' + $restEndpointSpan.parent().is(':visible'));
-            console.log('DEBUG toggleEndpointTypeVisibility: REST select element after show - visible: ' + $restSelect.is(':visible') + ', display: ' + $restSelect.css('display'));
-            console.log('DEBUG toggleEndpointTypeVisibility: REST select element after show - options count: ' + $restSelect.find('option').length);
-
-            // Check if Chosen is initialized and working
-            var $chosenContainer = form_type === 'create' ? $('#id_rest_push_endpoint_id_chosen') : $('#id_edit_rest_push_endpoint_id_chosen');
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container exists: ' + $chosenContainer.length);
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container visible: ' + $chosenContainer.is(':visible'));
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container display: ' + $chosenContainer.css('display'));
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen container HTML: ' + $chosenContainer.html());
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen single span text: ' + $chosenContainer.find('.chosen-single span').text());
-            console.log('DEBUG toggleEndpointTypeVisibility: Chosen dropdown options: ' + $chosenContainer.find('.chosen-drop .chosen-results li').length);
         } else if (pushTypeValue === 'service') {
             // Hide REST span first to prevent layout shift
+            console.log('DEBUG toggleEndpointTypeVisibility: hiding REST endpoint span for service push type');
             $restEndpointSpan.hide();
             console.log('DEBUG toggleEndpointTypeVisibility: showing service span');
             $serviceSpan.show();
+            console.log('DEBUG toggleEndpointTypeVisibility: service span shown');
         } else {
-            console.log('DEBUG toggleEndpointTypeVisibility: hiding both spans');
+            console.log('DEBUG toggleEndpointTypeVisibility: hiding both spans for unknown push type');
             $restEndpointSpan.hide();
             $serviceSpan.hide();
+            console.log('DEBUG toggleEndpointTypeVisibility: both spans hidden');
         }
+
+        console.log('DEBUG toggleEndpointTypeVisibility: after changes - restEndpointSpan visible=' + $restEndpointSpan.is(':visible') + ', serviceSpan visible=' + $serviceSpan.is(':visible'));
     }
 
     // Set initial state
+    console.log('DEBUG setupDeliveryTypeVisibility: setting initial state');
     togglePushAndEndpointVisibility();
 
     // Handle delivery type changes
