@@ -862,7 +862,7 @@ class WorkerStore(_WorkerStoreBase):
             # .. so it won't be redelivered anymore.
             else:
                 log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
-                          f' -> Msg ID: `{msg_id}` -> Max retries reached (attempts={delivery_count})'
+                          f' -> Msg ID: `{msg_id}` -> Max wait time reached (attempts={delivery_count})'
                 logger.info(log_msg)
                 logger.info('🏓 ACK ACK 222')
                 msg.ack()
