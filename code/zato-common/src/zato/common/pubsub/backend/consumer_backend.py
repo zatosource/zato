@@ -212,8 +212,19 @@ class ConsumerBackend(Backend):
         delivery_type:'str' = msg['delivery_type']
         old_delivery_type:'str' = msg['old_delivery_type']
 
+        # Extract push endpoint/service information from message
+        rest_push_endpoint_id = msg['rest_push_endpoint_id']
+        push_service_name = msg['push_service_name']
+
         topic_name_list:'strlist' = msg['topic_name_list']
         topic_name_list = sorted(topic_name_list)
+
+        # Set new push endpoints
+        for config_data in self.worker_store.worker_config.pubsub_subs.values():
+            config = config_data['config']
+            if config['sub_key'] == sub_key:
+                config['rest_push_endpoint_id'] = rest_push_endpoint_id
+                config['push_service_name'] = push_service_name
 
         # Check if we have an existing consumer
         consumer = self.consumers.get(sub_key)
