@@ -762,6 +762,7 @@ class WorkerStore(_WorkerStoreBase):
         print()
         '''
 
+        '''
         # Local objects
         service_msg = {}
 
@@ -777,19 +778,41 @@ class WorkerStore(_WorkerStoreBase):
             service_msg['payload'] = body
             service_msg['cid'] = body.get('correl_id') or body.msg_id
             service_msg['service'] = 'zato.pubsub.subscription.handle-delivery'
+        '''
 
         # .. push that message to the server ..
         # self.broker_client.invoke_async(service_msg)
 
+        # Enrich the body with our own metadata
+        body['_zato_meta'] = {}
+        body['_zato_meta']['sub_key'] = config.queue
+
+        logger.info('😀 ******** BOD BOD BOD %s', body)
         logger.info('😀 ******** MSG MSG MSG %s', msg)
+        logger.info('😀 ******** NAM NAM NAM %s', name)
+        logger.info('😀 ******** CON CON CON %s', config)
+
+        service = 'zato.pubsub.subscription.handle-delivery'
+
+        _ = self.invoke(service, body)
 
 # ################################################################################################################################
 
     def on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', name:'str', config:'strdict') -> 'None':
 
+        # Try to deliver our message ..
         try:
+
+            # .. invoke the callback ..
             self._handle_pubsub_public_message(body, msg, name, config)
+
+            # .. if we are here, it means everything went fine so we can acknoledge the message with the broker ..
             msg.ack()
+
+            # .. and let's return explicitly.
+            logger.info('🍀 ACK ACK 111')
+            return
+
         except Exception as e:
 
             # OK, we have an exception so we will potentially retry the delivery ..
@@ -843,18 +866,29 @@ class WorkerStore(_WorkerStoreBase):
 
             if has_time_left and has_sleep_time:
 
-                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> sleeping for {sleep_time:.1f}s (attempt={delivery_count} -> remaining={remaining_time})')
+                log_msg = f'Subscriber: `{subscriber}`' + \
+                          f' -> topic: `{topic_name}`' + \
+                          f' -> Msg ID: `{msg_id}`' + \
+                          f' -> sleeping for {sleep_time:.1f}s' + \
+                          f' (attempt={delivery_count} -> remaining={remaining_time})' + \
+                          f' e=`{format_exc()}`'
+                logger.info(log_msg)
 
                 # .. do sleep now ..
+                logger.info('🕐 REJ REJ 111')
                 sleep(sleep_time)
 
                 # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
+                logger.info('🕐 REJ REJ 222')
                 msg.reject(requeue=True)
 
             # .. if we go here, it means we run out of time, so we need to accept that message ..
             # .. so it won't be redelivered anymore.
             else:
-                logger.info(f'Subscriber: `{subscriber}` -> topic: `{topic_name}` -> Msg ID: `{msg_id}` -> Max retries reached (attempts={delivery_count})')
+                log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
+                          f' -> Msg ID: `{msg_id}` -> Max retries reached (attempts={delivery_count})'
+                logger.info(log_msg)
+                logger.info('🏓 ACK ACK 222')
                 msg.ack()
 
 # ################################################################################################################################
@@ -919,7 +953,7 @@ class WorkerStore(_WorkerStoreBase):
             return config
         else:
             sub_keys = sorted(self.worker_config.pubsub_subs.keys())
-            msg = f'No such sub_key {sub_key} among {sub_keys}'
+            msg = f'No such sub_key `{sub_key}` among `{sub_keys}`'
             raise Exception(msg)
 
 # ################################################################################################################################

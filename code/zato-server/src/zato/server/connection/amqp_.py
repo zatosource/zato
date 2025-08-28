@@ -202,7 +202,6 @@ class _AMQPMessage:
 
 # ################################################################################################################################
 
-
 class Producer:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one Producer object assigned.

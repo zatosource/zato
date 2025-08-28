@@ -687,38 +687,38 @@ class Unsubscribe(_BaseModifyTopicList):
 
 class HandleDelivery(Service):
 
-    def build_business_message(self, input:'Bunch') -> 'PubSubMessage':
+    def build_business_message(self, input:'strdict') -> 'PubSubMessage':
 
         msg = PubSubMessage()
 
-        msg.msg_id = input.msg_id
-        msg.correl_id = input.correl_id
+        msg.msg_id = input['msg_id']
+        msg.correl_id = input['correl_id']
 
-        msg.data = input.data
-        msg.size = input.size
+        msg.data = input['data']
+        msg.size = input['size']
 
-        msg.publisher = input.publisher
+        msg.publisher = input['publisher']
 
-        msg.pub_time_iso = input.pub_time_iso
-        msg.recv_time_iso = input.recv_time_iso
+        msg.pub_time_iso = input['pub_time_iso']
+        msg.recv_time_iso = input['recv_time_iso']
 
-        msg.priority = input.priority
-        msg.delivery_count = input.delivery_count
+        msg.priority = input['priority']
+        msg.delivery_count = input['delivery_count']
 
-        msg.expiration = input.expiration
-        msg.expiration_time_iso = input.expiration_time_iso
+        msg.expiration = input['expiration']
+        msg.expiration_time_iso = input['expiration_time_iso']
 
-        msg.ext_client_id = input.ext_client_id
-        msg.in_reply_to = input.in_reply_to
+        msg.ext_client_id = input['ext_client_id']
+        msg.in_reply_to = input['in_reply_to']
 
-        msg.sub_key = input.sub_key
-        msg.topic_name = input.topic_name
+        msg.sub_key = input['sub_key']
+        msg.topic_name = input['topic_name']
 
         return msg
 
 # ################################################################################################################################
 
-    def build_rest_message(self, input:'Bunch', outconn_config:'strdict') -> 'strdict':
+    def build_rest_message(self, input:'strdict', outconn_config:'strdict') -> 'strdict':
 
         # .. our message to produce ..
         out_msg = {}
@@ -759,10 +759,13 @@ class HandleDelivery(Service):
     def handle(self):
 
         # Local aliases
-        input = self.request.raw_request
+        input:'strdict' = self.request.raw_request
+
+        # Extract the metadata - and delete it from input because we don't want to deliver it
+        meta = input.pop('_zato_meta')
 
         # Get the detailed configuration of the subscriber ..
-        config = self.server.worker_store.get_pubsub_sub_config(input.sub_key)
+        config = self.server.worker_store.get_pubsub_sub_config(meta['sub_key'])
 
         # .. we go here if we're to invoke a specific service
         if config.push_type == _push_type.Service:
@@ -793,7 +796,7 @@ class HandleDelivery(Service):
 
         # .. if we're here, it's an unrecognized push type and we cannot handle this message.
         else:
-            msg = f'Unrecognized push_type: {repr(input.push_type)} ({input.msg_id} - {input.correl_id})'
+            msg = f'Unrecognized push_type: {repr(input.get("push_type"))} ({input.get("msg_id")} - {input.get("correl_id")})'
             raise Exception(msg)
 
 # ################################################################################################################################
