@@ -20,6 +20,7 @@ from logging import getLogger
 import requests
 
 # Zato
+from zato.common.pubsub.util import set_time_since
 from zato.common.typing_ import any_, anydict
 from zato.common.util.api import utcnow
 
@@ -258,23 +259,12 @@ class PubSubRESTServer(BaseRESTServer):
             ext_client_id = payload.get('ext_client_id', '')
             in_reply_to = payload.get('in_reply_to', '')
 
-            # Calculate time deltas
-
-            pub_timestamp = datetime.fromisoformat(pub_time_iso)
-            time_since_pub = str(current_time - pub_timestamp)
-
-            recv_timestamp = datetime.fromisoformat(recv_time_iso)
-            time_since_recv = str(current_time - recv_timestamp)
-
             # We want for the keys to be serialized in a specific order ..
             message = {
                 'topic_name': topic_name,
                 'size': size,
                 'priority': priority,
                 'expiration': expiration,
-
-                'time_since_pub': time_since_pub,
-                'time_since_recv': time_since_recv,
 
                 'msg_id': msg_id,
                 'correl_id': correl_id,
@@ -295,6 +285,9 @@ class PubSubRESTServer(BaseRESTServer):
             # .. so is this ..
             if in_reply_to := payload.get('in_reply_to'):
                 message['in_reply_to'] = in_reply_to
+
+            # .. calculate and set time deltas ..
+            set_time_since(message, pub_time_iso, recv_time_iso, current_time)
 
             # .. finally, we can add our actual data ..
             message['data'] = actual_data
