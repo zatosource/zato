@@ -181,11 +181,6 @@ class BrokerClient:
             # .. and now we can serialize the message too ..
             msg = dumps(msg)
 
-        print()
-        print('BBB-1', priority)
-        print('BBB-2', expiration)
-        print()
-
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
 

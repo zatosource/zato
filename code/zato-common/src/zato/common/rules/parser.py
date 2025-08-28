@@ -24,7 +24,7 @@ from zato.common.util.sorted_dict import SortedDict
 
 if 0:
     from pathlib import Path
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import any_, strdict
 
 # ################################################################################################################################
 
@@ -35,7 +35,7 @@ def parse_file(path:'str | Path', container_name:'str') -> 'strdict':
 
 # ################################################################################################################################
 
-def parse_assignments(text:'str') -> 'strdict':
+def parse_assignments(text:'str') -> 'any_':
 
     # Remove multi-line comments (both """ and ''')
     text = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', text, flags=re.DOTALL)
