@@ -954,8 +954,6 @@ class WorkerStore(_WorkerStoreBase):
         for topic_name, config in self.worker_config.pubsub_subs.items():
             config = config['config']
             config_sub_key = config['sub_key']
-            print('SSS-2', config)
-            print()
             if config_sub_key == sub_key:
                 return config
             else:
