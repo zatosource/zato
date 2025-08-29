@@ -14,6 +14,7 @@ pylint
 pyright==1.1.266
 pytest==8.3.4
 requests-openapi
+schemathesis==4.1.3
 selenium==4.2.0
 selenium-wire
 types-markdown

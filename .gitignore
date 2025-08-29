@@ -1,4 +1,5 @@
 .idea
+.hypothesis
 .vscode
 code/.installed.cfg
 code/.Python
