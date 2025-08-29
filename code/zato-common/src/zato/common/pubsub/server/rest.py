@@ -322,9 +322,6 @@ class PubSubRESTServer(BaseRESTServer):
             message = messages[0]
             response.meta = message
             response.data = message.pop('data', None)
-            # Remove data from meta since it's now at root level
-            if 'data' in response.meta:
-                del response.meta['data']
         else:
             # Always wrap in list for max_messages > 1 or when wrap_in_list is True
             response.messages = messages if messages else []
