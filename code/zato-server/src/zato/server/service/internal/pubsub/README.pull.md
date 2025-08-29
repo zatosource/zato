@@ -117,18 +117,19 @@ curl -X POST \
 ## Message Format
 
 Retrieved messages contain:
-- `topic_name` - Topic the message was published to
-- `size` - Message size in bytes
-- `priority` - Message priority (0-9, higher is more important)
-- `expiration` - Message expiration time in seconds
-- `msg_id` - Unique message identifier
-- `correl_id` - Correlation ID for message tracking
-- `pub_time_iso` - When the message was published (ISO format with timezone)
-- `recv_time_iso` - When the message was received by the system (ISO format with timezone)
-- `expiration_time_iso` - When the message will expire (ISO format with timezone)
-- `time_since_pub` - Time elapsed since message was published (duration format)
-- `time_since_recv` - Time elapsed since message was received (duration format)
 - `data` - The actual message content (string or JSON object)
+- `meta` - Message metadata containing:
+  - `topic_name` - Topic the message was published to
+  - `size` - Message size in bytes
+  - `priority` - Message priority (0-9, higher is more important)
+  - `expiration` - Message expiration time in seconds
+  - `msg_id` - Unique message identifier
+  - `correl_id` - Correlation ID for message tracking
+  - `pub_time_iso` - When the message was published (ISO format with timezone)
+  - `recv_time_iso` - When the message was received by the system (ISO format with timezone)
+  - `expiration_time_iso` - When the message will expire (ISO format with timezone)
+  - `time_since_pub` - Time elapsed since message was published (duration format)
+  - `time_since_recv` - Time elapsed since message was received (duration format)
 
 ## Message Processing
 
@@ -170,8 +171,8 @@ Common error scenarios:
 3. **Handle empty responses** - No error is returned when no messages are available
 4. **Process promptly** - Retrieved messages are removed from the queue immediately
 5. **Monitor message size** - Use `max_len` to control total data volume per request
-6. **Check all fields** - Use `topic_name` to route messages to appropriate handlers
-7. **Use correlation IDs** - Track message flows using `correl_id` fields
+6. **Check all fields** - Use `meta.topic_name` to route messages to appropriate handlers
+7. **Use correlation IDs** - Track message flows using `meta.correl_id` fields
 
 ## Subscription Requirements
 

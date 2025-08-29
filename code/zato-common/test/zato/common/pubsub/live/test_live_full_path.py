@@ -292,7 +292,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(len(messages), 1)
         received_message = messages[0]
         self.assertEqual(received_message['data'], expected_message)
-        self.assertEqual(received_message['msg_id'], expected_msg_id)
+        self.assertEqual(received_message['meta']['msg_id'], expected_msg_id)
 
 # ################################################################################################################################
 
