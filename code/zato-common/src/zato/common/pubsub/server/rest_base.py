@@ -12,7 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
-from http.client import responses as http_responses
+from http.client import responses as http_responses, OK
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -169,7 +169,7 @@ class BaseRESTServer(BaseServer):
                 logger.warning('[{cid}] No request data provided')
                 return {}
 
-        except Exception as e:
+        except Exception:
             raise BadRequestException(cid, f'JSON parsing error: `{format_exc()}`')
 
 # ################################################################################################################################
@@ -179,7 +179,7 @@ class BaseRESTServer(BaseServer):
         """
 
         # Get the textual part of the status code ..
-        response_text = http_responses[data.status]
+        response_text = http_responses[data.status] # type: ignore
 
         # .. build a full status field ..
         status = f'{data.status} {response_text}'
