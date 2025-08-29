@@ -43,7 +43,7 @@ Content-Type: application/json
 {
   "is_ok": true,
   "cid": "correlation-id",
-  "data": [
+  "messages": [
     {
       "data": "message content",
       "msg_id": "unique-message-id",
@@ -108,12 +108,12 @@ curl -X POST \
 ## Message Format
 
 Retrieved messages contain:
-- `data` - The actual message content (string or JSON object)
+- `messages` - The actual message content (string or JSON object)
 - `msg_id` - Unique message identifier
 - `topic_name` - Topic the message was published to
 - `pub_time_iso` - When the message was published (ISO format)
 - `recv_time_iso` - When the message was received by the system (ISO format)
-- `priority` - Message priority (1-9, higher is more important)
+- `priority` - Message priority (0-9, higher is more important)
 - `size` - Message size in bytes
 - `correl_id` - Correlation ID for message tracking
 - `expiration` - Message expiration time in seconds

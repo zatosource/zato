@@ -294,9 +294,10 @@ curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/demo.1
 curl -u demo:demo -X GET http://localhost:44556/pubsub/admin/diagnostics; echo
 
 curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/demo.1; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -H "Content-Type: application/json" -d '{"data": "First message", "priority": 7, expiration: 25}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -H "Content-Type: application/json" -d '{"data": "Second message", "priority": 5}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/messages/get -H "Content-Type: application/json" -d '{"max_messages": 10, "max_len": 1000000}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, expiration: 25}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
+curl -u demo:demo -X POST http://localhost:44556/pubsub/messages/get -d '{"max_messages": 10}'; echo
 curl -u demo:demo -X POST http://localhost:44556/pubsub/unsubscribe/topic/demo.1; echo
 """
 
