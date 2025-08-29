@@ -19,11 +19,6 @@ from logging import getLogger
 # requests
 import requests
 
-# Zato
-from zato.common.pubsub.util import set_time_since
-from zato.common.typing_ import any_, anydict
-from zato.common.util.api import utcnow
-
 # gunicorn
 from gunicorn.app.base import BaseApplication
 
@@ -35,12 +30,14 @@ from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
+from zato.common.pubsub.util import set_time_since, validate_topic_name
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictnone
+    from zato.common.typing_ import any_, anydict, dictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -373,6 +370,9 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
+
+        # .. validate topic name ..
+        validate_topic_name(topic_name)
 
         # .. check if user has permission to subscribe to this topic ..
         permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
