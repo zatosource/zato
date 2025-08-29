@@ -65,7 +65,7 @@ paths:
                   description: Message priority (0=lowest, 9=highest)
                 expiration:
                   type: integer
-                  minimum: 0
+                  minimum: 1
                   default: 31536000
                   description: Message expiration time in seconds
                 correl_id:
@@ -78,6 +78,10 @@ paths:
                 ext_client_id:
                   type: string
                   description: External client identifier
+                pub_time:
+                  type: string
+                  format: date-time
+                  description: Custom publication time (ISO format with timezone)
             examples:
               simple_message:
                 summary: Simple text message
