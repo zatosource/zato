@@ -261,7 +261,7 @@ class PubSubRESTServer(BaseRESTServer):
             in_reply_to = payload.get('in_reply_to', '')
 
             # We want for the keys to be serialized in a specific order ..
-            message = {
+            meta = {
                 'topic_name': topic_name,
                 'size': size,
                 'priority': priority,
@@ -281,17 +281,20 @@ class PubSubRESTServer(BaseRESTServer):
 
             # .. this is optional ..
             if ext_client_id := payload.get('ext_client_id'):
-                message['ext_client_id'] = ext_client_id
+                meta['ext_client_id'] = ext_client_id
 
             # .. so is this ..
             if in_reply_to := payload.get('in_reply_to'):
-                message['in_reply_to'] = in_reply_to
+                meta['in_reply_to'] = in_reply_to
 
             # .. calculate and set time deltas ..
-            set_time_since(message, pub_time_iso, recv_time_iso, current_time)
+            set_time_since(meta, pub_time_iso, recv_time_iso, current_time)
 
-            # .. finally, we can add our actual data ..
-            message['data'] = actual_data
+            # .. create the message structure with meta and data ..
+            message = {
+                'meta': meta,
+                'data': actual_data
+            }
 
             # .. OK, the message is ready ..
             messages.append(message)
