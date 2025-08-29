@@ -320,8 +320,8 @@ class PubSubRESTServer(BaseRESTServer):
 
         if needs_single_message and not wrap_in_list and len_messages == 1:
             message = messages[0]
-            response.meta = message['meta']
             response.data = message['data']
+            response.meta = message['meta']
         else:
             # Always wrap in list for max_messages > 1 or when wrap_in_list is True
             response.messages = messages
