@@ -14,6 +14,7 @@ import time
 from http.client import BAD_REQUEST, OK, UNAUTHORIZED
 from pathlib import Path
 from unittest import main
+from urllib.parse import quote
 
 # PyYAML
 from yaml import safe_load
@@ -274,24 +275,25 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         """
         # Test topic name with hash character (should fail per OpenAPI pattern)
         invalid_topic = 'unauthorized.topic#invalid'
+        encoded_topic = quote(invalid_topic)
 
         # Test publish with invalid topic
-        publish_url = f'{self.base_url}/pubsub/topic/{invalid_topic.replace("#", "%23")}'
+        publish_url = f'{self.base_url}/pubsub/topic/{encoded_topic}'
         payload = {'data': 'test message'}
         response = requests.post(publish_url, json=payload, auth=self.auth)
-        self.assertEqual(response.status_code, UNAUTHORIZED)
+        self.assertEqual(response.status_code, BAD_REQUEST)
         self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', UNAUTHORIZED)
 
         # Test subscribe with invalid topic
-        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{invalid_topic.replace("#", "%23")}'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{encoded_topic}'
         response = requests.post(subscribe_url, auth=self.auth)
-        self.assertEqual(response.status_code, UNAUTHORIZED)
+        self.assertEqual(response.status_code, BAD_REQUEST)
         self._validate_response_against_schema(response, '/pubsub/subscribe/topic/{topic_name}', UNAUTHORIZED)
 
         # Test unsubscribe with invalid topic
-        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{invalid_topic.replace("#", "%23")}'
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{encoded_topic}'
         response = requests.post(unsubscribe_url, auth=self.auth)
-        self.assertEqual(response.status_code, UNAUTHORIZED)
+        self.assertEqual(response.status_code, BAD_REQUEST)
         self._validate_response_against_schema(response, '/pubsub/unsubscribe/topic/{topic_name}', UNAUTHORIZED)
 
 # ################################################################################################################################
