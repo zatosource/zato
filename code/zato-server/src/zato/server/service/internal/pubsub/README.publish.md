@@ -47,8 +47,8 @@ Content-Type: application/json
 - `data` - The message content (string or JSON object)
 
 #### Optional Parameters
-- `priority` - Message priority from 1-9 (default: 5, higher is more important)
-- `expiration` - Message expiration time in seconds (default: 3600)
+- `priority` - Message priority from 0-9 (default: 5, lowest=0, highest=9)
+- `expiration` - Message expiration time in seconds (default: 3600 * 24 * 365 = 31536000 = 1 year expressed in seconds)
 - `correl_id` - Correlation ID for message tracking
 - `in_reply_to` - ID of message this is replying to
 - `ext_client_id` - External client identifier
