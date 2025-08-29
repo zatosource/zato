@@ -26,10 +26,7 @@ Topic names must adhere to the following rules:
 - The "#" character is not allowed in topic names
 - Only ASCII characters are permitted
 
-### Request Headers
-```
-Content-Type: application/json
-```
+
 
 ### Request Body
 No request body required.
@@ -49,7 +46,9 @@ No request body required.
 ```json
 {
   "is_ok": false,
-  "details": "Permission denied"
+  "cid": "correlation-id",
+  "details": "Authentication failed",
+  "status": "401 Unauthorized"
 }
 ```
 
@@ -57,7 +56,9 @@ No request body required.
 ```json
 {
   "is_ok": false,
-  "details": "Topic name validation error"
+  "cid": "correlation-id",
+  "details": "Topic name validation error",
+  "status": "400 Bad Request"
 }
 ```
 
@@ -66,17 +67,15 @@ No request body required.
 #### Subscribe to Order Events
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/orders.processed/subscribe \
   -u username:password \
-  -H "Content-Type: application/json"
+  http://localhost:17010/topic/orders.processed/subscribe
 ```
 
 #### Subscribe to Wildcard Pattern Topic
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/alerts.critical.system/subscribe \
   -u username:password \
-  -H "Content-Type: application/json"
+  http://localhost:17010/topic/alerts.critical.system/subscribe
 ```
 
 ### Topic Auto-Creation
@@ -91,7 +90,7 @@ curl -X POST \
 ### Message Queues
 - Each user gets a unique subscription key that identifies their own message queue
 - Messages from all subscribed topics are delivered to that one queue
-- Use the `/messages/get` endpoint to retrieve messages (see README.pull.md)
+- Use the `/messages/get` endpoint to retrieve messages
 - Delivery type is set to 'Pull' for REST API subscriptions
 
 ## Topic Permissions
@@ -105,21 +104,18 @@ sub=alerts.**          # Can subscribe to any alerts topic at any depth
 sub=notifications.user.email  # Can only subscribe to this exact topic
 ```
 
-See README.patterns.md for complete pattern matching documentation.
-
 ## Error Handling
 
 Common error scenarios:
 
 ### Authentication Errors
 - **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
-- **401 Permission denied** - Valid credentials but no subscribe permission for the topic
 
 ### Topic Validation Errors
-- **400 Topic name validation** - Topic name violates restrictions (length, characters, etc.)
+- **400 Bad Request** - Topic name violates restrictions (length, characters, etc.)
 
 ### Server Errors
-- **400 Failed to create subscription in server** - Database error during subscription creation
+- **400 Bad Request** - Database error during subscription creation
 - **500 Internal Server Error** - Unexpected server-side error
 
 ## Technical Implementation
@@ -132,6 +128,6 @@ Common error scenarios:
 
 After subscribing to topics:
 
-1. **Retrieve Messages** - Use `POST /messages/get` to pull messages (see README.pull.md)
-2. **Unsubscribe** - Use `POST /topic/{topic_name}/unsubscribe` when done (see README.unsubscribe.md)
-3. **Publish Messages** - Use `POST /topic/{topic_name}/publish` to send messages (see README.publish.md)
+1. **Retrieve Messages** - Use `POST /messages/get` to pull messages
+2. **Unsubscribe** - Use `POST /topic/{topic_name}/unsubscribe` when done
+3. **Publish Messages** - Use `POST /topic/{topic_name}/publish` to send messages
