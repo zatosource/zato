@@ -26,10 +26,7 @@ Topic names must adhere to the following rules:
 - The "#" character is not allowed in topic names
 - Only ASCII characters are permitted
 
-### Request Headers
-```
-Content-Type: application/json
-```
+
 
 ### Request Body
 ```json
@@ -69,7 +66,9 @@ Content-Type: application/json
 ```json
 {
   "is_ok": false,
-  "details": "Permission denied"
+  "cid": "correlation-id",
+  "details": "Authentication failed",
+  "status": "401 Unauthorized"
 }
 ```
 
@@ -77,7 +76,9 @@ Content-Type: application/json
 ```json
 {
   "is_ok": false,
-  "details": "Message data missing"
+  "cid": "correlation-id",
+  "details": "Message data missing",
+  "status": "400 Bad Request"
 }
 ```
 
@@ -86,18 +87,16 @@ Content-Type: application/json
 #### Simple Message
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/orders.processed/publish \
   -u username:password \
-  -H "Content-Type: application/json" \
+  http://localhost:17010/topic/orders.processed/publish \
   -d '{"data": "Order #12345 has been processed"}'
 ```
 
 #### JSON Message with Options
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/notifications.urgent/publish \
   -u username:password \
-  -H "Content-Type: application/json" \
+  http://localhost:17010/topic/notifications.urgent/publish \
   -d '{
     "data": {
       "order_id": 12345,
@@ -113,9 +112,8 @@ curl -X POST \
 #### High Priority Business Event
 ```bash
 curl -X POST \
-  http://localhost:17010/topic/payments.failed/publish \
   -u username:password \
-  -H "Content-Type: application/json" \
+  http://localhost:17010/topic/payments.failed/publish \
   -d '{
     "data": {
       "payment_id": "pay_67890",
@@ -157,15 +155,14 @@ Common error scenarios:
 
 ### Authentication Errors
 - **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
-- **401 Permission Denied** - Valid credentials but no publish permission for the topic
 
 ### Request Format Errors
-- **400 Input data missing** - No JSON body provided in the request
-- **400 Message data missing** - JSON body exists but missing required `data` field
-- **400 Invalid JSON** - Malformed JSON in request body
+- **400 Bad Request** - No JSON body provided in the request
+- **400 Bad Request** - JSON body exists but missing required `data` field
+- **400 Bad Request** - Malformed JSON in request body
 
 ### Topic Validation Errors
-- **400 Topic name validation** - Topic name violates restrictions (length, characters, etc.)
+- **400 Bad Request** - Topic name violates restrictions (e.g. invalid length or characters)
 
 ### Server Errors
 - **500 Internal Server Error** - Unexpected server-side error during processing
