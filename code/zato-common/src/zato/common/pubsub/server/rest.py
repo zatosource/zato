@@ -54,7 +54,8 @@ _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 
 _max_messages_limit = 1000
-_max_len_limit = 5_000_000
+_max_len_limit = PubSub.Message.Default_Max_Len
+_default_max_messages = PubSub.Message.Default_Max_Messages
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,7 +157,7 @@ class PubSubRESTServer(BaseRESTServer):
         """ Extract and validate max_len/max_messages parameters.
         """
         max_len = data.get('max_len', _max_len_limit)
-        max_messages = data.get('max_messages', 50)
+        max_messages = data.get('max_messages', _default_max_messages)
 
         max_len = min(max_len, _max_len_limit)
         max_messages = min(max_messages, _max_messages_limit)
