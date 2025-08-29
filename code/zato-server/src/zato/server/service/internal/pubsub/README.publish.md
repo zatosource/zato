@@ -88,7 +88,7 @@ Topic names must adhere to the following rules:
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/orders.processed/publish \
+  http://localhost:44556/topic/orders.processed/publish \
   -d '{"data": "Order #12345 has been processed"}'
 ```
 
@@ -96,7 +96,7 @@ curl -X POST \
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/notifications.urgent/publish \
+  http://localhost:44556/topic/notifications.urgent/publish \
   -d '{
     "data": {
       "order_id": 12345,
@@ -113,7 +113,7 @@ curl -X POST \
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/payments.failed/publish \
+  http://localhost:44556/topic/payments.failed/publish \
   -d '{
     "data": {
       "payment_id": "pay_67890",
