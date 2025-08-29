@@ -82,6 +82,9 @@ class PubSubRESTServer(BaseRESTServer):
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
 
+        # .. validate topic name ..
+        validate_topic_name(topic_name)
+
         # .. check if user has permission to publish to this topic ..
         permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
         if not permission_result.is_ok:
@@ -398,6 +401,9 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
+
+        # .. validate topic name ..
+        validate_topic_name(topic_name)
 
         # .. check if user has permission to subscribe to this topic ..
         permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
