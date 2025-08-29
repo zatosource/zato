@@ -332,17 +332,16 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         # Test valid priorities (0-9)
         for priority in [0, 5, 9]:
             payload = {
-                "data": f"Test message with priority {priority}",
+                'data': f'Test message with priority {priority}',
                 "priority": priority
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
-            self.assertEqual(response.status_code, OK,
-                           f"Priority {priority} should be valid")
+            self.assertEqual(response.status_code, OK, f'Priority {priority} should be valid')
 
         # Test invalid priorities (outside 0-9 range)
         for priority in [-1, 10, 15]:
             payload = {
-                "data": f"Test message with invalid priority {priority}",
+                'data': f'Test message with invalid priority {priority}',
                 "priority": priority
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
@@ -366,11 +365,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         for expiration in valid_expirations:
             payload = {
-                "data": f"Test message with expiration {expiration}",
+                'data': f'Test message with expiration {expiration}',
                 "expiration": expiration
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
-            self.assertEqual(response.status_code, OK, f"Expiration {expiration} should be valid")
+            self.assertEqual(response.status_code, OK, f'Expiration {expiration} should be valid')
 
             response_data = response.json()
             self.assertTrue(response_data.get('is_ok'))
