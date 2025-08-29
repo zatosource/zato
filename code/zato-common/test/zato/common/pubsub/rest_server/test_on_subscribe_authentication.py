@@ -195,7 +195,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
 
         # Verify backend was called with authenticated username
         self.assertEqual(len(backend_calls), 1)
-        _, _, username, username_to_sec_name, _, _ = backend_calls[0]
+        _, _, username, _, _, _ = backend_calls[0]
         self.assertEqual(username, expected_username)
 
 # ################################################################################################################################
