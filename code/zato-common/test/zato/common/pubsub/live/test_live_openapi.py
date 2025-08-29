@@ -110,7 +110,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test simple message as per OpenAPI examples
         simple_payload = {
-            "data": "Order #12345 has been processed"
+            'data': 'Order #12345 has been processed'
         }
 
         publish_url = f'{self.base_url}/topic/{topic_name}/publish'
@@ -126,14 +126,14 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test JSON message with metadata as per OpenAPI examples
         json_payload = {
-            "data": {
-                "order_id": 12345,
-                "status": "completed",
-                "timestamp": "2025-01-01T12:00:00Z"
+            'data': {
+                'order_id': 12345,
+                'status': 'completed',
+                'timestamp': '2025-01-01T12:00:00Z'
             },
-            "priority": 8,
-            "expiration": 7200,
-            "correl_id": "order-12345-notification"
+            'priority': 8,
+            'expiration': 7200,
+            'correl_id': 'order-12345-notification'
         }
 
         response = requests.post(publish_url, json=json_payload, auth=self.auth)
@@ -198,14 +198,14 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Publish a test message
         test_message = {
-            "data": {
-                "order_id": 12345,
-                "status": "completed",
-                "amount": 299.99,
-                "currency": "EUR"
+            'data': {
+                'order_id': 12345,
+                'status': 'completed',
+                'amount': 299.99,
+                'currency': 'EUR'
             },
-            "priority": 5,
-            "correl_id": "test-message-123"
+            'priority': 5,
+            'correl_id': 'test-message-123'
         }
 
         publish_url = f'{self.base_url}/topic/{topic_name}/publish'
@@ -248,8 +248,8 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test with parameters as per OpenAPI examples
         request_payload = {
-            "max_messages": 10,
-            "max_len": 1000000
+            'max_messages': 10,
+            'max_len': 1000000
         }
 
         response = requests.post(get_messages_url, json=request_payload, auth=self.auth)
@@ -258,8 +258,8 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test batch processing example
         batch_payload = {
-            "max_messages": 100,
-            "max_len": 2000000
+            'max_messages': 100,
+            'max_len': 2000000
         }
 
         response = requests.post(get_messages_url, json=batch_payload, auth=self.auth)
@@ -272,11 +272,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         """ Test topic name validation as specified in OpenAPI spec.
         """
         # Test topic name with hash character (should fail per OpenAPI pattern)
-        invalid_topic = "test#topic"
+        invalid_topic = 'test#topic'
 
         # Test publish with invalid topic
         publish_url = f'{self.base_url}/topic/{invalid_topic}/publish'
-        payload = {"data": "test message"}
+        payload = {'data': 'test message'}
         response = requests.post(publish_url, json=payload, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
         self._validate_response_against_schema(response, '/topic/{topic_name}/publish', BAD_REQUEST)
@@ -302,7 +302,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test 400 Bad Request - missing data field
         publish_url = f'{self.base_url}/topic/{topic_name}/publish'
-        invalid_payload = {"priority": 5}  # Missing required 'data' field
+        invalid_payload = {'priority': 5}  # Missing required 'data' field
 
         response = requests.post(publish_url, json=invalid_payload, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
@@ -314,11 +314,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         self.assertIn('cid', response_data)
 
         # Test 400 Bad Request - malformed JSON
-        response = requests.post(publish_url, data="invalid json", headers={'Content-Type': 'application/json'}, auth=self.auth)
+        response = requests.post(publish_url, data='invalid json', headers={'Content-Type': 'application/json'}, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
 
         # Test 401 Unauthorized
-        response = requests.post(publish_url, json={"data": "test"})
+        response = requests.post(publish_url, json={'data': 'test'})
         self.assertEqual(response.status_code, 401)
 
 # ################################################################################################################################
@@ -333,7 +333,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         for priority in [0, 5, 9]:
             payload = {
                 'data': f'Test message with priority {priority}',
-                "priority": priority
+                'priority': priority
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
             self.assertEqual(response.status_code, OK, f'Priority {priority} should be valid')
@@ -342,7 +342,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         for priority in [-1, 10, 15]:
             payload = {
                 'data': f'Test message with invalid priority {priority}',
-                "priority": priority
+                'priority': priority
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
             # The server should either accept it (clamping to valid range) or reject it
@@ -366,7 +366,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         for expiration in valid_expirations:
             payload = {
                 'data': f'Test message with expiration {expiration}',
-                "expiration": expiration
+                'expiration': expiration
             }
             response = requests.post(publish_url, json=payload, auth=self.auth)
             self.assertEqual(response.status_code, OK, f'Expiration {expiration} should be valid')
@@ -391,19 +391,19 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         messages_to_publish = [
             {
-                "data": {"type": "order", "id": 1, "status": "pending"},
-                "priority": 3,
-                "correl_id": "order-001"
+                'data': {'type': 'order', 'id': 1, 'status': 'pending'},
+                'priority': 3,
+                'correl_id': 'order-001'
             },
             {
-                "data": {"type": "order", "id": 2, "status": "processed"},
-                "priority": 7,
-                "correl_id": "order-002"
+                'data': {'type': 'order', 'id': 2, 'status': 'processed'},
+                'priority': 7,
+                'correl_id': 'order-002'
             },
             {
-                "data": {"type": "alert", "level": "critical"},
-                "priority": 9,
-                "correl_id": "alert-001"
+                'data': {'type': 'alert', 'level': 'critical'},
+                'priority': 9,
+                'correl_id': 'alert-001'
             }
         ]
 
@@ -421,7 +421,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Step 4: Retrieve messages (should be in priority order)
         get_messages_url = f'{self.base_url}/messages/get'
-        response = requests.post(get_messages_url, json={"max_messages": 10}, auth=self.auth)
+        response = requests.post(get_messages_url, json={'max_messages': 10}, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
         response_data = response.json()
@@ -447,7 +447,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
     def test_openapi_spec_examples_validation(self):
         """ Test all examples from OpenAPI spec work correctly.
         """
-        topic_name = "orders.processed"  # As used in OpenAPI examples
+        topic_name = 'orders.processed'  # As used in OpenAPI examples
 
         # Subscribe first
         subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
@@ -456,7 +456,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test simple_message example from OpenAPI spec
         simple_example = {
-            "data": "Order #12345 has been processed"
+            'data': 'Order #12345 has been processed'
         }
 
         publish_url = f'{self.base_url}/topic/{topic_name}/publish'
@@ -465,14 +465,14 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Test json_message example from OpenAPI spec
         json_example = {
-            "data": {
-                "order_id": 12345,
-                "status": "completed",
-                "timestamp": "2025-01-01T12:00:00Z"
+            'data': {
+                'order_id': 12345,
+                'status': 'completed',
+                'timestamp': '2025-01-01T12:00:00Z'
             },
-            "priority": 8,
-            "expiration": 7200,
-            "correl_id": "order-12345-notification"
+            'priority': 8,
+            'expiration': 7200,
+            'correl_id': 'order-12345-notification'
         }
 
         response = requests.post(publish_url, json=json_example, auth=self.auth)
@@ -487,16 +487,16 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         # Standard example
         standard_example = {
-            "max_messages": 10,
-            "max_len": 1000000
+            'max_messages': 10,
+            'max_len': 1000000
         }
         response = requests.post(get_messages_url, json=standard_example, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
         # Batch processing example
         batch_example = {
-            "max_messages": 100,
-            "max_len": 2000000
+            'max_messages': 100,
+            'max_len': 2000000
         }
         response = requests.post(get_messages_url, json=batch_example, auth=self.auth)
         self.assertEqual(response.status_code, OK)
