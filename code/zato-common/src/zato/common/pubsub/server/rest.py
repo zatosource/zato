@@ -374,7 +374,8 @@ class PubSubRESTServer(BaseRESTServer):
             message_word = 'message' if message_count == 1 else 'messages'
             logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
 
-            return self._build_success_response(cid, messages, max_messages, wrap_in_list)
+            response = self._build_success_response(cid, messages, max_messages, wrap_in_list)
+            return response
 
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
