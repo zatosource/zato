@@ -8,6 +8,7 @@ mock==5.2.0
 mypy
 mypy-extensions>=1.0.0,<2.0.0
 openapi-spec-validator
+openapi3==1.8.2
 pyflakes==3.2.0
 pylint
 pyright==1.1.266

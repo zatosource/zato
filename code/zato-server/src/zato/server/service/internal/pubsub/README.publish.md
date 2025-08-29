@@ -26,8 +26,6 @@ Topic names must adhere to the following rules:
 - The "#" character is not allowed in topic names
 - Only ASCII characters are permitted
 
-
-
 ### Request Body
 ```json
 {
@@ -36,7 +34,8 @@ Topic names must adhere to the following rules:
   "expiration": 3600,
   "correl_id": "optional-correlation-id",
   "in_reply_to": "optional-message-id",
-  "ext_client_id": "optional-external-client-id"
+  "ext_client_id": "optional-external-client-id",
+  "pub_time": "2025-01-01T12:00:00+00:00"
 }
 ```
 
@@ -49,6 +48,8 @@ Topic names must adhere to the following rules:
 - `correl_id` - Correlation ID for message tracking
 - `in_reply_to` - ID of message this is replying to
 - `ext_client_id` - External client identifier
+- `pub_time` - Custom publication time (ISO format with timezone) - you can set it to indicate the pub time as it was observed
+   from your own perspective. If not set, the server will set it to current_timestamp.
 
 ### Response
 
