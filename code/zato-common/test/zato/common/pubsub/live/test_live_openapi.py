@@ -93,18 +93,85 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
             logger.warning(f'Response schema for {status_code} not found for path {endpoint_path}')
             return
 
-        # Basic validation - check if response is JSON when expected
+        # Validate JSON response
         content_type = response.headers.get('content-type', '')
         if 'application/json' in content_type:
             try:
                 response_data = response.json()
-                logger.debug(f'Response data validated for {endpoint_path}: {response_data}')
             except json.JSONDecodeError as e:
                 self.fail(f'Invalid JSON response for {endpoint_path}: {e}')
 
+            # Get content schema
+            content = response_spec.get('content', {})
+            json_content = content.get('application/json', {})
+            schema = json_content.get('schema', {})
+
+            if schema:
+                self._validate_schema(response_data, schema, f'{endpoint_path} response')
+
 # ################################################################################################################################
 
-    def xtest_openapi_publish_message(self):
+    def _validate_schema(self, data, schema, context):
+        """ Validate data against schema definition.
+        """
+        schema_type = schema.get('type')
+
+        if schema_type == 'object':
+            if not isinstance(data, dict):
+                self.fail(f'{context}: expected object, got {type(data).__name__}')
+
+            # Check required fields
+            required = schema.get('required', [])
+            for field in required:
+                if field not in data:
+                    self.fail(f'{context}: missing required field "{field}"')
+
+            # Validate properties
+            properties = schema.get('properties', {})
+            for field, field_schema in properties.items():
+                if field in data:
+                    self._validate_schema(data[field], field_schema, f'{context}.{field}')
+
+        elif schema_type == 'array':
+            if not isinstance(data, list):
+                self.fail(f'{context}: expected array, got {type(data).__name__}')
+
+            items_schema = schema.get('items', {})
+            if items_schema:
+                for i, item in enumerate(data):
+                    self._validate_schema(item, items_schema, f'{context}[{i}]')
+
+        elif schema_type == 'string':
+            if not isinstance(data, str):
+                self.fail(f'{context}: expected string, got {type(data).__name__}')
+
+        elif schema_type == 'integer':
+            if not isinstance(data, int):
+                self.fail(f'{context}: expected integer, got {type(data).__name__}')
+
+        elif schema_type == 'boolean':
+            if not isinstance(data, bool):
+                self.fail(f'{context}: expected boolean, got {type(data).__name__}')
+
+        # Handle allOf
+        if 'allOf' in schema:
+            for sub_schema in schema['allOf']:
+                self._validate_schema(data, sub_schema, context)
+
+        # Handle $ref
+        if '$ref' in schema:
+            ref_path = schema['$ref']
+            if ref_path.startswith('#/components/schemas/'):
+                schema_name = ref_path.split('/')[-1]
+                components = self.api_spec.get('components', {})
+                schemas = components.get('schemas', {})
+                ref_schema = schemas.get(schema_name, {})
+                if ref_schema:
+                    self._validate_schema(data, ref_schema, context)
+
+# ################################################################################################################################
+
+    def test_openapi_publish_message(self):
         """ Test publish message endpoint against OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -147,7 +214,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_subscribe_to_topic(self):
+    def test_openapi_subscribe_to_topic(self):
         """ Test subscribe endpoint against OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -164,7 +231,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_unsubscribe_from_topic(self):
+    def test_openapi_unsubscribe_from_topic(self):
         """ Test unsubscribe endpoint against OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -186,7 +253,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_get_messages(self):
+    def test_openapi_get_messages(self):
         """ Test get messages endpoint against OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -298,7 +365,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_error_responses(self):
+    def test_openapi_error_responses(self):
         """ Test error responses match OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -326,7 +393,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_message_priority_validation(self):
+    def test_openapi_message_priority_validation(self):
         """ Test message priority validation as per OpenAPI spec (0-9 range).
         """
         topic_name = self.test_topics[0]
@@ -357,7 +424,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_expiration_validation(self):
+    def test_openapi_expiration_validation(self):
         """ Test message expiration validation as per OpenAPI spec.
         """
         topic_name = self.test_topics[0]
@@ -379,7 +446,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_openapi_complete_workflow(self):
+    def test_openapi_complete_workflow(self):
         """ Test complete workflow as described in README files and OpenAPI spec.
         """
         topic_name = self.test_topics[0]
