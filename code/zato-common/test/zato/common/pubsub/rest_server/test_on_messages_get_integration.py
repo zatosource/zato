@@ -145,10 +145,9 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         # Verify success response
         self.assertTrue(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
-        self.assertEqual(len(response.messages), 1)
         self.assertEqual(response.message_count, 1)
-        self.assertEqual(response.messages[0]['data'], 'test message 1')
-        self.assertEqual(response.messages[0]['meta']['msg_id'], 'msg_1')
+        self.assertEqual(response.data, 'test message 1')
+        self.assertEqual(response.meta['msg_id'], 'msg_1')
 
 # ################################################################################################################################
 
