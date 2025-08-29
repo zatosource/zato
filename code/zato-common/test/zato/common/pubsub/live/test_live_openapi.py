@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import time
-from http.client import BAD_REQUEST, OK, UNAUTHORIZED
+from http.client import BAD_REQUEST, OK
 from pathlib import Path
 from unittest import main
 from urllib.parse import quote
