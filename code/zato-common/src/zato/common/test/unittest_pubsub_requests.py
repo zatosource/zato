@@ -84,8 +84,9 @@ class PubSubRESTServerBaseTestCase(TestCase):
             cls.config['pubsub_topic'][2]['name']
         ]
 
-        # Set up HTTP client patching
-        cls._setup_http_patching()
+        # Set up HTTP client patching if debug is enabled
+        if os.environ.get('Zato_Has_Debug') == '1':
+            cls._setup_http_patching()
 
 # ################################################################################################################################
 
