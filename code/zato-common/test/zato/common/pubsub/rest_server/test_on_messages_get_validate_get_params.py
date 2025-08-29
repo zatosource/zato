@@ -62,7 +62,7 @@ class RESTValidateGetParamsTestCase(TestCase):
         """ _validate_get_params returns default values when no params provided.
         """
         data = {}
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, PubSub.Message.Default_Max_Len)
         self.assertEqual(max_messages, PubSub.Message.Default_Max_Messages)
@@ -76,7 +76,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': 1000,
             'max_messages': 5
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, 1000)
         self.assertEqual(max_messages, 5)
@@ -90,7 +90,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': 10_000_000,  # Above limit
             'max_messages': 5
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, 5_000_000)  # Capped to PubSub.Message.Default_Max_Len
         self.assertEqual(max_messages, 5)
@@ -104,7 +104,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': 1000,
             'max_messages': 2000    # Above limit
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, 1000)
         self.assertEqual(max_messages, 1000)  # Capped to limit
@@ -118,7 +118,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': 10_000_000,  # Above limit
             'max_messages': 2000    # Above limit
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, 5_000_000)  # Capped to PubSub.Message.Default_Max_Len
         self.assertEqual(max_messages, 1000)  # Capped to limit
@@ -132,7 +132,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': 0,
             'max_messages': 0
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, 0)
         self.assertEqual(max_messages, 0)
@@ -146,7 +146,7 @@ class RESTValidateGetParamsTestCase(TestCase):
             'max_len': -100,
             'max_messages': -5
         }
-        max_len, max_messages = self.rest_server._validate_get_params(data)
+        max_len, max_messages, wrap_in_list = self.rest_server._validate_get_params(data)
 
         self.assertEqual(max_len, -100)
         self.assertEqual(max_messages, -5)
