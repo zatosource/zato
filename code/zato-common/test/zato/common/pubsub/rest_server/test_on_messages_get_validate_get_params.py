@@ -15,6 +15,7 @@ import warnings
 from unittest import main, TestCase
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.server.rest import PubSubRESTServer
 
@@ -63,8 +64,8 @@ class RESTValidateGetParamsTestCase(TestCase):
         data = {}
         max_len, max_messages = self.rest_server._validate_get_params(data)
 
-        self.assertEqual(max_len, 5_000_000)  # _max_len_limit
-        self.assertEqual(max_messages, 1)
+        self.assertEqual(max_len, PubSub.Message.Default_Max_Len)
+        self.assertEqual(max_messages, PubSub.Message.Default_Max_Messages)
 
 # ################################################################################################################################
 
@@ -91,7 +92,7 @@ class RESTValidateGetParamsTestCase(TestCase):
         }
         max_len, max_messages = self.rest_server._validate_get_params(data)
 
-        self.assertEqual(max_len, 5_000_000)  # Capped to limit
+        self.assertEqual(max_len, 5_000_000)  # Capped to PubSub.Message.Default_Max_Len
         self.assertEqual(max_messages, 5)
 
 # ################################################################################################################################
@@ -119,7 +120,7 @@ class RESTValidateGetParamsTestCase(TestCase):
         }
         max_len, max_messages = self.rest_server._validate_get_params(data)
 
-        self.assertEqual(max_len, 5_000_000)  # Capped to limit
+        self.assertEqual(max_len, 5_000_000)  # Capped to PubSub.Message.Default_Max_Len
         self.assertEqual(max_messages, 1000)  # Capped to limit
 
 # ################################################################################################################################

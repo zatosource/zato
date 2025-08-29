@@ -1178,6 +1178,8 @@ class PubSub:
         Priority_Max = 9
         Priority_Default = 5
         Default_Expiration = 86400 * 365  # 24 hours * 365 days = 1 year in seconds
+        Default_Max_Len = 5_000_000
+        Default_Max_Messages = 50
 
     class Repeats:
         Max = 500
