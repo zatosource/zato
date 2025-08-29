@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 
 class ModuleCtx:
-    Max_Length = 200
+    Max_Length = PubSub.Topic.Name_Max_Len
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -256,11 +256,10 @@ class PatternMatcher:
 
 # ################################################################################################################################
 
-    def _pattern_sort_key(self, pattern_info:'PatternInfo') -> 'tuple[str, bool]':
+    def _pattern_sort_key(self, pattern_info:'PatternInfo') -> 'tuple':
         """ Sort key for patterns: alphabetical with wildcards last.
         """
-        has_wildcard = '*' in pattern_info.pattern
-        return (pattern_info.pattern, has_wildcard)
+        return (pattern_info.has_wildcards, pattern_info.pattern)
 
 # ################################################################################################################################
 
