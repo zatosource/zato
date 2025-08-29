@@ -343,33 +343,63 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # .. verify that the user is no longer subscribed to topic.
         self._assert_user_not_subscribed_to_topic(topic_name)
 
-# ################################################################################################################################
 
     def test_topic_validation(self) -> 'None':
         """ Test topic name validation for publish, subscribe, and unsubscribe operations.
         """
-        invalid_topics = [
-            ('a' * 201, 'Invalid request data'),
-            ('test#topic', 'Invalid request data'),
-            ('test.Ω', 'Invalid request data')
-        ]
+        class InvalidTopic:
+            def __init__(self, name, expected_error):
+                self.name = name
+                self.expected_error = expected_error
 
-        for topic_name, expected_error in invalid_topics:
+        long_topic = InvalidTopic('a' * 201, 'Invalid request data')
+        hash_topic = InvalidTopic('test#topic', 'Invalid request data')
+        unicode_topic = InvalidTopic('test.Ω', 'Invalid request data')
 
-            # Test publish validation
-            publish_response = self._publish_message(topic_name, {'test': 'data'})
-            self.assertEqual(publish_response.status_code, BAD_REQUEST)
-            self.assertIn(expected_error, publish_response.text)
+        # Test long topic name - publish
+        publish_response = self._publish_message(long_topic.name, {'test': 'data'})
+        self.assertEqual(publish_response.status_code, 400)
+        self.assertIn(long_topic.expected_error, publish_response.text)
 
-            # Test subscribe validation
-            subscribe_response = self._subscribe_to_topic(topic_name)
-            self.assertEqual(subscribe_response.status_code, BAD_REQUEST)
-            self.assertIn(expected_error, subscribe_response.text)
+        # Test long topic name - subscribe
+        subscribe_response = self._subscribe_to_topic(long_topic.name)
+        self.assertEqual(subscribe_response.status_code, 400)
+        self.assertIn(long_topic.expected_error, subscribe_response.text)
 
-            # Test unsubscribe validation
-            unsubscribe_response = self._unsubscribe_from_topic(topic_name)
-            self.assertEqual(unsubscribe_response.status_code, BAD_REQUEST)
-            self.assertIn(expected_error, unsubscribe_response.text)
+        # Test long topic name - unsubscribe
+        unsubscribe_response = self._unsubscribe_from_topic(long_topic.name)
+        self.assertEqual(unsubscribe_response.status_code, 400)
+        self.assertIn(long_topic.expected_error, unsubscribe_response.text)
+
+        # Test hash character topic - publish
+        publish_response = self._publish_message(hash_topic.name, {'test': 'data'})
+        self.assertEqual(publish_response.status_code, 400)
+        self.assertIn(hash_topic.expected_error, publish_response.text)
+
+        # Test hash character topic - subscribe
+        subscribe_response = self._subscribe_to_topic(hash_topic.name)
+        self.assertEqual(subscribe_response.status_code, 400)
+        self.assertIn(hash_topic.expected_error, subscribe_response.text)
+
+        # Test hash character topic - unsubscribe
+        unsubscribe_response = self._unsubscribe_from_topic(hash_topic.name)
+        self.assertEqual(unsubscribe_response.status_code, 400)
+        self.assertIn(hash_topic.expected_error, unsubscribe_response.text)
+
+        # Test unicode character topic - publish
+        publish_response = self._publish_message(unicode_topic.name, {'test': 'data'})
+        self.assertEqual(publish_response.status_code, 400)
+        self.assertIn(unicode_topic.expected_error, publish_response.text)
+
+        # Test unicode character topic - subscribe
+        subscribe_response = self._subscribe_to_topic(unicode_topic.name)
+        self.assertEqual(subscribe_response.status_code, 400)
+        self.assertIn(unicode_topic.expected_error, subscribe_response.text)
+
+        # Test unicode character topic - unsubscribe
+        unsubscribe_response = self._unsubscribe_from_topic(unicode_topic.name)
+        self.assertEqual(unsubscribe_response.status_code, 400)
+        self.assertIn(unicode_topic.expected_error, unsubscribe_response.text)
 
 # ################################################################################################################################
 
