@@ -43,7 +43,7 @@ class BrokerClientHelper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTOnUnsubscribePermissionCheckingTestCase(TestCase):
+class RESTOnUnsubscribeValidationTestCase(TestCase):
 
     def setUp(self):
 
