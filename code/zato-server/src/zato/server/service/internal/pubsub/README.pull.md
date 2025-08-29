@@ -31,7 +31,7 @@ Content-Type: application/json
 ```
 
 #### Parameters
-- `max_messages` (optional) - Maximum number of messages to retrieve (default: 1, max: 1000)
+- `max_messages` (optional) - Maximum number of messages to retrieve (default: 50, max: 1000)
 - `max_len` (optional) - Maximum total length of message data (default: 5,000,000 bytes, max: 5,000,000 bytes)
 
 **Note:** Parameters are automatically clamped to their maximum values if you specify higher numbers.
@@ -57,7 +57,12 @@ Content-Type: application/json
       "expiration_time_iso": "2025-01-01T13:00:00+00:00",
       "time_since_pub": "0:00:30.123456",
       "time_since_recv": "0:00:30.123456",
-      "data": "message content"
+      "data": {
+        "order_id": 12345,
+        "status": "completed",
+        "amount": 299.99,
+        "currency": "EUR"
+      }
     }
   ],
   "message_count": 1
