@@ -66,7 +66,7 @@ class RESTBuildSuccessResponseTestCase(TestCase):
             {'msg_id': 'msg_2', 'data': 'message 2'}
         ]
 
-        response = self.rest_server._build_success_response(self.test_cid, test_messages)
+        response = self.rest_server._build_success_response(self.test_cid, test_messages, 50, False)
 
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
@@ -81,7 +81,7 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         """
         test_messages = []
 
-        response = self.rest_server._build_success_response(self.test_cid, test_messages)
+        response = self.rest_server._build_success_response(self.test_cid, test_messages, 50, False)
 
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
@@ -103,7 +103,7 @@ class RESTBuildSuccessResponseTestCase(TestCase):
             }
         ]
 
-        response = self.rest_server._build_success_response(self.test_cid, test_messages)
+        response = self.rest_server._build_success_response(self.test_cid, test_messages, 50, False)
 
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
@@ -135,7 +135,7 @@ class RESTBuildSuccessResponseTestCase(TestCase):
             }
         ]
 
-        response = self.rest_server._build_success_response(self.test_cid, test_messages)
+        response = self.rest_server._build_success_response(self.test_cid, test_messages, 50, False)
 
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
@@ -157,7 +157,7 @@ class RESTBuildSuccessResponseTestCase(TestCase):
                 'sequence': i
             })
 
-        response = self.rest_server._build_success_response(self.test_cid, test_messages)
+        response = self.rest_server._build_success_response(self.test_cid, test_messages, 50, False)
 
         self.assertIsInstance(response, APIResponse)
         self.assertTrue(response.is_ok)
@@ -179,8 +179,8 @@ class RESTBuildSuccessResponseTestCase(TestCase):
         cid1 = 'cid-111'
         cid2 = 'cid-222'
 
-        response1 = self.rest_server._build_success_response(cid1, test_messages)
-        response2 = self.rest_server._build_success_response(cid2, test_messages)
+        response1 = self.rest_server._build_success_response(cid1, test_messages, 50, False)
+        response2 = self.rest_server._build_success_response(cid2, test_messages, 50, False)
 
         self.assertEqual(response1.cid, cid1)
         self.assertEqual(response2.cid, cid2)
