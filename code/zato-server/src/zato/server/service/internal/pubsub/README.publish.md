@@ -136,15 +136,15 @@ using pattern matching - see the pattern documentation for details on how topic 
 ## Message Properties
 
 ### Priority Levels
-- **1-3**: Low priority (background processing, audit logs)
+- **0-3**: Low priority (background processing, audit logs)
 - **4-6**: Normal priority (regular business transactions)
 - **7-9**: High priority (urgent business events, payment failures)
 
 ### Expiration
 - Messages expire after the specified time in seconds
 - Expired messages are automatically removed from queues
-- Default expiration is 1 year
-- Set to 0 for messages that never expire
+- All messages always eventually expire
+- Default expiration is 1 year expressed as 31536000 in seconds
 
 ### Message ID
 - Each published message receives a unique message ID in the response
