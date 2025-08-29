@@ -43,20 +43,24 @@ Content-Type: application/json
 {
   "is_ok": true,
   "cid": "correlation-id",
+  "status": "200 OK",
   "messages": [
     {
-      "data": "message content",
-      "msg_id": "unique-message-id",
       "topic_name": "orders.processed",
-      "pub_time_iso": "2025-01-01T12:00:00",
-      "recv_time_iso": "2025-01-01T12:00:01",
-      "priority": 5,
       "size": 123,
-      "correl_id": "order-12345",
+      "priority": 5,
       "expiration": 3600,
-      "mime_type": "application/json"
+      "msg_id": "unique-message-id",
+      "correl_id": "order-12345",
+      "pub_time_iso": "2025-01-01T12:00:00+00:00",
+      "recv_time_iso": "2025-01-01T12:00:01+00:00",
+      "expiration_time_iso": "2025-01-01T13:00:00+00:00",
+      "time_since_pub": "0:00:30.123456",
+      "time_since_recv": "0:00:30.123456",
+      "data": "message content"
     }
-  ]
+  ],
+  "message_count": 1
 }
 ```
 
@@ -81,43 +85,41 @@ Content-Type: application/json
 #### Get Single Message
 ```bash
 curl -X POST \
-  http://localhost:17010/messages/get \
   -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{}'
+  http://localhost:17010/messages/get
 ```
 
 #### Get Multiple Messages
 ```bash
 curl -X POST \
-  http://localhost:17010/messages/get \
   -u username:password \
-  -H "Content-Type: application/json" \
+  http://localhost:17010/messages/get \
   -d '{"max_messages": 5, "max_len": 100000}'
 ```
 
 #### Get Many Messages for Batch Processing
 ```bash
 curl -X POST \
-  http://localhost:17010/messages/get \
   -u username:password \
-  -H "Content-Type: application/json" \
+  http://localhost:17010/messages/get \
   -d '{"max_messages": 100, "max_len": 2000000}'
 ```
 
 ## Message Format
 
 Retrieved messages contain:
-- `messages` - The actual message content (string or JSON object)
-- `msg_id` - Unique message identifier
 - `topic_name` - Topic the message was published to
-- `pub_time_iso` - When the message was published (ISO format)
-- `recv_time_iso` - When the message was received by the system (ISO format)
-- `priority` - Message priority (0-9, higher is more important)
 - `size` - Message size in bytes
-- `correl_id` - Correlation ID for message tracking
+- `priority` - Message priority (0-9, higher is more important)
 - `expiration` - Message expiration time in seconds
-- `mime_type` - Content type of the message
+- `msg_id` - Unique message identifier
+- `correl_id` - Correlation ID for message tracking
+- `pub_time_iso` - When the message was published (ISO format with timezone)
+- `recv_time_iso` - When the message was received by the system (ISO format with timezone)
+- `expiration_time_iso` - When the message will expire (ISO format with timezone)
+- `time_since_pub` - Time elapsed since message was published (duration format)
+- `time_since_recv` - Time elapsed since message was received (duration format)
+- `data` - The actual message content (string or JSON object)
 
 ## Message Processing
 
