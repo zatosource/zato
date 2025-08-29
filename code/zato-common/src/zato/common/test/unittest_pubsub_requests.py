@@ -126,8 +126,8 @@ class PubSubRESTServerBaseTestCase(TestCase):
     def _setup_http_patching(cls):
         """ Set up HTTP client patching for detailed logging.
         """
-        # Disable default HTTP traffic logging to avoid duplicates
-        http_client.HTTPConnection.debuglevel = 0
+        # Enable HTTP debug logging when Zato_Has_Debug=1
+        http_client.HTTPConnection.debuglevel = 1
 
         def patched_send(self, data):
             logger = logging.getLogger('http.client')
