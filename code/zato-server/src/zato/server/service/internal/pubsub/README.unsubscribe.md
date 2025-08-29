@@ -67,14 +67,14 @@ No request body required.
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/orders.processed/unsubscribe
+  http://localhost:44556/topic/orders.processed/unsubscribe
 ```
 
 #### Unsubscribe from Alert Topic
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/alerts.critical.system/unsubscribe
+  http://localhost:44556/topic/alerts.critical.system/unsubscribe
 ```
 
 ## Unsubscribe Behavior
