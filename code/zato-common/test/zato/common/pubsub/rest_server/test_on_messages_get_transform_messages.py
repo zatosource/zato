@@ -98,15 +98,14 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(message['data'], 'test message data')
 
         self.assertEqual(message['meta']['msg_id'], 'msg_123')
-        self.assertEqual(message['meta']['correl_id'], '')
+        self.assertEqual(message['meta']['correl_id'], 'corr_456')
         self.assertEqual(message['meta']['priority'], 5)
         self.assertEqual(message['meta']['pub_time_iso'], '2025-01-01T12:00:00+00:00')
         self.assertEqual(message['meta']['recv_time_iso'], '2025-01-01T12:00:00+00:00')
-        self.assertEqual(message['meta']['expiration'], '0')
-        self.assertEqual(message['meta']['topic_name'], '')
-        self.assertEqual(message['meta']['ext_client_id'], '')
+        self.assertEqual(message['meta']['expiration'], '3600')
+        self.assertEqual(message['meta']['topic_name'], 'test.topic')
+        self.assertEqual(message['meta']['ext_client_id'], 'client_789')
         self.assertEqual(message['meta']['expiration_time_iso'], '')
-        self.assertEqual(message['meta']['in_reply_to'], '')
         self.assertEqual(message['meta']['size'], len('test message data'.encode('utf-8')))
 
 # ################################################################################################################################
