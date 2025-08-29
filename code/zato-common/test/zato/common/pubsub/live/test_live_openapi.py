@@ -276,20 +276,20 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         invalid_topic = 'unauthorized.topic#invalid'
 
         # Test publish with invalid topic
-        publish_url = f'{self.base_url}/pubsub/topic/{invalid_topic}'
+        publish_url = f'{self.base_url}/pubsub/topic/{invalid_topic.replace("#", "%23")}'
         payload = {'data': 'test message'}
         response = requests.post(publish_url, json=payload, auth=self.auth)
         self.assertEqual(response.status_code, UNAUTHORIZED)
         self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', UNAUTHORIZED)
 
         # Test subscribe with invalid topic
-        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{invalid_topic}'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{invalid_topic.replace("#", "%23")}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, UNAUTHORIZED)
         self._validate_response_against_schema(response, '/pubsub/subscribe/topic/{topic_name}', UNAUTHORIZED)
 
         # Test unsubscribe with invalid topic
-        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{invalid_topic}'
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{invalid_topic.replace("#", "%23")}'
         response = requests.post(unsubscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, UNAUTHORIZED)
         self._validate_response_against_schema(response, '/pubsub/unsubscribe/topic/{topic_name}', UNAUTHORIZED)
