@@ -246,6 +246,12 @@ class BaseRESTServer(BaseServer):
                 response.cid = cid
                 return self._json_response(start_response, response)
 
+        except ValueError as e:
+            logger.warning(f'[{cid}] {e}')
+            response = BadRequestResponse()
+            response.cid = cid
+            return self._json_response(start_response, response)
+
         except UnauthorizedException:
             response = UnauthorizedResponse()
             response.cid = cid

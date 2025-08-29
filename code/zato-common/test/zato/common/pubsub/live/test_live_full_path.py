@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 import subprocess
+from http.client import BAD_REQUEST, OK
 from unittest import main
 
 # Requests
@@ -121,10 +122,11 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         publish_response = requests.post(publish_url, json=publish_payload, auth=self.auth)
 
-        logger.info('Message published to %s', topic_name)
-
-        # First check RabbitMQ to ensure there's at least one message in the queue ..
-        self._wait_for_messages_in_queue()
+        # Only wait for messages if the publish was successful
+        if publish_response.status_code == OK:
+            logger.info('Message published to %s', topic_name)
+            # First check RabbitMQ to ensure there's at least one message in the queue ..
+            self._wait_for_messages_in_queue()
 
         # .. and now return the publication response ..
         return publish_response
@@ -343,6 +345,34 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
 # ################################################################################################################################
 
+    def test_topic_validation(self) -> 'None':
+        """ Test topic name validation for publish, subscribe, and unsubscribe operations.
+        """
+        invalid_topics = [
+            ('a' * 201, 'Invalid request data'),
+            ('test#topic', 'Invalid request data'),
+            ('test.Ω', 'Invalid request data')
+        ]
+
+        for topic_name, expected_error in invalid_topics:
+
+            # Test publish validation
+            publish_response = self._publish_message(topic_name, {'test': 'data'})
+            self.assertEqual(publish_response.status_code, BAD_REQUEST)
+            self.assertIn(expected_error, publish_response.text)
+
+            # Test subscribe validation
+            subscribe_response = self._subscribe_to_topic(topic_name)
+            self.assertEqual(subscribe_response.status_code, BAD_REQUEST)
+            self.assertIn(expected_error, subscribe_response.text)
+
+            # Test unsubscribe validation
+            unsubscribe_response = self._unsubscribe_from_topic(topic_name)
+            self.assertEqual(unsubscribe_response.status_code, BAD_REQUEST)
+            self.assertIn(expected_error, unsubscribe_response.text)
+
+# ################################################################################################################################
+
     def test_full_path(self) -> 'None':
         """ Test full path with enmasse configuration.
         """
@@ -351,6 +381,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # Skip auto-unsubscribe for this test since we want to control cleanup manually ..
         self.skip_auto_unsubscribe = True
+
+        # .. first test topic validation ..
+        self.test_topic_validation()
 
         # .. wait for all configuration objects to appear in diagnostics ..
         self._wait_for_objects_in_diagnostics()
