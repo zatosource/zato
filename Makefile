@@ -29,7 +29,7 @@ common-tests:
 	cd $(CURDIR)/code/zato-common && make run-tests
 
 pubsub-tests:
-	cd $(CURDIR)/code/zato-common && make pubsub-tests
+	cd $(CURDIR)/code/zato-common && Zato_Has_Debug=1 make pubsub-tests
 
 server-tests:
 	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make run-tests
