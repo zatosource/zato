@@ -31,7 +31,7 @@ from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import set_time_since, validate_topic_name
-from zato.common.util.api import utcnow
+from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,16 +153,17 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _validate_get_params(self, data:'dict') -> 'tuple[int, int]':
+    def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
         """
         max_len = data.get('max_len', _max_len_limit)
         max_messages = data.get('max_messages', _default_max_messages)
+        wrap_in_list = as_bool(data.get('wrap_in_list', False))
 
         max_len = min(max_len, _max_len_limit)
         max_messages = min(max_messages, _max_messages_limit)
 
-        return max_len, max_messages
+        return max_len, max_messages, wrap_in_list
 
 # ################################################################################################################################
 
@@ -304,15 +305,30 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _build_success_response(self, cid:'str', messages:'list') -> 'APIResponse':
+    def _build_success_response(self, cid:'str', messages:'list', max_messages:'int', wrap_in_list:'bool') -> 'APIResponse':
         """ Create successful APIResponse with messages.
         """
         response = APIResponse()
         response.is_ok = True
         response.cid = cid
         response.data = None
-        response.messages = messages if messages else []
-        response.message_count = len(response.messages)
+        response.message_count = len(messages)
+
+        # If max_messages is 1 and wrap_in_list is False, return single message format
+        needs_single_message = max_messages == 1
+        len_messages = len(messages)
+
+        if needs_single_message and not wrap_in_list and len_messages == 1:
+            message = messages[0]
+            response.meta = message
+            response.data = message.pop('data', None)
+            # Remove data from meta since it's now at root level
+            if 'data' in response.meta:
+                del response.meta['data']
+        else:
+            # Always wrap in list for max_messages > 1 or when wrap_in_list is True
+            response.messages = messages if messages else []
+
         return response
 
 # ################################################################################################################################
@@ -337,8 +353,8 @@ class PubSubRESTServer(BaseRESTServer):
         request = Request(environ)
         data = self._parse_json(cid, request)
 
-        max_len, max_messages = self._validate_get_params(data)
-        logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}')
+        max_len, max_messages, wrap_in_list = self._validate_get_params(data)
+        logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}, wrap_in_list={wrap_in_list}')
 
         sub_key = self._find_user_sub_key(cid, username)
         logger.info(f'[{cid}] Found sub_key: {sub_key}')
@@ -361,7 +377,7 @@ class PubSubRESTServer(BaseRESTServer):
             message_word = 'message' if message_count == 1 else 'messages'
             logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
 
-            return self._build_success_response(cid, messages)
+            return self._build_success_response(cid, messages, max_messages, wrap_in_list)
 
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
