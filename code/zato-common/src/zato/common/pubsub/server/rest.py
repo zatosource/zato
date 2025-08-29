@@ -156,7 +156,7 @@ class PubSubRESTServer(BaseRESTServer):
         """ Extract and validate max_len/max_messages parameters.
         """
         max_len = data.get('max_len', _max_len_limit)
-        max_messages = data.get('max_messages', 1)
+        max_messages = data.get('max_messages', 50)
 
         max_len = min(max_len, _max_len_limit)
         max_messages = min(max_messages, _max_messages_limit)
