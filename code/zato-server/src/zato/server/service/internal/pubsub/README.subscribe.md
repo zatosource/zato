@@ -68,14 +68,14 @@ No request body required.
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/orders.processed/subscribe
+  http://localhost:44556/topic/orders.processed/subscribe
 ```
 
 #### Subscribe to Wildcard Pattern Topic
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/topic/alerts.critical.system/subscribe
+  http://localhost:44556/topic/alerts.critical.system/subscribe
 ```
 
 ### Topic Auto-Creation

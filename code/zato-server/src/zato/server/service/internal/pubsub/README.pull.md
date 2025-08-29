@@ -95,14 +95,14 @@ Content-Type: application/json
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/messages/get
+  http://localhost:44556/messages/get
 ```
 
 #### Get Multiple Messages
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/messages/get \
+  http://localhost:44556/messages/get \
   -d '{"max_messages": 5, "max_len": 100000}'
 ```
 
@@ -110,7 +110,7 @@ curl -X POST \
 ```bash
 curl -X POST \
   -u username:password \
-  http://localhost:17010/messages/get \
+  http://localhost:44556/messages/get \
   -d '{"max_messages": 100, "max_len": 2000000}'
 ```
 
