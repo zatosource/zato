@@ -400,6 +400,35 @@ class PatternMatcherTestCase(TestCase):
         self.assertFalse(result.is_ok)
 
 # ################################################################################################################################
+
+    def test_pattern_evaluation_order_exact_before_wildcards(self):
+        permissions = [
+            {'pattern': 'alerts.**', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'alerts.critical', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'orders.*', 'access_type': PubSub.API_Client.Publisher},
+            {'pattern': 'orders.urgent', 'access_type': PubSub.API_Client.Publisher}
+        ]
+        self.matcher.add_client(self.client_id, permissions)
+
+        # Test that exact patterns are matched before wildcard patterns
+        result = self.matcher.evaluate(self.client_id, 'alerts.critical', 'publish')
+        self.assertTrue(result.is_ok)
+        self.assertEqual(result.matched_pattern, 'alerts.critical')
+
+        result = self.matcher.evaluate(self.client_id, 'orders.urgent', 'publish')
+        self.assertTrue(result.is_ok)
+        self.assertEqual(result.matched_pattern, 'orders.urgent')
+
+        # Test that wildcard patterns still work for non-exact matches
+        result = self.matcher.evaluate(self.client_id, 'alerts.warning', 'publish')
+        self.assertTrue(result.is_ok)
+        self.assertEqual(result.matched_pattern, 'alerts.**')
+
+        result = self.matcher.evaluate(self.client_id, 'orders.processed', 'publish')
+        self.assertTrue(result.is_ok)
+        self.assertEqual(result.matched_pattern, 'orders.*')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
