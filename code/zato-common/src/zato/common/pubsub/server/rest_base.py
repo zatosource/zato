@@ -194,13 +194,14 @@ class BaseRESTServer(BaseServer):
         fields_to_check = ['details', 'msg_id', 'data']
 
         # .. add fields that should only be dropped if None ..
-        for field in ['messages', 'message_count']:
-            if response_data.get(field) is None:
+        for field in ['messages', 'message_count', 'meta', 'messages']:
+            value = response_data.get(field)
+            if value is None:
                 fields_to_check.append(field)
 
         for key in fields_to_check:
             if not response_data.get(key):
-                del response_data[key]
+                _ = response_data.pop(key, None)
 
         # .. now we can serialize it ..
         json_data = dumps(response_data).encode('utf-8')
