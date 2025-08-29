@@ -113,11 +113,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
             'data': 'Order #12345 has been processed'
         }
 
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         response = requests.post(publish_url, json=simple_payload, auth=self.auth)
 
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/publish', OK)
+        self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', OK)
 
         response_data = response.json()
         self.assertTrue(response_data.get('is_ok'))
@@ -138,7 +138,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         response = requests.post(publish_url, json=json_payload, auth=self.auth)
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/publish', OK)
+        self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', OK)
 
         response_data = response.json()
         self.assertTrue(response_data.get('is_ok'))
@@ -151,11 +151,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         """
         topic_name = self.test_topics[0]
 
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
 
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/subscribe', OK)
+        self._validate_response_against_schema(response, '/pubsub/subscribe/topic/{topic_name}', OK)
 
         response_data = response.json()
         self.assertTrue(response_data.get('is_ok'))
@@ -169,16 +169,15 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         topic_name = self.test_topics[0]
 
         # First subscribe
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
-        self.assertEqual(response.status_code, OK)
 
-        # Then unsubscribe
-        unsubscribe_url = f'{self.base_url}/topic/{topic_name}/unsubscribe'
+        # Step 2: Unsubscribe from topic
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
         response = requests.post(unsubscribe_url, auth=self.auth)
 
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/unsubscribe', OK)
+        self._validate_response_against_schema(response, '/pubsub/unsubscribe/topic/{topic_name}', OK)
 
         response_data = response.json()
         self.assertTrue(response_data.get('is_ok'))
@@ -192,7 +191,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         topic_name = self.test_topics[0]
 
         # Subscribe to topic first
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -208,7 +207,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
             'correl_id': 'test-message-123'
         }
 
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         response = requests.post(publish_url, json=test_message, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -216,11 +215,11 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         time.sleep(0.5)
 
         # Test default parameters (no request body)
-        get_messages_url = f'{self.base_url}/messages/get'
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
         response = requests.post(get_messages_url, auth=self.auth)
 
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/messages/get', OK)
+        self._validate_response_against_schema(response, '/pubsub/messages/get', OK)
 
         response_data = response.json()
         self.assertTrue(response_data.get('is_ok'))
@@ -254,7 +253,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         response = requests.post(get_messages_url, json=request_payload, auth=self.auth)
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/messages/get', OK)
+        self._validate_response_against_schema(response, '/pubsub/messages/get', OK)
 
         # Test batch processing example
         batch_payload = {
@@ -264,7 +263,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         response = requests.post(get_messages_url, json=batch_payload, auth=self.auth)
         self.assertEqual(response.status_code, OK)
-        self._validate_response_against_schema(response, '/messages/get', OK)
+        self._validate_response_against_schema(response, '/pubsub/messages/get', OK)
 
 # ################################################################################################################################
 
@@ -275,23 +274,23 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         invalid_topic = 'test#topic'
 
         # Test publish with invalid topic
-        publish_url = f'{self.base_url}/topic/{invalid_topic}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{invalid_topic}'
         payload = {'data': 'test message'}
         response = requests.post(publish_url, json=payload, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/publish', BAD_REQUEST)
+        self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', BAD_REQUEST)
 
         # Test subscribe with invalid topic
-        subscribe_url = f'{self.base_url}/topic/{invalid_topic}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{invalid_topic}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/subscribe', BAD_REQUEST)
+        self._validate_response_against_schema(response, '/pubsub/subscribe/topic/{topic_name}', BAD_REQUEST)
 
         # Test unsubscribe with invalid topic
-        unsubscribe_url = f'{self.base_url}/topic/{invalid_topic}/unsubscribe'
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{invalid_topic}'
         response = requests.post(unsubscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/unsubscribe', BAD_REQUEST)
+        self._validate_response_against_schema(response, '/pubsub/unsubscribe/topic/{topic_name}', BAD_REQUEST)
 
 # ################################################################################################################################
 
@@ -301,12 +300,12 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         topic_name = self.test_topics[0]
 
         # Test 400 Bad Request - missing data field
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         invalid_payload = {'priority': 5}  # Missing required 'data' field
 
         response = requests.post(publish_url, json=invalid_payload, auth=self.auth)
         self.assertEqual(response.status_code, BAD_REQUEST)
-        self._validate_response_against_schema(response, '/topic/{topic_name}/publish', BAD_REQUEST)
+        self._validate_response_against_schema(response, '/pubsub/topic/{topic_name}', BAD_REQUEST)
 
         response_data = response.json()
         self.assertFalse(response_data.get('is_ok'))
@@ -327,7 +326,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         """ Test message priority validation as per OpenAPI spec (0-9 range).
         """
         topic_name = self.test_topics[0]
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
 
         # Test valid priorities (0-9)
         for priority in [0, 5, 9]:
@@ -358,7 +357,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         """ Test message expiration validation as per OpenAPI spec.
         """
         topic_name = self.test_topics[0]
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
 
         # Test valid expiration values
         valid_expirations = [1, 3600, 86400, 31536000]  # 1 second to 1 year
@@ -382,12 +381,12 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         topic_name = self.test_topics[0]
 
         # Step 1: Subscribe to topic
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
         # Step 2: Publish multiple messages with different priorities
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
 
         messages_to_publish = [
             {
@@ -420,7 +419,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         time.sleep(1.0)
 
         # Step 4: Retrieve messages (should be in priority order)
-        get_messages_url = f'{self.base_url}/messages/get'
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
         response = requests.post(get_messages_url, json={'max_messages': 10}, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -435,7 +434,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(priorities, sorted(priorities, reverse=True))
 
         # Step 5: Unsubscribe from topic
-        unsubscribe_url = f'{self.base_url}/topic/{topic_name}/unsubscribe'
+        unsubscribe_url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
         response = requests.post(unsubscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -450,7 +449,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         topic_name = 'orders.processed'  # As used in OpenAPI examples
 
         # Subscribe first
-        subscribe_url = f'{self.base_url}/topic/{topic_name}/subscribe'
+        subscribe_url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(subscribe_url, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -459,7 +458,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
             'data': 'Order #12345 has been processed'
         }
 
-        publish_url = f'{self.base_url}/topic/{topic_name}/publish'
+        publish_url = f'{self.base_url}/pubsub/topic/{topic_name}'
         response = requests.post(publish_url, json=simple_example, auth=self.auth)
         self.assertEqual(response.status_code, OK)
 
@@ -479,7 +478,7 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
         self.assertEqual(response.status_code, OK)
 
         # Test get messages examples
-        get_messages_url = f'{self.base_url}/messages/get'
+        get_messages_url = f'{self.base_url}/pubsub/messages/get'
 
         # Default example (no body)
         response = requests.post(get_messages_url, auth=self.auth)

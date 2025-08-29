@@ -23,7 +23,7 @@ security:
   - basicAuth: []
 
 paths:
-  /topic/{topic_name}/publish:
+  /pubsub/topic/{topic_name}:
     post:
       summary: Publish a message to a topic
       description: |
@@ -120,7 +120,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /topic/{topic_name}/subscribe:
+  /pubsub/subscribe/topic/{topic_name}:
     post:
       summary: Subscribe to a topic
       description: |
@@ -162,7 +162,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /topic/{topic_name}/unsubscribe:
+  /pubsub/unsubscribe/topic/{topic_name}:
     post:
       summary: Unsubscribe from a topic
       description: |
@@ -204,7 +204,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /messages/get:
+  /pubsub/messages/get:
     post:
       summary: Retrieve messages from subscribed topics
       description: |
