@@ -223,7 +223,8 @@ class BaseRESTServer(BaseServer):
         cid = new_cid_pubsub()
 
         # .. log what we're doing ..
-        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
+        path_info = environ.get('PATH_INFO', '').encode('latin1').decode('utf-8', errors='replace')
+        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), path_info)
 
         # Bind the URL map to the current request
         urls = self.url_map.bind_to_environ(environ)

@@ -352,10 +352,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
                 self.expected_error = expected_error
 
         long_topic = InvalidTopic('a' * 201, 'Invalid request data')
-        hash_topic = InvalidTopic('test#topic', 'Invalid request data')
+        hash_topic = InvalidTopic('test%23topic', 'Invalid request data')
         unicode_topic = InvalidTopic('test.Ω', 'Invalid request data')
 
-        '''
         # Test long topic name - publish
         publish_response = self._publish_message(long_topic.name, {'test': 'data'})
         self.assertEqual(publish_response.status_code, BAD_REQUEST)
@@ -370,7 +369,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         unsubscribe_response = self._unsubscribe_from_topic(long_topic.name)
         self.assertEqual(unsubscribe_response.status_code, BAD_REQUEST)
         self.assertIn(long_topic.expected_error, unsubscribe_response.text)
-        '''
 
         # Test hash character topic - publish
         publish_response = self._publish_message(hash_topic.name, {'test': 'data'})
