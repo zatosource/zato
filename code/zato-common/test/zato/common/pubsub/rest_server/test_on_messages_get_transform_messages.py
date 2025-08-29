@@ -96,19 +96,18 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], 'test message data')
-        self.assertEqual(message['msg_id'], 'msg_123')
-        self.assertEqual(message['correl_id'], 'corr_456')
-        self.assertEqual(message['priority'], 5)
 
-        self.assertEqual(message['pub_time_iso'], '2025-01-01T12:00:00+00:00')
-        self.assertEqual(message['recv_time_iso'], '2025-01-01T12:00:00+00:00')
-        self.assertEqual(message['expiration'], '3600')
-        self.assertEqual(message['topic_name'], 'test.topic')
-        self.assertEqual(message['ext_client_id'], 'client_789')
-
-
-        self.assertEqual(message['expiration_time_iso'], '')
-        self.assertEqual(message['size'], len('test message data'.encode('utf-8')))
+        self.assertEqual(message['meta']['msg_id'], 'msg_123')
+        self.assertEqual(message['meta']['correl_id'], '')
+        self.assertEqual(message['meta']['priority'], 5)
+        self.assertEqual(message['meta']['pub_time_iso'], '2025-01-01T12:00:00+00:00')
+        self.assertEqual(message['meta']['recv_time_iso'], '2025-01-01T12:00:00+00:00')
+        self.assertEqual(message['meta']['expiration'], '0')
+        self.assertEqual(message['meta']['topic_name'], '')
+        self.assertEqual(message['meta']['ext_client_id'], '')
+        self.assertEqual(message['meta']['expiration_time_iso'], '')
+        self.assertEqual(message['meta']['in_reply_to'], '')
+        self.assertEqual(message['meta']['size'], len('test message data'.encode('utf-8')))
 
 # ################################################################################################################################
 
@@ -141,11 +140,10 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], 'minimal message')
-        self.assertEqual(message['msg_id'], '')
-        self.assertEqual(message['correl_id'], '')
-        self.assertEqual(message['priority'], PubSub.Message.Priority_Default)
-
-        self.assertEqual(message['expiration'], '0')
+        self.assertEqual(message['meta']['msg_id'], '')
+        self.assertEqual(message['meta']['correl_id'], '')
+        self.assertEqual(message['meta']['priority'], PubSub.Message.Priority_Default)
+        self.assertEqual(message['meta']['expiration'], '0')
 
 # ################################################################################################################################
 
@@ -180,9 +178,8 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], 'message without headers')
-        self.assertEqual(message['msg_id'], 'msg_456')
-        self.assertEqual(message['topic_name'], '')
-
+        self.assertEqual(message['meta']['msg_id'], 'msg_456')
+        self.assertEqual(message['meta']['topic_name'], '')
 
 # ################################################################################################################################
 
@@ -217,7 +214,7 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], string_payload)
-        self.assertEqual(message['size'], len(string_payload.encode('utf-8')))
+        self.assertEqual(message['meta']['size'], len(string_payload.encode('utf-8')))
 
 # ################################################################################################################################
 
@@ -252,7 +249,7 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], byte_payload.decode('utf-8'))
-        self.assertEqual(message['size'], len(byte_payload))
+        self.assertEqual(message['meta']['size'], len(byte_payload))
 
 # ################################################################################################################################
 
@@ -287,7 +284,7 @@ class RESTTransformMessagesTestCase(TestCase):
         message = result[0]
 
         self.assertEqual(message['data'], unicode_payload)
-        self.assertEqual(message['size'], len(unicode_payload.encode('utf-8')))
+        self.assertEqual(message['meta']['size'], len(unicode_payload.encode('utf-8')))
 
 # ################################################################################################################################
 
@@ -353,13 +350,13 @@ class RESTTransformMessagesTestCase(TestCase):
         self.assertEqual(len(result), 3)
 
         self.assertEqual(result[0]['data'], 'first message')
-        self.assertEqual(result[0]['msg_id'], 'msg_1')
+        self.assertEqual(result[0]['meta']['msg_id'], 'msg_1')
 
         self.assertEqual(result[1]['data'], 'second message')
-        self.assertEqual(result[1]['msg_id'], 'msg_2')
+        self.assertEqual(result[1]['meta']['msg_id'], 'msg_2')
 
         self.assertEqual(result[2]['data'], 'third message')
-        self.assertEqual(result[2]['msg_id'], 'msg_3')
+        self.assertEqual(result[2]['meta']['msg_id'], 'msg_3')
 
 # ################################################################################################################################
 
