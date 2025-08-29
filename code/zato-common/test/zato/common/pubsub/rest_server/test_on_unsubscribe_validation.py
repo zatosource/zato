@@ -294,6 +294,79 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
         self.assertEqual(len(method_calls), 0)
 
 # ################################################################################################################################
+
+    def test_on_unsubscribe_validates_topic_name_empty(self):
+        """ on_unsubscribe validates empty topic name.
+        """
+        environ = self._create_environ('test_user', 'test_password')
+
+        with self.assertRaises(ValueError) as cm:
+            _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, '')
+
+        self.assertIn('Topic name cannot be empty', str(cm.exception))
+
+# ################################################################################################################################
+
+    def test_on_unsubscribe_validates_topic_name_too_long(self):
+        """ on_unsubscribe validates topic name length.
+        """
+        environ = self._create_environ('test_user', 'test_password')
+        long_topic = 'a' * 201  # Exceeds 200 character limit
+
+        with self.assertRaises(ValueError) as cm:
+            _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, long_topic)
+
+        self.assertIn('exceeds maximum length', str(cm.exception))
+
+# ################################################################################################################################
+
+    def test_on_unsubscribe_validates_topic_name_hash_character(self):
+        """ on_unsubscribe validates topic name with hash character.
+        """
+        environ = self._create_environ('test_user', 'test_password')
+
+        with self.assertRaises(ValueError) as cm:
+            _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, 'test#topic')
+
+        self.assertIn('cannot contain "#" character', str(cm.exception))
+
+# ################################################################################################################################
+
+    def test_on_unsubscribe_validates_topic_name_non_ascii(self):
+        """ on_unsubscribe validates topic name with non-ASCII characters.
+        """
+        environ = self._create_environ('test_user', 'test_password')
+
+        with self.assertRaises(ValueError) as cm:
+            _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, 'test.tópic')
+
+        self.assertIn('non-ASCII characters', str(cm.exception))
+
+# ################################################################################################################################
+
+    def test_on_unsubscribe_validates_topic_name_before_permission_check(self):
+        """ on_unsubscribe validates topic name before checking permissions.
+        """
+        # Track permission check calls
+        permission_calls = []
+
+        def track_evaluate(username, topic_name, operation):
+            permission_calls.append((username, topic_name, operation))
+            return original_evaluate(username, topic_name, operation)
+
+        original_evaluate = self.rest_server.backend.pattern_matcher.evaluate
+        self.rest_server.backend.pattern_matcher.evaluate = track_evaluate
+
+        environ = self._create_environ('test_user', 'test_password')
+
+        # Try with invalid topic name
+        with self.assertRaises(ValueError):
+            _ = self.rest_server.on_unsubscribe(self.test_cid, environ, None, 'test#invalid')
+
+        # Verify permission check was never called
+        self.assertEqual(len(permission_calls), 0)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
