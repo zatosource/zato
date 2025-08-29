@@ -73,7 +73,9 @@ Content-Type: application/json
 ```json
 {
   "is_ok": false,
-  "details": "Permission denied"
+  "cid": "correlation-id",
+  "details": "Authentication failed",
+  "status": "401 Unauthorized"
 }
 ```
 
@@ -81,7 +83,9 @@ Content-Type: application/json
 ```json
 {
   "is_ok": false,
-  "details": "No subscription found for user"
+  "cid": "correlation-id",
+  "details": "No subscription found for user",
+  "status": "400 Bad Request"
 }
 ```
 
@@ -151,14 +155,13 @@ Common error scenarios:
 - **401 Unauthorized** - Invalid credentials provided in HTTP Basic Auth
 
 ### Request Format Errors
-- **400 Invalid JSON** - Malformed JSON in request body
+- **400 Bad Request** - Malformed JSON in request body
 
 ### Subscription Errors
-- **400 No subscription found for user** - User has no active subscriptions to any topics
+- **400 Bad Request** - User has no active subscriptions to any topics
 
 ### Server Errors
-- **500 Internal error retrieving messages** - Unexpected error during message retrieval
-- **500 Subscription not found** - Internal error finding user's subscription queue
+- **500 Internal Server Error** - Unexpected error during message retrieval
 
 ## Best Practices
 
