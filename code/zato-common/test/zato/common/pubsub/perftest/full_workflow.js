@@ -87,7 +87,7 @@ export default function() {
 
     // Track published correlation ID
     publishedIds[vuId].add(correlId);
-    console.log(`VU ${vuId} published message with correl_id: ${correlId}`);
+    console.log(`VU ${vuId} publishing full payload: ${JSON.stringify(payload)}`);
 
     let publishResponse = http.post(
       `${BASE_URL}/pubsub/topic/${topicName}`,
@@ -160,7 +160,7 @@ export default function() {
           
           // Track received messages by correlation ID
           for (const msg of body.messages) {
-            console.log(`VU ${vuId} received message with correl_id: ${msg.correl_id}, data: ${JSON.stringify(msg.data)}`);
+            console.log(`VU ${vuId} received full message: ${JSON.stringify(msg)}`);
             if (msg.correl_id && publishedIds[vuId].has(msg.correl_id)) {
               receivedIds[vuId].add(msg.correl_id);
             }
