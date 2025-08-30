@@ -22,12 +22,17 @@ pubsub_topic:
   - name: demo.3
     description: Demo topic 3
 
+  - name: orders.processed
+    description: Orders topic 1
+
 pubsub_permission:
   - security: demo_sec_def
     pub:
       - demo.*
+      - orders.*
     sub:
       - demo.*
+      - orders.*
 
 pubsub_subscription:
   - security: demo_sec_def
@@ -40,3 +45,4 @@ pubsub_subscription:
       - demo.1
       - demo.2
       - demo.3
+      - orders.processed
