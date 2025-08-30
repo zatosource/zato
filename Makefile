@@ -49,6 +49,19 @@ openapi-server-run:
 %:
 	@:
 
+convert-openapi-to-k6:
+	@if [ -z "$$Zato_Test_PubSub_OpenAPI_File" ]; then \
+		echo "Error: Zato_Test_PubSub_OpenAPI_File environment variable is not set"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$$Zato_Test_PubSub_OpenAPI_File" ]; then \
+		echo "Error: OpenAPI file not found: $$Zato_Test_PubSub_OpenAPI_File"; \
+		exit 1; \
+	fi
+	rm -rf $(CURDIR)/code/zato-common/test/zato/common/pubsub/perftest
+	mkdir -p $(CURDIR)/code/zato-common/test/zato/common/pubsub/perftest
+	DISABLE_ANALYTICS=true npx @grafana/openapi-to-k6 "$$Zato_Test_PubSub_OpenAPI_File" $(CURDIR)/code/zato-common/test/zato/common/pubsub/perftest --include-sample-script --mode split
+
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx playwright install
@@ -56,6 +69,7 @@ install-qa-reqs:
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
 	npm install -g @grafana/openapi-to-k6
+	$(MAKE) convert-openapi-to-k6
 
 run-tests:
 #	$(MAKE) web-admin-tests
