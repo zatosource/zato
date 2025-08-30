@@ -107,6 +107,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+            text/html:
+              schema:
+                type: string
+                description: HTML error page for malformed requests
         '401':
           description: Authentication failed
           content:
@@ -254,11 +258,15 @@ paths:
                   - $ref: '#/components/schemas/MessagesListResponse'
                   - $ref: '#/components/schemas/SingleMessageResponse'
         '400':
-          description: Bad request (malformed JSON, no subscription found)
+          description: Bad request (malformed JSON, no subscription found for user)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+            text/html:
+              schema:
+                type: string
+                description: HTML error page for malformed requests
         '401':
           description: Authentication failed
           content:
