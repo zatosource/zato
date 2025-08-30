@@ -1,8 +1,8 @@
 security:
-  - name: demo_sec_def
+  - name: demo_sec_def.1
     type: basic_auth
-    username: demo
-    password: demo
+    username: demo.1
+    password: demo.1
 
 outgoing_rest:
 
@@ -26,7 +26,7 @@ pubsub_topic:
     description: Orders topic 1
 
 pubsub_permission:
-  - security: demo_sec_def
+  - security: demo_sec_def.1
     pub:
       - demo.*
       - orders.*
@@ -35,7 +35,7 @@ pubsub_permission:
       - orders.*
 
 pubsub_subscription:
-  - security: demo_sec_def
+  - security: demo_sec_def.1
     delivery_type: pull
 #    delivery_type: push
 #    push_service: demo.outgoing.rest.1
