@@ -105,8 +105,8 @@ export default function() {
 
   while (totalPulledMessages < publishedMessages && pullAttempts < maxPullAttempts) {
     const pullPayload = {
-      max_messages: messageCount,
-      max_len: 2000000,
+      max_messages: 100,
+      max_len: 5000000,
     };
 
     let pullResponse = http.post(
