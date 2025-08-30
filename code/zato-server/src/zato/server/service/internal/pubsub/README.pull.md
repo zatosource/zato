@@ -79,13 +79,12 @@ Content-Type: application/json
 }
 ```
 
-#### Error (400 Bad Request)
 ```json
 {
   "is_ok": false,
   "cid": "correlation-id",
   "details": "No subscription found for user",
-  "status": "400 Bad Request"
+  "status": "401 Unauthorized"
 }
 ```
 
@@ -159,7 +158,7 @@ Common error scenarios:
 - **400 Bad Request** - Malformed JSON in request body
 
 ### Subscription Errors
-- **400 Bad Request** - User has no active subscriptions to any topics
+- **401 Unauthorized** - User has no active subscriptions to any topics
 
 ### Server Errors
 - **500 Internal Server Error** - Unexpected error during message retrieval

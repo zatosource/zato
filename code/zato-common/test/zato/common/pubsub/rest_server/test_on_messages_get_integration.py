@@ -16,7 +16,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.models import BadRequestResponse, Subscription
+from zato.common.pubsub.models import BadRequestResponse, Subscription, UnauthorizedResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 
 # ################################################################################################################################
@@ -154,7 +154,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
     def test_on_messages_get_returns_error_when_no_subscription(self):
         """ on_messages_get returns error when user has no subscription.
         """
-        # Clear subscriptions
+        # Clear subscriptions for consistent error
         self.rest_server.backend.subs_by_topic.clear()
 
         # Create request
@@ -164,7 +164,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
@@ -238,7 +238,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
@@ -262,7 +262,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
@@ -281,7 +281,7 @@ class RESTOnMessagesGetIntegrationTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
