@@ -19,8 +19,8 @@ export let options = {
 export default function() {
 
   const payload = {
-    max_messages: Math.floor(Math.random() * 20) + 5,
-    max_len: Math.floor(Math.random() * 1000000) + 500000,
+    max_messages: 100,
+    max_len: 5000000,
   };
 
   let response = http.post(
