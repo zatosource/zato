@@ -1,15 +1,15 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, headers, getTopicName } from './config.js';
+import { BASE_URL, VUS, ITERATIONS_PER_VU, getUserCredentials, getTopicName } from './config.js';
 
 export let options = {
-  stages: [
-    { duration: '30s', target: 10 },
-    { duration: '2m', target: 50 },
-    { duration: '1m', target: 100 },
-    { duration: '2m', target: 100 },
-    { duration: '30s', target: 0 },
-  ],
+  scenarios: {
+    default: {
+      executor: 'per-vu-iterations',
+      vus: VUS,
+      iterations: ITERATIONS_PER_VU,
+    }
+  },
   thresholds: {
     http_req_duration: ['p(95)<500'],
     http_req_failed: ['rate==0'],
@@ -18,6 +18,8 @@ export let options = {
 
 export default function() {
   const topicName = getTopicName(__VU);
+  const userCreds = getUserCredentials(__VU);
+
   const payload = {
     data: {
       message: `Performance test message from VU ${__VU}, iteration ${__ITER}`,
@@ -33,7 +35,7 @@ export default function() {
   let response = http.post(
     `${BASE_URL}/pubsub/topic/${topicName}`,
     JSON.stringify(payload),
-    { headers }
+    { headers: userCreds.headers }
   );
 
   check(response, {
