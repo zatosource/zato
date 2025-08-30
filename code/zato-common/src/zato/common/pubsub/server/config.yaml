@@ -1,8 +1,8 @@
 security:
   - name: demo_sec_def.1
     type: basic_auth
-    username: demo.1
-    password: demo.1
+    username: user.1
+    password: password.1
 
 outgoing_rest:
 

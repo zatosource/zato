@@ -70,7 +70,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
             cls.config = yaml_load(f, Loader=Loader)
 
         # Extract demo user credentials
-        cls.username = 'demo.1'
+        cls.username = 'user.1'
         cls.password = cls.config['security'][0]['password']
         cls.auth = HTTPBasicAuth(cls.username, cls.password)
 
