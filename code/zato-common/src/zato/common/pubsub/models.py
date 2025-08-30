@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass, field
-from http.client import BAD_REQUEST, NOT_IMPLEMENTED, OK, UNAUTHORIZED
+from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, UNAUTHORIZED
 
 # Zato
 from zato.common.api import PubSub
@@ -134,6 +134,16 @@ class BadRequestResponse(ErrorResponse):
     """
     details: 'str' = 'Invalid request data'
     status: 'str' = BAD_REQUEST
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class MethodNotAllowedResponse(ErrorResponse):
+    """ 405 Method Not Allowed response.
+    """
+    details: 'str' = 'Method not allowed'
+    status: 'str' = METHOD_NOT_ALLOWED
 
 # ################################################################################################################################
 # ################################################################################################################################
