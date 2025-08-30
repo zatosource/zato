@@ -54,6 +54,8 @@ install-qa-reqs:
 	npx playwright install
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
+	sudo snap install k6
+	npm install -g @grafana/openapi-to-k6
 
 run-tests:
 #	$(MAKE) web-admin-tests
