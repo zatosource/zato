@@ -20,9 +20,20 @@ export let options = {
   },
 };
 
+// Per-VU message tracking
+const publishedIds = {};
+const receivedIds = {};
+
 export default function() {
   const topicName = getTopicName(__VU);
   const userCreds = getUserCredentials(__VU);
+  const vuId = __VU;
+
+  // Initialize tracking for this VU
+  if (!publishedIds[vuId]) {
+    publishedIds[vuId] = new Set();
+    receivedIds[vuId] = new Set();
+  }
 
   if (__ITER === 0) {
 
@@ -57,6 +68,7 @@ export default function() {
   let publishedMessages = 0;
 
   for (let i = 0; i < messageCount; i++) {
+    const correlId = `vu${vuId}-iter${__ITER}-msg${i}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const payload = {
       data: {
         workflow_test: true,
@@ -68,8 +80,10 @@ export default function() {
       },
       priority: Math.floor(Math.random() * 10),
       expiration: 1800,
-      correl_id: `workflow-${__VU}-${__ITER}-${i}`,
+      correl_id: correlId,
     };
+
+    publishedIds[vuId].add(correlId);
 
     let publishResponse = http.post(
       `${BASE_URL}/pubsub/topic/${topicName}`,
@@ -139,6 +153,13 @@ export default function() {
         const body = JSON.parse(pullResponse.body);
         if (body.messages && Array.isArray(body.messages)) {
           totalPulledMessages += body.messages.length;
+          
+          // Track received messages by correlation ID
+          for (const msg of body.messages) {
+            if (msg.correl_id && publishedIds[vuId].has(msg.correl_id)) {
+              receivedIds[vuId].add(msg.correl_id);
+            }
+          }
         }
       } catch (e) {
         console.error(`Failed to parse pull response for VU ${__VU}: ${e}`);
@@ -171,7 +192,15 @@ export default function() {
     }, { operation: 'unsubscribe' });
   }
 
-  console.log(`VU ${__VU} iteration ${__ITER}: published ${publishedMessages}, pulled ${totalPulledMessages} messages`);
+  const publishedCount = publishedIds[vuId].size;
+  const receivedCount = receivedIds[vuId].size;
+  const missingCount = publishedCount - receivedCount;
+  
+  console.log(`VU ${vuId} iteration ${__ITER}: published ${publishedMessages} this iter, total published ${publishedCount}, total received ${receivedCount}, missing ${missingCount}`);
+
+  if (__ITER === ITERATIONS_PER_VU - 1 && missingCount > 0) {
+    console.error(`VU ${vuId} FINAL: ${missingCount} messages never received out of ${publishedCount} published`);
+  }
 
   sleep(0.2);
 }
