@@ -12,7 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 from dataclasses import asdict
-from http.client import responses as http_responses, OK
+from http.client import responses as http_responses, OK, METHOD_NOT_ALLOWED
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -39,8 +39,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Zato
 from zato.common.api import PubSub
 from zato.common.util.api import new_cid_pubsub
-from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, NotImplementedResponse, \
-    UnauthorizedResponse
+from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, MethodNotAllowedResponse, \
+    NotImplementedResponse, UnauthorizedResponse
 from zato.common.pubsub.server.base import BaseServer
 from zato.common.pubsub.util import get_broker_config
 
@@ -177,6 +177,8 @@ class BaseRESTServer(BaseServer):
     def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
         """ Return a JSON response.
         """
+        # Check if this is a 405 response before status gets modified
+        is_method_not_allowed = data.status == METHOD_NOT_ALLOWED
 
         # Get the textual part of the status code ..
         response_text = http_responses[data.status] # type: ignore
@@ -208,6 +210,10 @@ class BaseRESTServer(BaseServer):
 
         # .. prepare our headers ..
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
+
+        # .. add Allow header for 405 responses ..
+        if is_method_not_allowed:
+            headers.append(('Allow', 'POST'))
 
         # .. call the WSGI handler ..
         start_response(status, headers)
@@ -267,7 +273,7 @@ class BaseRESTServer(BaseServer):
 
         except MethodNotAllowed as e:
             logger.warning(f'[{cid}] Method not allowed')
-            response = BadRequestResponse()
+            response = MethodNotAllowedResponse()
             response.cid = cid
             response.details = 'Method not allowed'
             return self._json_response(start_response, response)
