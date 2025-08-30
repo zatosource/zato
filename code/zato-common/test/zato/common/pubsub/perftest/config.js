@@ -6,15 +6,10 @@ export const PASSWORD = __ENV.Zato_Test_PubSub_OpenAPI_Password;
 export const MAX_TOPICS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Max_Topics);
 export const VUS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_VUs);
 export const ITERATIONS_PER_VU = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Iterations_Per_VU);
+export const NEEDS_DETAILS = __ENV.Zato_Needs_Details === 'true';
 
 if (!BASE_URL) {
   throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_URL is not set');
-}
-if (!USERNAME) {
-  throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_Username is not set');
-}
-if (!PASSWORD) {
-  throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_Password is not set');
 }
 if (isNaN(MAX_TOPICS)) {
   throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_Max_Topics is not set or invalid');
