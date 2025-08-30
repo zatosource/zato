@@ -33,8 +33,12 @@ export Zato_Test_PubSub_OpenAPI_Password="demo"
 # Optional: Set custom server URL
 export Zato_Test_PubSub_OpenAPI_URL="http://localhost:44556"
 
-# Set number of topics to cycle through (default: 3)
+# Set number of topics to cycle through
 export Zato_Test_PubSub_OpenAPI_Max_Topics=3
+
+# Set number of VUs and iterations per VU
+export Zato_Test_PubSub_OpenAPI_VUs=10
+export Zato_Test_PubSub_OpenAPI_Iterations_Per_VU=50
 
 # Run individual tests
 k6 run publish.js

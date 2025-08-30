@@ -1,14 +1,15 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, headers, getTopicName } from './config.js';
+import { BASE_URL, VUS, ITERATIONS_PER_VU, getUserCredentials, getTopicName } from './config.js';
 
 export let options = {
-  stages: [
-    { duration: '1m', target: 10 },
-    { duration: '3m', target: 25 },
-    { duration: '2m', target: 25 },
-    { duration: '1m', target: 0 },
-  ],
+  scenarios: {
+    default: {
+      executor: 'per-vu-iterations',
+      vus: VUS,
+      iterations: ITERATIONS_PER_VU,
+    }
+  },
   thresholds: {
     http_req_duration: ['p(95)<1000'],
     http_req_failed: ['rate==0'],
@@ -21,31 +22,35 @@ export let options = {
 
 export default function() {
   const topicName = getTopicName(__VU);
+  const userCreds = getUserCredentials(__VU);
 
-  // Step 1: Subscribe to topic
-  let subscribeResponse = http.post(
-    `${BASE_URL}/pubsub/subscribe/topic/${topicName}`,
-    null,
-    { headers, tags: { operation: 'subscribe' } }
-  );
+  if (__ITER === 0) {
 
-  check(subscribeResponse, {
-    'subscribe status is 200': (r) => r.status === 200,
-    'subscribe is_ok true': (r) => {
-      try {
-        return JSON.parse(r.body).is_ok === true;
-      } catch (e) {
-        return false;
-      }
-    },
-  }, { operation: 'subscribe' });
+    // Step 1: Subscribe to topic (first iteration only)
+    let subscribeResponse = http.post(
+      `${BASE_URL}/pubsub/subscribe/topic/${topicName}`,
+      null,
+      { headers: userCreds.headers, tags: { operation: 'subscribe' } }
+    );
 
-  if (subscribeResponse.status !== 200) {
-    console.error(`Subscribe failed for VU ${__VU}: ${subscribeResponse.status}`);
-    return;
+    check(subscribeResponse, {
+      'subscribe status is 200': (r) => r.status === 200,
+      'subscribe is_ok true': (r) => {
+        try {
+          return JSON.parse(r.body).is_ok === true;
+        } catch (e) {
+          return false;
+        }
+      },
+    }, { operation: 'subscribe' });
+
+    if (subscribeResponse.status !== 200) {
+      console.error(`Subscribe failed for VU ${__VU}: ${subscribeResponse.status}`);
+      return;
+    }
+
+    sleep(0.1);
   }
-
-  sleep(0.1);
 
   // Step 2: Publish messages to topic
   const messageCount = Math.floor(Math.random() * 5) + 3;
@@ -69,7 +74,7 @@ export default function() {
     let publishResponse = http.post(
       `${BASE_URL}/pubsub/topic/${topicName}`,
       JSON.stringify(payload),
-      { headers, tags: { operation: 'publish' } }
+      { headers: userCreds.headers, tags: { operation: 'publish' } }
     );
 
     check(publishResponse, {
@@ -107,7 +112,7 @@ export default function() {
     let pullResponse = http.post(
       `${BASE_URL}/pubsub/messages/get`,
       JSON.stringify(pullPayload),
-      { headers, tags: { operation: 'pull' } }
+      { headers: userCreds.headers, tags: { operation: 'pull' } }
     );
 
     check(pullResponse, {
@@ -146,25 +151,27 @@ export default function() {
 
   sleep(0.1);
 
-  // Step 4: Unsubscribe from topic
-  let unsubscribeResponse = http.post(
-    `${BASE_URL}/pubsub/unsubscribe/topic/${topicName}`,
-    null,
-    { headers, tags: { operation: 'unsubscribe' } }
-  );
+  if (__ITER === ITERATIONS_PER_VU - 1) {
+    // Step 4: Unsubscribe from topic (last iteration only)
+    let unsubscribeResponse = http.post(
+      `${BASE_URL}/pubsub/unsubscribe/topic/${topicName}`,
+      null,
+      { headers: userCreds.headers, tags: { operation: 'unsubscribe' } }
+    );
 
-  check(unsubscribeResponse, {
-    'unsubscribe status is 200': (r) => r.status === 200,
-    'unsubscribe is_ok true': (r) => {
-      try {
-        return JSON.parse(r.body).is_ok === true;
-      } catch (e) {
-        return false;
-      }
-    },
-  }, { operation: 'unsubscribe' });
+    check(unsubscribeResponse, {
+      'unsubscribe status is 200': (r) => r.status === 200,
+      'unsubscribe is_ok true': (r) => {
+        try {
+          return JSON.parse(r.body).is_ok === true;
+        } catch (e) {
+          return false;
+        }
+      },
+    }, { operation: 'unsubscribe' });
+  }
 
-  console.log(`VU ${__VU} workflow: published ${publishedMessages}, pulled ${totalPulledMessages} messages`);
+  console.log(`VU ${__VU} iteration ${__ITER}: published ${publishedMessages}, pulled ${totalPulledMessages} messages`);
 
   sleep(0.2);
 }
