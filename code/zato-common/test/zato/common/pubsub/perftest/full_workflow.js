@@ -29,9 +29,11 @@ export default function() {
   const userCreds = getUserCredentials(__VU);
   const vuId = __VU;
 
-  // Initialize tracking for this VU
+  // Per-VU tracking of published and received message IDs
   if (!publishedIds[vuId]) {
     publishedIds[vuId] = new Set();
+  }
+  if (!receivedIds[vuId]) {
     receivedIds[vuId] = new Set();
   }
 
@@ -83,7 +85,9 @@ export default function() {
       correl_id: correlId,
     };
 
+    // Track published correlation ID
     publishedIds[vuId].add(correlId);
+    console.log(`VU ${vuId} published message with correl_id: ${correlId}`);
 
     let publishResponse = http.post(
       `${BASE_URL}/pubsub/topic/${topicName}`,
@@ -156,6 +160,7 @@ export default function() {
           
           // Track received messages by correlation ID
           for (const msg of body.messages) {
+            console.log(`VU ${vuId} received message with correl_id: ${msg.correl_id}, data: ${JSON.stringify(msg.data)}`);
             if (msg.correl_id && publishedIds[vuId].has(msg.correl_id)) {
               receivedIds[vuId].add(msg.correl_id);
             }
