@@ -37,7 +37,7 @@ paths:
           schema:
             type: string
             maxLength: 200
-            pattern: '^[^\#]*$'
+            pattern: '^[\x20-\x22\x24-\x7E]*$'
             example: orders.processed
       requestBody:
         required: true
@@ -134,7 +134,7 @@ paths:
           schema:
             type: string
             maxLength: 200
-            pattern: '^[^\#]*$'
+            pattern: '^[\x20-\x22\x24-\x7E]*$'
             example: orders.processed
       responses:
         '200':
@@ -176,7 +176,7 @@ paths:
           schema:
             type: string
             maxLength: 200
-            pattern: '^[^\#]*$'
+            pattern: '^[\x20-\x22\x24-\x7E]*$'
             example: orders.processed
       responses:
         '200':
