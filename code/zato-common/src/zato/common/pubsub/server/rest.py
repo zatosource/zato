@@ -28,7 +28,7 @@ from werkzeug.wrappers import Request
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage
-from zato.common.pubsub.models import APIResponse, BadRequestResponse
+from zato.common.pubsub.models import APIResponse, BadRequestResponse, UnauthorizedResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import set_time_since, validate_topic_name
 from zato.common.util.api import as_bool, utcnow
@@ -330,10 +330,16 @@ class PubSubRESTServer(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _build_error_response(self, cid:'str', details:'str') -> 'BadRequestResponse':
+    def _build_error_response(
+        self,
+        cid:'str',
+        details:'str',
+        *,
+        response_class:'any_'=BadRequestResponse,
+    ) -> 'BadRequestResponse | UnauthorizedResponse':
         """ Create error responses for various failure cases.
         """
-        response = BadRequestResponse()
+        response = response_class()
         response.cid = cid
         response.details = details
         return response
@@ -357,7 +363,7 @@ class PubSubRESTServer(BaseRESTServer):
         logger.info(f'[{cid}] Found sub_key: {sub_key}')
         if not sub_key:
             logger.info(f'[{cid}] No sub_key found, returning error response')
-            return self._build_error_response(cid, 'No subscription found for user')
+            return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
 
         logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
 
