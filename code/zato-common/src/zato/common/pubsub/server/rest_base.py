@@ -116,8 +116,16 @@ class BaseRESTServer(BaseServer):
             logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
             return None
 
-        # First, extract the username and password from the auth header
-        result = extract_basic_auth(cid, auth_header, raise_on_error=False)
+        try:
+
+            # First, extract the username and password from the auth header ..
+            result = extract_basic_auth(cid, auth_header, raise_on_error=False)
+
+        except Exception as e:
+
+            # .. but if we failed to extract them, turn that into a 401 exception because we cannot log the user in.
+            raise UnauthorizedException(e.args[0])
+
         username, _ = result
 
         if not username:
