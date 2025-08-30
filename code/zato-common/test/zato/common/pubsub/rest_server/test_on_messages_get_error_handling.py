@@ -18,7 +18,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.models import BadRequestResponse, Subscription
+from zato.common.pubsub.models import BadRequestResponse, Subscription, UnauthorizedResponse
 from zato.common.pubsub.server.rest import PubSubRESTServer
 from zato.common.pubsub.server.rest_base import UnauthorizedException
 
@@ -160,7 +160,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Should get bad request for invalid parameters
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
 
     def test_on_messages_get_handles_no_subscription_found(self):
@@ -179,7 +179,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify specific error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
@@ -201,7 +201,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response structure
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertIsInstance(response.details, str)
         self.assertTrue(len(response.details) > 0)
@@ -227,7 +227,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
                 response = self.rest_server.on_messages_get(cid, environ, None)
 
                 # Verify CID is preserved
-                self.assertIsInstance(response, BadRequestResponse)
+                self.assertIsInstance(response, UnauthorizedResponse)
                 self.assertEqual(response.cid, cid)
 
                 # Reset subscriptions for next test
@@ -257,7 +257,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
 
         # Verify error response
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertEqual(response.cid, self.test_cid)
         self.assertEqual(response.details, 'No subscription found for user')
 
@@ -280,7 +280,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
 
         # Call method and expect error response instead of AttributeError
         response = self.rest_server.on_messages_get(self.test_cid, environ, None)
-        self.assertIsInstance(response, BadRequestResponse)
+        self.assertIsInstance(response, UnauthorizedResponse)
         self.assertFalse(response.is_ok)
         self.assertEqual(response.cid, self.test_cid)
 
