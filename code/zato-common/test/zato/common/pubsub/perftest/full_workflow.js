@@ -11,11 +11,11 @@ export let options = {
   ],
   thresholds: {
     http_req_duration: ['p(95)<1000'],
-    http_req_failed: ['rate<0.1'],
-    'checks{operation:subscribe}': ['rate>0.95'],
-    'checks{operation:publish}': ['rate>0.95'],
-    'checks{operation:pull}': ['rate>0.90'],
-    'checks{operation:unsubscribe}': ['rate>0.95'],
+    http_req_failed: ['rate==0'],
+    'checks{operation:subscribe}': ['rate==1'],
+    'checks{operation:publish}': ['rate==1'],
+    'checks{operation:pull}': ['rate==1'],
+    'checks{operation:unsubscribe}': ['rate==1'],
   },
 };
 
