@@ -48,7 +48,7 @@ class EnmasseGenerator:
 
 # ################################################################################################################################
 
-    def _add_users_topics_and_subscriptions(self, config_data:'strdict', users:'int') -> 'strdict':
+    def _add_users_topics_and_subscriptions(self, config_data:'strdict', users:'int', topics_multiplier:'float') -> 'strdict':
 
         new_config = copy.deepcopy(config_data)
 
@@ -57,8 +57,8 @@ class EnmasseGenerator:
         existing_users_count = len(existing_security)
         users_to_add = users - existing_users_count
 
-        # Add topics
-        total_topics_needed = users * 10
+        # Add topics based on multiplier
+        total_topics_needed = round(users * topics_multiplier)
         existing_topics = new_config.get('pubsub_topic', [])
         existing_topic_count = len(existing_topics)
         topics_to_add = total_topics_needed - existing_topic_count
@@ -66,7 +66,7 @@ class EnmasseGenerator:
         if topics_to_add > 0:
             for topic_idx in range(topics_to_add):
                 topic_num = existing_topic_count + topic_idx + 1
-                topic_name = f'topic.{topic_num}'
+                topic_name = f'demo.{topic_num}'
                 topic_def = {
                     'name': topic_name,
                     'description': f'Generated topic {topic_num}'
@@ -145,9 +145,9 @@ class EnmasseGenerator:
 
 # ################################################################################################################################
 
-    def generate(self, users:'int') -> 'None':
+    def generate(self, users:'int', topics_multiplier:'float') -> 'None':
         config_data = self.load_config()
-        modified_config = self._add_users_topics_and_subscriptions(config_data, users)
+        modified_config = self._add_users_topics_and_subscriptions(config_data, users, topics_multiplier)
         self.create_multi_config(modified_config)
         self.log_config_info(modified_config, users)
 
@@ -157,9 +157,10 @@ class EnmasseGenerator:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate enmasse configuration')
     _ = parser.add_argument('--users', type=int, default=1, help='Number of users (default: 1)')
+    _ = parser.add_argument('--topics-multiplier', type=float, default=10.0, help='Topics multiplier (default: 10.0)')
     args = parser.parse_args()
     generator = EnmasseGenerator()
-    generator.generate(args.users)
+    generator.generate(args.users, args.topics_multiplier)
 
 # ################################################################################################################################
 # ################################################################################################################################
