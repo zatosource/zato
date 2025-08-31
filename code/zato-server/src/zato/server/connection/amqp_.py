@@ -228,7 +228,7 @@ class Producer:
                 result = pools.ProducerPool(connections[connection], limit=limit)
                 return result
 
-        self.pool = _Producers(limit=self.config.pool_size)
+        self.pool = _Producers(limit=self.config.pool_size + 1000)
 
     def acquire(self, *args, **kwargs) -> 'KombuProducer':
         producers = self.pool[self.conn]
