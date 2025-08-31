@@ -500,11 +500,11 @@ class BrokerClient:
                 )
 
                 if response_api.status_code != OK:
-                    logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
+                    logger.info(f'[{cid}] AMQP queue no longer found `{response.reply_queue_name}`')
                     break
 
-            except Exception as e:
-                logger.info(f'AMQP queue check failed `{response.reply_queue_name}` for {cid}')
+            except Exception:
+                logger.info(f'[{cid}] AMQP queue check failed `{response.reply_queue_name}` -> {format_exc()}')
                 break
 
             else:
