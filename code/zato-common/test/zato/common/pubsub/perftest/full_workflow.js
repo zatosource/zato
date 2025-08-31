@@ -122,11 +122,12 @@ export default function() {
   // Step 3: Pull messages
   let totalPulledMessages = 0;
   let pullAttempts = 0;
-  const maxPullAttempts = 500;
+  const maxPullAttempts = 50;
 
-  while (totalPulledMessages < publishedMessages && pullAttempts < maxPullAttempts) {
-    console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1}/${maxPullAttempts}, need ${publishedMessages - totalPulledMessages} more messages`);
-    
+  while (pullAttempts < maxPullAttempts) {
+    const totalPublishedSoFar = publishedIds[vuId].size;
+    console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1}/${maxPullAttempts}, need ${totalPublishedSoFar - totalPulledMessages} more messages`);
+
     const pullPayload = {
       max_messages: 100,
       max_len: 5000000,
@@ -163,7 +164,7 @@ export default function() {
         if (body.messages && Array.isArray(body.messages)) {
           const receivedThisAttempt = body.messages.length;
           totalPulledMessages += receivedThisAttempt;
-          console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1} got ${receivedThisAttempt} messages, total now ${totalPulledMessages}/${publishedMessages}`);
+          console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1} got ${receivedThisAttempt} messages, total now ${totalPulledMessages}/${totalPublishedSoFar}`);
 
           // Track received messages by correlation ID
           for (const msg of body.messages) {
