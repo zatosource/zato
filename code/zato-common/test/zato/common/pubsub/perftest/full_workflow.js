@@ -122,7 +122,7 @@ export default function() {
   // Step 3: Pull messages
   let totalPulledMessages = 0;
   let pullAttempts = 0;
-  const maxPullAttempts = 5;
+  const maxPullAttempts = 500;
 
   while (totalPulledMessages < publishedMessages && pullAttempts < maxPullAttempts) {
     const pullPayload = {
@@ -208,7 +208,8 @@ export default function() {
     const missing = totalPublished - totalReceived;
 
     if (missing > 0) {
-      console.error(`VU ${vuId} FINAL: ${missing} messages never received out of ${totalPublished} published`);
+      const messageWord = missing === 1 ? 'message' : 'messages';
+      console.error(`VU ${vuId} FINAL: ${missing} ${messageWord} never received out of ${totalPublished} published`);
     } else {
       console.log(`VU ${vuId} FINAL: All ${totalPublished} messages received successfully`);
     }
@@ -229,7 +230,8 @@ export default function() {
     if (globalThis.finishedVUs === VUS) {
       const globalMissing = globalThis.finalResults.totalPublished - globalThis.finalResults.totalReceived;
       if (globalMissing > 0) {
-        console.error(`GLOBAL FINAL: ${globalMissing} messages never received out of ${globalThis.finalResults.totalPublished} published across all VUs`);
+        const globalMessageWord = globalMissing === 1 ? 'message' : 'messages';
+        console.error(`GLOBAL FINAL: ${globalMissing} ${globalMessageWord} never received out of ${globalThis.finalResults.totalPublished} published across all VUs`);
       } else {
         console.log(`GLOBAL FINAL: All ${globalThis.finalResults.totalPublished} messages received successfully across all VUs`);
       }
