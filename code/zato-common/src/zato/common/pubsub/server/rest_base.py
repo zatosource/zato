@@ -11,6 +11,7 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+import os
 from dataclasses import asdict
 from http.client import responses as http_responses, OK, METHOD_NOT_ALLOWED
 from json import dumps, loads
@@ -38,7 +39,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid_pubsub
+from zato.common.util.api import as_bool, new_cid_pubsub
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, MethodNotAllowedResponse, \
     NotImplementedResponse, UnauthorizedResponse
 from zato.common.pubsub.server.base import BaseServer
@@ -57,6 +58,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
@@ -239,7 +242,8 @@ class BaseRESTServer(BaseServer):
 
         # .. log what we're doing ..
         path_info = environ.get('PATH_INFO', '').encode('latin1').decode('utf-8', errors='replace')
-        logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), path_info)
+        if _needs_details:
+            logger.info('[%s] Handling request, %s %s', cid, environ.get('REQUEST_METHOD'), path_info)
 
         # Bind the URL map to the current request
         urls = self.url_map.bind_to_environ(environ)
