@@ -33,11 +33,16 @@ export function getTopicName(vu) {
   return `demo.${topicIndex}`;
 }
 
-export function getUserCredentials(vu) {
+export function getUserCredentials(vuId) {
+  const userNum = ((vuId - 1) % MAX_TOPICS) + 1;
+  const username = `user.${userNum}`;
+  const password = `password.${userNum}`;
+  const vuAuth = encoding.b64encode(`${username}:${password}`);
+
   return {
-    username: USERNAME,
-    password: PASSWORD,
-    auth: auth,
-    headers: headers
+    headers: {
+      'Authorization': `Basic ${vuAuth}`,
+      'Content-Type': 'application/json',
+    }
   };
 }
