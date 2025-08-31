@@ -64,8 +64,21 @@ class EnmasseGenerator:
         topics_to_add = total_topics_needed - existing_topic_count
 
         if topics_to_add > 0:
+            # Find highest demo.X number to continue sequence properly
+            highest_demo_num = 0
+            for topic in existing_topics:
+                topic_name = topic['name']
+                if topic_name.startswith('demo.'):
+                    try:
+                        topic_parts = topic_name.split('.')
+                        topic_number_str = topic_parts[1]
+                        num = int(topic_number_str)
+                        highest_demo_num = max(highest_demo_num, num)
+                    except (ValueError, IndexError):
+                        pass
+
             for topic_idx in range(topics_to_add):
-                topic_num = existing_topic_count + topic_idx + 1
+                topic_num = highest_demo_num + topic_idx + 1
                 topic_name = f'demo.{topic_num}'
                 topic_def = {
                     'name': topic_name,
