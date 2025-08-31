@@ -39,18 +39,18 @@ export default function() {
 
   if (__ITER === 0) {
 
-    // Step 1: Subscribe to topic (first iteration only)
-    let subscribeResponse = http.post(
-      `${BASE_URL}/pubsub/subscribe/topic/${topicName}`,
-      null,
-      { headers: userCreds.headers, tags: { operation: 'subscribe' } }
-    );
+
+    const subscribeResponse = http.post(`${BASE_URL}/pubsub/subscribe/topic/${topicName}`, '', {
+      headers: userCreds.headers,
+      tags: { operation: 'subscribe' }
+    });
 
     check(subscribeResponse, {
       'subscribe status is 200': (r) => r.status === 200,
       'subscribe is_ok true': (r) => {
         try {
-          return JSON.parse(r.body).is_ok === true;
+          const body = JSON.parse(r.body);
+          return body.is_ok === true;
         } catch (e) {
           return false;
         }
@@ -58,11 +58,8 @@ export default function() {
     }, { operation: 'subscribe' });
 
     if (subscribeResponse.status !== 200) {
-      console.error(`Subscribe failed for VU ${__VU}: ${subscribeResponse.status}`);
-      return;
+      console.error(`Subscribe failed for VU ${vuId}: ${subscribeResponse.status}`);
     }
-
-    sleep(0.1);
   }
 
   // Step 2: Publish messages to topic
@@ -159,7 +156,7 @@ export default function() {
         const body = JSON.parse(pullResponse.body);
         if (body.messages && Array.isArray(body.messages)) {
           totalPulledMessages += body.messages.length;
-          
+
           // Track received messages by correlation ID
           for (const msg of body.messages) {
             if (NEEDS_DETAILS) {
@@ -200,17 +197,46 @@ export default function() {
         }
       },
     }, { operation: 'unsubscribe' });
+
+    // Final summary for this VU
+    const totalPublished = publishedIds[vuId].size;
+    const totalReceived = receivedIds[vuId].size;
+    const missing = totalPublished - totalReceived;
+
+    if (missing > 0) {
+      console.error(`VU ${vuId} FINAL: ${missing} messages never received out of ${totalPublished} published`);
+    } else {
+      console.log(`VU ${vuId} FINAL: All ${totalPublished} messages received successfully`);
+    }
+
+    // Add to global tracking
+    if (!globalThis.finalResults) {
+      globalThis.finalResults = { totalPublished: 0, totalReceived: 0 };
+    }
+    globalThis.finalResults.totalPublished += totalPublished;
+    globalThis.finalResults.totalReceived += totalReceived;
+
+    // Check if this is the last VU to finish
+    if (!globalThis.finishedVUs) {
+      globalThis.finishedVUs = 0;
+    }
+    globalThis.finishedVUs++;
+
+    if (globalThis.finishedVUs === VUS) {
+      const globalMissing = globalThis.finalResults.totalPublished - globalThis.finalResults.totalReceived;
+      if (globalMissing > 0) {
+        console.error(`GLOBAL FINAL: ${globalMissing} messages never received out of ${globalThis.finalResults.totalPublished} published across all VUs`);
+      } else {
+        console.log(`GLOBAL FINAL: All ${globalThis.finalResults.totalPublished} messages received successfully across all VUs`);
+      }
+    }
   }
 
   const publishedCount = publishedIds[vuId].size;
   const receivedCount = receivedIds[vuId].size;
   const missingCount = publishedCount - receivedCount;
-  
-  console.log(`VU ${vuId} iteration ${__ITER}: published ${publishedMessages} this iter, total published ${publishedCount}, total received ${receivedCount}, missing ${missingCount}`);
 
-  if (__ITER === ITERATIONS_PER_VU - 1 && missingCount > 0) {
-    console.error(`VU ${vuId} FINAL: ${missingCount} messages never received out of ${publishedCount} published`);
-  }
+  console.log(`VU ${vuId} iteration ${__ITER}: published ${publishedMessages} this iter, total published ${publishedCount}, total received ${receivedCount}, missing ${missingCount}`);
 
   sleep(0.2);
 }
