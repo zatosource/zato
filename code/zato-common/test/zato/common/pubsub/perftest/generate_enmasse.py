@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import argparse
 from pathlib import Path
 
 # PyYAML
@@ -15,7 +16,7 @@ import yaml
 # ################################################################################################################################
 # ################################################################################################################################
 
-def main():
+def main(users: 'int') -> 'None':
     # Get the path to the YAML config file using relative path
     current_dir = Path(__file__).parent
     config_path = current_dir / '..' / '..' / '..' / '..' / '..' / 'src' / 'zato' / 'common' / 'pubsub' / 'server' / 'config.yaml'
@@ -27,6 +28,7 @@ def main():
 
     # Process the configuration data
     print(f'Loaded configuration from: {config_path}')
+    print(f'Users: {users}')
     print(f'Security definitions: {len(config_data.get("security", []))}')
     print(f'Topics: {len(config_data.get("pubsub_topic", []))}')
     print(f'Permissions: {len(config_data.get("pubsub_permission", []))}')
@@ -36,7 +38,10 @@ def main():
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Generate enmasse configuration')
+    _ = parser.add_argument('--users', type=int, default=1, help='Number of users (default: 1)')
+    args = parser.parse_args()
+    main(args.users)
 
 # ################################################################################################################################
 # ################################################################################################################################
