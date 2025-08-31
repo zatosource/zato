@@ -211,11 +211,16 @@ class Backend:
         timeout:'int'=20,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
+
         logger.info(f'INVOKE-1 {service} {request}')
+        logger.info(f'LOCK-WAIT {service} {request}')
+
         with self._invoke_lock:
             logger.info(f'INVOKE-2 {service} {request}')
             response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
-            return response
+
+        logger.info(f'INVOKE-3 {service} {request}')
+        return response
 
 # ################################################################################################################################
 
@@ -296,7 +301,9 @@ class Backend:
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
-        logger.info(f'[{cid}] Published message `{msg_id}` to topic `{topic_name}` (username={username}{ext_client_part}')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Published message `{msg_id}` to topic `{topic_name}` (username={username}{ext_client_part}')
 
         # Return success response
         response = PubResponse()
