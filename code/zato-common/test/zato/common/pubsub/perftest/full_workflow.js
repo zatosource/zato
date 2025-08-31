@@ -125,6 +125,8 @@ export default function() {
   const maxPullAttempts = 500;
 
   while (totalPulledMessages < publishedMessages && pullAttempts < maxPullAttempts) {
+    console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1}/${maxPullAttempts}, need ${publishedMessages - totalPulledMessages} more messages`);
+    
     const pullPayload = {
       max_messages: 100,
       max_len: 5000000,
@@ -159,7 +161,9 @@ export default function() {
       try {
         const body = JSON.parse(pullResponse.body);
         if (body.messages && Array.isArray(body.messages)) {
-          totalPulledMessages += body.messages.length;
+          const receivedThisAttempt = body.messages.length;
+          totalPulledMessages += receivedThisAttempt;
+          console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1} got ${receivedThisAttempt} messages, total now ${totalPulledMessages}/${publishedMessages}`);
 
           // Track received messages by correlation ID
           for (const msg of body.messages) {
@@ -171,10 +175,14 @@ export default function() {
               receivedIds[vuId].add(correlId);
             }
           }
+        } else {
+          console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1} got 0 messages`);
         }
       } catch (e) {
         console.error(`Failed to parse pull response for VU ${__VU}: ${e}`);
       }
+    } else {
+      console.log(`VU ${vuId} iter ${__ITER}: pull attempt ${pullAttempts + 1} failed with status ${pullResponse.status}`);
     }
 
     pullAttempts++;
