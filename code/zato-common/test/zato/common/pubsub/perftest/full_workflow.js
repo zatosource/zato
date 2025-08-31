@@ -63,7 +63,8 @@ export default function() {
   }
 
   // Step 2: Publish messages to topic
-  const messageCount = Math.floor(Math.random() * 5) + 3;
+  // const messageCount = Math.floor(Math.random() * 5) + 3;
+  const messageCount = 1;
   let publishedMessages = 0;
 
   for (let i = 0; i < messageCount; i++) {
