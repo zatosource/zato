@@ -48,7 +48,7 @@ class EnmasseGenerator:
 
 # ################################################################################################################################
 
-    def _add_users_and_subscriptions(self, config_data:'strdict', users:'int') -> 'strdict':
+    def _add_users_topics_and_subscriptions(self, config_data:'strdict', users:'int') -> 'strdict':
 
         new_config = copy.deepcopy(config_data)
 
@@ -57,13 +57,29 @@ class EnmasseGenerator:
         existing_users_count = len(existing_security)
         users_to_add = users - existing_users_count
 
-        if users_to_add > 0:
+        # Add topics
+        total_topics_needed = users * 10
+        existing_topics = new_config.get('pubsub_topic', [])
+        existing_topic_count = len(existing_topics)
+        topics_to_add = total_topics_needed - existing_topic_count
 
-            # Extract topic names from the existing configuration
-            topics = []
-            pubsub_topics = new_config.get('pubsub_topic', [])
-            for topic in pubsub_topics:
-                topics.append(topic['name'])
+        if topics_to_add > 0:
+            for topic_idx in range(topics_to_add):
+                topic_num = existing_topic_count + topic_idx + 1
+                topic_name = f'topic.{topic_num}'
+                topic_def = {
+                    'name': topic_name,
+                    'description': f'Generated topic {topic_num}'
+                }
+                new_config.setdefault('pubsub_topic', []).append(topic_def)
+
+        # Extract all topic names for subscriptions
+        topics = []
+        all_topics = new_config.get('pubsub_topic', [])
+        for topic in all_topics:
+            topics.append(topic['name'])
+
+        if users_to_add > 0:
 
             # Create new users, permissions, and subscriptions
             for idx in range(users_to_add):
@@ -131,7 +147,7 @@ class EnmasseGenerator:
 
     def generate(self, users:'int') -> 'None':
         config_data = self.load_config()
-        modified_config = self._add_users_and_subscriptions(config_data, users)
+        modified_config = self._add_users_topics_and_subscriptions(config_data, users)
         self.create_multi_config(modified_config)
         self.log_config_info(modified_config, users)
 
