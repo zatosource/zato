@@ -191,6 +191,9 @@ class BrokerClient:
             # Make sure we are connected ..
             _ = client.connection.ensure_connection() # type: ignore
 
+            # Enable confirm mode on the channel
+            client.channel.confirm_select()
+
             # .. and publish the message now.
             result:'VinePromise' = client.publish(
                 msg,
@@ -202,6 +205,7 @@ class BrokerClient:
                 priority=priority,
                 expiration=expiration,
                 mandatory=mandatory,
+                confirm_timeout=3600 * 24,
                 headers={
                     'zato_msg_id': new_msg_id(),
                     'zato_pub_time': utcnow().isoformat()
