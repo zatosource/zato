@@ -11,11 +11,9 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+import os
 from logging import getLogger
-
 from traceback import format_exc
-
-
 
 # Zato
 from zato.common.typing_ import any_, dict_
@@ -26,7 +24,7 @@ from werkzeug.routing import Map, Rule
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
-from zato.common.util.api import new_cid_pubsub, utcnow
+from zato.common.util.api import as_bool, new_cid_pubsub, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 
 # ################################################################################################################################
@@ -42,6 +40,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
@@ -276,7 +276,8 @@ class BaseServer:
                     if not topic_name:
                         continue
 
-                    logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
+                    if _needs_details:
+                        logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
                     _ = self.backend.register_subscription(cid, topic_name, username=username, sub_key=sub_key)

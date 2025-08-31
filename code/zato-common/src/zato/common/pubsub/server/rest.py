@@ -11,6 +11,7 @@ from gevent import monkey;
 _ = monkey.patch_all()
 
 # stdlib
+import os
 from datetime import datetime
 from json import loads
 from http.client import OK
@@ -46,6 +47,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 _min_priority = PubSub.Message.Priority_Min
 _max_priority = PubSub.Message.Priority_Max
@@ -357,10 +360,15 @@ class PubSubRESTServer(BaseRESTServer):
         data = self._parse_json(cid, request)
 
         max_len, max_messages, wrap_in_list = self._validate_get_params(data)
-        logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}, wrap_in_list={wrap_in_list}')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}, wrap_in_list={wrap_in_list}')
 
         sub_key = self._find_user_sub_key(cid, username)
-        logger.info(f'[{cid}] Found sub_key: {sub_key}')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Found sub_key: {sub_key}')
+
         if not sub_key:
             logger.info(f'[{cid}] No sub_key found, returning error response')
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
