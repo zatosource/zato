@@ -337,7 +337,7 @@ class Backend:
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         if not sub_key:
 
-            logger.info(f'Subs by topic: {self.subs_by_topic}')
+            logger.debug(f'Subs by topic: {self.subs_by_topic}')
 
             # Look for existing sub_key for this user across all topics
             for topic_subs in self.subs_by_topic.values():
