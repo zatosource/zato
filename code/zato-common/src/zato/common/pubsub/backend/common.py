@@ -70,7 +70,7 @@ class Backend:
         self.topics = {}
         self.subs_by_topic = {}
         self._main_lock = RLock()
-        self._invoke_lock = RLock(enable_logging=True)
+        self._invoke_lock = RLock()
 
 # ################################################################################################################################
 
