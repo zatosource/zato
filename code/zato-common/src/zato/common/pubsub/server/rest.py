@@ -86,7 +86,9 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
-        logger.info(f'[{cid}] Authenticated user for messages/publish: `{username}`')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Authenticated user for messages/publish: `{username}`')
 
         # .. validate topic name ..
         validate_topic_name(topic_name)
@@ -358,7 +360,9 @@ class PubSubRESTServer(BaseRESTServer):
             logger.info(f'[{cid}] Processing messages/get request')
 
         username = self.authenticate(cid, environ)
-        logger.info(f'[{cid}] Authenticated user for messages/get: `{username}`')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Authenticated user for messages/get: `{username}`')
 
         request = Request(environ)
         data = self._parse_json(cid, request)
@@ -377,7 +381,8 @@ class PubSubRESTServer(BaseRESTServer):
             logger.info(f'[{cid}] No sub_key found, returning error response')
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
 
-        logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
+        if _needs_details:
+            logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
 
         api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
 
