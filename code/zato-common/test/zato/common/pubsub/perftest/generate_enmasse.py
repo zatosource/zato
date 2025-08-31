@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import logging
-from pathlib import Path
+import os
 
 # PyYAML
 import yaml
@@ -34,10 +34,10 @@ logger = logging.getLogger('zato')
 class EnmasseGenerator:
 
     def __init__(self):
-        self.current_dir = Path(__file__).parent
-        self.server_config_dir = self.current_dir / '..' / '..' / '..' / '..' / '..' / 'src' / 'zato' / 'common' / 'pubsub' / 'server'
-        self.config_path = (self.server_config_dir / 'config.yaml').resolve()
-        self.multi_config_path = (self.server_config_dir / 'config.multi.yaml').resolve()
+        self.current_dir = os.path.dirname(__file__)
+        self.server_config_dir = os.path.join(self.current_dir, '..', '..', '..', '..', '..', 'src', 'zato', 'common', 'pubsub', 'server')
+        self.config_path = os.path.join(self.server_config_dir, 'config.yaml')
+        self.multi_config_path = os.path.join(self.server_config_dir, 'config.multi.yaml')
 
 # ################################################################################################################################
 
