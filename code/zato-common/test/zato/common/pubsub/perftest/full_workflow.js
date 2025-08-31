@@ -8,6 +8,7 @@ export let options = {
       executor: 'per-vu-iterations',
       vus: VUS,
       iterations: ITERATIONS_PER_VU,
+      maxDuration: '120m',
     }
   },
   thresholds: {
