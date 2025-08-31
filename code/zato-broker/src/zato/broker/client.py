@@ -183,6 +183,7 @@ class BrokerClient:
 
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
+        mandatory = kwargs.get('mandatory', True)
 
         with self.producer.acquire() as client:
 
@@ -199,6 +200,7 @@ class BrokerClient:
                 retry=True,
                 priority=priority,
                 expiration=expiration,
+                mandatory=mandatory,
                 headers={
                     'zato_msg_id': new_msg_id(),
                     'zato_pub_time': utcnow().isoformat()

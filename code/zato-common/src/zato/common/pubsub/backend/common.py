@@ -71,6 +71,8 @@ class Backend:
         self.subs_by_topic = {}
         self._main_lock = RLock()
         self._invoke_lock = RLock()
+        self._publish_counter_lock = RLock()
+        self.message_counter = 0
 
 # ################################################################################################################################
 
@@ -299,12 +301,17 @@ class Backend:
         if msg.in_reply_to:
             message['in_reply_to'] = msg.in_reply_to
 
-        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name)
+        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
 
+        # Increment message counter in thread-safe way
+        with self._publish_counter_lock:
+            self.message_counter += 1
+            current_count = self.message_counter
+
         # if _needs_details:
-        logger.info(f'[{cid}] Published message `{msg_id}` to topic `{topic_name}` (username={username}{ext_client_part}')
+        logger.info(f'[{cid}] Published message `{msg_id}` ({current_count:015d}) to topic `{topic_name}` (username={username}{ext_client_part}')
 
         # Return success response
         response = PubResponse()

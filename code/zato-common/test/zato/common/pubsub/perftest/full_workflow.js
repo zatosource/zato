@@ -127,7 +127,6 @@ export default function() {
     publish(topicName, userCreds);
   }
 
-  sleep(1);
-
-  pullMessages(userCreds);
+  // sleep(1);
+  // pullMessages(userCreds);
 }
