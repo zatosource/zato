@@ -476,59 +476,42 @@ class BrokerClient:
     ) -> 'None':
         """ Waits for a response from the broker within the specified timeout.
         """
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-1 Starting wait with timeout: {timeout}')
 
         end_time = utcnow() + timedelta(seconds=timeout)
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-2 End time calculated: {end_time}')
 
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-3 Using RabbitMQ REST API to check queue')
-        
         # Get broker configuration for REST API access
         broker_config = get_broker_config()
         host, _ = broker_config.address.split(':')
         rabbitmq_api_port = 15672
         vhost_encoded = broker_config.vhost.replace('/', '%2F')
 
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-5 Starting wait loop')
         while not response.ready and utcnow() < end_time:
-            logger.info(f'[{cid}] WAIT-FOR-RESPONSE-6 Loop iteration - response.ready: {response.ready}')
 
             try:
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-7 Checking if queue exists via REST API: {response.reply_queue_name}')
-                
+
                 # Check if queue exists using RabbitMQ Management API
                 api_url = f'http://{host}:{rabbitmq_api_port}/api/queues/{vhost_encoded}/{response.reply_queue_name}'
-                
+
                 response_api = requests.get(
                     api_url,
                     auth=HTTPBasicAuth(broker_config.username, broker_config.password),
                     headers={'Content-Type': 'application/json'},
                     timeout=1_000_000
                 )
-                
-                if response_api.status_code == OK:
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-8 Queue exists, continuing wait')
-                else:
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-9 Queue no longer exists, breaking early')
+
+                if response_api.status_code != OK:
                     logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
                     break
-                    
+
             except Exception as e:
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-9 Error checking queue via REST API: {e}')
                 logger.info(f'AMQP queue check failed `{response.reply_queue_name}` for {cid}')
                 break
 
             else:
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-10 About to sleep for {sleep_time}s')
                 sleep(sleep_time)
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-11 Woke up from sleep')
                 time_left = (end_time - utcnow()).total_seconds()
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-12 Time left: {time_left:.1f}s')
                 msg = f'Still waiting - queue: {response.reply_queue_name}, time left: {time_left:.1f}s'
                 logger.debug(msg)
-
-            logger.info(f'[{cid}] WAIT-FOR-RESPONSE-13 Exited wait loop - response.ready: {response.ready}')
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-14 Channel closed, exiting _wait_for_response')
 
 # ################################################################################################################################
 
@@ -543,11 +526,8 @@ class BrokerClient:
         """ Synchronously invokes a service via the broker and waits for the response.
         """
 
-        logger.info(f'ASYNC-INVOKE-1 Using CID: {cid} for service: {service}')
-
         # For later use
         sleep_time = 0.05
-        logger.info(f'[{cid}] ASYNC-INVOKE-2 Set sleep_time to {sleep_time}')
 
         # Create response holder class without nonlocal keyword
         class ResponseHolder:
@@ -565,16 +545,12 @@ class BrokerClient:
                 reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
                 logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
 
-        logger.info(f'[{cid}] ASYNC-INVOKE-3 Created ResponseHolder class')
-
         # Initialize response holder
         response = ResponseHolder()
-        logger.info(f'[{cid}] ASYNC-INVOKE-4 Initialized response holder')
 
         # Store service and CID in response holder for logging when response arrives
         response.service = service
         response.cid = cid
-        logger.info(f'[{cid}] ASYNC-INVOKE-5 Stored service and CID in response holder')
 
         # Prepare the message
         msg = {
@@ -584,84 +560,50 @@ class BrokerClient:
             'cid': cid,
             'request_type': 'sync',
         }
-        logger.info(f'[{cid}] ASYNC-INVOKE-6 Prepared message: {msg}')
 
         # Get correlation ID and create reply queue via _invoke_with_callback
-        logger.info(f'[{cid}] ASYNC-INVOKE-7 About to call _invoke_with_callback')
         ctx = self._invoke_with_callback(msg, response.set_response)
-        logger.info(f'[{cid}] ASYNC-INVOKE-8 Returned from _invoke_with_callback')
-        logger.info(f'[{cid}] ASYNC-INVOKE-9 Context correlation_id: {ctx.correlation_id}')
 
         # Store the reply queue name for possible cleanup in case of timeout
-        logger.info(f'[{cid}] ASYNC-INVOKE-11 About to acquire lock for correlation_to_queue_map')
         with self.lock:
-            logger.info(f'[{cid}] ASYNC-INVOKE-12 Acquired lock, checking correlation_to_queue_map')
             if ctx.correlation_id in self.correlation_to_queue_map:
                 response.reply_queue_name = self.correlation_to_queue_map.get(ctx.correlation_id)
-                logger.info(f'[{cid}] ASYNC-INVOKE-13 Found reply queue name: {response.reply_queue_name}')
-            else:
-                logger.info(f'[{cid}] ASYNC-INVOKE-14 CID not found in correlation_to_queue_map')
-        logger.info(f'[{cid}] ASYNC-INVOKE-15 Released lock')
 
         # Log service invocation with reply queue and CID in the same line
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
         logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
-        logger.info(f'[{cid}] ASYNC-INVOKE-16 Logged service invocation')
 
         # Wait for response
-        logger.info(f'[{cid}] ASYNC-INVOKE-17 About to call _wait_for_response with timeout: {timeout}')
         self._wait_for_response(ctx, response, timeout, sleep_time, cid)
-        logger.info(f'[{cid}] ASYNC-INVOKE-18 Returned from _wait_for_response')
 
         # .. handle timeouts and early exists (does not matter which one led us here)..
-        logger.info(f'[{cid}] ASYNC-INVOKE-19 Checking if response is ready: {response.ready}')
         if not response.ready:
-            logger.info(f'[{cid}] ASYNC-INVOKE-20 Response not ready, handling timeout')
 
             # .. if we know the queue name, clean it up ..
             if response.reply_queue_name:
-                logger.info(f'[{cid}] ASYNC-INVOKE-21 Reply queue name exists, cleaning up: {response.reply_queue_name}')
 
                 logger.info(f'No response - cleaning up reply queue {response.reply_queue_name}')
-                logger.info(f'[{cid}] ASYNC-INVOKE-22 About to call _cleanup_reply_consumer')
                 self._cleanup_reply_consumer(ctx.correlation_id, response.reply_queue_name)
-                logger.info(f'[{cid}] ASYNC-INVOKE-23 Returned from _cleanup_reply_consumer')
 
                 # Also clean up the callback registration
-                logger.info(f'[{cid}] ASYNC-INVOKE-24 About to acquire lock for cleanup')
                 with self.lock:
-                    logger.info(f'[{cid}] ASYNC-INVOKE-25 Acquired lock for cleanup')
 
                     if ctx.correlation_id in self._callbacks:
-                        logger.info(f'[{cid}] ASYNC-INVOKE-26 Removing callback for CID: {ctx.correlation_id}')
                         _ = self._callbacks.pop(ctx.correlation_id, None) # type: ignore
-                    else:
-                        logger.info(f'[{cid}] ASYNC-INVOKE-27 No callback found for CID: {ctx.correlation_id}')
 
                     if ctx.correlation_id in self.correlation_to_queue_map:
-                        logger.info(f'[{cid}] ASYNC-INVOKE-28 Removing correlation mapping for CID: {ctx.correlation_id}')
                         _ = self.correlation_to_queue_map.pop(ctx.correlation_id, None)
-                    else:
-                        logger.info(f'[{cid}] ASYNC-INVOKE-29 No correlation mapping found for CID: {ctx.correlation_id}')
-                logger.info(f'[{cid}] ASYNC-INVOKE-30 Released lock after cleanup')
-            else:
-                logger.info(f'[{cid}] ASYNC-INVOKE-31 No reply queue name to clean up')
 
             exc_msg = f'No response received from service `{service}`'
             logger.info(f'[{cid}] ASYNC-INVOKE-32 About to raise NoResponseReceivedException: {exc_msg}')
             raise NoResponseReceivedException(exc_msg)
 
-        logger.info(f'[{cid}] ASYNC-INVOKE-33 Response is ready, processing data')
         if not needs_root_elem:
-            logger.info(f'[{cid}] ASYNC-INVOKE-34 Extracting root element from response data')
             data = response.data
             data_keys = list(data.keys()) # type: ignore
             root = data_keys[0]
-            logger.info(f'[{cid}] ASYNC-INVOKE-35 Root element: {root}')
             data = data[root] # type: ignore
-            logger.info(f'[{cid}] ASYNC-INVOKE-36 Extracted data: {data}')
         else:
-            logger.info(f'[{cid}] ASYNC-INVOKE-37 Using full response data (needs_root_elem=True)')
             data = response.data
 
         logger.info(f'[{cid}] ASYNC-INVOKE-38 Returning data from _invoke_sync')
