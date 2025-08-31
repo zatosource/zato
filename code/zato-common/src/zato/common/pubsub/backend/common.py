@@ -303,8 +303,8 @@ class Backend:
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
 
-        if _needs_details:
-            logger.info(f'[{cid}] Published message `{msg_id}` to topic `{topic_name}` (username={username}{ext_client_part}')
+        # if _needs_details:
+        logger.info(f'[{cid}] Published message `{msg_id}` to topic `{topic_name}` (username={username}{ext_client_part}')
 
         # Return success response
         response = PubResponse()
