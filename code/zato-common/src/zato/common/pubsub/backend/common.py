@@ -210,16 +210,24 @@ class Backend:
         request:'anydictnone'=None,
         timeout:'int'=20,
         needs_root_elem:'bool'=False,
+        cid:'str'=''
     ) -> 'any_':
 
-        logger.info(f'INVOKE-1 {service} {request}')
-        logger.info(f'LOCK-WAIT {service} {request}')
+        logger.info(f'[{cid}] INVOKE-1 {service} {request}')
+        logger.info(f'[{cid}] LOCK-WAIT {service} {request}')
 
         with self._invoke_lock:
-            logger.info(f'INVOKE-2 {service} {request}')
-            response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
+            logger.info(f'[{cid}] INVOKE-2 {service} {request}')
+            try:
+                response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
+                logger.info(f'[{cid}] INVOKE-3 {service} {request}')
+            except Exception:
+                logger.error(f'[{cid}] INVOKE-ERROR {service} {request} {format_exc()}')
+                raise
+            else:
+                logger.info(f'[{cid}] INVOKE-4 {service} {request} {response}')
 
-        logger.info(f'INVOKE-3 {service} {request}')
+        logger.info(f'[{cid}] INVOKE-5 {service} {request} {response}')
         return response
 
 # ################################################################################################################################
