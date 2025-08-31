@@ -8,10 +8,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import argparse
+import logging
 from pathlib import Path
 
 # PyYAML
 import yaml
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.DEBUG, format=log_format)
+
+logger = logging.getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,12 +36,12 @@ def main(users: 'int') -> 'None':
         config_data = yaml.safe_load(f)
 
     # Process the configuration data
-    print(f'Loaded configuration from: {config_path}')
-    print(f'Users: {users}')
-    print(f'Security definitions: {len(config_data.get("security", []))}')
-    print(f'Topics: {len(config_data.get("pubsub_topic", []))}')
-    print(f'Permissions: {len(config_data.get("pubsub_permission", []))}')
-    print(f'Subscriptions: {len(config_data.get("pubsub_subscription", []))}')
+    logger.info(f'Loaded configuration from: {config_path}')
+    logger.info(f'Users: {users}')
+    logger.info(f'Security definitions: {len(config_data.get("security", []))}')
+    logger.info(f'Topics: {len(config_data.get("pubsub_topic", []))}')
+    logger.info(f'Permissions: {len(config_data.get("pubsub_permission", []))}')
+    logger.info(f'Subscriptions: {len(config_data.get("pubsub_subscription", []))}')
 
 # ################################################################################################################################
 # ################################################################################################################################
