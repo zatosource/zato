@@ -28,9 +28,12 @@ export const headers = {
   'Content-Type': 'application/json',
 };
 
-export function getTopicName(vu) {
-  const topicIndex = ((vu - 1) % MAX_TOPICS) + 1;
-  return `demo.${topicIndex}`;
+export function getTopicNames() {
+  const topics = [];
+  for (let i = 1; i <= MAX_TOPICS; i++) {
+    topics.push(`demo.${i}`);
+  }
+  return topics;
 }
 
 export function getUserCredentials(vuId) {
