@@ -79,6 +79,11 @@ class EnmasseGenerator:
         for topic in all_topics:
             topics.append(topic['name'])
 
+        # Update existing subscriptions to include all topics
+        existing_subscriptions = new_config.get('pubsub_subscription', [])
+        for subscription in existing_subscriptions:
+            subscription['topic_list'] = topics
+
         if users_to_add > 0:
 
             # Create new users, permissions, and subscriptions
