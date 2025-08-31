@@ -221,7 +221,7 @@ class Backend:
         with self._invoke_lock:
             logger.info(f'[{cid}] INVOKE-2 {service} {request}')
             try:
-                response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
+                response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem, cid=cid)
                 logger.info(f'[{cid}] INVOKE-3 {service} {request}')
             except Exception:
                 logger.error(f'[{cid}] INVOKE-ERROR {service} {request} {format_exc()}')
