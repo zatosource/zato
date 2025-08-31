@@ -74,4 +74,4 @@ unify:
 	python3 $(CURDIR)/code/util/unify.py
 
 perftest:
-	cd $(CURDIR)/code/zato-common && $(MAKE) perftest
+	cd $(CURDIR)/code/zato-common && $(MAKE) perftest USERS=$(filter-out $@,$(MAKECMDGOALS))
