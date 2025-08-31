@@ -165,7 +165,7 @@ class BaseServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.invoke_service_with_pubsub(service, request)
+        response = self.backend.invoke_service_with_pubsub(service, request, cid=cid)
 
         # .. log what we've received ..
         len_response = len(response)
@@ -205,7 +205,7 @@ class BaseServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.invoke_service_with_pubsub(service, request)
+        response = self.backend.invoke_service_with_pubsub(service, request, cid=cid)
 
         # .. log what we've received ..
         len_response = len(response)
@@ -244,7 +244,7 @@ class BaseServer:
         }
 
         # .. invoke the service ..
-        response = self.backend.invoke_service_with_pubsub(service, request)
+        response = self.backend.invoke_service_with_pubsub(service, request, cid=cid)
 
         # .. log what we've received ..
         len_response = len(response)
@@ -305,7 +305,7 @@ class BaseServer:
 
         try:
             # .. invoke the service ..
-            response = self.backend.invoke_service_with_pubsub(service, request)
+            response = self.backend.invoke_service_with_pubsub(service, request, cid=cid)
 
             # .. log what we've received ..
             len_response = len(response)
