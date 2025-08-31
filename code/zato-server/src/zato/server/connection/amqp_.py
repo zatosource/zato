@@ -217,7 +217,7 @@ class Producer:
         # because multiple channels or outgoing connections may be using the same definition,
         # thus we need to create a new connection group for each Producer object.
 
-        connections = pools.register_group(pools.Connections(limit=self.config.pool_size))
+        connections = pools.register_group(pools.Connections(limit=5000)) # self.config.pool_size))
 
         class _Producers(pools.Producers):
             def create(
