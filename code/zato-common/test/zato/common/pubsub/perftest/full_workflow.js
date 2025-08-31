@@ -43,7 +43,8 @@ export default function() {
 
     const subscribeResponse = http.post(`${BASE_URL}/pubsub/subscribe/topic/${topicName}`, '', {
       headers: userCreds.headers,
-      tags: { operation: 'subscribe' }
+      tags: { operation: 'subscribe' },
+      timeout: '20m'
     });
 
     check(subscribeResponse, {
@@ -186,7 +187,7 @@ export default function() {
     let unsubscribeResponse = http.post(
       `${BASE_URL}/pubsub/unsubscribe/topic/${topicName}`,
       null,
-      { headers: userCreds.headers, tags: { operation: 'unsubscribe' } }
+      { headers: userCreds.headers, tags: { operation: 'unsubscribe' }, timeout: '20m' }
     );
 
     check(unsubscribeResponse, {
