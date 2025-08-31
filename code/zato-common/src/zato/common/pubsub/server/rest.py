@@ -81,10 +81,12 @@ class PubSubRESTServer(BaseRESTServer):
         """ Publish a message to a topic.
         """
         # Log what we're doing ..
-        logger.info(f'[{cid}] Processing publish request')
+        if _needs_details:
+            logger.info(f'[{cid}] Processing publish request')
 
         # .. make sure the client is allowed to carry out this action ..
         username = self.authenticate(cid, environ)
+        logger.info(f'[{cid}] Authenticated user for messages/publish: `{username}`')
 
         # .. validate topic name ..
         validate_topic_name(topic_name)
@@ -352,9 +354,11 @@ class PubSubRESTServer(BaseRESTServer):
     def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
         """ Get messages from the user's queue.
         """
-        logger.info(f'[{cid}] Processing messages/get request')
+        if _needs_details:
+            logger.info(f'[{cid}] Processing messages/get request')
+
         username = self.authenticate(cid, environ)
-        logger.info(f'[{cid}] Authenticated user: {username}')
+        logger.info(f'[{cid}] Authenticated user for messages/get: `{username}`')
 
         request = Request(environ)
         data = self._parse_json(cid, request)

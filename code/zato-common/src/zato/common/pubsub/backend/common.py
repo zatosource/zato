@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from datetime import timedelta
 from http.client import BAD_REQUEST, OK
 from json import dumps
@@ -21,7 +22,7 @@ from zato.broker.message_handler import handle_broker_msg
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage, PubResponse, StatusResponse, Subscription, Topic
 from zato.common.pubsub.util import create_subscription_bindings
-from zato.common.util.api import new_msg_id, new_sub_key, utcnow
+from zato.common.util.api import as_bool, new_msg_id, new_sub_key, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +40,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 _prefix = PubSub.Prefix
 
 # ################################################################################################################################
@@ -68,6 +70,7 @@ class Backend:
         self.topics = {}
         self.subs_by_topic = {}
         self._main_lock = RLock()
+        self._invoke_lock = RLock()
 
 # ################################################################################################################################
 
@@ -208,9 +211,10 @@ class Backend:
         timeout:'int'=20,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
-        #request = request or {}
-        response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
-        return response
+        with self._invoke_lock:
+            logger.info(f'INVOKE-1 {service} {request}')
+            response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
+            return response
 
 # ################################################################################################################################
 
@@ -337,7 +341,8 @@ class Backend:
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
         if not sub_key:
 
-            logger.debug(f'Subs by topic: {self.subs_by_topic}')
+            if _needs_details:
+                logger.info(f'Subs by topic: {self.subs_by_topic}')
 
             # Look for existing sub_key for this user across all topics
             for topic_subs in self.subs_by_topic.values():
