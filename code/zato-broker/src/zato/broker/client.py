@@ -595,7 +595,6 @@ class BrokerClient:
                         _ = self.correlation_to_queue_map.pop(ctx.correlation_id, None)
 
             exc_msg = f'No response received from service `{service}`'
-            logger.info(f'[{cid}] ASYNC-INVOKE-32 About to raise NoResponseReceivedException: {exc_msg}')
             raise NoResponseReceivedException(exc_msg)
 
         if not needs_root_elem:
@@ -606,7 +605,6 @@ class BrokerClient:
         else:
             data = response.data
 
-        logger.info(f'[{cid}] ASYNC-INVOKE-38 Returning data from _invoke_sync')
         return data
 
 # ################################################################################################################################
