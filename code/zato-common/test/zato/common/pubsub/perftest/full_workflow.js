@@ -12,6 +12,7 @@ export let options = {
   },
   thresholds: {
     http_req_duration: ['p(95)<1000'],
+    'http_req_duration{operation:unsubscribe}': ['p(100)<1200000'],
     http_req_failed: ['rate==0'],
     'checks{operation:subscribe}': ['rate==1'],
     'checks{operation:publish}': ['rate==1'],
