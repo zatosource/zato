@@ -481,31 +481,51 @@ class BrokerClient:
         end_time = utcnow() + timedelta(seconds=timeout)
         logger.info(f'[{cid}] WAIT-FOR-RESPONSE-2 End time calculated: {end_time}')
 
-        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-3 Opening channel to broker')
-        with ctx.producer.connection.channel() as channel:
-            logger.info(f'[{cid}] WAIT-FOR-RESPONSE-4 Channel opened successfully')
+        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-3 Using RabbitMQ REST API to check queue')
+        
+        # Get broker configuration for REST API access
+        broker_config = get_broker_config()
+        host, _ = broker_config.address.split(':')
+        rabbitmq_api_port = 15672
+        vhost_encoded = broker_config.vhost.replace('/', '%2F')
 
-            logger.info(f'[{cid}] WAIT-FOR-RESPONSE-5 Starting wait loop')
-            while not response.ready and utcnow() < end_time:
-                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-6 Loop iteration - response.ready: {response.ready}')
+        logger.info(f'[{cid}] WAIT-FOR-RESPONSE-5 Starting wait loop')
+        while not response.ready and utcnow() < end_time:
+            logger.info(f'[{cid}] WAIT-FOR-RESPONSE-6 Loop iteration - response.ready: {response.ready}')
 
-                try:
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-7 Checking if queue exists: {response.reply_queue_name}')
-                    channel.queue_declare(queue=response.reply_queue_name, passive=True)
+            try:
+                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-7 Checking if queue exists via REST API: {response.reply_queue_name}')
+                
+                # Check if queue exists using RabbitMQ Management API
+                api_url = f'http://{host}:{rabbitmq_api_port}/api/queues/{vhost_encoded}/{response.reply_queue_name}'
+                
+                response_api = requests.get(
+                    api_url,
+                    auth=HTTPBasicAuth(broker_config.username, broker_config.password),
+                    headers={'Content-Type': 'application/json'},
+                    timeout=1_000_000
+                )
+                
+                if response_api.status_code == OK:
                     logger.info(f'[{cid}] WAIT-FOR-RESPONSE-8 Queue exists, continuing wait')
-                except channel.connection.channel_errors:
+                else:
                     logger.info(f'[{cid}] WAIT-FOR-RESPONSE-9 Queue no longer exists, breaking early')
                     logger.info(f'AMQP queue no longer found `{response.reply_queue_name}` for {cid}')
                     break
+                    
+            except Exception as e:
+                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-9 Error checking queue via REST API: {e}')
+                logger.info(f'AMQP queue check failed `{response.reply_queue_name}` for {cid}')
+                break
 
-                else:
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-10 About to sleep for {sleep_time}s')
-                    sleep(sleep_time)
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-11 Woke up from sleep')
-                    time_left = (end_time - utcnow()).total_seconds()
-                    logger.info(f'[{cid}] WAIT-FOR-RESPONSE-12 Time left: {time_left:.1f}s')
-                    msg = f'Still waiting - queue: {response.reply_queue_name}, time left: {time_left:.1f}s'
-                    logger.debug(msg)
+            else:
+                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-10 About to sleep for {sleep_time}s')
+                sleep(sleep_time)
+                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-11 Woke up from sleep')
+                time_left = (end_time - utcnow()).total_seconds()
+                logger.info(f'[{cid}] WAIT-FOR-RESPONSE-12 Time left: {time_left:.1f}s')
+                msg = f'Still waiting - queue: {response.reply_queue_name}, time left: {time_left:.1f}s'
+                logger.debug(msg)
 
             logger.info(f'[{cid}] WAIT-FOR-RESPONSE-13 Exited wait loop - response.ready: {response.ready}')
         logger.info(f'[{cid}] WAIT-FOR-RESPONSE-14 Channel closed, exiting _wait_for_response')
