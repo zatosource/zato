@@ -28,15 +28,24 @@ logger = logging.getLogger('zato')
 def main(users: 'int') -> 'None':
     # Get the path to the YAML config file using relative path
     current_dir = Path(__file__).parent
-    config_path = current_dir / '..' / '..' / '..' / '..' / '..' / 'src' / 'zato' / 'common' / 'pubsub' / 'server' / 'config.yaml'
+    server_config_dir = current_dir / '..' / '..' / '..' / '..' / '..' / 'src' / 'zato' / 'common' / 'pubsub' / 'server'
+    config_path = server_config_dir / 'config.yaml'
     config_path = config_path.resolve()
+
+    multi_config_path = server_config_dir / 'config.multi.yaml'
+    multi_config_path = multi_config_path.resolve()
 
     # Read and parse the YAML file
     with open(config_path, 'r', encoding='utf-8') as f:
         config_data = yaml.safe_load(f)
 
+    # Create copy with multi config name
+    with open(multi_config_path, 'w', encoding='utf-8') as f:
+        yaml.safe_dump(config_data, f, default_flow_style=False, allow_unicode=True)
+
     # Process the configuration data
     logger.info(f'Loaded configuration from: {config_path}')
+    logger.info(f'Created copy at: {multi_config_path}')
     logger.info(f'Users: {users}')
     logger.info(f'Security definitions: {len(config_data.get("security", []))}')
     logger.info(f'Topics: {len(config_data.get("pubsub_topic", []))}')
