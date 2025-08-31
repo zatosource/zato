@@ -112,8 +112,7 @@ class EnmasseGenerator:
 
 # ################################################################################################################################
 
-    def create_multi_config(self, config_data:'strdict', users:'int') -> 'None':
-        modified_config = self._add_users_and_subscriptions(config_data, users)
+    def create_multi_config(self, modified_config:'strdict') -> 'None':
         with open(self.multi_config_path, 'w', encoding='utf-8') as f:
             yaml.safe_dump(modified_config, f, default_flow_style=False, allow_unicode=True)
 
@@ -132,8 +131,9 @@ class EnmasseGenerator:
 
     def generate(self, users:'int') -> 'None':
         config_data = self.load_config()
-        self.create_multi_config(config_data, users)
-        self.log_config_info(config_data, users)
+        modified_config = self._add_users_and_subscriptions(config_data, users)
+        self.create_multi_config(modified_config)
+        self.log_config_info(modified_config, users)
 
 # ################################################################################################################################
 # ################################################################################################################################
