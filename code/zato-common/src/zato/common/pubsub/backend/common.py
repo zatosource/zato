@@ -70,7 +70,7 @@ class Backend:
         self.topics = {}
         self.subs_by_topic = {}
         self._main_lock = RLock()
-        self._invoke_lock = RLock()
+        self._invoke_lock = RLock(enable_logging=True)
 
 # ################################################################################################################################
 
@@ -212,6 +212,8 @@ class Backend:
         needs_root_elem:'bool'=False,
         cid:'str'=''
     ) -> 'any_':
+        if not cid:
+            raise Exception()
 
         logger.info(f'[{cid}] INVOKE-1 {service} {request}')
         logger.info(f'[{cid}] LOCK-WAIT {service} {request}')
@@ -408,7 +410,7 @@ class Backend:
             }
 
             service_name = 'zato.pubsub.subscription.subscribe'
-            service_response = self.invoke_service_with_pubsub(service_name, request, needs_root_elem=True)
+            service_response = self.invoke_service_with_pubsub(service_name, request, needs_root_elem=True, cid=cid)
 
             if error := service_response.get('error'):
                 is_ok = False
@@ -470,7 +472,7 @@ class Backend:
             }
 
             # .. invoke our service ..
-            self.invoke_service_with_pubsub('zato.pubsub.subscription.unsubscribe', request)
+            self.invoke_service_with_pubsub('zato.pubsub.subscription.unsubscribe', request, cid=cid)
 
             # .. remove subscription from memory ..
             with self._main_lock:
