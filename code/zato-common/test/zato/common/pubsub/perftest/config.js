@@ -7,6 +7,8 @@ export const MAX_TOPICS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Max_Topics);
 export const VUS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_VUs);
 export const ITERATIONS_PER_VU = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Iterations_Per_VU);
 export const NEEDS_DETAILS = __ENV.Zato_Needs_Details === 'true';
+export const PULL_MAX_MESSAGES = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Pull_Max_Messages) || 1000;
+export const PULL_MAX_EMPTY_ATTEMPTS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Pull_Max_Empty_Attempts) || 10;
 
 if (!BASE_URL) {
   throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_URL is not set');
