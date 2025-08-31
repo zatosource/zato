@@ -48,4 +48,4 @@ endif
 
 perftest:
 	echo "Perftest called"
-	py $(CURDIR)/test/zato/common/pubsub/perftest/generate_enmasse.py --users $(or $(USERS),1)
+	py $(CURDIR)/test/zato/common/pubsub/perftest/generate_enmasse.py --users $(or $(USERS),1) --topics-multiplier $(or $(TOPICS_MULTIPLIER),10.0)
