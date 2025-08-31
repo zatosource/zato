@@ -211,8 +211,9 @@ class Backend:
         timeout:'int'=20,
         needs_root_elem:'bool'=False,
     ) -> 'any_':
+        logger.info(f'INVOKE-1 {service} {request}')
         with self._invoke_lock:
-            logger.info(f'INVOKE-1 {service} {request}')
+            logger.info(f'INVOKE-2 {service} {request}')
             response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
             return response
 
@@ -440,7 +441,7 @@ class Backend:
                 return response
 
         # Log what we're doing ..
-        logger.info(f'[{cid}] Unsubscribing `{sec_name}` from topic `{topic_name}`')
+        logger.info(f'[{cid}] Unsubscribing `{sec_name}` from topic `{topic_name}` should_notify_server={should_notify_server}')
 
         # .. this is optional because we may have been called from self.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE ..
         # .. in which case the server has already deleted the subscription so we don't need to notify it about it ..
