@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import http.client as http_client
-import json
 import logging
 import os
 from unittest import TestCase

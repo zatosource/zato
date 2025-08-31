@@ -1,4 +1,3 @@
-.idea
 .hypothesis
 .vscode
 code/.installed.cfg
@@ -39,6 +38,7 @@ code/share/*
 code/src/*
 code/tests/*
 code/windows-bin/zato.py
+code/zato-common/src/zato/common/pubsub/server/*.multi.yaml
 code/zato-cy/src/zato/cy/*.c
 code/zato-cy/src/zato/cy/*.html
 code/zato-cy/src/zato/cy/*/*.c
