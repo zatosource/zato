@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, getUserCredentials, getTopicName, VUS, ITERATIONS_PER_VU } from './config.js';
+import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU } from './config.js';
 
 export let options = {
   scenarios: {
@@ -57,10 +57,12 @@ function publish(topicName, userCreds) {
 }
 
 export default function() {
-  const topicName = getTopicName(__VU);
   const userCreds = getUserCredentials(__VU);
+  const topicNames = getTopicNames();
 
-  publish(topicName, userCreds);
+  for (const topicName of topicNames) {
+    publish(topicName, userCreds);
+  }
 
   sleep(0.1);
 }
