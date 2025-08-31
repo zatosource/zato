@@ -30,6 +30,8 @@ function publish(topicName, userCreds) {
     expiration: 3600,
   };
 
+
+
   let publishResponse = http.post(
     `${BASE_URL}/pubsub/topic/${topicName}`,
     JSON.stringify(payload),
@@ -50,6 +52,8 @@ function publish(topicName, userCreds) {
 
   if (publishResponse.status !== 200) {
     console.error(`Publish failed for VU ${__VU}: ${publishResponse.status}`);
+  } else {
+    console.log(`VU ${__VU} iter ${__ITER}: published to ${topicName} - status ${publishResponse.status}`);
   }
 }
 
