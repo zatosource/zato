@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS } from './config.js';
+import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS } from './config.js';
 
 export let options = {
   scenarios: {
@@ -127,6 +127,13 @@ export default function() {
     publish(topicName, userCreds);
   }
 
-  // sleep(1);
-  // pullMessages(userCreds);
+  /*
+  console.log(`VU ${__VU}: waiting ${WAIT_BEFORE_PULL_SECONDS} seconds before pulling messages...`);
+  for (let i = 1; i <= WAIT_BEFORE_PULL_SECONDS; i++) {
+    sleep(1);
+    console.log(`VU ${__VU}: still waiting... ${i}/${WAIT_BEFORE_PULL_SECONDS} seconds elapsed`);
+  }
+  console.log(`VU ${__VU}: finished waiting, starting to pull messages`);
+  pullMessages(userCreds);
+  */
 }
