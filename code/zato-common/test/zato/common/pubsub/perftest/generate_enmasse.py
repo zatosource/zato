@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import argparse
+import copy
 import logging
 import os
 
@@ -41,15 +42,66 @@ class EnmasseGenerator:
 
 # ################################################################################################################################
 
+    def _add_users_and_subscriptions(self, config_data:'strdict', users:'int') -> 'strdict':
+
+        new_config = copy.deepcopy(config_data)
+
+        existing_security = new_config.get('security', [])
+        existing_users_count = len(existing_security)
+        users_to_add = users - existing_users_count
+
+        if users_to_add > 0:
+            topics = []
+            pubsub_topics = new_config.get('pubsub_topic', [])
+            for topic in pubsub_topics:
+                topics.append(topic['name'])
+
+            for idx in range(users_to_add):
+                user_num = existing_users_count + idx
+                user_num += 1
+                sec_name = f'demo_sec_def.{user_num}'
+                username = f'user.{user_num}'
+                password = f'password.{user_num}'
+
+                # Add security definition
+                security_def = {
+                    'name': sec_name,
+                    'type': 'basic_auth',
+                    'username': username,
+                    'password': password
+                }
+                new_config.setdefault('security', []).append(security_def)
+
+                # Add permissions
+                permission = {
+                    'security': sec_name,
+                    'pub': ['demo.*', 'orders.*'],
+                    'sub': ['demo.*', 'orders.*']
+                }
+                new_config.setdefault('pubsub_permission', []).append(permission)
+
+                # Add subscription
+                subscription = {
+                    'security': sec_name,
+                    'delivery_type': 'pull',
+                    'topic_list': topics
+                }
+                new_config.setdefault('pubsub_subscription', []).append(subscription)
+
+        return new_config
+
+# ################################################################################################################################
+
     def load_config(self) -> 'strdict':
         with open(self.config_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
 
 # ################################################################################################################################
 
-    def create_multi_config(self, config_data:'strdict') -> 'None':
+    def create_multi_config(self, config_data:'strdict', users:'int') -> 'None':
+        modified_config = self._add_users_and_subscriptions(config_data, users)
         with open(self.multi_config_path, 'w', encoding='utf-8') as f:
-            yaml.safe_dump(config_data, f, default_flow_style=False, allow_unicode=True)
+            yaml.safe_dump(modified_config, f, default_flow_style=False, allow_unicode=True)
 
 # ################################################################################################################################
 
@@ -66,7 +118,7 @@ class EnmasseGenerator:
 
     def generate(self, users:'int') -> 'None':
         config_data = self.load_config()
-        self.create_multi_config(config_data)
+        self.create_multi_config(config_data, users)
         self.log_config_info(config_data, users)
 
 # ################################################################################################################################
