@@ -42,6 +42,7 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
+    from vine.promises import promise as VinePromise
     from zato.common.pubsub.common import BrokerConfig
     from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strdictnone, strlist, strnone
     from zato.server.base.parallel import ParallelServer
@@ -49,7 +50,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,7 +192,7 @@ class BrokerClient:
             _ = client.connection.ensure_connection() # type: ignore
 
             # .. and publish the message now.
-            _ = client.publish(
+            result:'VinePromise' = client.publish(
                 msg,
                 exchange=exchange,
                 routing_key=routing_key,
@@ -205,7 +206,16 @@ class BrokerClient:
                     'zato_msg_id': new_msg_id(),
                     'zato_pub_time': utcnow().isoformat()
                 }
-            )
+            ) # type: ignore
+
+            logger.warning('RES-1 %s', result.cancelled)
+            logger.warning('RES-2 %s', repr(result))
+
+            # Wait for the promise to complete
+            while not result.ready and not result.cancelled:
+                sleep(0.01)
+
+            logger.warning('RES-3 ready:%s cancelled:%s value:%s', result.ready, result.cancelled, result.value)
 
     invoke_async = publish
 
