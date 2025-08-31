@@ -72,3 +72,6 @@ unify:
 	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/__init__.py
 	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/__init__.py
 	python3 $(CURDIR)/code/util/unify.py
+
+perftest:
+	cd $(CURDIR)/code/zato-common && $(MAKE) perftest

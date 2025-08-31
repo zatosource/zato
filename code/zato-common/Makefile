@@ -45,3 +45,7 @@ endif
 	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/rest_server -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 #	st run $Zato_Test_PubSub_OpenAPI_File --url http://localhost:44556/ -a $Zato_Test_PubSub_OpenAPI_Username:$Zato_Test_PubSub_OpenAPI_Password --output-sanitize false --warnings off -n 500
+
+perftest:
+	echo "Perftest called"
+	py $(CURDIR)/test/zato/common/pubsub/perftest/generate_enmasse.py
