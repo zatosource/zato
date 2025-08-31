@@ -46,19 +46,27 @@ class EnmasseGenerator:
 
         new_config = copy.deepcopy(config_data)
 
+        # Get existing security definitions to determine how many users we already have
         existing_security = new_config.get('security', [])
         existing_users_count = len(existing_security)
         users_to_add = users - existing_users_count
 
         if users_to_add > 0:
+
+            # Extract topic names from the existing configuration
             topics = []
             pubsub_topics = new_config.get('pubsub_topic', [])
             for topic in pubsub_topics:
                 topics.append(topic['name'])
 
+            # Create new users, permissions, and subscriptions
             for idx in range(users_to_add):
+
+                # Calculate user number (1-based indexing)
                 user_num = existing_users_count + idx
                 user_num += 1
+
+                # Generate names for this user
                 sec_name = f'demo_sec_def.{user_num}'
                 username = f'user.{user_num}'
                 password = f'password.{user_num}'
@@ -72,7 +80,7 @@ class EnmasseGenerator:
                 }
                 new_config.setdefault('security', []).append(security_def)
 
-                # Add permissions
+                # Add permissions for this user
                 permission = {
                     'security': sec_name,
                     'pub': ['demo.*', 'orders.*'],
@@ -80,7 +88,7 @@ class EnmasseGenerator:
                 }
                 new_config.setdefault('pubsub_permission', []).append(permission)
 
-                # Add subscription
+                # Add subscription for this user to all existing topics
                 subscription = {
                     'security': sec_name,
                     'delivery_type': 'pull',
