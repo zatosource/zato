@@ -33,7 +33,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow
+from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow, wait_for_predicate
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 
@@ -42,7 +42,6 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from typing import Dict
-    from vine.promises import promise as VinePromise
     from zato.common.pubsub.common import BrokerConfig
     from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strdictnone, strlist, strnone
     from zato.server.base.parallel import ParallelServer
@@ -195,7 +194,7 @@ class BrokerClient:
             client.channel.confirm_select()
 
             # .. and publish the message now.
-            result:'VinePromise' = client.publish(
+            _ = client.publish(
                 msg,
                 exchange=exchange,
                 routing_key=routing_key,
@@ -211,15 +210,6 @@ class BrokerClient:
                     'zato_pub_time': utcnow().isoformat()
                 }
             ) # type: ignore
-
-            logger.warning('RES-1 %s', result.cancelled)
-            logger.warning('RES-2 %s', repr(result))
-
-            # Wait for the promise to complete
-            while not result.ready and not result.cancelled:
-                sleep(0.01)
-
-            logger.warning('RES-3 ready:%s cancelled:%s value:%s', result.ready, result.cancelled, result.value)
 
     invoke_async = publish
 
@@ -875,7 +865,21 @@ class BrokerClient:
 # ################################################################################################################################
 
     def create_internal_queue(self, queue_name:'str') -> 'None':
-        self.create_bindings('', 'n/a', 'components', queue_name, queue_name)
+
+        def _predicate_create_queue():
+            try:
+                self.create_bindings('', 'n/a', 'components', queue_name, queue_name)
+                return True
+            except Exception as e:
+                logger.info(f'Queue creation failed for `{queue_name}`, will retry: {e}')
+                return False
+
+        _ = wait_for_predicate(
+            _predicate_create_queue,
+            100_000_000,  # Wait forever
+            2.0,          # Check every 2 seconds
+            jitter=0.2
+        )
 
 # ################################################################################################################################
 

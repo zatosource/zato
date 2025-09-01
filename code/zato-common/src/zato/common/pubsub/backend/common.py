@@ -310,7 +310,7 @@ class Backend:
             self.message_counter += 1
             current_count = self.message_counter
 
-        # if _needs_details:
+        #if _needs_details:
         logger.info(f'[{cid}] Published message `{msg_id}` ({current_count:015d}) to topic `{topic_name}` (username={username}{ext_client_part}')
 
         # Return success response
