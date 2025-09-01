@@ -33,11 +33,13 @@ function publish(topicName, userCreds) {
     expiration: 3600 * 24 * 365,
   };
 
+  const startTime = Date.now();
   let publishResponse = http.post(
     `${BASE_URL}/pubsub/topic/${topicName}`,
     JSON.stringify(payload),
     { headers: userCreds.headers, tags: { operation: 'publish' } }
   );
+  const duration = Date.now() - startTime;
 
   check(publishResponse, {
     'publish status is 200': (r) => r.status === 200,
@@ -52,7 +54,15 @@ function publish(topicName, userCreds) {
   }, { operation: 'publish' });
 
   if (publishResponse.status !== 200) {
-    console.error(`Publish failed for VU ${__VU}: ${publishResponse.status} - Topic: ${topicName} - Message: ${JSON.stringify(payload.data)} - Timestamp: ${payload.data.timestamp} - Response: ${publishResponse.body}`);
+    console.error(`Publish failed for VU ${__VU}:`);
+    console.error(`  Status: ${publishResponse.status}`);
+    console.error(`  Duration: ${duration}ms`);
+    console.error(`  Topic: ${topicName}`);
+    console.error(`  Error: ${publishResponse.error || 'none'}`);
+    console.error(`  Error Code: ${publishResponse.error_code || 'none'}`);
+    console.error(`  Body: ${publishResponse.body || 'null'}`);
+    console.error(`  Message: ${JSON.stringify(payload.data)}`);
+    console.error(`  Timestamp: ${payload.data.timestamp}`);
   } else {
     const body = JSON.parse(publishResponse.body);
     console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);

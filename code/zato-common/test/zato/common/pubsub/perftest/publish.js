@@ -32,11 +32,13 @@ export default function() {
     correl_id: `perf-${__VU}-${__ITER}`,
   };
 
+  const startTime = Date.now();
   let response = http.post(
     `${BASE_URL}/pubsub/topic/${topicName}`,
     JSON.stringify(payload),
     { headers: userCreds.headers }
   );
+  const duration = Date.now() - startTime;
 
   check(response, {
     'publish status is 200': (r) => r.status === 200,
@@ -58,7 +60,15 @@ export default function() {
   });
 
   if (response.status !== 200) {
-    console.error(`Publish failed for VU ${__VU}: ${response.status} - Topic: ${topicName} - Message: ${JSON.stringify(payload.data)} - Timestamp: ${payload.data.timestamp} - Response: ${response.body}`);
+    console.error(`Publish failed for VU ${__VU}:`);
+    console.error(`  Status: ${response.status}`);
+    console.error(`  Duration: ${duration}ms`);
+    console.error(`  Topic: ${topicName}`);
+    console.error(`  Error: ${response.error || 'none'}`);
+    console.error(`  Error Code: ${response.error_code || 'none'}`);
+    console.error(`  Body: ${response.body || 'null'}`);
+    console.error(`  Message: ${JSON.stringify(payload.data)}`);
+    console.error(`  Timestamp: ${payload.data.timestamp}`);
   }
 
   sleep(0.1);
