@@ -203,7 +203,6 @@ class AMQP:
             channel.queue_delete(queue=queue_name)
 
             # Log only if it's not a reply to queue - there are too many of them to do it
-
             if not queue_name.startswith(PubSub.Prefix.Reply_Queue):
                 logger.info(f'[{cid}] Deleted queue: {queue_name}')
 
@@ -219,7 +218,7 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def get_bindings(
+    def _get_bindings(
         self,
         cid: 'str',
         exchange_name: 'str',
@@ -228,55 +227,45 @@ class AMQP:
         # Get binding information
         logger.debug(f'[{cid}] Getting bindings for exchange={exchange_name}')
 
-        # We'll store binding information here
-        binding_info = []
-
         # Get broker configuration
         broker_config = get_broker_config()
 
-        # Extract host and port information
+        # Build the management API URL
         host, _ = broker_config.address.split(':')
+        management_port = broker_config.management_port
+        management_url = f'http://{host}:{management_port}/api/exchanges/{broker_config.vhost}/{exchange_name}/bindings/source'
 
-        # Default management API port
-        rabbitmq_api_port = 15672
+        # Make the request
+        auth = HTTPBasicAuth(broker_config.username, broker_config.password)
+        response = requests.get(management_url, auth=auth)
 
-        # The management API URL includes the vhost encoded as %2F for default vhost
-        vhost_encoded = broker_config.vhost.replace('/', '%2F')
+        if response.status_code != OK:
+            logger.warning(f'[{cid}] Failed to get bindings for exchange {exchange_name}: {response.status_code} {response.text}')
+            return []
 
-        # Construct the API URL for this exchange's bindings
-        api_url = f'http://{host}:{rabbitmq_api_port}/api/exchanges/{vhost_encoded}/{exchange_name}/bindings/source'
+        # Parse the response
+        bindings_data = response.json()
 
-        # Make the request to the RabbitMQ API
-        response = requests.get(
-            api_url,
-            auth=HTTPBasicAuth(broker_config.username, broker_config.password),
-            headers={'Content-Type': 'application/json'},
-            timeout=20
-        )
+        # Transform the data to match our expected format
+        out = []
+        for binding in bindings_data:
+            out.append({
+                'source': binding.get('source', ''),
+                'destination': binding.get('destination', ''),
+                'destination_type': binding.get('destination_type', ''),
+                'routing_key': binding.get('routing_key', ''),
+                'arguments': binding.get('arguments', {}),
+                'properties_key': binding.get('properties_key', ''),
+                'queue': binding.get('destination', ''),  # For compatibility
+            })
 
-        if not response.status_code == OK:
-            msg = f'[{cid}] Failed to get bindings: API returned: {response.text}'
-            raise Exception(msg)
+        logger.debug(f'[{cid}] Found {len(out)} bindings for exchange {exchange_name}')
+        return out
 
-        else:
+# ################################################################################################################################
 
-            # Parse bindings from response
-            bindings_data = response.json()
-
-            # Process each binding
-            for binding in bindings_data:
-
-                # Only include bindings to queues (not to other exchanges)
-                if binding['destination_type'] == 'queue':
-                    binding_info.append({
-                        'queue': binding['destination'],
-                        'routing_key': binding['routing_key'],
-                        'exchange': binding['source'],
-                        'arguments': binding.get('arguments') or {},
-                        'vhost': binding['vhost'],
-                    })
-
-        return binding_info
+    def get_bindings(self, *args, **kwargs) -> 'dictlist':
+        return self._wait_for_completion(self._get_bindings, 'Get bindings failed', *args, **kwargs)
 
 # ################################################################################################################################
 
