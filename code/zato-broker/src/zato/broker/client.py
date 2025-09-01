@@ -796,51 +796,8 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def create_bindings(
-        self,
-        cid: 'str',
-        sub_key: 'str',
-        exchange_name: 'str',
-        queue_name: 'str',
-        routing_key: 'str',
-        conn: 'BrokerConnection | None'=None,
-        queue_arguments: 'strdictnone'=None,
-    ) -> 'None':
-
-        # Make sure we have a cid
-        cid = cid or new_cid_broker_client()
-
-        # Get broker connection from input or build a new one
-        if conn:
-            should_close = False
-        else:
-            conn = self.get_connection()
-            should_close = True
-
-        # Customize the queue per our needs ..
-        queue_arguments = queue_arguments or {}
-        queue_arguments.update({
-            'x-queue-type': 'quorum',
-            'x-delivery-limit': PubSub.Max_Repeats
-        })
-
-        # Create exchange and queue objects
-        exchange = Exchange(exchange_name, type='topic', durable=True)
-        queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True, queue_arguments=queue_arguments)
-
-        # Bind the queue to the exchange with the topic name as the routing key
-        logger.debug(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
-
-        _ = queue.maybe_bind(conn)
-        _ = queue.declare()
-        _ = queue.bind_to(
-            exchange=exchange, # type: ignore
-            routing_key=routing_key
-        )
-
-        # Close the connection if it was opened by us
-        if should_close:
-            conn.close()
+    def create_bindings(self, *args, **kwargs):
+        return self._amqp.create_bindings(*args, **kwargs)
 
 # ################################################################################################################################
 
