@@ -36,6 +36,7 @@ from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow, wait_for_predicate
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
+from zato.broker.amqp_layer import AMQP as _AMQP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,6 +97,7 @@ class BrokerClient:
         self.reply_consumer_started = False
         self.consumer = None
         self.consumer_drain_events_timeout = kwargs.get('consumer_drain_events_timeout')
+        self._amqp = _AMQP()
 
         # This is the object whose on_broker_msg_ methods will be invoked for any messages taken off a queue
         self.context = kwargs.get('context') or self
@@ -651,30 +653,8 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def get_connection(self, broker_config:'BrokerConfig | None'=None, needs_ensure:'bool'=True) -> 'BrokerConnection':
-        """ Returns a new AMQP connection object using broker configuration parameters.
-        """
-        # Get broker configuration
-        broker_config = get_broker_config()
-
-        # Split host and port from address
-        host, port = broker_config.address.split(':')
-        port = int(port)
-
-        # Create and return a new connection
-        conn = BrokerConnection(
-            hostname=host,
-            port=port,
-            userid=broker_config.username,
-            password=broker_config.password,
-            virtual_host=broker_config.vhost,
-            transport=broker_config.protocol,
-        )
-
-        # Make sure we are connected
-        _ = conn.ensure_connection(timeout=1)
-
-        return conn
+    def get_connection(self, *args, **kwargs):
+        return self._amqp.get_connection(*args, **kwargs)
 
 # ################################################################################################################################
 
