@@ -115,4 +115,36 @@ class AMQP:
             conn.close()
 
 # ################################################################################################################################
+
+    def delete_bindings(
+        self,
+        cid: 'str',
+        sub_key: 'str',
+        exchange_name: 'str',
+        queue_name: 'str',
+        routing_key: 'str',
+        conn: 'BrokerConnection | None'=None,
+    ) -> 'None':
+
+        # Get broker connection from input or build a new one
+        conn = conn or self.get_connection()
+
+        # Create exchange and queue objects
+        exchange = Exchange(exchange_name, type='topic', durable=True)
+
+        # Unbind the queue from the exchange with the topic name as the routing key
+        logger = getLogger('zato')
+        logger.debug(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
+
+        # Get a channel from the connection
+        channel = conn.channel()
+
+        # Unbind the queue from the exchange
+        _ = channel.queue_unbind(
+            queue=queue_name,
+            exchange=exchange_name,
+            routing_key=routing_key
+        )
+
+# ################################################################################################################################
 # ################################################################################################################################

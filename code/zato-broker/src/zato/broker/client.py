@@ -36,7 +36,7 @@ from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow, wait_for_predicate
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
-from zato.broker.amqp_layer import AMQP as _AMQP
+from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,13 +74,6 @@ class NoResponseReceivedException(Exception):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-class BrokerConnection(KombuConnection):
-
-    def ensure_connection(self, *args, **kwargs):
-        kwargs['timeout'] = None
-        _ = self._ensure_connection(*args, **kwargs)
-        return self
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -820,34 +813,8 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def delete_bindings(
-        self,
-        cid: 'str',
-        sub_key: 'str',
-        exchange_name: 'str',
-        queue_name: 'str',
-        routing_key: 'str',
-        conn: 'BrokerConnection | None'=None,
-    ) -> 'None':
-
-        # Get broker connection from input or build a new one
-        conn = conn or self.get_connection()
-
-        # Create exchange and queue objects
-        exchange = Exchange(exchange_name, type='topic', durable=True)
-
-        # Unbind the queue from the exchange with the topic name as the routing key
-        logger.debug(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
-
-        # Get a channel from the connection
-        channel = conn.channel()
-
-        # Unbind the queue from the exchange
-        _ = channel.queue_unbind(
-            queue=queue_name,
-            exchange=exchange_name,
-            routing_key=routing_key
-        )
+    def delete_bindings(self, *args, **kwargs):
+        return self._amqp.delete_bindings(*args, **kwargs)
 
 # ################################################################################################################################
 
