@@ -368,7 +368,7 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def rename_topic(
+    def _rename_topic(
         self,
         cid: 'str',
         old_topic_name: 'str',
@@ -427,11 +427,43 @@ class AMQP:
 
 # ################################################################################################################################
 
+    def rename_topic(
+        self,
+        cid: 'str',
+        old_topic_name: 'str',
+        new_topic_name: 'str',
+        exchange_name: 'str',
+        conn: 'BrokerConnection | None' = None,
+    ) -> 'None':
+
+        def _predicate_func():
+            try:
+                self._rename_topic(cid, old_topic_name, new_topic_name, exchange_name, conn)
+                return True
+            except Exception as e:
+                logger = getLogger('zato')
+                logger.info(f'Topic rename failed for `{old_topic_name}` -> `{new_topic_name}`, will retry: {e}')
+                return False
+
+        _ = wait_for_predicate(
+            _predicate_func,
+            100_000_000,  # Wait forever
+            2.0,          # Check every 2 seconds
+            jitter=0.2
+        )
+
+# ################################################################################################################################
+
+    def _create_internal_queue(self, queue_name:'str') -> 'None':
+        self.create_bindings('', 'n/a', 'components', queue_name, queue_name)
+
+# ################################################################################################################################
+
     def create_internal_queue(self, queue_name:'str') -> 'None':
 
-        def _predicate_create_queue():
+        def _predicate_func():
             try:
-                self.create_bindings('', 'n/a', 'components', queue_name, queue_name)
+                self._create_internal_queue(queue_name)
                 return True
             except Exception as e:
                 logger = getLogger('zato')
@@ -439,7 +471,7 @@ class AMQP:
                 return False
 
         _ = wait_for_predicate(
-            _predicate_create_queue,
+            _predicate_func,
             100_000_000,  # Wait forever
             2.0,          # Check every 2 seconds
             jitter=0.2
