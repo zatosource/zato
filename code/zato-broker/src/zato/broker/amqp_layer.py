@@ -51,14 +51,15 @@ class BrokerConnection(KombuConnection):
 
 class AMQP:
 
-    def _wait_for_completion(self, func:'callable_', log_message:'str', *args:'any_', **kwargs:'any_') -> 'None':
+    def _wait_for_completion(self, func:'callable_', log_message:'str', *args:'any_', **kwargs:'any_') -> 'any_':
 
         def _predicate_func():
             try:
-                func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                _predicate_func.result = result # type: ignore
                 return True
             except Exception as e:
-                logger.info(f'{log_message}, will retry: {e}')
+                logger.info(f'Error calling `{func.__name__}` with `{args}` and `{kwargs}` - {log_message}, will retry: {e}')
                 return False
 
         _ = wait_for_predicate(
@@ -68,9 +69,11 @@ class AMQP:
             jitter=0.2
         )
 
+        return getattr(_predicate_func, 'result', None)
+
 # ################################################################################################################################
 
-    def get_connection(self, broker_config:'BrokerConfig | None'=None, needs_ensure:'bool'=True) -> 'BrokerConnection':
+    def _get_connection(self, broker_config:'BrokerConfig | None'=None, needs_ensure:'bool'=True) -> 'BrokerConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
         """
         # Get broker configuration
@@ -97,7 +100,12 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def create_bindings(
+    def get_connection(self, *args, **kwargs) -> 'BrokerConnection':
+        return self._wait_for_completion(self._get_connection, 'Connection creation failed', *args, **kwargs)
+
+# ################################################################################################################################
+
+    def _create_bindings(
         self,
         cid: 'str',
         sub_key: 'str',
@@ -145,7 +153,12 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def delete_bindings(
+    def create_bindings(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._create_bindings, 'Bindings creation failed', *args, **kwargs)
+
+# ################################################################################################################################
+
+    def _delete_bindings(
         self,
         cid: 'str',
         sub_key: 'str',
@@ -161,14 +174,12 @@ class AMQP:
         # Create exchange and queue objects
         exchange = Exchange(exchange_name, type='topic', durable=True)
 
-        # Unbind the queue from the exchange with the topic name as the routing key
-
         logger.debug(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         # Get a channel from the connection
         channel = conn.channel()
 
-        # Unbind the queue from the exchange
+        # Unbind the queue from the exchange with the topic name as the routing key
         _ = channel.queue_unbind(
             queue=queue_name,
             exchange=exchange_name,
@@ -177,7 +188,12 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def delete_queue(self, cid:'str', queue_name:'str') -> 'None':
+    def delete_bindings(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._delete_bindings, 'Bindings deletion failed', *args, **kwargs)
+
+# ################################################################################################################################
+
+    def _delete_queue(self, cid:'str', queue_name:'str') -> 'None':
         """ Explicitly deletes a queue from the broker.
         """
         try:
@@ -198,6 +214,11 @@ class AMQP:
 
 # ################################################################################################################################
 
+    def delete_queue(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._delete_queue, 'Queue deletion failed', *args, **kwargs)
+
+# ################################################################################################################################
+
     def get_bindings(
         self,
         cid: 'str',
@@ -205,7 +226,6 @@ class AMQP:
     ) -> 'dictlist':
 
         # Get binding information
-
         logger.debug(f'[{cid}] Getting bindings for exchange={exchange_name}')
 
         # We'll store binding information here
@@ -285,7 +305,6 @@ class AMQP:
         new_keys_set = set(new_routing_key_list)
 
         # If sets are identical, do nothing
-
         if current_keys_set == new_keys_set:
             logger.debug(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
             return {'added': [], 'removed': []}
@@ -315,7 +334,7 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def delete_topic(
+    def _delete_topic(
         self,
         cid: 'str',
         topic_name: 'str',
@@ -335,7 +354,6 @@ class AMQP:
         if not topic_bindings:
             return
 
-
         logger.info(f'[{cid}] Removing topic bindings -> {topic_name} -> {topic_bindings}')
 
         # Delete each binding
@@ -346,6 +364,11 @@ class AMQP:
             self.delete_bindings(cid, sub_key, exchange_name, sub_key, topic_name, conn)
 
         logger.info(f'[{cid}] Topic {topic_name} successfully removed from exchange {exchange_name}')
+
+# ################################################################################################################################
+
+    def delete_topic(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._delete_topic, 'Topic deletion failed', *args, **kwargs)
 
 # ################################################################################################################################
 
