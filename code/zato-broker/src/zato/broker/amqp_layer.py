@@ -29,7 +29,12 @@ from zato.common.util.api import new_cid_broker_client, wait_for_predicate
 
 if 0:
     from zato.common.pubsub.common import BrokerConfig
-    from zato.common.typing_ import dictlist, strdictnone, strlist
+    from zato.common.typing_ import any_, dictlist, strdictnone, strlist, callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +50,25 @@ class BrokerConnection(KombuConnection):
 # ################################################################################################################################
 
 class AMQP:
+
+    def _wait_for_completion(self, func:'callable_', log_message:'str', *args:'any_', **kwargs:'any_') -> 'None':
+
+        def _predicate_func():
+            try:
+                func(*args, **kwargs)
+                return True
+            except Exception as e:
+                logger.info(f'{log_message}, will retry: {e}')
+                return False
+
+        _ = wait_for_predicate(
+            _predicate_func,
+            100_000_000,  # Wait forever
+            2.0,          # Check every 2 seconds
+            jitter=0.2
+        )
+
+# ################################################################################################################################
 
     def get_connection(self, broker_config:'BrokerConfig | None'=None, needs_ensure:'bool'=True) -> 'BrokerConnection':
         """ Returns a new AMQP connection object using broker configuration parameters.
@@ -106,7 +130,6 @@ class AMQP:
         queue = Queue(name=queue_name, exchange=exchange, routing_key=routing_key, durable=True, queue_arguments=queue_arguments)
 
         # Bind the queue to the exchange with the topic name as the routing key
-        logger = getLogger('zato')
         logger.debug(f'[{cid}] [{sub_key}] Configuring bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         _ = queue.maybe_bind(conn)
@@ -139,7 +162,7 @@ class AMQP:
         exchange = Exchange(exchange_name, type='topic', durable=True)
 
         # Unbind the queue from the exchange with the topic name as the routing key
-        logger = getLogger('zato')
+
         logger.debug(f'[{cid}] [{sub_key}] Removing bindings for exchange={exchange.name} -> queue={queue_name} (topic={routing_key})')
 
         # Get a channel from the connection
@@ -164,12 +187,12 @@ class AMQP:
             channel.queue_delete(queue=queue_name)
 
             # Log only if it's not a reply to queue - there are too many of them to do it
-            logger = getLogger('zato')
+
             if not queue_name.startswith(PubSub.Prefix.Reply_Queue):
                 logger.info(f'[{cid}] Deleted queue: {queue_name}')
 
         except Exception:
-            logger = getLogger('zato')
+
             logger.warning(f'[{cid}] Error deleting queue `{queue_name}` -> {format_exc()}')
             raise
 
@@ -182,7 +205,7 @@ class AMQP:
     ) -> 'dictlist':
 
         # Get binding information
-        logger = getLogger('zato')
+
         logger.debug(f'[{cid}] Getting bindings for exchange={exchange_name}')
 
         # We'll store binding information here
@@ -262,7 +285,7 @@ class AMQP:
         new_keys_set = set(new_routing_key_list)
 
         # If sets are identical, do nothing
-        logger = getLogger('zato')
+
         if current_keys_set == new_keys_set:
             logger.debug(f'[{cid}] [{sub_key}] Routing keys unchanged for exchange={exchange_name} -> queue={queue_name}')
             return {'added': [], 'removed': []}
@@ -312,7 +335,7 @@ class AMQP:
         if not topic_bindings:
             return
 
-        logger = getLogger('zato')
+
         logger.info(f'[{cid}] Removing topic bindings -> {topic_name} -> {topic_bindings}')
 
         # Delete each binding
@@ -386,7 +409,7 @@ class AMQP:
         topic_bindings = self.get_bindings_by_routing_key(cid, exchange_name, old_topic_name)
 
         # If no bindings found, just return silently
-        logger = getLogger('zato')
+
         if not topic_bindings:
             logger.info(f'[{cid}] Nothing to rename, no bindings found for `{old_topic_name}` in `{exchange_name}`')
             return
@@ -427,30 +450,8 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def rename_topic(
-        self,
-        cid: 'str',
-        old_topic_name: 'str',
-        new_topic_name: 'str',
-        exchange_name: 'str',
-        conn: 'BrokerConnection | None' = None,
-    ) -> 'None':
-
-        def _predicate_func():
-            try:
-                self._rename_topic(cid, old_topic_name, new_topic_name, exchange_name, conn)
-                return True
-            except Exception as e:
-                logger = getLogger('zato')
-                logger.info(f'Topic rename failed for `{old_topic_name}` -> `{new_topic_name}`, will retry: {e}')
-                return False
-
-        _ = wait_for_predicate(
-            _predicate_func,
-            100_000_000,  # Wait forever
-            2.0,          # Check every 2 seconds
-            jitter=0.2
-        )
+    def rename_topic(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._rename_topic, 'Topic rename failed', *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -459,23 +460,8 @@ class AMQP:
 
 # ################################################################################################################################
 
-    def create_internal_queue(self, queue_name:'str') -> 'None':
-
-        def _predicate_func():
-            try:
-                self._create_internal_queue(queue_name)
-                return True
-            except Exception as e:
-                logger = getLogger('zato')
-                logger.info(f'Queue creation failed for `{queue_name}`, will retry: {e}')
-                return False
-
-        _ = wait_for_predicate(
-            _predicate_func,
-            100_000_000,  # Wait forever
-            2.0,          # Check every 2 seconds
-            jitter=0.2
-        )
+    def create_internal_queue(self, *args, **kwargs) -> 'None':
+        self._wait_for_completion(self._create_internal_queue, 'Queue creation failed', *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
