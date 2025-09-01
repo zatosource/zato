@@ -58,7 +58,7 @@ export default function() {
   });
 
   if (response.status !== 200) {
-    console.error(`Publish failed for VU ${__VU}: ${response.status} - ${response.body}`);
+    console.error(`Publish failed for VU ${__VU}: ${response.status} - Topic: ${topicName} - Message: ${JSON.stringify(payload.data)} - Timestamp: ${payload.data.timestamp} - Response: ${response.body}`);
   }
 
   sleep(0.1);

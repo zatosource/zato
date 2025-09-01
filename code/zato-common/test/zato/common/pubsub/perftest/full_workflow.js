@@ -5,10 +5,12 @@ import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PU
 export let options = {
   scenarios: {
     default: {
-      executor: 'per-vu-iterations',
-      vus: VUS,
-      iterations: ITERATIONS_PER_VU,
-      maxDuration: '1200m',
+      executor: 'constant-arrival-rate',
+      rate: 200,
+      timeUnit: '1s',
+      duration: '3h',
+      preAllocatedVUs: 50,
+      maxVUs: 200,
     }
   },
   thresholds: {
@@ -50,7 +52,7 @@ function publish(topicName, userCreds) {
   }, { operation: 'publish' });
 
   if (publishResponse.status !== 200) {
-    console.error(`Publish failed for VU ${__VU}: ${publishResponse.status}`);
+    console.error(`Publish failed for VU ${__VU}: ${publishResponse.status} - Topic: ${topicName} - Message: ${JSON.stringify(payload.data)} - Timestamp: ${payload.data.timestamp} - Response: ${publishResponse.body}`);
   } else {
     const body = JSON.parse(publishResponse.body);
     console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
