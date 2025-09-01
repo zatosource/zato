@@ -28,7 +28,7 @@ function publish(topicName, userCreds) {
       iteration: __ITER,
     },
     priority: 5,
-    expiration: 3600,
+    expiration: 3600 * 24 * 365,
   };
 
   let publishResponse = http.post(
