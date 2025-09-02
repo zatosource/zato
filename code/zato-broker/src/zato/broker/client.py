@@ -184,7 +184,7 @@ class BrokerClient:
         with self.producer.acquire() as client:
 
             # Make sure we are connected ..
-            _ = client.connection.ensure_connection() # type: ignore
+            # _ = client.connection.ensure_connection() # type: ignore
 
             # Enable confirm mode on the channel
             client.channel.confirm_select()
