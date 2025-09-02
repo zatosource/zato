@@ -97,21 +97,19 @@ class ProgressTracker:
         filled = int((percentage / 100) * bar_width)
         bar = '█' * filled + '░' * (bar_width - filled)
         
-        # Color coding
-        if percentage < 50:
-            color = Fore.RED
-        elif percentage < 80:
-            color = Fore.YELLOW
+        # Color coding for failed messages
+        if self.failed_messages > 0:
+            failed_color = Fore.RED
         else:
-            color = Fore.GREEN
+            failed_color = Fore.GREEN
             
         progress_line = (
-            f'\r{color}Progress: [{bar}] '
+            f'\r{Fore.GREEN}Progress: [{bar}] '
             f'{percentage:5.1f}% '
             f'({total_processed:,}/{self.total_messages:,}) '
             f'| Rate: {rate:6.1f} req/s '
             f'| Success: {self.completed_messages:,} '
-            f'| Failed: {self.failed_messages:,} '
+            f'| Failed: {failed_color}{self.failed_messages:,}{Fore.GREEN} '
             f'| ETA: {eta_str}{Style.RESET_ALL}'
         )
         
@@ -144,7 +142,7 @@ logger = getLogger(__name__)
 class Producer:
     """ Placeholder class for Producer instances.
     """
-    def __init__(self, reqs_per_producer:'int'=1, producer_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3, progress_tracker:'ProgressTracker') -> 'None':
+    def __init__(self, progress_tracker:'ProgressTracker', reqs_per_producer:'int'=1, producer_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
         self.reqs_per_producer = reqs_per_producer
         self.producer_id = producer_id
         self.reqs_per_second = reqs_per_second
@@ -277,7 +275,7 @@ class ProducerManager:
     def _start_producer(self, reqs_per_producer:'int', producer_id:'int', reqs_per_second:'float', max_topics:'int', progress_tracker:'ProgressTracker') -> 'any_':
         """ Creates a new Producer instance in a greenlet.
         """
-        producer = Producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker)
+        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, max_topics)
         greenlet = spawn(producer.start)
         return greenlet
 
