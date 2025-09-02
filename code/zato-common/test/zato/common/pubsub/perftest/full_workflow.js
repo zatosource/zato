@@ -58,7 +58,8 @@ function publish(topicName, userCreds) {
   }, { operation: 'publish' });
 
   if (publishResponse.status !== 200) {
-    console.error(`\n***************************************************************
+    if (publishResponse.error !== 'context canceled') {
+      console.error(`\n***************************************************************
 Publish failed for VU ${__VU}:
 Timestamp: ${payload.data.timestamp}
 Duration: ${duration}ms
@@ -72,6 +73,8 @@ RequestPayload: ${JSON.stringify(payload)}
 RequestHeaders: ${JSON.stringify(userCreds.headers)}
 URL: ${BASE_URL}/pubsub/topic/${topicName}
 ***************************************************************`);
+      fail(`Publish failed with status ${publishResponse.status}`);
+    }
   } else {
     const body = JSON.parse(publishResponse.body);
     console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
@@ -137,7 +140,8 @@ ErrorCode: ${pullResponse.error_code || 'none'}
         emptyAttempts++;
       }
     } else {
-      console.error(`\n***************************************************************
+      if (pullResponse.error !== 'context canceled') {
+        console.error(`\n***************************************************************
 VU ${__VU}: pull failed:
 Timestamp: ${new Date().toISOString()}
 Status: ${pullResponse.status}
@@ -146,7 +150,8 @@ ErrorCode: ${pullResponse.error_code || 'none'}
 Body: ${pullResponse.body || 'null'}
 RequestPayload: ${JSON.stringify(payload)}
 ***************************************************************`);
-      emptyAttempts++;
+        fail(`Pull failed with status ${pullResponse.status}`);
+      }
     }
 
     sleep(0.1);
