@@ -137,12 +137,17 @@ class ProgressTracker:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Producer:
-    """ Placeholder class for Producer instances.
+class Client:
+    """ Base class for pub/sub clients.
     """
-    def __init__(self, progress_tracker:'ProgressTracker', reqs_per_producer:'int'=1, producer_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
-        self.reqs_per_producer = reqs_per_producer
-        self.producer_id = producer_id
+    def __init__(self,
+        progress_tracker:'ProgressTracker',
+        client_id:'int'=0,
+        reqs_per_second:'float'=1.0,
+        max_topics:'int'=3
+    ) -> 'None':
+
+        self.client_id = client_id
         self.reqs_per_second = reqs_per_second
         self.max_topics = max_topics
         self.progress_tracker = progress_tracker
@@ -162,7 +167,6 @@ class Producer:
         base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
         username = os.environ['Zato_Test_PubSub_OpenAPI_Username']
         password = os.environ['Zato_Test_PubSub_OpenAPI_Password']
-        reqs_per_producer = self.reqs_per_producer
         reqs_per_second = self.reqs_per_second
         max_topics = self.max_topics
 
@@ -171,7 +175,6 @@ class Producer:
             'username': username,
             'password': password,
             'max_topics': max_topics,
-            'reqs_per_producer': reqs_per_producer,
             'reqs_per_second': reqs_per_second,
         }
 
@@ -182,11 +185,11 @@ class Producer:
         """
         return {
             'data': {
-                'message': f'Test message from Python invoker',
+                'message': f'Test message from Python client',
                 'topic': topic_name,
             },
             'priority': 5,
-            'expiration': 3600,
+            'expiration': 3600 * 1000,
         }
 
 # ################################################################################################################################
@@ -203,12 +206,38 @@ class Producer:
             self.progress_tracker.update_progress(success)
 
         if not success:
-            logger.error(f'Producer {self.producer_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
+            logger.error(f'Client {self.client_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
 
 # ################################################################################################################################
 
-    def _start(self) -> 'None':
-        """ Main invoker logic.
+    def start(self) -> 'None':
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+class Producer(Client):
+    """ Producer client for publishing messages.
+    """
+    def __init__(self,
+        progress_tracker:'ProgressTracker',
+        reqs_per_producer:'int'=1,
+        producer_id:'int'=0,
+        reqs_per_second:'float'=1.0,
+        max_topics:'int'=3
+    ) -> 'None':
+
+        super().__init__(progress_tracker, producer_id, reqs_per_second, max_topics)
+        self.reqs_per_producer = reqs_per_producer
+
+    def _get_config(self) -> 'anydict':
+        """ Get configuration from environment variables.
+        """
+        config = super()._get_config()
+        config['reqs_per_producer'] = self.reqs_per_producer
+        return config
+
+    def start(self) -> 'None':
+        """ Start the producer.
         """
         config = self._get_config()
         auth = (config['username'], config['password'])
@@ -231,7 +260,6 @@ class Producer:
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
                 payload = self._create_payload(topic_name)
 
-                # Remove individual producer logging since we have global progress now
                 self._publish_message(url, payload, headers, auth)
 
                 end_time = utcnow()
@@ -242,31 +270,20 @@ class Producer:
                     sleep(sleep_time)
 
 # ################################################################################################################################
-
-    def _after_start(self) -> 'None':
-        """ Called after starting the invoker.
-        """
-        pass
-
-# ################################################################################################################################
-
-    def start(self) -> 'None':
-        """ Start the invoker.
-        """
-        self._before_start()
-        self._start()
-        self._after_start()
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class ProducerManager:
     """ Creates new instances of Producer class in greenlets.
     """
 
-    def _start_producer(self, reqs_per_producer:'int', producer_id:'int', reqs_per_second:'float', max_topics:'int', progress_tracker:'ProgressTracker') -> 'any_':
-        """ Creates a new Producer instance in a greenlet.
-        """
+    def _start_producer(self,
+        reqs_per_producer:'int',
+        producer_id:'int',
+        reqs_per_second:'float',
+        max_topics:'int',
+        progress_tracker:'ProgressTracker'
+    ) -> 'any_':
+
         producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, max_topics)
         greenlet = spawn(producer.start)
         return greenlet
