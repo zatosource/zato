@@ -109,7 +109,7 @@ class ProgressTracker:
             f'({total_processed:,}/{self.total_messages:,}) '
             f'| Rate: {rate:6.1f} req/s '
             f'| Success: {self.completed_messages:,} '
-            f'| Failed: {failed_color}{self.failed_messages:,}{Fore.GREEN} '
+            f'| Failed: {Style.RESET_ALL}{failed_color}{self.failed_messages:,}{Style.RESET_ALL} '
             f'| ETA: {eta_str}{Style.RESET_ALL}'
         )
         
