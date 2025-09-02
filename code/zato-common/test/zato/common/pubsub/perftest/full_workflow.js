@@ -154,6 +154,7 @@ export default function() {
     publish(topicName, userCreds);
   }
 
+  /*
   console.log(`VU ${__VU}: waiting ${WAIT_BEFORE_PULL_SECONDS} seconds before pulling messages...`);
   for (let i = 1; i <= WAIT_BEFORE_PULL_SECONDS; i++) {
     sleep(1);
@@ -161,4 +162,5 @@ export default function() {
   }
   console.log(`VU ${__VU}: finished waiting, starting to pull messages`);
   pullMessages(userCreds);
+  */
 }
