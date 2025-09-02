@@ -151,9 +151,9 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. build our response ..
         response = APIResponse()
-        response.is_ok = True # result.is_ok
+        response.is_ok = result.is_ok
         response.cid = cid
-        response.msg_id = new_msg_id() # result.msg_id
+        response.msg_id = result.msg_id
 
         # .. and return it to the caller.
         return response
@@ -396,8 +396,8 @@ class PubSubRESTServer(BaseRESTServer):
             message_count = len(messages)
             message_word = 'message' if message_count == 1 else 'messages'
 
-            if _needs_details:
-                logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
+            #if _needs_details:
+            logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
 
             response = self._build_success_response(cid, messages, max_messages, wrap_in_list)
             return response

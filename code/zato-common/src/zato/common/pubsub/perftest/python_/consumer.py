@@ -90,7 +90,7 @@ class Consumer(Client):
                 message_count = len(messages)
                 logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
-                for _ in range(message_count):
+                if message_count > 0:
                     self.progress_tracker.update_progress(True)
 
             except Exception as e:
