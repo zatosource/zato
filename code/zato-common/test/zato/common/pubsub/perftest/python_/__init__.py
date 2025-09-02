@@ -33,7 +33,7 @@ logging.basicConfig(level=log_level, format=log_format)
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +46,7 @@ logger = getLogger(__name__)
 class Invoker:
     """ Placeholder class for Invoker instances.
     """
-    def __init__(self, reqs_per_invoker: 'int' = 1) -> 'None':
+    def __init__(self, reqs_per_invoker:'int'=1) -> 'None':
         self.reqs_per_invoker = reqs_per_invoker
 
 # ################################################################################################################################
@@ -58,7 +58,7 @@ class Invoker:
 
 # ################################################################################################################################
 
-    def _get_config(self) -> 'dict':
+    def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
         base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
@@ -67,7 +67,7 @@ class Invoker:
         max_topics_env = os.environ['Zato_Test_PubSub_OpenAPI_Max_Topics']
         max_topics = int(max_topics_env)
         reqs_per_invoker = self.reqs_per_invoker
-        
+
         return {
             'base_url': base_url,
             'username': username,
@@ -78,7 +78,7 @@ class Invoker:
 
 # ################################################################################################################################
 
-    def _create_payload(self, topic_name: 'str') -> 'dict':
+    def _create_payload(self, topic_name:'str') -> 'anydict':
         """ Create message payload for publishing.
         """
         return {
@@ -92,7 +92,7 @@ class Invoker:
 
 # ################################################################################################################################
 
-    def _publish_message(self, url: 'str', payload: 'dict', headers: 'dict', auth: 'tuple') -> 'None':
+    def _publish_message(self, url:'str', payload:'anydict', headers:'anydict', auth:'tuple') -> 'None':
         """ Publish a single message to the broker.
         """
         response = requests.post(url, data=dumps(payload), headers=headers, auth=auth)
@@ -115,7 +115,7 @@ class Invoker:
         reqs_per_invoker = config['reqs_per_invoker']
         max_topics = config['max_topics']
         max_topics_range = max_topics + 1
-        
+
         for _ in range(reqs_per_invoker):
             for topic_num in range(1, max_topics_range):
                 topic_name = f'demo.{topic_num}'
@@ -147,7 +147,7 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def _start_invoker(self, reqs_per_invoker: 'int') -> 'any_':
+    def _start_invoker(self, reqs_per_invoker:'int') -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
         invoker = Invoker(reqs_per_invoker)
@@ -156,7 +156,7 @@ class InvokerManager:
 
 # ################################################################################################################################
 
-    def run(self, num_invokers: 'int', reqs_per_invoker: 'int' = 1) -> 'None':
+    def run(self, num_invokers:'int', reqs_per_invoker:'int'=1) -> 'None':
         """ Run the specified number of invokers and wait for completion.
         """
         if num_invokers == 1:
