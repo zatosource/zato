@@ -97,11 +97,11 @@ class ProgressTracker:
         filled = int((percentage / 100) * bar_width)
         bar = '█' * filled + '░' * (bar_width - filled)
         
-        # Color coding for failed messages
+        # Color failed messages
         if self.failed_messages > 0:
-            failed_color = Fore.RED
+            failed_section = f'{Style.RESET_ALL}{Fore.RED}Failed: {self.failed_messages:,}{Style.RESET_ALL}'
         else:
-            failed_color = Fore.GREEN
+            failed_section = f'{Style.RESET_ALL}Failed: {self.failed_messages:,}{Style.RESET_ALL}'
             
         progress_line = (
             f'\r{Fore.GREEN}Progress: [{bar}] '
@@ -109,7 +109,7 @@ class ProgressTracker:
             f'({total_processed:,}/{self.total_messages:,}) '
             f'| Rate: {rate:6.1f} req/s '
             f'| Success: {self.completed_messages:,} '
-            f'| Failed: {Style.RESET_ALL}{failed_color}{self.failed_messages:,}{Style.RESET_ALL} '
+            f'| {failed_section}{Fore.GREEN} '
             f'| ETA: {eta_str}{Style.RESET_ALL}'
         )
         
