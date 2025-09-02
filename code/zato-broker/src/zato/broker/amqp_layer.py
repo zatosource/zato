@@ -129,8 +129,8 @@ class AMQP:
         # Customize the queue per our needs ..
         queue_arguments = queue_arguments or {}
         queue_arguments.update({
-            'x-queue-type': 'quorum',
-            'x-delivery-limit': PubSub.Max_Repeats
+            # 'x-queue-type': 'quorum',
+            # 'x-delivery-limit': PubSub.Max_Repeats
         })
 
         # Create exchange and queue objects
