@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt
 """
 
 # stdlib
-from json import loads
+import os
+import json
 from logging import getLogger
 
 # requests
@@ -42,38 +43,51 @@ class Consumer(Client):
         progress_tracker:'ProgressTracker',
         consumer_id:'int'=0,
         pull_interval:'float'=1.0,
-        max_topics:'int'=3
+        max_topics:'int'=3,
+        max_messages:'int'=100
     ) -> 'None':
 
         super().__init__(progress_tracker, consumer_id, 1.0, max_topics)
         self.pull_interval = pull_interval
+        self.max_messages = max_messages
 
     def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
-        config = super()._get_config()
-        config['pull_interval'] = self.pull_interval
-        return config
+        base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
+        username = f'user.{self.client_id}'
+        password = f'password.{self.client_id}'
+        max_topics = self.max_topics
+        pull_interval = self.pull_interval
+
+        return {
+            'base_url': base_url,
+            'username': username,
+            'password': password,
+            'max_topics': max_topics,
+            'pull_interval': pull_interval,
+            'max_messages': self.max_messages,
+        }
 
 # ################################################################################################################################
 
-    def _consume_messages(self, base_url:'str', headers:'anydict', auth:'tuple', topic_num:'int') -> 'None':
+    def _consume_messages(self, base_url:'str', headers:'anydict', auth:'tuple', topic_num:'int', max_messages:'int') -> 'None':
         """ Retrieve messages from a single topic.
         """
         topic_name = f'demo.{topic_num}'
         url = f'{base_url}/pubsub/messages/get'
-        payload = {'topic_name': topic_name}
-        logger.info(f'Client {self.client_id}: Attempting to consume from {topic_name}')
+        payload = {'topic_name': topic_name, 'max_messages': max_messages}
+        logger.debug(f'Client {self.client_id}: Attempting to consume from {topic_name}')
         response = requests.post(url, json=payload, headers=headers, auth=auth)
 
         success = response.status_code == 200
 
         if success:
             try:
-                data = loads(response.text)
+                data = json.loads(response.text)
                 messages = data.get('messages', [])
                 message_count = len(messages)
-                logger.info(f'Client {self.client_id}: Retrieved {message_count} messages from {topic_name}')
+                logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages from {topic_name}')
 
                 for _ in range(message_count):
                     self.progress_tracker.update_progress(True)
@@ -100,24 +114,25 @@ class Consumer(Client):
         pull_interval = config['pull_interval']
         base_url = config['base_url']
         max_topics = config['max_topics']
+        max_messages = config['max_messages']
         current_topic = 1
 
         while True:
             start_time = utcnow()
-            logger.info(f'Client {self.client_id}: Starting pull cycle for topic demo.{current_topic}')
+            logger.debug(f'Client {self.client_id}: Starting pull cycle for topic demo.{current_topic}')
 
-            self._consume_messages(base_url, headers, auth, current_topic)
+            self._consume_messages(base_url, headers, auth, current_topic, max_messages)
 
             current_topic += 1
             if current_topic > max_topics:
                 current_topic = 1
-                logger.info(f'Client {self.client_id}: Cycling back to topic demo.1')
+                logger.debug(f'Client {self.client_id}: Cycling back to topic demo.1')
 
             end_time = utcnow()
             time_diff = end_time - start_time
             elapsed_time = time_diff.total_seconds()
             sleep_time = pull_interval - elapsed_time
-            logger.info(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next topic')
+            logger.debug(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next topic')
             if sleep_time > 0:
                 sleep(sleep_time)
 
