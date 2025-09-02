@@ -13,8 +13,10 @@ _ = patch_all()
 # stdlib
 import logging
 import os
+import sys
 from json import dumps
 from logging import getLogger
+from threading import Lock
 
 # gevent
 from gevent import sleep, spawn
@@ -22,21 +24,114 @@ from gevent import sleep, spawn
 # requests
 import requests
 
+# colorama
+from colorama import Fore, Style, init as colorama_init
+
 # Zato
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-log_level = logging.INFO
+log_level = logging.WARNING
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=log_level, format=log_format)
+
+colorama_init()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ProgressTracker:
+    """ Tracks progress across all producers.
+    """
+    def __init__(self, total_producers:'int', total_messages:'int') -> 'None':
+        self.total_producers = total_producers
+        self.total_messages = total_messages
+        self.completed_messages = 0
+        self.failed_messages = 0
+        self.start_time = utcnow()
+        self.lock = Lock()
+        
+    def update_progress(self, success:'bool'=True) -> 'None':
+        """ Update progress counters.
+        """
+        with self.lock:
+            if success:
+                self.completed_messages += 1
+            else:
+                self.failed_messages += 1
+            self._display_progress()
+    
+    def _display_progress(self) -> 'None':
+        """ Display progress in place.
+        """
+        current_time = utcnow()
+        elapsed_time = current_time - self.start_time
+        elapsed_seconds = elapsed_time.total_seconds()
+        
+        total_processed = self.completed_messages + self.failed_messages
+        percentage = (total_processed / self.total_messages) * 100 if self.total_messages > 0 else 0
+        
+        if elapsed_seconds > 0:
+            rate = total_processed / elapsed_seconds
+        else:
+            rate = 0
+            
+        if rate > 0:
+            eta_seconds = (self.total_messages - total_processed) / rate
+            eta_minutes = int(eta_seconds // 60)
+            eta_seconds = int(eta_seconds % 60)
+            eta_str = f'{eta_minutes:02d}:{eta_seconds:02d}'
+        else:
+            eta_str = '--:--'
+        
+        # Create progress bar
+        bar_width = 30
+        filled = int((percentage / 100) * bar_width)
+        bar = '█' * filled + '░' * (bar_width - filled)
+        
+        # Color coding
+        if percentage < 50:
+            color = Fore.RED
+        elif percentage < 80:
+            color = Fore.YELLOW
+        else:
+            color = Fore.GREEN
+            
+        progress_line = (
+            f'\r{color}Progress: [{bar}] '
+            f'{percentage:5.1f}% '
+            f'({total_processed:,}/{self.total_messages:,}) '
+            f'| Rate: {rate:6.1f} req/s '
+            f'| Success: {self.completed_messages:,} '
+            f'| Failed: {self.failed_messages:,} '
+            f'| ETA: {eta_str}{Style.RESET_ALL}'
+        )
+        
+        sys.stdout.write(progress_line)
+        sys.stdout.flush()
+        
+    def finish(self) -> 'None':
+        """ Finish progress tracking.
+        """
+        end_time = utcnow()
+        total_time = end_time - self.start_time
+        total_seconds = total_time.total_seconds()
+        
+        print(f'\n{Fore.GREEN}✓ Completed in {total_seconds:.2f}s{Style.RESET_ALL}')
+        print(f'  Total messages: {self.completed_messages + self.failed_messages:,}')
+        print(f'  Success rate: {(self.completed_messages / (self.completed_messages + self.failed_messages) * 100):5.1f}%')
+        if total_seconds > 0:
+            print(f'  Average rate: {(self.completed_messages + self.failed_messages) / total_seconds:.1f} req/s')
+
+
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,11 +144,12 @@ logger = getLogger(__name__)
 class Producer:
     """ Placeholder class for Producer instances.
     """
-    def __init__(self, reqs_per_producer:'int'=1, producer_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
+    def __init__(self, reqs_per_producer:'int'=1, producer_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3, progress_tracker:'ProgressTracker') -> 'None':
         self.reqs_per_producer = reqs_per_producer
         self.producer_id = producer_id
         self.reqs_per_second = reqs_per_second
         self.max_topics = max_topics
+        self.progress_tracker = progress_tracker
 
 # ################################################################################################################################
 
@@ -105,9 +201,12 @@ class Producer:
         response = requests.post(url, data=dumps(payload), headers=headers, auth=auth)
 
         topic_name = payload['data']['topic']
-        if response.status_code == 200:
-            pass
-        else:
+        success = response.status_code == 200
+        
+        if self.progress_tracker:
+            self.progress_tracker.update_progress(success)
+            
+        if not success:
             logger.error(f'Producer {self.producer_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
 
 # ################################################################################################################################
@@ -142,8 +241,7 @@ class Producer:
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
                 payload = self._create_payload(topic_name)
 
-                if message_count == 1 or message_count % log_interval == 0:
-                    logger.info(f'Producer {self.producer_id}: Sending message {message_count}/{total_messages} to {topic_name} ({reqs_per_second} req/s)')
+                # Remove individual producer logging since we have global progress now
                 self._publish_message(url, payload, headers, auth)
 
                 end_time = utcnow()
@@ -176,10 +274,10 @@ class ProducerManager:
     """ Creates new instances of Producer class in greenlets.
     """
 
-    def _start_producer(self, reqs_per_producer:'int', producer_id:'int', reqs_per_second:'float', max_topics:'int') -> 'any_':
+    def _start_producer(self, reqs_per_producer:'int', producer_id:'int', reqs_per_second:'float', max_topics:'int', progress_tracker:'ProgressTracker') -> 'any_':
         """ Creates a new Producer instance in a greenlet.
         """
-        producer = Producer(reqs_per_producer, producer_id, reqs_per_second, max_topics)
+        producer = Producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker)
         greenlet = spawn(producer.start)
         return greenlet
 
@@ -193,16 +291,23 @@ class ProducerManager:
         else:
             noun = 'producers'
 
-        logger.info(f'Starting {num_producers} {noun}')
+        total_messages = num_producers * reqs_per_producer * max_topics
+        progress_tracker = ProgressTracker(num_producers, total_messages)
+        
+        print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
+        print(f'{Fore.CYAN}Rate: {reqs_per_second} req/s per producer, Topics: {max_topics}{Style.RESET_ALL}')
+        print()
 
         greenlets = []
         for producer_id in range(1, num_producers + 1):
-            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, max_topics)
+            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
         for greenlet in greenlets:
             greenlet.join()
+            
+        progress_tracker.finish()
 
 # ################################################################################################################################
 # ################################################################################################################################
