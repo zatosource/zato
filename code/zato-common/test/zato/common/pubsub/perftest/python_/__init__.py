@@ -49,10 +49,11 @@ logger = getLogger(__name__)
 class Invoker:
     """ Placeholder class for Invoker instances.
     """
-    def __init__(self, reqs_per_invoker:'int'=1, invoker_id:'int'=0, reqs_per_second:'float'=1.0) -> 'None':
+    def __init__(self, reqs_per_invoker:'int'=1, invoker_id:'int'=0, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
         self.reqs_per_invoker = reqs_per_invoker
         self.invoker_id = invoker_id
         self.reqs_per_second = reqs_per_second
+        self.max_topics = max_topics
 
 # ################################################################################################################################
 
@@ -69,10 +70,9 @@ class Invoker:
         base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
         username = os.environ['Zato_Test_PubSub_OpenAPI_Username']
         password = os.environ['Zato_Test_PubSub_OpenAPI_Password']
-        max_topics_env = os.environ['Zato_Test_PubSub_OpenAPI_Max_Topics']
-        max_topics = int(max_topics_env)
         reqs_per_invoker = self.reqs_per_invoker
         reqs_per_second = self.reqs_per_second
+        max_topics = self.max_topics
 
         return {
             'base_url': base_url,
@@ -106,7 +106,7 @@ class Invoker:
 
         topic_name = payload['data']['topic']
         if response.status_code == 200:
-            logger.info(f'Invoker {self.invoker_id}: Published message to {topic_name}')
+            pass
         else:
             logger.error(f'Invoker {self.invoker_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
 
@@ -125,15 +125,19 @@ class Invoker:
         max_topics_range = max_topics + 1
 
         request_interval = 1.0 / reqs_per_second
+        total_messages = reqs_per_invoker * max_topics
+        message_count = 0
 
         for _ in range(reqs_per_invoker):
             for topic_num in range(1, max_topics_range):
+                message_count += 1
                 start_time = utcnow()
 
                 topic_name = f'demo.{topic_num}'
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
                 payload = self._create_payload(topic_name)
 
+                logger.info(f'Invoker {self.invoker_id}: Sending message {message_count}/{total_messages} to {topic_name}')
                 self._publish_message(url, payload, headers, auth)
 
                 end_time = utcnow()
@@ -166,16 +170,16 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def _start_invoker(self, reqs_per_invoker:'int', invoker_id:'int', reqs_per_second:'float') -> 'any_':
+    def _start_invoker(self, reqs_per_invoker:'int', invoker_id:'int', reqs_per_second:'float', max_topics:'int') -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
-        invoker = Invoker(reqs_per_invoker, invoker_id, reqs_per_second)
+        invoker = Invoker(reqs_per_invoker, invoker_id, reqs_per_second, max_topics)
         greenlet = spawn(invoker.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_invokers:'int', reqs_per_invoker:'int'=1, reqs_per_second:'float'=1.0) -> 'None':
+    def run(self, num_invokers:'int', reqs_per_invoker:'int'=1, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
         """ Run the specified number of invokers and wait for completion.
         """
         if num_invokers == 1:
@@ -187,7 +191,7 @@ class InvokerManager:
 
         greenlets = []
         for invoker_id in range(1, num_invokers + 1):
-            greenlet = self._start_invoker(reqs_per_invoker, invoker_id, reqs_per_second)
+            greenlet = self._start_invoker(reqs_per_invoker, invoker_id, reqs_per_second, max_topics)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -206,10 +210,11 @@ if __name__ == '__main__':
     _ = parser.add_argument('--num-invokers', type=int, default=1, help='Number of invokers to start')
     _ = parser.add_argument('--reqs-per-invoker', type=int, default=1, help='Number of requests each invoker should send')
     _ = parser.add_argument('--reqs-per-second', type=float, default=1.0, help='Number of requests per second each invoker should make')
+    _ = parser.add_argument('--max-topics', type=int, default=3, help='Number of topics to publish to')
     args = parser.parse_args()
 
     manager = InvokerManager()
-    manager.run(args.num_invokers, args.reqs_per_invoker, args.reqs_per_second)
+    manager.run(args.num_invokers, args.reqs_per_invoker, args.reqs_per_second, args.max_topics)
 
 # ################################################################################################################################
 # ################################################################################################################################
