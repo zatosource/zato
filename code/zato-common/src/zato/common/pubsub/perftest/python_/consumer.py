@@ -83,6 +83,8 @@ class Consumer(Client):
 
         success = response.status_code == 200
 
+        self.progress_tracker.update_progress(success)
+
         if success:
             try:
                 data = json.loads(response.text)
@@ -91,15 +93,13 @@ class Consumer(Client):
                 logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
                 if message_count > 0:
-                    for _ in range(message_count):
+                    for _ in range(message_count - 1):
                         self.progress_tracker.update_progress(True)
 
             except Exception as e:
                 logger.error(f'Client {self.client_id}: Failed to parse response: {e}')
-                self.progress_tracker.update_progress(False)
         else:
             logger.error(f'Client {self.client_id}: Failed to consume messages: {response.status_code} - {response.text}')
-            self.progress_tracker.update_progress(False)
 
 # ################################################################################################################################
 
