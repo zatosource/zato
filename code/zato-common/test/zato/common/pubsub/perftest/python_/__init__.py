@@ -17,10 +17,13 @@ from json import dumps
 from logging import getLogger
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # requests
 import requests
+
+# Zato
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,9 +49,10 @@ logger = getLogger(__name__)
 class Invoker:
     """ Placeholder class for Invoker instances.
     """
-    def __init__(self, reqs_per_invoker:'int'=1, invoker_id:'int'=0) -> 'None':
+    def __init__(self, reqs_per_invoker:'int'=1, invoker_id:'int'=0, reqs_per_second:'float'=1.0) -> 'None':
         self.reqs_per_invoker = reqs_per_invoker
         self.invoker_id = invoker_id
+        self.reqs_per_second = reqs_per_second
 
 # ################################################################################################################################
 
@@ -68,6 +72,7 @@ class Invoker:
         max_topics_env = os.environ['Zato_Test_PubSub_OpenAPI_Max_Topics']
         max_topics = int(max_topics_env)
         reqs_per_invoker = self.reqs_per_invoker
+        reqs_per_second = self.reqs_per_second
 
         return {
             'base_url': base_url,
@@ -75,6 +80,7 @@ class Invoker:
             'password': password,
             'max_topics': max_topics,
             'reqs_per_invoker': reqs_per_invoker,
+            'reqs_per_second': reqs_per_second,
         }
 
 # ################################################################################################################################
@@ -114,16 +120,28 @@ class Invoker:
         headers = {'Content-Type': 'application/json'}
 
         reqs_per_invoker = config['reqs_per_invoker']
+        reqs_per_second = config['reqs_per_second']
         max_topics = config['max_topics']
         max_topics_range = max_topics + 1
 
+        request_interval = 1.0 / reqs_per_second
+
         for _ in range(reqs_per_invoker):
             for topic_num in range(1, max_topics_range):
+                start_time = utcnow()
+
                 topic_name = f'demo.{topic_num}'
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
                 payload = self._create_payload(topic_name)
 
                 self._publish_message(url, payload, headers, auth)
+
+                end_time = utcnow()
+                time_diff = end_time - start_time
+                elapsed_time = time_diff.total_seconds()
+                sleep_time = request_interval - elapsed_time
+                if sleep_time > 0:
+                    sleep(sleep_time)
 
 # ################################################################################################################################
 
@@ -148,16 +166,16 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def _start_invoker(self, reqs_per_invoker:'int', invoker_id:'int') -> 'any_':
+    def _start_invoker(self, reqs_per_invoker:'int', invoker_id:'int', reqs_per_second:'float') -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
-        invoker = Invoker(reqs_per_invoker, invoker_id)
+        invoker = Invoker(reqs_per_invoker, invoker_id, reqs_per_second)
         greenlet = spawn(invoker.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_invokers:'int', reqs_per_invoker:'int'=1) -> 'None':
+    def run(self, num_invokers:'int', reqs_per_invoker:'int'=1, reqs_per_second:'float'=1.0) -> 'None':
         """ Run the specified number of invokers and wait for completion.
         """
         if num_invokers == 1:
@@ -169,7 +187,7 @@ class InvokerManager:
 
         greenlets = []
         for invoker_id in range(1, num_invokers + 1):
-            greenlet = self._start_invoker(reqs_per_invoker, invoker_id)
+            greenlet = self._start_invoker(reqs_per_invoker, invoker_id, reqs_per_second)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -191,7 +209,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     manager = InvokerManager()
-    manager.run(args.num_invokers, args.reqs_per_invoker)
+    manager.run(args.num_invokers, args.reqs_per_invoker, args.reqs_per_second)
 
 # ################################################################################################################################
 # ################################################################################################################################
