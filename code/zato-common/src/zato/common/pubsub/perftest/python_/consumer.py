@@ -73,13 +73,12 @@ class Consumer(Client):
 
 # ################################################################################################################################
 
-    def _consume_messages(self, base_url:'str', headers:'anydict', auth:'tuple', topic_num:'int', max_messages:'int') -> 'None':
-        """ Retrieve messages from a single topic.
+    def _consume_messages(self, base_url:'str', headers:'anydict', auth:'tuple', max_messages:'int') -> 'None':
+        """ Retrieve messages from user's queue.
         """
-        topic_name = f'demo.{topic_num}'
         url = f'{base_url}/pubsub/messages/get'
-        payload = {'topic_name': topic_name, 'max_messages': max_messages}
-        logger.debug(f'Client {self.client_id}: Attempting to consume from {topic_name}')
+        payload = {'max_messages': max_messages}
+        logger.info(f'Client {self.client_id}: Attempting to consume messages')
         response = requests.post(url, json=payload, headers=headers, auth=auth)
 
         success = response.status_code == 200
@@ -89,7 +88,7 @@ class Consumer(Client):
                 data = json.loads(response.text)
                 messages = data.get('messages', [])
                 message_count = len(messages)
-                logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages from {topic_name}')
+                logger.info(f'Client {self.client_id}: Retrieved {message_count} messages')
 
                 for _ in range(message_count):
                     self.progress_tracker.update_progress(True)
@@ -98,10 +97,10 @@ class Consumer(Client):
                     self.progress_tracker.update_progress(True)
 
             except Exception as e:
-                logger.error(f'Client {self.client_id}: Failed to parse response from {topic_name}: {e}')
+                logger.error(f'Client {self.client_id}: Failed to parse response: {e}')
                 self.progress_tracker.update_progress(False)
         else:
-            logger.error(f'Client {self.client_id}: Failed to consume from {topic_name}: {response.status_code} - {response.text}')
+            logger.error(f'Client {self.client_id}: Failed to consume messages: {response.status_code} - {response.text}')
             self.progress_tracker.update_progress(False)
 
 # ################################################################################################################################
@@ -115,26 +114,19 @@ class Consumer(Client):
 
         pull_interval = config['pull_interval']
         base_url = config['base_url']
-        max_topics = config['max_topics']
         max_messages = config['max_messages']
-        current_topic = 1
 
         while True:
             start_time = utcnow()
-            logger.debug(f'Client {self.client_id}: Starting pull cycle for topic demo.{current_topic}')
+            logger.info(f'Client {self.client_id}: Starting pull cycle')
 
-            self._consume_messages(base_url, headers, auth, current_topic, max_messages)
-
-            current_topic += 1
-            if current_topic > max_topics:
-                current_topic = 1
-                logger.debug(f'Client {self.client_id}: Cycling back to topic demo.1')
+            self._consume_messages(base_url, headers, auth, max_messages)
 
             end_time = utcnow()
             time_diff = end_time - start_time
             elapsed_time = time_diff.total_seconds()
             sleep_time = pull_interval - elapsed_time
-            logger.debug(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next topic')
+            logger.info(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next pull')
             if sleep_time > 0:
                 sleep(sleep_time)
 
