@@ -58,19 +58,20 @@ function publish(topicName, userCreds) {
   }, { operation: 'publish' });
 
   if (publishResponse.status !== 200) {
-    console.error(`*************************************************************************************************`);
-    console.error(`Publish failed for VU ${__VU}:`);
-    console.error(`  Timestamp: ${payload.data.timestamp}`);
-    console.error(`  Duration: ${duration}ms`);
-    console.error(`  Status: ${publishResponse.status}`);
-    console.error(`  Topic: ${topicName}`);
-    console.error(`  Error: ${publishResponse.error || 'none'}`);
-    console.error(`  Error Code: ${publishResponse.error_code || 'none'}`);
-    console.error(`  Body: ${publishResponse.body || 'null'}`);
-    console.error(`  Message: ${JSON.stringify(payload.data)}`);
-    console.error(`  Request payload: ${JSON.stringify(payload)}`);
-    console.error(`  Request headers: ${JSON.stringify(userCreds.headers)}`);
-    console.error(`  URL: ${BASE_URL}/pubsub/topic/${topicName}`);
+    console.error(`\n***************************************************************
+Publish failed for VU ${__VU}:
+Timestamp: ${payload.data.timestamp}
+Duration: ${duration}ms
+Status: ${publishResponse.status}
+Topic: ${topicName}
+Error: ${publishResponse.error || 'none'}
+ErrorCode: ${publishResponse.error_code || 'none'}
+Body: ${publishResponse.body || 'null'}
+Message: ${JSON.stringify(payload.data)}
+RequestPayload: ${JSON.stringify(payload)}
+RequestHeaders: ${JSON.stringify(userCreds.headers)}
+URL: ${BASE_URL}/pubsub/topic/${topicName}
+***************************************************************`);
   } else {
     const body = JSON.parse(publishResponse.body);
     console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
@@ -124,19 +125,25 @@ function pullMessages(userCreds) {
           console.log(`VU ${__VU}: no messages received (empty attempt ${emptyAttempts}/${PULL_MAX_EMPTY_ATTEMPTS})`);
         }
       } catch (e) {
-        console.error(`VU ${__VU}: failed to parse pull response: ${e}`);
-        console.error(`VU ${__VU}: pull response status: ${pullResponse.status}`);
-        console.error(`VU ${__VU}: pull response body: ${pullResponse.body}`);
-        console.error(`VU ${__VU}: pull response error: ${pullResponse.error || 'none'}`);
-        console.error(`VU ${__VU}: pull response error_code: ${pullResponse.error_code || 'none'}`);
+        console.error(`***************************************************************
+VU ${__VU}: failed to parse pull response:
+  ParseError: ${e}
+  Status: ${pullResponse.status}
+  Body: ${pullResponse.body}
+  Error: ${pullResponse.error || 'none'}
+  ErrorCode: ${pullResponse.error_code || 'none'}
+***************************************************************`);
         emptyAttempts++;
       }
     } else {
-      console.error(`VU ${__VU}: pull failed with status ${pullResponse.status}`);
-      console.error(`VU ${__VU}: pull error: ${pullResponse.error || 'none'}`);
-      console.error(`VU ${__VU}: pull error_code: ${pullResponse.error_code || 'none'}`);
-      console.error(`VU ${__VU}: pull body: ${pullResponse.body || 'null'}`);
-      console.error(`VU ${__VU}: pull request payload: ${JSON.stringify(payload)}`);
+      console.error(`***************************************************************
+VU ${__VU}: pull failed:
+  Status: ${pullResponse.status}
+  Error: ${pullResponse.error || 'none'}
+  ErrorCode: ${pullResponse.error_code || 'none'}
+  Body: ${pullResponse.body || 'null'}
+  RequestPayload: ${JSON.stringify(payload)}
+***************************************************************`);
       emptyAttempts++;
     }
 

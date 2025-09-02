@@ -12,7 +12,7 @@ export const PULL_MAX_EMPTY_ATTEMPTS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_P
 export const WAIT_BEFORE_PULL_SECONDS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Wait_Before_Pull_Seconds) || 2;
 export const REQUEST_RATE = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Request_Rate) || 10;
 export const PRE_ALLOCATED_VUS = parseInt(__ENV.Zato_Test_PubSub_OpenAPI_Pre_Allocated_VUs) || 10;
-export const HTTP_TIMEOUT = __ENV.Zato_Test_PubSub_OpenAPI_HTTP_Timeout || '2s';
+export const HTTP_TIMEOUT = __ENV.Zato_Test_PubSub_OpenAPI_HTTP_Timeout || '20ms';
 
 if (!BASE_URL) {
   throw new Error('Environment variable Zato_Test_PubSub_OpenAPI_URL is not set');
