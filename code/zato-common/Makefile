@@ -49,3 +49,7 @@ endif
 perftest:
 	echo "Perftest called"
 	py $(CURDIR)/test/zato/common/pubsub/perftest/generate_enmasse.py $(if $(USERS),--users $(USERS)) $(if $(TOPICS_MULTIPLIER),--topics-multiplier $(TOPICS_MULTIPLIER))
+
+perftest-python:
+	echo "Python perftest called"
+	py $(CURDIR)/test/zato/common/pubsub/perftest/python_/__init__.py $(if $(NUM_INVOKERS),--num-invokers $(NUM_INVOKERS)) $(if $(REQS_PER_INVOKER),--reqs-per-invoker $(REQS_PER_INVOKER)) $(if $(REQS_PER_SECOND),--reqs-per-second $(REQS_PER_SECOND))
