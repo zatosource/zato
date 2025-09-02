@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-log_level = logging.WARNING
+log_level = logging.INFO
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=log_level, format=log_format)
 
