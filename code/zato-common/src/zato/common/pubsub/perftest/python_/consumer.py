@@ -104,27 +104,38 @@ class Consumer(Client):
     def start(self) -> 'None':
         """ Start the consumer.
         """
-        config = self._get_config()
-        auth = (config['username'], config['password'])
-        headers = {'Content-Type': 'application/json'}
+        try:
+            logger.info(f'Client {self.client_id}: Consumer starting')
+            config = self._get_config()
+            auth = (config['username'], config['password'])
+            headers = {'Content-Type': 'application/json'}
 
-        pull_interval = config['pull_interval']
-        base_url = config['base_url']
-        max_messages = config['max_messages']
+            pull_interval = config['pull_interval']
+            base_url = config['base_url']
+            max_messages = config['max_messages']
 
-        while True:
-            start_time = utcnow()
-            logger.debug(f'Client {self.client_id}: Starting pull cycle')
+            cycle_count = 0
+            while True:
+                cycle_count += 1
+                start_time = utcnow()
+                logger.debug(f'Client {self.client_id}: Starting pull cycle #{cycle_count}')
 
-            self._consume_messages(base_url, headers, auth, max_messages)
+                try:
+                    self._consume_messages(base_url, headers, auth, max_messages)
+                except Exception as e:
+                    logger.error(f'Client {self.client_id}: Error in consume_messages: {e}')
 
-            end_time = utcnow()
-            time_diff = end_time - start_time
-            elapsed_time = time_diff.total_seconds()
-            sleep_time = pull_interval - elapsed_time
-            logger.debug(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next pull')
-            if sleep_time > 0:
-                sleep(sleep_time)
+                end_time = utcnow()
+                time_diff = end_time - start_time
+                elapsed_time = time_diff.total_seconds()
+                sleep_time = pull_interval - elapsed_time
+                logger.debug(f'Client {self.client_id}: Cycle #{cycle_count} took {elapsed_time:.3f}s, sleeping for {sleep_time:.2f}s')
+                if sleep_time > 0:
+                    sleep(sleep_time)
+
+        except Exception as e:
+            logger.error(f'Client {self.client_id}: Consumer crashed: {e}')
+            raise
 
 # ################################################################################################################################
 # ################################################################################################################################
