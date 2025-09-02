@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check, sleep, fail } from 'k6';
 import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE, PRE_ALLOCATED_VUS, HTTP_TIMEOUT } from './config.js';
 
 export let options = {
@@ -76,8 +76,8 @@ URL: ${BASE_URL}/pubsub/topic/${topicName}
       fail(`Publish failed with status ${publishResponse.status}`);
     }
   } else {
-    const body = JSON.parse(publishResponse.body);
-    console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
+    //const body = JSON.parse(publishResponse.body);
+    //console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
   }
 }
 

@@ -75,7 +75,7 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
         'conn_url': conn_url,
         'conn_class': KombuAMQPConnection,
         'is_active': True,
-        'queue_type': 'quorum',
+        # 'queue_type': 'quorum',
         'max_repeats': consumer_config.max_repeats
     })
 

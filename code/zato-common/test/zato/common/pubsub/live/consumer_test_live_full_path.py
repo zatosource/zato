@@ -64,7 +64,8 @@ def consume_from_queue() -> 'None':
     logger.info('Starting consumer for queue Q1')
 
     connection = get_broker_connection()
-    queue = Queue('Q1', durable=True, queue_arguments={'x-queue-type': 'quorum'})
+    # queue = Queue('Q1', durable=True, queue_arguments={'x-queue-type': 'quorum'})
+    queue = Queue('Q1', durable=True)
 
     try:
         with connection:

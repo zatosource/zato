@@ -251,7 +251,7 @@ class Consumer:
 
         # Public pub/sub queues require special configuration
         if config.queue.startswith('zpsk') or config.queue in {'server', 'pubsub', 'scheduler'}:
-            queue_arguments={'x-queue-type': config.queue_type, 'x-delivery-limit': config.max_repeats}
+            queue_arguments={}
         else:
             queue_arguments = None
 
