@@ -54,13 +54,7 @@ class ProgressTracker:
         else:
             rate = 0
 
-        if rate > 0:
-            eta_seconds = (self.total_messages - total_processed) / rate
-            eta_minutes = int(eta_seconds // 60)
-            eta_seconds = int(eta_seconds % 60)
-            eta_str = f'{eta_minutes:02d}:{eta_seconds:02d}'
-        else:
-            eta_str = '--:--'
+
 
         # Create progress bar
         bar_width = 30
@@ -79,8 +73,7 @@ class ProgressTracker:
             f'({total_processed:,}/{self.total_messages:,}) '
             f'| Rate: {rate:6.1f} req/s '
             f'| Success: {self.completed_messages:,} '
-            f'| {failed_section} '
-            f'| ETA: {eta_str}{Style.RESET_ALL}'
+            f'| {failed_section} |{Style.RESET_ALL}'
         )
 
         print(progress_line, end='', flush=True)
