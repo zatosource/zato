@@ -87,4 +87,4 @@ run-consumers:
 	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
 		--num-consumers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
 		--pull-interval $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1.0) \
-		--max-topics $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),3)
+		--max-messages $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),100)
