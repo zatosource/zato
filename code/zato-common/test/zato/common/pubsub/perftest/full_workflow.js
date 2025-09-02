@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE } from './config.js';
+import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE, PRE_ALLOCATED_VUS } from './config.js';
 
 export let options = {
   scenarios: {
@@ -8,8 +8,8 @@ export let options = {
       executor: 'ramping-arrival-rate',
       startRate: REQUEST_RATE,
       timeUnit: '1s',
-      preAllocatedVUs: Math.min(VUS, 50),
-      maxVUs: VUS,
+      preAllocatedVUs: Math.min(VUS, PRE_ALLOCATED_VUS),
+      maxVUs: VUS * 3,
       stages: [
         { duration: '30s', target: REQUEST_RATE },
         { duration: `${Math.floor((VUS * ITERATIONS_PER_VU) / REQUEST_RATE)}s`, target: REQUEST_RATE },
