@@ -1,16 +1,20 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS } from './config.js';
+import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE } from './config.js';
 
 export let options = {
   scenarios: {
     default: {
-      executor: 'constant-arrival-rate',
-      rate: 200,
+      executor: 'ramping-arrival-rate',
+      startRate: REQUEST_RATE,
       timeUnit: '1s',
-      duration: '10m',
-      preAllocatedVUs: 50,
-      maxVUs: 200,
+      preAllocatedVUs: Math.min(VUS, 50),
+      maxVUs: VUS,
+      stages: [
+        { duration: '30s', target: REQUEST_RATE },
+        { duration: `${Math.floor((VUS * ITERATIONS_PER_VU) / REQUEST_RATE)}s`, target: REQUEST_RATE },
+        { duration: '30s', target: 0 },
+      ],
     }
   },
   thresholds: {
@@ -139,7 +143,6 @@ export default function() {
     publish(topicName, userCreds);
   }
 
-  /*
   console.log(`VU ${__VU}: waiting ${WAIT_BEFORE_PULL_SECONDS} seconds before pulling messages...`);
   for (let i = 1; i <= WAIT_BEFORE_PULL_SECONDS; i++) {
     sleep(1);
@@ -147,5 +150,4 @@ export default function() {
   }
   console.log(`VU ${__VU}: finished waiting, starting to pull messages`);
   pullMessages(userCreds);
-  */
 }
