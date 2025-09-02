@@ -33,7 +33,7 @@ logging.basicConfig(level=log_level, format=log_format)
 # ################################################################################################################################
 
 if 0:
-    pass
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,8 +138,7 @@ class InvokerManager:
         """ Creates a new Invoker instance in a greenlet.
         """
         invoker = Invoker()
-        greenlet = spawn(invoker.start)
-        return greenlet
+        _ = spawn(invoker.start)
 
 # ################################################################################################################################
 
@@ -172,6 +171,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Invoker Manager')
     _ = parser.add_argument('--num-invokers', type=int, default=1, help='Number of invokers to start')
+    _ = parser.add_argument('--reqs-per-invoker', type=int, default=1, help='Number of requests each invoker should send')
+    _ = parser.add_argument('--reqs-per-second', type=float, default=1.0, help='Number of requests per second each invoker should make')
     args = parser.parse_args()
 
     manager = InvokerManager()
