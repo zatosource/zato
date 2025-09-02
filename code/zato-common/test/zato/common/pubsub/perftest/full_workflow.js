@@ -125,24 +125,26 @@ function pullMessages(userCreds) {
           console.log(`VU ${__VU}: no messages received (empty attempt ${emptyAttempts}/${PULL_MAX_EMPTY_ATTEMPTS})`);
         }
       } catch (e) {
-        console.error(`***************************************************************
+        console.error(`\n***************************************************************
 VU ${__VU}: failed to parse pull response:
-  ParseError: ${e}
-  Status: ${pullResponse.status}
-  Body: ${pullResponse.body}
-  Error: ${pullResponse.error || 'none'}
-  ErrorCode: ${pullResponse.error_code || 'none'}
+Timestamp: ${new Date().toISOString()}
+ParseError: ${e}
+Status: ${pullResponse.status}
+Body: ${pullResponse.body}
+Error: ${pullResponse.error || 'none'}
+ErrorCode: ${pullResponse.error_code || 'none'}
 ***************************************************************`);
         emptyAttempts++;
       }
     } else {
-      console.error(`***************************************************************
+      console.error(`\n***************************************************************
 VU ${__VU}: pull failed:
-  Status: ${pullResponse.status}
-  Error: ${pullResponse.error || 'none'}
-  ErrorCode: ${pullResponse.error_code || 'none'}
-  Body: ${pullResponse.body || 'null'}
-  RequestPayload: ${JSON.stringify(payload)}
+Timestamp: ${new Date().toISOString()}
+Status: ${pullResponse.status}
+Error: ${pullResponse.error || 'none'}
+ErrorCode: ${pullResponse.error_code || 'none'}
+Body: ${pullResponse.body || 'null'}
+RequestPayload: ${JSON.stringify(payload)}
 ***************************************************************`);
       emptyAttempts++;
     }
