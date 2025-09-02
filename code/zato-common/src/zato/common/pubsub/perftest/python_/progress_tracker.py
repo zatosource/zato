@@ -87,12 +87,14 @@ class ProgressTracker:
         elapsed_str = f'{days}d {hours}h {minutes}m {seconds}s'
 
         if self.total_messages > 0 and rate_total > 0:
-            eta_seconds = (self.total_messages - total_processed) / rate_total
-            eta_minutes = int(eta_seconds // 60)
-            eta_seconds = int(eta_seconds % 60)
-            eta_str = f'{eta_minutes:02d}:{eta_seconds:02d}'
+            eta_total_seconds = (self.total_messages - total_processed) / rate_total
+            eta_days = int(eta_total_seconds // 86400)
+            eta_hours = int((eta_total_seconds % 86400) // 3600)
+            eta_minutes = int((eta_total_seconds % 3600) // 60)
+            eta_seconds = int(eta_total_seconds % 60)
+            eta_str = f'{eta_days}d {eta_hours}h {eta_minutes}m {eta_seconds}s'
         else:
-            eta_str = '--:--'
+            eta_str = '0d 0h 0m 0s'
 
         # Create progress bar
         bar_width = 30
@@ -105,7 +107,7 @@ class ProgressTracker:
         else:
             failed_section = f'Failed: {self.failed_messages:,}'
 
-        eta_section = f'| ETA: {eta_str}' if self.total_messages > 0 else '|'
+        eta_section = f'| ETA: {eta_str}' if self.total_messages > 0 else ''
 
         progress_line = (
             f'\r{Fore.GREEN}Progress: [{bar}] '

@@ -18,7 +18,7 @@ from logging import getLogger
 from colorama import Fore, Style, init as colorama_init
 
 # gevent
-from gevent import spawn
+from gevent import spawn, sleep
 
 # Zato
 from zato.common.pubsub.perftest.python_.producer import Producer
@@ -86,9 +86,23 @@ class ConsumerManager:
             greenlet = self._start_consumer(consumer_id, pull_interval, 1, max_messages, progress_tracker)
             greenlets.append(greenlet)
 
-        # Wait for all greenlets to complete
-        for greenlet in greenlets:
-            greenlet.join()
+        # Monitor greenlets periodically
+        try:
+            while True:
+                sleep(10)
+                dead_count = 0
+                for i, greenlet in enumerate(greenlets):
+                    if greenlet.dead:
+                        logger.error(f'Consumer {i+1} greenlet is not running anymore')
+                        dead_count += 1
+
+                if dead_count > 0:
+                    logger.error(f'{dead_count} out of {num_consumers} consumers are not running anymore')
+
+        except KeyboardInterrupt:
+            logger.info('Shutting down consumers')
+            for greenlet in greenlets:
+                greenlet.kill()
 
 # ################################################################################################################################
 # ################################################################################################################################
