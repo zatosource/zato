@@ -78,7 +78,12 @@ if __name__ == '__main__':
 
     manager = InvokerManager()
 
-    logger.info('Starting %d invokers', args.num_invokers)
+    if args.num_invokers == 1:
+        noun = 'invoker'
+    else:
+        noun = 'invokers'
+
+    logger.info(f'Starting {args.num_invokers} {noun}')
 
     for _ in range(args.num_invokers):
         _ = manager.start_invoker()
