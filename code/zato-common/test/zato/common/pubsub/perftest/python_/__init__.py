@@ -3,8 +3,16 @@
 """
 Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
-Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt
 """
+
+# Must come first
+from gevent.monkey import patch_all
+_ = patch_all()
+
+# stdlib
+import logging
+from logging import getLogger
 
 # gevent
 from gevent import spawn
@@ -12,8 +20,20 @@ from gevent import spawn
 # ################################################################################################################################
 # ################################################################################################################################
 
+log_level = logging.INFO
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=log_level, format=log_format)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if 0:
     pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +77,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     manager = InvokerManager()
+
+    logger.info('Starting %d invokers', args.num_invokers)
 
     for _ in range(args.num_invokers):
         _ = manager.start_invoker()
