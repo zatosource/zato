@@ -32,7 +32,7 @@ from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, UnauthorizedResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import set_time_since, validate_topic_name
-from zato.common.util.api import as_bool, new_msg_id, utcnow
+from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,8 +396,8 @@ class PubSubRESTServer(BaseRESTServer):
             message_count = len(messages)
             message_word = 'message' if message_count == 1 else 'messages'
 
-            #if _needs_details:
-            logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
+            if _needs_details:
+                logger.info(f'[{cid}] Retrieved {message_count} {message_word} for user `{username}` from queue `{sub_key}`')
 
             response = self._build_success_response(cid, messages, max_messages, wrap_in_list)
             return response

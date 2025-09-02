@@ -122,8 +122,14 @@ class ProducerManager:
         total_messages = num_producers * reqs_per_producer * max_topics
         progress_tracker = ProgressTracker(num_producers, total_messages)
 
+        if reqs_per_second >= 1:
+            rate_display = f'{reqs_per_second} req/s per producer'
+        else:
+            seconds_per_req = 1.0 / reqs_per_second
+            rate_display = f'{reqs_per_second} req/s per producer (1 req/{seconds_per_req:.0f}s)'
+
         print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
-        print(f'{Fore.CYAN}Rate: {reqs_per_second} req/s per producer, Topics: {max_topics}{Style.RESET_ALL}')
+        print(f'{Fore.CYAN}Rate: {rate_display}, Topics: {max_topics}{Style.RESET_ALL}')
         print()
 
         greenlets = []
