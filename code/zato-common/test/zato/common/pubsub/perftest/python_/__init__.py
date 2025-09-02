@@ -46,8 +46,9 @@ logger = getLogger(__name__)
 class Invoker:
     """ Placeholder class for Invoker instances.
     """
-    def __init__(self, reqs_per_invoker:'int'=1) -> 'None':
+    def __init__(self, reqs_per_invoker:'int'=1, invoker_id:'int'=0) -> 'None':
         self.reqs_per_invoker = reqs_per_invoker
+        self.invoker_id = invoker_id
 
 # ################################################################################################################################
 
@@ -99,9 +100,9 @@ class Invoker:
 
         topic_name = payload['data']['topic']
         if response.status_code == 200:
-            logger.info(f'Published message to {topic_name}')
+            logger.info(f'Invoker {self.invoker_id}: Published message to {topic_name}')
         else:
-            logger.error(f'Failed to publish to {topic_name}: {response.status_code} - {response.text}')
+            logger.error(f'Invoker {self.invoker_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
 
 # ################################################################################################################################
 
@@ -147,10 +148,10 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def _start_invoker(self, reqs_per_invoker:'int') -> 'any_':
+    def _start_invoker(self, reqs_per_invoker:'int', invoker_id:'int') -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
-        invoker = Invoker(reqs_per_invoker)
+        invoker = Invoker(reqs_per_invoker, invoker_id)
         greenlet = spawn(invoker.start)
         return greenlet
 
@@ -167,8 +168,8 @@ class InvokerManager:
         logger.info(f'Starting {num_invokers} {noun}')
 
         greenlets = []
-        for _ in range(num_invokers):
-            greenlet = self._start_invoker(reqs_per_invoker)
+        for invoker_id in range(1, num_invokers + 1):
+            greenlet = self._start_invoker(reqs_per_invoker, invoker_id)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
