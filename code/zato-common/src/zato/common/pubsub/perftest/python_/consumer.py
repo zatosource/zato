@@ -51,6 +51,8 @@ class Consumer(Client):
         self.pull_interval = pull_interval
         self.max_messages = max_messages
 
+# ################################################################################################################################
+
     def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
