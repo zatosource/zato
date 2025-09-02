@@ -46,8 +46,8 @@ logger = getLogger(__name__)
 class Invoker:
     """ Placeholder class for Invoker instances.
     """
-    def __init__(self) -> 'None':
-        pass
+    def __init__(self, reqs_per_invoker: 'int' = 1) -> 'None':
+        self.reqs_per_invoker = reqs_per_invoker
 
 # ################################################################################################################################
 
@@ -61,11 +61,19 @@ class Invoker:
     def _get_config(self) -> 'dict':
         """ Get configuration from environment variables.
         """
+        base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
+        username = os.environ['Zato_Test_PubSub_OpenAPI_Username']
+        password = os.environ['Zato_Test_PubSub_OpenAPI_Password']
+        max_topics_env = os.environ['Zato_Test_PubSub_OpenAPI_Max_Topics']
+        max_topics = int(max_topics_env)
+        reqs_per_invoker = self.reqs_per_invoker
+        
         return {
-            'base_url': os.environ['Zato_Test_PubSub_OpenAPI_URL'],
-            'username': os.environ['Zato_Test_PubSub_OpenAPI_Username'],
-            'password': os.environ['Zato_Test_PubSub_OpenAPI_Password'],
-            'max_topics': int(os.environ['Zato_Test_PubSub_OpenAPI_Max_Topics']),
+            'base_url': base_url,
+            'username': username,
+            'password': password,
+            'max_topics': max_topics,
+            'reqs_per_invoker': reqs_per_invoker,
         }
 
 # ################################################################################################################################
@@ -104,12 +112,17 @@ class Invoker:
         auth = (config['username'], config['password'])
         headers = {'Content-Type': 'application/json'}
 
-        for topic_num in range(1, config['max_topics'] + 1):
-            topic_name = f'demo.{topic_num}'
-            url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
-            payload = self._create_payload(topic_name)
+        reqs_per_invoker = config['reqs_per_invoker']
+        max_topics = config['max_topics']
+        max_topics_range = max_topics + 1
+        
+        for _ in range(reqs_per_invoker):
+            for topic_num in range(1, max_topics_range):
+                topic_name = f'demo.{topic_num}'
+                url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
+                payload = self._create_payload(topic_name)
 
-            self._publish_message(url, payload, headers, auth)
+                self._publish_message(url, payload, headers, auth)
 
 # ################################################################################################################################
 
@@ -134,15 +147,16 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def _start_invoker(self) -> 'any_':
+    def _start_invoker(self, reqs_per_invoker: 'int') -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
-        invoker = Invoker()
-        _ = spawn(invoker.start)
+        invoker = Invoker(reqs_per_invoker)
+        greenlet = spawn(invoker.start)
+        return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_invokers: 'int') -> 'None':
+    def run(self, num_invokers: 'int', reqs_per_invoker: 'int' = 1) -> 'None':
         """ Run the specified number of invokers and wait for completion.
         """
         if num_invokers == 1:
@@ -154,7 +168,7 @@ class InvokerManager:
 
         greenlets = []
         for _ in range(num_invokers):
-            greenlet = self._start_invoker()
+            greenlet = self._start_invoker(reqs_per_invoker)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -176,7 +190,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     manager = InvokerManager()
-    manager.run(args.num_invokers)
+    manager.run(args.num_invokers, args.reqs_per_invoker)
 
 # ################################################################################################################################
 # ################################################################################################################################
