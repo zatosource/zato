@@ -134,11 +134,33 @@ class InvokerManager:
     """ Creates new instances of Invoker class in greenlets.
     """
 
-    def start_invoker(self) -> 'None':
+    def _start_invoker(self) -> 'any_':
         """ Creates a new Invoker instance in a greenlet.
         """
         invoker = Invoker()
-        _ = spawn(invoker.start)
+        greenlet = spawn(invoker.start)
+        return greenlet
+
+# ################################################################################################################################
+
+    def run(self, num_invokers: 'int') -> 'None':
+        """ Run the specified number of invokers and wait for completion.
+        """
+        if num_invokers == 1:
+            noun = 'invoker'
+        else:
+            noun = 'invokers'
+
+        logger.info(f'Starting {num_invokers} {noun}')
+
+        greenlets = []
+        for _ in range(num_invokers):
+            greenlet = self._start_invoker()
+            greenlets.append(greenlet)
+
+        # Wait for all greenlets to complete
+        for greenlet in greenlets:
+            greenlet.join()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,16 +175,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     manager = InvokerManager()
-
-    if args.num_invokers == 1:
-        noun = 'invoker'
-    else:
-        noun = 'invokers'
-
-    logger.info(f'Starting {args.num_invokers} {noun}')
-
-    for _ in range(args.num_invokers):
-        _ = manager.start_invoker()
+    manager.run(args.num_invokers)
 
 # ################################################################################################################################
 # ################################################################################################################################
