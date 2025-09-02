@@ -39,7 +39,7 @@ class ProgressTracker:
         with self.lock:
             current_time = utcnow()
             self.message_timestamps.append(current_time)
-            
+
             if success:
                 self.completed_messages += 1
             else:
