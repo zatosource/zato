@@ -127,17 +127,23 @@ class Invoker:
         request_interval = 1.0 / reqs_per_second
         total_messages = reqs_per_invoker * max_topics
         message_count = 0
-
+        
+        if total_messages < 1000:
+            log_interval = 10
+        else:
+            log_interval = 50
+        
         for _ in range(reqs_per_invoker):
             for topic_num in range(1, max_topics_range):
                 message_count += 1
                 start_time = utcnow()
-
+                
                 topic_name = f'demo.{topic_num}'
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
                 payload = self._create_payload(topic_name)
 
-                logger.info(f'Invoker {self.invoker_id}: Sending message {message_count}/{total_messages} to {topic_name}')
+                if message_count == 1 or message_count % log_interval == 0:
+                    logger.info(f'Invoker {self.invoker_id}: Sending message {message_count}/{total_messages} to {topic_name} ({reqs_per_second} req/s)')
                 self._publish_message(url, payload, headers, auth)
 
                 end_time = utcnow()
