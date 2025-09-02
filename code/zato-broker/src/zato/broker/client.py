@@ -179,6 +179,7 @@ class BrokerClient:
         exchange    = kwargs.get('exchange') or 'components'
         routing_key = kwargs.get('routing_key') or 'server'
         mandatory = kwargs.get('mandatory', True)
+        publish_timeout = kwargs.get('publish_timeout', 5)
 
         with self.producer.acquire() as client:
 
@@ -199,6 +200,7 @@ class BrokerClient:
                 priority=priority,
                 expiration=expiration,
                 mandatory=mandatory,
+                timeout=publish_timeout,
                 confirm_timeout=3600 * 24,
                 headers={
                     'zato_msg_id': new_msg_id(),
