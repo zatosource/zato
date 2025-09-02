@@ -77,4 +77,6 @@ perftest:
 	cd $(CURDIR)/code/zato-common && $(MAKE) perftest USERS=$(word 2,$(MAKECMDGOALS)) TOPICS_MULTIPLIER=$(word 3,$(MAKECMDGOALS))
 
 run-invokers:
-	py code/zato-common/test/zato/common/pubsub/perftest/python_/__init__.py --num-invokers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1)
+	py code/zato-common/test/zato/common/pubsub/perftest/python_/__init__.py \
+		--num-invokers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
+		--reqs-per-invoker $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1)
