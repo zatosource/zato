@@ -74,10 +74,12 @@ class ConsumerManager:
         else:
             noun = 'consumers'
 
-        progress_tracker = ProgressTracker(num_consumers, 0)
+        progress_tracker = ProgressTracker(0, 0)
 
         print(f'{Fore.CYAN}Starting {num_consumers} {noun} with pull interval {pull_interval}s{Style.RESET_ALL}')
         print()
+
+        progress_tracker._display_progress()
 
         greenlets = []
         for consumer_id in range(1, num_consumers + 1):
