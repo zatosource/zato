@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE, PRE_ALLOCATED_VUS } from './config.js';
+import { BASE_URL, getUserCredentials, getTopicNames, VUS, ITERATIONS_PER_VU, PULL_MAX_MESSAGES, PULL_MAX_EMPTY_ATTEMPTS, WAIT_BEFORE_PULL_SECONDS, REQUEST_RATE, PRE_ALLOCATED_VUS, HTTP_TIMEOUT } from './config.js';
 
 export let options = {
   scenarios: {
@@ -41,7 +41,7 @@ function publish(topicName, userCreds) {
   let publishResponse = http.post(
     `${BASE_URL}/pubsub/topic/${topicName}`,
     JSON.stringify(payload),
-    { headers: userCreds.headers, tags: { operation: 'publish' } }
+    { headers: userCreds.headers, tags: { operation: 'publish' }, timeout: HTTP_TIMEOUT }
   );
   const duration = Date.now() - startTime;
 
@@ -58,15 +58,16 @@ function publish(topicName, userCreds) {
   }, { operation: 'publish' });
 
   if (publishResponse.status !== 200) {
+    console.error(`*************************************************************************************************`);
     console.error(`Publish failed for VU ${__VU}:`);
-    console.error(`  Status: ${publishResponse.status}`);
+    console.error(`  Timestamp: ${payload.data.timestamp}`);
     console.error(`  Duration: ${duration}ms`);
+    console.error(`  Status: ${publishResponse.status}`);
     console.error(`  Topic: ${topicName}`);
     console.error(`  Error: ${publishResponse.error || 'none'}`);
     console.error(`  Error Code: ${publishResponse.error_code || 'none'}`);
     console.error(`  Body: ${publishResponse.body || 'null'}`);
     console.error(`  Message: ${JSON.stringify(payload.data)}`);
-    console.error(`  Timestamp: ${payload.data.timestamp}`);
     console.error(`  Request payload: ${JSON.stringify(payload)}`);
     console.error(`  Request headers: ${JSON.stringify(userCreds.headers)}`);
     console.error(`  URL: ${BASE_URL}/pubsub/topic/${topicName}`);
@@ -89,7 +90,7 @@ function pullMessages(userCreds) {
     let pullResponse = http.post(
       `${BASE_URL}/pubsub/messages/get`,
       JSON.stringify(payload),
-      { headers: userCreds.headers, tags: { operation: 'pull' } }
+      { headers: userCreds.headers, tags: { operation: 'pull' }, timeout: HTTP_TIMEOUT }
     );
 
     check(pullResponse, {
