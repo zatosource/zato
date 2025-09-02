@@ -33,17 +33,18 @@ class ProgressTracker:
 
 # ################################################################################################################################
 
-    def update_progress(self, success:'bool'=True) -> 'None':
+    def update_progress(self, success:'bool'=True, count:'int'=1) -> 'None':
         """ Update progress counters.
         """
         with self.lock:
             current_time = utcnow()
-            self.message_timestamps.append(current_time)
+            for _ in range(count):
+                self.message_timestamps.append(current_time)
 
             if success:
-                self.completed_messages += 1
+                self.completed_messages += count
             else:
-                self.failed_messages += 1
+                self.failed_messages += count
             self._display_progress()
 
 # ################################################################################################################################
