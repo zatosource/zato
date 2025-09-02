@@ -78,7 +78,7 @@ class Consumer(Client):
         """
         url = f'{base_url}/pubsub/messages/get'
         payload = {'max_messages': max_messages}
-        logger.info(f'Client {self.client_id}: Attempting to consume messages')
+        logger.debug(f'Client {self.client_id}: Attempting to consume messages')
         response = requests.post(url, json=payload, headers=headers, auth=auth)
 
         success = response.status_code == 200
@@ -88,7 +88,7 @@ class Consumer(Client):
                 data = json.loads(response.text)
                 messages = data.get('messages', [])
                 message_count = len(messages)
-                logger.info(f'Client {self.client_id}: Retrieved {message_count} messages')
+                logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
                 if message_count > 0:
                     for _ in range(message_count):
@@ -116,7 +116,7 @@ class Consumer(Client):
 
         while True:
             start_time = utcnow()
-            logger.info(f'Client {self.client_id}: Starting pull cycle')
+            logger.debug(f'Client {self.client_id}: Starting pull cycle')
 
             self._consume_messages(base_url, headers, auth, max_messages)
 
@@ -124,7 +124,7 @@ class Consumer(Client):
             time_diff = end_time - start_time
             elapsed_time = time_diff.total_seconds()
             sleep_time = pull_interval - elapsed_time
-            logger.info(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next pull')
+            logger.debug(f'Client {self.client_id}: Sleeping for {sleep_time:.2f}s before next pull')
             if sleep_time > 0:
                 sleep(sleep_time)
 
