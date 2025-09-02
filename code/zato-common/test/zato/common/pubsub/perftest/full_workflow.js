@@ -67,6 +67,9 @@ function publish(topicName, userCreds) {
     console.error(`  Body: ${publishResponse.body || 'null'}`);
     console.error(`  Message: ${JSON.stringify(payload.data)}`);
     console.error(`  Timestamp: ${payload.data.timestamp}`);
+    console.error(`  Request payload: ${JSON.stringify(payload)}`);
+    console.error(`  Request headers: ${JSON.stringify(userCreds.headers)}`);
+    console.error(`  URL: ${BASE_URL}/pubsub/topic/${topicName}`);
   } else {
     const body = JSON.parse(publishResponse.body);
     console.log(`VU ${__VU} iter ${__ITER}: published msg_id ${body.msg_id} to ${topicName}`);
@@ -121,10 +124,18 @@ function pullMessages(userCreds) {
         }
       } catch (e) {
         console.error(`VU ${__VU}: failed to parse pull response: ${e}`);
+        console.error(`VU ${__VU}: pull response status: ${pullResponse.status}`);
+        console.error(`VU ${__VU}: pull response body: ${pullResponse.body}`);
+        console.error(`VU ${__VU}: pull response error: ${pullResponse.error || 'none'}`);
+        console.error(`VU ${__VU}: pull response error_code: ${pullResponse.error_code || 'none'}`);
         emptyAttempts++;
       }
     } else {
       console.error(`VU ${__VU}: pull failed with status ${pullResponse.status}`);
+      console.error(`VU ${__VU}: pull error: ${pullResponse.error || 'none'}`);
+      console.error(`VU ${__VU}: pull error_code: ${pullResponse.error_code || 'none'}`);
+      console.error(`VU ${__VU}: pull body: ${pullResponse.body || 'null'}`);
+      console.error(`VU ${__VU}: pull request payload: ${JSON.stringify(payload)}`);
       emptyAttempts++;
     }
 
