@@ -33,6 +33,12 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 log_level = logging.WARNING
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=log_level, format=log_format)
@@ -42,8 +48,7 @@ colorama_init()
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import any_, anydict
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,7 +63,7 @@ class ProgressTracker:
         self.failed_messages = 0
         self.start_time = utcnow()
         self.lock = Lock()
-        
+
     def update_progress(self, success:'bool'=True) -> 'None':
         """ Update progress counters.
         """
@@ -68,22 +73,22 @@ class ProgressTracker:
             else:
                 self.failed_messages += 1
             self._display_progress()
-    
+
     def _display_progress(self) -> 'None':
         """ Display progress in place.
         """
         current_time = utcnow()
         elapsed_time = current_time - self.start_time
         elapsed_seconds = elapsed_time.total_seconds()
-        
+
         total_processed = self.completed_messages + self.failed_messages
         percentage = (total_processed / self.total_messages) * 100 if self.total_messages > 0 else 0
-        
+
         if elapsed_seconds > 0:
             rate = total_processed / elapsed_seconds
         else:
             rate = 0
-            
+
         if rate > 0:
             eta_seconds = (self.total_messages - total_processed) / rate
             eta_minutes = int(eta_seconds // 60)
@@ -91,18 +96,18 @@ class ProgressTracker:
             eta_str = f'{eta_minutes:02d}:{eta_seconds:02d}'
         else:
             eta_str = '--:--'
-        
+
         # Create progress bar
         bar_width = 30
         filled = int((percentage / 100) * bar_width)
         bar = '█' * filled + '░' * (bar_width - filled)
-        
+
         # Color failed messages
         if self.failed_messages > 0:
             failed_section = f'{Style.RESET_ALL}{Fore.RED}Failed: {self.failed_messages:,}{Style.RESET_ALL}'
         else:
-            failed_section = f'{Style.RESET_ALL}Failed: {self.failed_messages:,}{Style.RESET_ALL}'
-            
+            failed_section = f'Failed: {self.failed_messages:,}'
+
         progress_line = (
             f'\r{Fore.GREEN}Progress: [{bar}] '
             f'{percentage:5.1f}% '
@@ -112,29 +117,22 @@ class ProgressTracker:
             f'| {failed_section}{Fore.GREEN} '
             f'| ETA: {eta_str}{Style.RESET_ALL}'
         )
-        
-        sys.stdout.write(progress_line)
-        sys.stdout.flush()
-        
+
+        _ = sys.stdout.write(progress_line)
+        _ = sys.stdout.flush()
+
     def finish(self) -> 'None':
         """ Finish progress tracking.
         """
         end_time = utcnow()
         total_time = end_time - self.start_time
         total_seconds = total_time.total_seconds()
-        
+
         print(f'\n{Fore.GREEN}✓ Completed in {total_seconds:.2f}s{Style.RESET_ALL}')
         print(f'  Total messages: {self.completed_messages + self.failed_messages:,}')
         print(f'  Success rate: {(self.completed_messages / (self.completed_messages + self.failed_messages) * 100):5.1f}%')
         if total_seconds > 0:
             print(f'  Average rate: {(self.completed_messages + self.failed_messages) / total_seconds:.1f} req/s')
-
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +165,7 @@ class Producer:
         reqs_per_producer = self.reqs_per_producer
         reqs_per_second = self.reqs_per_second
         max_topics = self.max_topics
-        
+
         return {
             'base_url': base_url,
             'username': username,
@@ -200,10 +198,10 @@ class Producer:
 
         topic_name = payload['data']['topic']
         success = response.status_code == 200
-        
+
         if self.progress_tracker:
             self.progress_tracker.update_progress(success)
-            
+
         if not success:
             logger.error(f'Producer {self.producer_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
 
@@ -220,15 +218,9 @@ class Producer:
         reqs_per_second = config['reqs_per_second']
         max_topics = config['max_topics']
         max_topics_range = max_topics + 1
-        
-        request_interval = 1.0 / reqs_per_second
-        total_messages = reqs_per_producer * max_topics
-        message_count = 0
 
-        if total_messages < 1000:
-            log_interval = 10
-        else:
-            log_interval = 50
+        request_interval = 1.0 / reqs_per_second
+        message_count = 0
 
         for _ in range(reqs_per_producer):
             for topic_num in range(1, max_topics_range):
@@ -291,7 +283,7 @@ class ProducerManager:
 
         total_messages = num_producers * reqs_per_producer * max_topics
         progress_tracker = ProgressTracker(num_producers, total_messages)
-        
+
         print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
         print(f'{Fore.CYAN}Rate: {reqs_per_second} req/s per producer, Topics: {max_topics}{Style.RESET_ALL}')
         print()
@@ -304,7 +296,7 @@ class ProducerManager:
         # Wait for all greenlets to complete
         for greenlet in greenlets:
             greenlet.join()
-            
+
         progress_tracker.finish()
 
 # ################################################################################################################################
