@@ -82,8 +82,7 @@ class Producer(Client):
         topic_name = payload['data']['topic']
         success = response.status_code == 200
 
-        if self.progress_tracker:
-            self.progress_tracker.update_progress(success)
+        self.progress_tracker.update_progress(success)
 
         if not success:
             logger.error(f'Client {self.client_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
