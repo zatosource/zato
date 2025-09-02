@@ -64,9 +64,12 @@ class ProgressTracker:
             rate_total = 0
 
         # Calculate 1-minute rate
-        one_minute_ago = current_time - timedelta(minutes=1)
-        messages_last_minute = sum(1 for ts in self.message_timestamps if ts >= one_minute_ago)
-        rate_1m = messages_last_minute / 60.0
+        if elapsed_seconds < 60:
+            rate_1m = rate_total
+        else:
+            one_minute_ago = current_time - timedelta(minutes=1)
+            messages_last_minute = sum(1 for ts in self.message_timestamps if ts >= one_minute_ago)
+            rate_1m = messages_last_minute / 60.0
 
         # Calculate 1-second rate
         one_second_ago = current_time - timedelta(seconds=1)
