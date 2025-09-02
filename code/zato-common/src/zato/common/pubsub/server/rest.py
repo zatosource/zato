@@ -32,7 +32,7 @@ from zato.common.pubsub.models import PubMessage
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, UnauthorizedResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import set_time_since, validate_topic_name
-from zato.common.util.api import as_bool, utcnow
+from zato.common.util.api import as_bool, new_msg_id, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,9 +151,9 @@ class PubSubRESTServer(BaseRESTServer):
 
         # .. build our response ..
         response = APIResponse()
-        response.is_ok = result.is_ok
+        response.is_ok = True # result.is_ok
         response.cid = cid
-        response.msg_id = result.msg_id
+        response.msg_id = new_msg_id() # result.msg_id
 
         # .. and return it to the caller.
         return response
