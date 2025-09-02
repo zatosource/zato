@@ -22,8 +22,7 @@ from bunch import bunchify
 from gevent import sleep, spawn
 
 # Kombu
-from kombu.connection import Connection as KombuConnection
-from kombu.entity import PERSISTENT_DELIVERY_MODE, Exchange, Queue
+from kombu.entity import PERSISTENT_DELIVERY_MODE
 
 # requests
 import requests
@@ -33,7 +32,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow, wait_for_predicate
+from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
@@ -43,8 +42,7 @@ from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
 
 if 0:
     from typing import Dict
-    from zato.common.pubsub.common import BrokerConfig
-    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strdictnone, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -184,7 +182,7 @@ class BrokerClient:
         with self.producer.acquire() as client:
 
             # Make sure we are connected ..
-            # _ = client.connection.ensure_connection() # type: ignore
+            _ = client.connection.ensure_connection() # type: ignore
 
             # Enable confirm mode on the channel
             client.channel.confirm_select()
