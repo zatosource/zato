@@ -301,7 +301,7 @@ class Backend:
         if msg.in_reply_to:
             message['in_reply_to'] = msg.in_reply_to
 
-        # self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
+        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
 
