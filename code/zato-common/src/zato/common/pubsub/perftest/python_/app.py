@@ -149,8 +149,11 @@ class ProducerManager:
             seconds_per_req = 1.0 / reqs_per_second
             rate_display = f'{reqs_per_second} req/s per producer (1 req/{seconds_per_req:.0f}s)'
 
+        burst_rate = reqs_per_second * burst_multiplier
+
         print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
         print(f'{Fore.CYAN}Rate: {rate_display}, Topics: {max_topics}{Style.RESET_ALL}')
+        print(f'{Fore.CYAN}Burst: {burst_rate} req/s per producer for {burst_duration}s every {burst_interval}s{Style.RESET_ALL}')
         print()
 
         greenlets = []
