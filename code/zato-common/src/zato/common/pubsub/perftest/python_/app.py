@@ -98,14 +98,15 @@ class ConsumerManager:
                     if greenlet.dead:
                         logger.error(f'Consumer {i+1} greenlet is not running anymore')
                         dead_count += 1
-
+                        
                 if dead_count > 0:
                     logger.error(f'{dead_count} out of {num_consumers} consumers are not running anymore')
-
+                    
         except KeyboardInterrupt:
             logger.info('Shutting down consumers')
             for greenlet in greenlets:
                 greenlet.kill()
+            raise SystemExit(0)
 
 # ################################################################################################################################
 # ################################################################################################################################
