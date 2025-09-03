@@ -65,7 +65,7 @@ class Producer(Client):
         """
         return {
             'data': {
-                'message': f'Test message from Python client',
+                'message': {'msg':'Test message from Python client' * 250},
                 'topic': topic_name,
             },
             'priority': 5,
