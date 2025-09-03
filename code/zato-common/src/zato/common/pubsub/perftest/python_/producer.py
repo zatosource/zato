@@ -137,10 +137,8 @@ class Producer(Client):
                     last_burst_time = current_time
                     is_in_burst = True
 
-                # Update progress tracker if burst status changed
-                if is_in_burst != current_burst_status:
-                    self.progress_tracker.set_burst_status(self.client_id, is_in_burst)
-                    current_burst_status = is_in_burst
+                # Track burst status for timing only
+                current_burst_status = is_in_burst
 
                 request_start = utcnow()
 
