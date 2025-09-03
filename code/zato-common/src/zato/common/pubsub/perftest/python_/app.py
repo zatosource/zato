@@ -71,7 +71,7 @@ class ConsumerManager:
         """
         start_id, end_id = _parse_consumer_range(consumer_spec)
         num_consumers = end_id - start_id + 1
-        
+
         if num_consumers == 1:
             noun = 'consumer'
         else:
@@ -98,10 +98,10 @@ class ConsumerManager:
                     if greenlet.dead:
                         logger.error(f'Consumer {i+1} greenlet is not running anymore')
                         dead_count += 1
-                        
+
                 if dead_count > 0:
                     logger.error(f'{dead_count} out of {num_consumers} consumers are not running anymore')
-                    
+
         except KeyboardInterrupt:
             logger.info('Shutting down consumers')
             for greenlet in greenlets:
@@ -120,16 +120,19 @@ class ProducerManager:
         producer_id:'int',
         reqs_per_second:'float',
         max_topics:'int',
-        progress_tracker:'ProgressTracker'
+        progress_tracker:'ProgressTracker',
+        burst_multiplier:'int'=10,
+        burst_duration:'int'=10,
+        burst_interval:'int'=60
     ) -> 'any_':
 
-        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, max_topics)
+        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, max_topics, burst_multiplier, burst_duration, burst_interval)
         greenlet = spawn(producer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_producers:'int', reqs_per_producer:'int'=1, reqs_per_second:'float'=1.0, max_topics:'int'=3) -> 'None':
+    def run(self, num_producers:'int', reqs_per_producer:'int'=1, reqs_per_second:'float'=1.0, max_topics:'int'=3, burst_multiplier:'int'=10, burst_duration:'int'=10, burst_interval:'int'=60) -> 'None':
         """ Run the specified number of producers and wait for completion.
         """
         if num_producers == 1:
@@ -152,7 +155,7 @@ class ProducerManager:
 
         greenlets = []
         for producer_id in range(1, num_producers + 1):
-            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker)
+            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker, burst_multiplier, burst_duration, burst_interval)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -191,11 +194,14 @@ if __name__ == '__main__':
     _ = parser.add_argument('--pull-interval', type=float, default=1.0, help='Pull interval for consumers in seconds')
     _ = parser.add_argument('--max-messages', type=int, default=100, help='Max messages per pull for consumers')
     _ = parser.add_argument('--max-topics', type=int, default=3, help='Number of topics to publish to')
+    _ = parser.add_argument('--burst-multiplier', type=int, default=10, help='Multiplier for burst rate (default: 10x normal rate)')
+    _ = parser.add_argument('--burst-duration', type=int, default=10, help='Duration of burst in seconds (default: 10)')
+    _ = parser.add_argument('--burst-interval', type=int, default=60, help='Interval between bursts in seconds (default: 60)')
     args = parser.parse_args()
 
     if args.num_producers:
         manager = ProducerManager()
-        manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.max_topics)
+        manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.max_topics, args.burst_multiplier, args.burst_duration, args.burst_interval)
     elif args.num_consumers:
         manager = ConsumerManager()
         manager.run(args.num_consumers, args.pull_interval, args.max_topics, args.max_messages)

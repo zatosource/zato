@@ -45,17 +45,26 @@ class Producer(Client):
         reqs_per_producer:'int'=1,
         producer_id:'int'=0,
         reqs_per_second:'float'=1.0,
-        max_topics:'int'=3
+        max_topics:'int'=3,
+        burst_multiplier:'int'=10,
+        burst_duration:'int'=10,
+        burst_interval:'int'=60
     ) -> 'None':
 
         super().__init__(progress_tracker, producer_id, reqs_per_second, max_topics)
         self.reqs_per_producer = reqs_per_producer
+        self.burst_multiplier = burst_multiplier
+        self.burst_duration = burst_duration
+        self.burst_interval = burst_interval
 
     def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
         config = super()._get_config()
         config['reqs_per_producer'] = self.reqs_per_producer
+        config['burst_multiplier'] = self.burst_multiplier
+        config['burst_duration'] = self.burst_duration
+        config['burst_interval'] = self.burst_interval
         return config
 
 # ################################################################################################################################
@@ -100,14 +109,34 @@ class Producer(Client):
         reqs_per_second = config['reqs_per_second']
         max_topics = config['max_topics']
         max_topics_range = max_topics + 1
+        burst_multiplier = config['burst_multiplier']
+        burst_duration = config['burst_duration']
+        burst_interval = config['burst_interval']
 
-        request_interval = 1.0 / reqs_per_second
+        normal_interval = 1.0 / reqs_per_second
+        burst_interval_time = 1.0 / (reqs_per_second * burst_multiplier)
+
+        start_time = utcnow()
+        last_burst_time = start_time
         message_count = 0
 
         for _ in range(reqs_per_producer):
             for topic_num in range(1, max_topics_range):
                 message_count += 1
-                start_time = utcnow()
+                current_time = utcnow()
+
+                # Check if we should start a burst
+                time_since_last_burst = (current_time - last_burst_time).total_seconds()
+                time_since_start = (current_time - start_time).total_seconds()
+
+                is_burst_time = time_since_last_burst >= burst_interval
+                is_in_burst = is_burst_time and (time_since_start % burst_interval) < burst_duration
+
+                if is_burst_time and not is_in_burst:
+                    last_burst_time = current_time
+                    is_in_burst = True
+
+                request_start = utcnow()
 
                 topic_name = f'demo.{topic_num}'
                 url = f'{config["base_url"]}/pubsub/topic/{topic_name}'
@@ -115,10 +144,13 @@ class Producer(Client):
 
                 self._publish_message(url, payload, headers, auth)
 
-                end_time = utcnow()
-                time_diff = end_time - start_time
-                elapsed_time = time_diff.total_seconds()
-                sleep_time = request_interval - elapsed_time
+                request_end = utcnow()
+                request_duration = (request_end - request_start).total_seconds()
+
+                # Use appropriate interval based on burst mode
+                target_interval = burst_interval_time if is_in_burst else normal_interval
+                sleep_time = target_interval - request_duration
+
                 if sleep_time > 0:
                     sleep(sleep_time)
 
