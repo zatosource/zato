@@ -119,7 +119,6 @@ class Producer(Client):
         start_time = utcnow()
         last_burst_time = start_time
         message_count = 0
-        current_burst_status = False
 
         for _ in range(reqs_per_producer):
             for topic_num in range(1, max_topics_range):
@@ -136,9 +135,6 @@ class Producer(Client):
                 if is_burst_time and not is_in_burst:
                     last_burst_time = current_time
                     is_in_burst = True
-
-                # Track burst status for timing only
-                current_burst_status = is_in_burst
 
                 request_start = utcnow()
 
