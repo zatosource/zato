@@ -30,6 +30,7 @@ class ProgressTracker:
         self.start_time = utcnow()
         self.lock = Lock()
         self.message_timestamps = []
+        self.burst_active_producers = set()
 
 # ################################################################################################################################
 
@@ -111,6 +112,7 @@ class ProgressTracker:
             failed_section = f'Failed: {self.failed_messages:,}'
 
         eta_section = f'| ETA: {eta_str}' if self.total_messages > 0 else ''
+        burst_section = f'| {Fore.YELLOW}BURST: {len(self.burst_active_producers)}/{self.total_producers}{Style.RESET_ALL}' if len(self.burst_active_producers) > 0 else ''
 
         progress_line = (
             f'\r{Fore.GREEN}Progress: [{bar}] '
@@ -122,10 +124,21 @@ class ProgressTracker:
             f'| Success: {self.completed_messages:,} '
             f'| {failed_section} '
             f'| Elapsed: {elapsed_str} '
-            f'{eta_section}{Style.RESET_ALL}'
+            f'{eta_section} {burst_section}{Style.RESET_ALL}'
         )
 
         print(progress_line, end='', flush=True)
+
+# ################################################################################################################################
+
+    def set_burst_status(self, producer_id:'int', is_bursting:'bool') -> 'None':
+        """ Update burst status for a producer.
+        """
+        with self.lock:
+            if is_bursting:
+                self.burst_active_producers.add(producer_id)
+            else:
+                self.burst_active_producers.discard(producer_id)
 
 # ################################################################################################################################
 

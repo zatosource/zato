@@ -83,8 +83,8 @@ run-producers:
 		--reqs-per-second $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),1.0) \
 		--max-topics $(if $(word 5,$(MAKECMDGOALS)),$(word 5,$(MAKECMDGOALS)),3) \
 		--burst-multiplier $(if $(word 6,$(MAKECMDGOALS)),$(word 6,$(MAKECMDGOALS)),10) \
-		--burst-duration $(if $(word 7,$(MAKECMDGOALS)),$(word 7,$(MAKECMDGOALS)),10) \
-		--burst-interval $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),60)
+		--burst-interval $(if $(word 7,$(MAKECMDGOALS)),$(word 7,$(MAKECMDGOALS)),60) \
+		--burst-duration $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),10)
 
 run-consumers:
 	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
