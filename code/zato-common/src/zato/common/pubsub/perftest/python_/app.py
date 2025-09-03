@@ -66,9 +66,12 @@ class ConsumerManager:
 
 # ################################################################################################################################
 
-    def run(self, num_consumers:'int', pull_interval:'float'=1.0, max_messages:'int'=100) -> 'None':
-        """ Run the specified number of consumers.
+    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_topics:'int'=1, max_messages:'int'=100) -> 'None':
+        """ Run consumers.
         """
+        start_id, end_id = _parse_consumer_range(consumer_spec)
+        num_consumers = end_id - start_id + 1
+        
         if num_consumers == 1:
             noun = 'consumer'
         else:
@@ -76,14 +79,14 @@ class ConsumerManager:
 
         progress_tracker = ProgressTracker(0, 0)
 
-        print(f'{Fore.CYAN}Starting {num_consumers} {noun} with pull interval {pull_interval}s{Style.RESET_ALL}')
+        print(f'{Fore.CYAN}Starting {num_consumers} {noun} (demo.{start_id} to demo.{end_id}) with pull interval {pull_interval}s{Style.RESET_ALL}')
         print()
 
         progress_tracker._display_progress()
 
         greenlets = []
-        for consumer_id in range(1, num_consumers + 1):
-            greenlet = self._start_consumer(consumer_id, pull_interval, 1, max_messages, progress_tracker)
+        for consumer_id in range(start_id, end_id + 1):
+            greenlet = self._start_consumer(consumer_id, pull_interval, max_topics, max_messages, progress_tracker)
             greenlets.append(greenlet)
 
         # Monitor greenlets periodically
@@ -160,6 +163,20 @@ class ProducerManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _parse_consumer_range(consumer_spec:'str') -> 'tuple[int, int]':
+    """ Parse consumer specification like "40" or "3-15" into (start, end) tuple.
+    """
+    if '-' in consumer_spec:
+        start_str, end_str = consumer_spec.split('-', 1)
+        start = int(start_str)
+        end = int(end_str)
+        return start, end
+    else:
+        count = int(consumer_spec)
+        return 1, count
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
@@ -167,7 +184,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Producer/Consumer Manager')
     _ = parser.add_argument('--num-producers', type=int, help='Number of producers to start')
-    _ = parser.add_argument('--num-consumers', type=int, help='Number of consumers to start')
+    _ = parser.add_argument('--num-consumers', type=str, help='Number of consumers to start (e.g., "40" or "3-15")')
     _ = parser.add_argument('--reqs-per-producer', type=int, default=1, help='Number of requests each producer should send')
     _ = parser.add_argument('--reqs-per-second', type=float, default=1.0, help='Number of requests per second each producer should make')
     _ = parser.add_argument('--pull-interval', type=float, default=1.0, help='Pull interval for consumers in seconds')
@@ -180,7 +197,7 @@ if __name__ == '__main__':
         manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.max_topics)
     elif args.num_consumers:
         manager = ConsumerManager()
-        manager.run(args.num_consumers, args.pull_interval, args.max_messages)
+        manager.run(args.num_consumers, args.pull_interval, args.max_topics, args.max_messages)
     else:
         parser.error('Must specify either --num-producers or --num-consumers')
 
