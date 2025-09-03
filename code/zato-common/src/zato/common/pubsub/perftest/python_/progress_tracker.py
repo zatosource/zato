@@ -37,16 +37,19 @@ class ProgressTracker:
         """ Update progress counters.
         """
         with self.lock:
-
             current_time = utcnow()
 
-            for _ in range(count):
-                self.message_timestamps.append(current_time)
-
             if success:
+                for _ in range(count):
+                    self.message_timestamps.append(current_time)
                 self.completed_messages += count
             else:
+                self.message_timestamps.append(current_time)
                 self.failed_messages += 1
+
+            # Trim timestamps older than 60 seconds
+            cutoff_time = current_time - timedelta(seconds=60)
+            self.message_timestamps = [ts for ts in self.message_timestamps if ts >= cutoff_time]
 
             self._display_progress()
 
