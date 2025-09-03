@@ -34,6 +34,165 @@ if 0:
 
 logger = getLogger(__name__)
 
+data = [
+    {
+        'name': 'Eaton Freeman',
+        'phone': '1-487-522-2778',
+        'time': '3:24 AM',
+        'company': 'Pharetra Felis Associates',
+        'postalZip': '34026',
+        'text': 'Integer urna. Vivamus molestie dapibus ligula. Aliquam erat volutpat. Nulla',
+        'region': 'Jönköpings län',
+        'guid': 'D263B5DF-E485-16B9-3E8E-9345F94C94C7',
+        'iban': 'DE71816804964943650924154086',
+        'track1': '%B3567251407726275^KqvzurfGzfygj^9209594857?5'
+    },
+    {
+        'name': 'Brenda Wilkins',
+        'phone': '(278) 654-2212',
+        'time': '3:59 PM',
+        'company': 'Rutrum Company',
+        'postalZip': '031570',
+        'text': 'ac orci. Ut semper pretium neque. Morbi quis urna. Nunc',
+        'region': 'Zamboanga Peninsula',
+        'guid': 'C35141C4-37C6-D1EA-ABDE-82EE2716041C',
+        'iban': 'GB302638468295516128646303452',
+        'track1': '%B3266028884335821^HfzilwlAfysdt^37072659?7'
+    },
+    {
+        'name': 'Piper Chaney',
+        'phone': '1-883-524-7463',
+        'time': '11:12 PM',
+        'company': 'Adipiscing Elit LLP',
+        'postalZip': '25425',
+        'text': 'pede et risus. Quisque libero lacus, varius et, euismod et,',
+        'region': 'Stirlingshire',
+        'guid': '666E2996-85AD-D2BE-D8BA-DA6C13CF6C0E',
+        'iban': 'DE98VBVE73195715634752',
+        'track1': '%B3365717117062201^DzbulyrNkacat^84051297?1'
+    },
+    {
+        'name': 'Jacob Mercer',
+        'phone': '(513) 457-4033',
+        'time': '2:39 PM',
+        'company': 'Non Foundation',
+        'postalZip': '513321',
+        'text': 'ligula. Aenean euismod mauris eu elit. Nulla facilisi. Sed neque.',
+        'region': 'Luik',
+        'guid': '69EC6286-7966-6B10-B8A0-E3A6C5731976',
+        'iban': 'FR48569576145488431698712133',
+        'track1': '%B8776285540045303^LdpmfrrBjflod^24119384?4'
+    },
+    {
+        'name': 'Austin Bryan',
+        'phone': '1-666-234-3029',
+        'time': '8:28 PM',
+        'company': 'Augue Sed Molestie LLP',
+        'postalZip': '72431',
+        'text': 'ligula tortor, dictum eu, placerat eget, venenatis a, magna. Lorem',
+        'region': 'Yucatán',
+        'guid': 'E5B55E39-62E6-8836-3652-E48482C6143E',
+        'iban': 'FR98244805215102663149383298',
+        'track1': '%B6867663289135515^KumxkcyLmeghj^64085553?4'
+    },
+    {
+        'name': 'Eaton Freeman',
+        'phone': '1-487-522-2778',
+        'time': '3:24 AM',
+        'company': 'Pharetra Felis Associates',
+        'postalZip': '34026',
+        'text': 'Integer urna. Vivamus molestie dapibus ligula. Aliquam erat volutpat. Nulla',
+        'region': 'Jönköpings län',
+        'guid': 'D263B5DF-E485-16B9-3E8E-9345F94C94C7',
+        'iban': 'DE71816804964943650924154086',
+        'track1': '%B3567251407726275^KqvzurfGzfygj^9209594857?5'
+    },
+    {
+        'name': 'Brenda Wilkins',
+        'phone': '(278) 654-2212',
+        'time': '3:59 PM',
+        'company': 'Rutrum Company',
+        'postalZip': '031570',
+        'text': 'ac orci. Ut semper pretium neque. Morbi quis urna. Nunc',
+        'region': 'Zamboanga Peninsula',
+        'guid': 'C35141C4-37C6-D1EA-ABDE-82EE2716041C',
+        'iban': 'GB302638468295516128646303452',
+        'track1': '%B3266028884335821^HfzilwlAfysdt^37072659?7'
+    },
+    {
+        'name': 'Piper Chaney',
+        'phone': '1-883-524-7463',
+        'time': '11:12 PM',
+        'company': 'Adipiscing Elit LLP',
+        'postalZip': '25425',
+        'text': 'pede et risus. Quisque libero lacus, varius et, euismod et,',
+        'region': 'Stirlingshire',
+        'guid': '666E2996-85AD-D2BE-D8BA-DA6C13CF6C0E',
+        'iban': 'DE98VBVE73195715634752',
+        'track1': '%B3365717117062201^DzbulyrNkacat^84051297?1'
+    },
+    {
+        'name': 'Jacob Mercer',
+        'phone': '(513) 457-4033',
+        'time': '2:39 PM',
+        'company': 'Non Foundation',
+        'postalZip': '513321',
+        'text': 'ligula. Aenean euismod mauris eu elit. Nulla facilisi. Sed neque.',
+        'region': 'Luik',
+        'guid': '69EC6286-7966-6B10-B8A0-E3A6C5731976',
+        'iban': 'FR48569576145488431698712133',
+        'track1': '%B8776285540045303^LdpmfrrBjflod^24119384?4'
+    },
+    {
+        'name': 'Austin Bryan',
+        'phone': '1-666-234-3029',
+        'time': '8:28 PM',
+        'company': 'Augue Sed Molestie LLP',
+        'postalZip': '72431',
+        'text': 'ligula tortor, dictum eu, placerat eget, venenatis a, magna. Lorem',
+        'region': 'Yucatán',
+        'guid': 'E5B55E39-62E6-8836-3652-E48482C6143E',
+        'iban': 'FR98244805215102663149383298',
+        'track1': '%B6867663289135515^KumxkcyLmeghj^64085553?4'
+    },
+    {
+        'name': 'Brenda Wilkins',
+        'phone': '(278) 654-2212',
+        'time': '3:59 PM',
+        'company': 'Rutrum Company',
+        'postalZip': '031570',
+        'text': 'ac orci. Ut semper pretium neque. Morbi quis urna. Nunc',
+        'region': 'Zamboanga Peninsula',
+        'guid': 'C35141C4-37C6-D1EA-ABDE-82EE2716041C',
+        'iban': 'GB302638468295516128646303452',
+        'track1': '%B3266028884335821^HfzilwlAfysdt^37072659?7'
+    },
+    {
+        'name': 'Piper Chaney',
+        'phone': '1-883-524-7463',
+        'time': '11:12 PM',
+        'company': 'Adipiscing Elit LLP',
+        'postalZip': '25425',
+        'text': 'pede et risus. Quisque libero lacus, varius et, euismod et,',
+        'region': 'Stirlingshire',
+        'guid': '666E2996-85AD-D2BE-D8BA-DA6C13CF6C0E',
+        'iban': 'DE98VBVE73195715634752',
+        'track1': '%B3365717117062201^DzbulyrNkacat^84051297?1'
+    },
+    {
+        'name': 'Jacob Mercer',
+        'phone': '(513) 457-4033',
+        'time': '2:39 PM',
+        'company': 'Non Foundation',
+        'postalZip': '513321',
+        'text': 'ligula. Aenean euismod mauris eu elit. Nulla facilisi. Sed neque.',
+        'region': 'Luik',
+        'guid': '69EC6286-7966-6B10-B8A0-E3A6C5731976',
+        'iban': 'FR48569576145488431698712133',
+        'track1': '%B8776285540045303^LdpmfrrBjflod^24119384?4'
+    }
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -74,7 +233,7 @@ class Producer(Client):
         """
         return {
             'data': {
-                'message': {'msg':'Test message from Python client' * 250},
+                'message': {'msg':data},
                 'topic': topic_name,
             },
             'priority': 5,
