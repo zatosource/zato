@@ -177,7 +177,7 @@ class BaseRESTServer(BaseServer):
                 data = loads(text_data)
                 return data
             else:
-                logger.warning('[{cid}] No request data provided')
+                logger.warning(f'[{cid}] No request data provided')
                 return {}
 
         except Exception:
