@@ -58,6 +58,7 @@ _default_max_messages = PubSub.Message.Default_Max_Messages
 class PubSubRESTServerPull(BaseRESTServer):
     """ A REST server for pub/sub message pulling operations.
     """
+    server_type = 'pull'
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
