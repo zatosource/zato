@@ -12,7 +12,6 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from datetime import datetime
 from json import loads
 from http.client import OK
 from logging import getLogger
