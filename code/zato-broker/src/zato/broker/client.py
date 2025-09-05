@@ -153,6 +153,13 @@ class BrokerClient:
 
 # ################################################################################################################################
 
+    def publish_to_pubsub(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
+
+        self.publish(msg, rourouting_key='pubsub.publish.1')
+        self.publish(msg, rourouting_key='pubsub.pull.1')
+
+# ################################################################################################################################
+
     def publish(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         """ Publishes a message to the AMQP broker.
         """

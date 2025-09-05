@@ -242,7 +242,7 @@ class Create(AdminService):
                 self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
 
                 # .. and the pub/sub server is invoked in background.
-                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                self.broker_client.publish_to_pubsub(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -406,7 +406,7 @@ class Edit(AdminService):
                 self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
 
                 # .. and the pub/sub server is invoked in background.
-                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                self.broker_client.publish_to_pubsub(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -478,7 +478,7 @@ class Delete(AdminService):
         self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
-        self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+        self.broker_client.publish_to_pubsub(pubsub_msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

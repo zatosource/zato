@@ -245,7 +245,8 @@ class Backend:
         self._add_topic(topic_name, topic)
         self.subs_by_topic[topic_name] = {}
 
-        logger.info(f'[{cid}] Created new topic: {topic_name} ({source})')
+        if _needs_details:
+            logger.info(f'[{cid}] Created new topic: {topic_name} ({source})')
 
 # ################################################################################################################################
 

@@ -183,7 +183,7 @@ class Edit(AdminService):
                     pubsub_msg.old_topic_name = old_name
 
                     self.broker_client.publish(pubsub_msg)
-                    self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                    self.broker_client.publish_to_pubsub(pubsub_msg)
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -221,7 +221,7 @@ class Delete(AdminService):
                 pubsub_msg.topic_name = topic.name
 
                 self.broker_client.publish(pubsub_msg)
-                self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+                self.broker_client.publish_to_pubsub(pubsub_msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
