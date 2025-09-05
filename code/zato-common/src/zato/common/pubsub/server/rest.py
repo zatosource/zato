@@ -481,6 +481,9 @@ class GunicornApplication(BaseApplication):
             if key in self.cfg.settings and value is not None: # type: ignore
                 self.cfg.set(key.lower(), value) # type: ignore
 
+        # We need to set this one explicitly because otherwise gunicorn insists it be an int (min=1)
+        object.__setattr__(self.cfg, 'graceful_timeout', 0.05)
+
     def load(self):
         return self.application
 
