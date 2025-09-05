@@ -551,7 +551,8 @@ class BrokerClient:
                 self.data = response
                 self.ready = True
                 reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
-                logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
+                # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
+                logger.info(f'Rsp 🠈 {cid} - `{self.service}`')
 
         # Initialize response holder
         response = ResponseHolder()
@@ -631,6 +632,23 @@ class BrokerClient:
 
         # .. now, we can invoke the actual service.
         return self._invoke_sync(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def notify_pubsub_counterpart(self, cid:'str', action:'str', source_server_type:'str', **msg_data:'any_') -> 'None':
+        """ Notify the counterpart pub/sub server about subscription changes.
+        """
+        counterpart = 'pull' if source_server_type == 'publish' else 'publish'
+        queue_name = f'pubsub.{counterpart}.1'
+
+        broker_msg = {
+            'action': action,
+            'cid': cid,
+            **msg_data
+        }
+
+        self.publish_to_queue(queue_name, broker_msg, cid)
+        logger.info(f'[{cid}] Notified counterpart server via queue `{queue_name}`')
 
 # ################################################################################################################################
 

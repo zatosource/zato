@@ -477,7 +477,7 @@ class BaseRESTServer(BaseServer):
             raise UnauthorizedException(cid, 'Permission denied')
 
         # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username=username, should_invoke_server=True)
+        result = self.backend.register_subscription(cid, topic_name, username=username, should_invoke_server=True, source_server_type=self.server_type)
 
         response = APIResponse()
         response.cid = cid
@@ -506,7 +506,7 @@ class BaseRESTServer(BaseServer):
             raise UnauthorizedException(cid, 'Permission denied')
 
         # Unsubscribe from topic using backend
-        result = self.backend.unregister_subscription(cid, topic_name, username=username)
+        result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
         response = APIResponse()
         response.is_ok = result.is_ok
