@@ -20,8 +20,7 @@ from logging import getLogger
 # requests
 import requests
 
-# gunicorn
-from gunicorn.app.base import BaseApplication
+
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -405,35 +404,6 @@ class PubSubRESTServerPublish(BaseRESTServer):
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
             return self._build_error_response(cid, 'Internal error retrieving messages')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GunicornApplication(BaseApplication):
-    """ Gunicorn application wrapper for the PubSub REST API.
-    """
-    def __init__(self, app:'PubSubRESTServer', options:'dictnone'=None):
-        self.options = options or {}
-        self.options.setdefault('post_fork', self.on_post_fork)
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        # Apply valid configuration options
-        for key, value in self.options.items():
-            if key in self.cfg.settings and value is not None: # type: ignore
-                self.cfg.set(key.lower(), value) # type: ignore
-
-        # We need to set this one explicitly because otherwise gunicorn insists it be an int (min=1)
-        object.__setattr__(self.cfg, 'graceful_timeout', 0.05)
-
-    def load(self):
-        return self.application
-
-    def on_post_fork(self, server, worker):
-        logger.info(f'Setting up PubSub REST Publish server at {self.cfg.address}') # type: ignore
-        self.application.init_broker_client()
-        self.application.setup()
 
 # ################################################################################################################################
 # ################################################################################################################################
