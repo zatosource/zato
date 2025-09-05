@@ -24,6 +24,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.util import cleanup_broker_impl, get_broker_config
 
 # ################################################################################################################################
@@ -42,6 +43,8 @@ logging.basicConfig(
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +77,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
         cls.auth = HTTPBasicAuth(cls.username, cls.password)
 
         # Server configuration
-        cls.base_url = 'http://127.0.0.1:44556'
+        cls.base_url = f'http://127.0.0.1:{_default_port_publish}'
 
         # Test topics from config
         cls.test_topics = [
