@@ -219,7 +219,7 @@ class Backend:
 
         with self._invoke_lock:
             try:
-                response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem, cid=cid)
+                response = self.broker_client.invoke_sync(service, request, timeout, needs_root_elem)
             except Exception:
                 raise
 
