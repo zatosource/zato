@@ -150,8 +150,9 @@ def get_parser() -> 'argparse.ArgumentParser':
     start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
     start_parser.add_argument('--workers', type=int, default=PubSub.REST_Server.Default_Threads, help='Number of worker processes')
     start_parser.add_argument('--has-debug', action='store_true', help='Enable debug logging')
-    start_parser.add_argument('--publish', action='store_true', help='Start server in publish mode (default)')
-    start_parser.add_argument('--pull', action='store_true', help='Start server in pull mode')
+    mode_group = start_parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument('--publish', action='store_true', help='Start server in publish mode')
+    mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
 
     # Cleanup command
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
