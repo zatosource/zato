@@ -139,8 +139,6 @@ def get_parser() -> 'argparse.ArgumentParser':
 def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
-    gunicorn_app = None
-
     try:
         # Create server application
         app = PubSubRESTServer(
