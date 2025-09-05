@@ -46,6 +46,7 @@ if 0:
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 _default_port_publish = PubSub.REST_Server.Default_Port_Publish
+_default_port_pull = PubSub.REST_Server.Default_Port_Get
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,7 +148,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
     _ = start_parser.add_argument('--host', default=PubSub.REST_Server.Default_Host, help='Host to bind to')
-    _ = start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
+    _ = start_parser.add_argument('--port', type=int, help='Port to bind to (defaults: 40100 for publish, 40200 for pull)')
     _ = start_parser.add_argument('--workers', type=int, default=PubSub.REST_Server.Default_Threads, help='Number of worker processes')
     _ = start_parser.add_argument('--has-debug', action='store_true', help='Enable debug logging')
 
@@ -180,25 +181,34 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
     try:
+        # Set default port based on server type
+        if args.publish:
+            default_port = _default_port_publish
+            server_type = 'Publish'
+            proc_type = 'pub'
+        else:
+            default_port = _default_port_pull
+            server_type = 'Pull'
+            proc_type = 'pull'
+
+        # Use provided port or default
+        port = args.port if args.port else default_port
+
         # Create server application based on mode
         if args.publish:
             app = PubSubRESTServerPublish(
                 host=args.host,
-                port=args.port,
+                port=port,
             )
-            server_type = 'Publish'
-            proc_type = 'pub'
         else:
             app = PubSubRESTServerPull(
                 host=args.host,
-                port=args.port,
+                port=port,
             )
-            server_type = 'Pull'
-            proc_type = 'pull'
 
         # Configure gunicorn options
         options = {
-            'bind': f'{args.host}:{args.port}',
+            'bind': f'{args.host}:{port}',
             'workers': args.workers,
             'worker_class': 'sync',
             'timeout': 30,
@@ -210,7 +220,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         }
 
         # Start gunicorn application
-        logger.info(f'Starting PubSub REST API {server_type} server on {args.host}:{args.port}')
+        logger.info(f'Starting PubSub REST API {server_type} server on {args.host}:{port}')
         worker_text = 'worker' if args.workers == 1 else 'workers'
         logger.info(f'Using {args.workers} {worker_text}')
 
@@ -332,34 +342,35 @@ def main() -> 'int':
 if __name__ == '__main__':
     sys.exit(main())
 
-"""
+f"""
 # Health check endpoint:
-curl http://localhost:40100/pubsub/health; echo
+curl http://localhost:{_default_port_publish}/pubsub/health; echo
 
-echo '{"data":"Hello World"}' > post_data.json
-ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:40100/pubsub/topic/demo.1
+echo '{{"data":"Hello World"}}' > post_data.json
+ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:{_default_port_publish}/pubsub/topic/demo.1
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/topic/demo.1 -d '{{"data":"Hello World"}}'; echo
 
-echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:40100/pubsub/topic/demo.1
-N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
+echo '{{"data":"Hello World"}}' > /tmp/payload.json && ab -n ${{1:-200000}} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:{_default_port_publish}/pubsub/topic/demo.1
+N=${{1:-100}}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/topic/demo.1 -d '{{"data":"Hello World"}}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
 
-# Subscribe to a topic:
-curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/subscribe/topic/demo.1; echo
 
-# Unsubscribe from a topic:
-curl -u demo:demo -X DELETE http://localhost:40100/pubsub/subscribe/topic/demo.1
+curl -u demo:demo -X DELETE http://localhost:{_default_port_publish}/pubsub/subscribe/topic/demo.1
 
 # Get admin diagnostics (logs topics, users, subscriptions etc.):
-curl -u demo:demo -X GET http://localhost:40100/pubsub/admin/diagnostics; echo
+curl -u demo:demo -X GET http://localhost:{_default_port_publish}/pubsub/admin/diagnostics; echo
 
-curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, "expiration": 250000000}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/messages/get -d '{"max_messages": 10}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/unsubscribe/topic/demo.1; echo
+# Get messages from queue:
+curl -u demo:demo -X POST http://localhost:{_default_port_pull}/pubsub/messages/get -d '{{"max_messages": 10, "max_len": 1000000}}'; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_pull}/pubsub/messages/get -d '{{"max_messages": 10}}'; echo
+
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/subscribe/topic/demo.1; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/topic/demo.1 -d '{{"data": "First message", "priority": 7, "expiration": 250000000}}'; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/topic/demo.1 -d '{{"data": "Second message", "priority": 5}}'; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_pull}/pubsub/messages/get -d '{{"max_messages": 10}}'; echo
+curl -u demo:demo -X POST http://localhost:{_default_port_publish}/pubsub/unsubscribe/topic/demo.1; echo
 """
 
 # ################################################################################################################################
