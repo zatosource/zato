@@ -20,7 +20,7 @@ from unittest.mock import Mock
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import Subscription
-from zato.common.pubsub.server.rest_publish import PubSubRESTServer
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +53,7 @@ class RESTOnMessagesGetPermissionCheckingTestCase(TestCase):
 
         # Create a test broker client that captures publish calls
         self.broker_client = BrokerClientHelper()
-        self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
+        self.rest_server = PubSubRESTServerPublish('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Set up test users for authentication

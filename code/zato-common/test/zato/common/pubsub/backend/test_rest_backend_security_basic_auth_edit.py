@@ -16,7 +16,7 @@ import warnings
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.server.rest_publish import PubSubRESTServer
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 from zato.common.pubsub.models import Subscription
 from zato.broker.client import BrokerClient
 
@@ -31,7 +31,7 @@ class RESTBackendSecurityBasicAuthEditTestCase(TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         self.broker_client = BrokerClient()
-        self.rest_server = PubSubRESTServer('localhost', 8080)
+        self.rest_server = PubSubRESTServerPublish('localhost', 8080)
         self.backend = RESTBackend(self.rest_server, self.broker_client)
 
         # Test data constants
