@@ -334,6 +334,7 @@ class Backend:
         sub_key: 'str'='',
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
+        source_server_type: 'str'='',
         ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
@@ -419,6 +420,17 @@ class Backend:
                 is_ok = True
                 status = OK
 
+            # .. notify the counterpart server ..
+            if source_server_type:
+                self.broker_client.notify_pubsub_counterpart(
+                    cid, 
+                    'PUBSUB_SUBSCRIPTION_CREATE', 
+                    source_server_type,
+                    sub_key=sub_key,
+                    topic_name=topic_name,
+                    sec_name=sec_name
+                )
+
             # .. build our response ..
             response.is_ok = is_ok
             response.status = status
@@ -440,6 +452,7 @@ class Backend:
         sec_name:'str' = '',
         username:'str' = '',
         should_notify_server:'bool'=True,
+        source_server_type: 'str'='',
         ) -> 'StatusResponse':
 
         # Get sec_name from username if needed
@@ -472,6 +485,16 @@ class Backend:
 
             # .. invoke our service ..
             self.invoke_service_with_pubsub('zato.pubsub.subscription.unsubscribe', request, cid=cid)
+
+            # .. notify the counterpart server ..
+            if source_server_type:
+                self.broker_client.notify_pubsub_counterpart(
+                    cid,
+                    'PUBSUB_SUBSCRIPTION_DELETE',
+                    source_server_type,
+                    topic_name=topic_name,
+                    sec_name=sec_name
+                )
 
             # .. remove subscription from memory ..
             with self._main_lock:
