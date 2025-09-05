@@ -188,7 +188,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         if args.publish:
             default_port = _default_port_publish
             server_type = 'Publish'
-            proc_type = 'pub'
+            proc_type = 'publish'
         else:
             default_port = _default_port_pull
             server_type = 'Pull'
