@@ -167,7 +167,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             'loglevel': 'has_debug' if args.has_debug else 'info',
             'proc_name': 'zato-pubsub-rest',
             'preload_app': False,
-            'graceful_timeout': 0.1,
+            'graceful_timeout': 1,
             'max_requests': 0,
         }
 
