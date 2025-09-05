@@ -25,7 +25,7 @@ from traceback import format_exc
 import gevent
 
 # Zato
-from zato.common.pubsub.server.rest import PubSubRESTServer, GunicornApplication
+from zato.common.pubsub.server.rest_publish import PubSubRESTServer, GunicornApplication
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid_cli
 
@@ -105,9 +105,9 @@ def get_parser() -> 'argparse.ArgumentParser':
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
 
-    # Create mutually exclusive group for push/pull
+    # Create mutually exclusive group for publish/pull
     mode_group = start_parser.add_mutually_exclusive_group(required=True)
-    _ = mode_group.add_argument('--push', action='store_true', help='Start server in push mode')
+    _ = mode_group.add_argument('--publish', action='store_true', help='Start server in publish mode')
     _ = mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
 
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
