@@ -16,7 +16,7 @@ from unittest.mock import Mock
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import APIResponse
-from zato.common.pubsub.server.rest import PubSubRESTServer
+from zato.common.pubsub.server.rest_publish import PubSubRESTServer
 
 # ################################################################################################################################
 # ################################################################################################################################
