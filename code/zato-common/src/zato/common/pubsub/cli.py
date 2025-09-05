@@ -14,6 +14,7 @@ _ = monkey.patch_all()
 import argparse
 import logging
 import os
+import signal
 import sys
 import threading
 from dataclasses import dataclass
@@ -104,12 +105,12 @@ def get_parser() -> 'argparse.ArgumentParser':
 
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
-    
+
     # Create mutually exclusive group for push/pull
     mode_group = start_parser.add_mutually_exclusive_group(required=True)
     _ = mode_group.add_argument('--push', action='store_true', help='Start server in push mode')
     _ = mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
-    
+
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
@@ -138,6 +139,17 @@ def get_parser() -> 'argparse.ArgumentParser':
 def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
+    gunicorn_app = None
+
+    def signal_handler(signum, frame):
+        logger.info('Received signal, shutting down server')
+        if gunicorn_app:
+            gunicorn_app.close()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
         # Create server application
         app = PubSubRESTServer(
@@ -149,13 +161,14 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         options = {
             'bind': f'{args.host}:{args.port}',
             'workers': args.workers,
-            'worker_class': 'gevent',
+            'worker_class': 'sync',
             'timeout': 30,
             'keepalive': 2,
             'loglevel': 'has_debug' if args.has_debug else 'info',
             'proc_name': 'zato-pubsub-rest',
-            'preload_app': True,
-            'reuse_port': True,
+            'preload_app': False,
+            'graceful_timeout': 0.1,
+            'max_requests': 0,
         }
 
         # Start gunicorn application
@@ -164,9 +177,13 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'Using {args.workers} {worker_text}')
 
         # Run the gunicorn application
-        GunicornApplication(app, options).run()
+        gunicorn_app = GunicornApplication(app, options)
+        gunicorn_app.run()
 
         return OperationResult(is_ok=True, message='Server stopped')
+    except KeyboardInterrupt:
+        logger.info('Server stopped by user')
+        return OperationResult(is_ok=True, message='Server stopped by user')
     except Exception as e:
         message = f'Error starting server: {format_exc()}'
         logger.error(message)
