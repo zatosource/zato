@@ -19,7 +19,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import BadRequestResponse, Subscription, UnauthorizedResponse
-from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
+from zato.common.pubsub.server.rest_pull import PubSubRESTServerPull
 from zato.common.pubsub.server.rest_base import UnauthorizedException
 
 # ################################################################################################################################
@@ -53,7 +53,7 @@ class RESTOnMessagesGetErrorHandlingTestCase(TestCase):
 
         # Create a test broker client that captures publish calls
         self.broker_client = BrokerClientHelper()
-        self.rest_server = PubSubRESTServerPublish('localhost', 8080, should_init_broker_client=False)
+        self.rest_server = PubSubRESTServerPull('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
 
         # Test data constants
