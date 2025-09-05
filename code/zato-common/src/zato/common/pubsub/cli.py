@@ -14,7 +14,6 @@ _ = monkey.patch_all()
 import argparse
 import logging
 import os
-import signal
 import sys
 import threading
 from dataclasses import dataclass
