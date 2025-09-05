@@ -16,7 +16,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.typing_ import any_, dict_
+from zato.common.typing_ import any_
 
 # werkzeug
 from werkzeug.routing import Map, Rule
@@ -292,7 +292,7 @@ class BaseServer:
 
 # ################################################################################################################################
 
-    def _load_permissions(self, cid:'str') -> 'None':
+    def _load_permissions(self, cid:'str') -> 'int':
         """ Load permissions from server and set up the matcher structure.
         """
 
@@ -385,10 +385,12 @@ class BaseServer:
 
     def create_user(self, cid:'str', sec_name:'str', username:'str', password:'str') -> 'None':
         if username not in self.users:
-            logger.info(f'[{cid}] Adding user credentials for `{username}` (`{sec_name}`)')
+            if _needs_details:
+                logger.info(f'[{cid}] Adding user credentials for `{username}` (`{sec_name}`)')
             self.users[username] = {'sec_name': sec_name, 'password': password}
         else:
-            logger.debug(f'[{cid}] User already exists: `{username}` (`{sec_name}`)')
+            if _needs_details:
+                logger.info(f'[{cid}] User already exists: `{username}` (`{sec_name}`)')
 
 # ################################################################################################################################
 
