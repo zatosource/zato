@@ -118,7 +118,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         self.rest_server.authenticate = track_authenticate
 
         # Mock backend unregister_subscription to avoid broker call
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -157,7 +157,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_unregister_subscription(cid, topic_name, username=''):
+        def track_unregister_subscription(cid, topic_name, username='', **kwargs):
             backend_calls.append((cid, topic_name, username))
 
             response = StatusResponse()
@@ -200,7 +200,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
                 # Track backend calls
                 backend_calls = []
 
-                def track_unregister_subscription(cid, topic_name, username=''):
+                def track_unregister_subscription(cid, topic_name, username='', **kwargs):
                     backend_calls.append((cid, topic_name, username))
 
                     response = StatusResponse()
@@ -279,7 +279,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
             method_calls.append('authenticate')
             return original_authenticate(cid, environ)
 
-        def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
+        def track_unregister_subscription(cid, topic_name, *, sec_name='', username='', **kwargs):
             method_calls.append('unregister_subscription')
 
             response = StatusResponse()
@@ -309,7 +309,7 @@ class RESTOnUnsubscribeAuthenticationTestCase(TestCase):
         method_calls = []
 
         # Override method to track calls
-        def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
+        def track_unregister_subscription(cid, topic_name, *, sec_name='', username='', **kwargs):
             method_calls.append('unregister_subscription')
 
             response = StatusResponse()
