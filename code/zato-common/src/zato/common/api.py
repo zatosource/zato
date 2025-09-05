@@ -1169,9 +1169,12 @@ class PubSub:
         Reply_Queue = 'zato-reply'
 
     class REST_Server:
-        Default_Port = 44556
+
         Default_Host = '0.0.0.0'
         Default_Threads = 1
+
+        Default_Port_Publish = 40100
+        Default_Port_Get = 40200
 
     class Message:
         Priority_Min = 0
