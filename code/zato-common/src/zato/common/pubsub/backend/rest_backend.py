@@ -343,6 +343,7 @@ class RESTBackend(Backend):
             raise Exception(f'No sub_key in `{msg}`')
 
         with self._main_lock:
+
             # Remove existing subscription by sub_key from all topics
             _ = self._remove_subscriptions_by_sub_key(sub_key)
 
