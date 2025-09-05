@@ -124,7 +124,9 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
 
         # Only wait for messages if the publish was successful
         if publish_response.status_code == OK:
+
             logger.info('Message published to %s', topic_name)
+
             # First check RabbitMQ to ensure there's at least one message in the queue ..
             self._wait_for_messages_in_queue()
 
@@ -425,8 +427,6 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         test_message_1 = {'first': 'message1', 'id': 1, 'timestamp': '2025-01-01T10:00:00Z'}
         test_message_2 = {'second': 'message2', 'id': 2, 'timestamp': '2025-01-02T11:00:00Z'}
         test_message_3 = {'third': 'message3', 'id': 3, 'timestamp': '2025-01-03T11:00:00Z'}
-
-        return
 
         # .. run complete scenarios in a loop ..
         for idx in range(1, max_loops+1):
