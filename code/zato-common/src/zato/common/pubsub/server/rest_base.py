@@ -310,6 +310,17 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
+    def on_status_check(self, cid:'str', environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
+        """ Status check endpoint for load balancer health checks.
+        """
+        response = HealthCheckResponse()
+        response.is_ok = True
+        response.cid = cid
+
+        return response
+
+# ################################################################################################################################
+
     def on_admin_diagnostics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
         """ Admin diagnostics endpoint - dumps topics, users, subscriptions, etc. to logs in YAML format.
         """
