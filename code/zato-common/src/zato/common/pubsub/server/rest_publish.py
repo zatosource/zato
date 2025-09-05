@@ -13,14 +13,7 @@ _ = monkey.patch_all()
 # stdlib
 import os
 from datetime import datetime
-from json import loads
-from http.client import OK
 from logging import getLogger
-
-# requests
-import requests
-
-
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -28,16 +21,16 @@ from werkzeug.wrappers import Request
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.models import PubMessage
-from zato.common.pubsub.models import APIResponse, BadRequestResponse
+from zato.common.pubsub.models import APIResponse
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import validate_topic_name
-from zato.common.util.api import as_bool, utcnow
+from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictnone
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,8 +47,6 @@ _max_priority = PubSub.Message.Priority_Max
 _default_priority = PubSub.Message.Priority_Default
 
 _default_expiration = PubSub.Message.Default_Expiration
-
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,10 +145,6 @@ class PubSubRESTServerPublish(BaseRESTServer):
 
         # .. and return it to the caller.
         return response
-
-# ################################################################################################################################
-
-
 
 # ################################################################################################################################
 # ################################################################################################################################
