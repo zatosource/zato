@@ -478,7 +478,7 @@ class Delete(AdminService):
         self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
-        self.broker_client.publish_to_pubsub(pubsub_msg)
+        # self.broker_client.publish_to_pubsub(pubsub_msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
