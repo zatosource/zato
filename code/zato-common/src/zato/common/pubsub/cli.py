@@ -30,6 +30,7 @@ from gunicorn.app.base import BaseApplication
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
+from zato.common.pubsub.server.rest_pull import PubSubRESTServerPull
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid_cli
 
@@ -145,16 +146,12 @@ def get_parser() -> 'argparse.ArgumentParser':
 
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
-
-    # Create mutually exclusive group for publish/pull
-    mode_group = start_parser.add_mutually_exclusive_group(required=True)
-    _ = mode_group.add_argument('--publish', action='store_true', help='Start server in publish mode')
-    _ = mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
-
-    _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
-    _ = start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
-    _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
-    _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
+    start_parser.add_argument('--host', default=PubSub.REST_Server.Default_Host, help='Host to bind to')
+    start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
+    start_parser.add_argument('--workers', type=int, default=PubSub.REST_Server.Default_Threads, help='Number of worker processes')
+    start_parser.add_argument('--has-debug', action='store_true', help='Enable debug logging')
+    start_parser.add_argument('--publish', action='store_true', help='Start server in publish mode (default)')
+    start_parser.add_argument('--pull', action='store_true', help='Start server in pull mode')
 
     # Cleanup command
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
@@ -180,11 +177,19 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """ Start the PubSub REST API server.
     """
     try:
-        # Create server application
-        app = PubSubRESTServerPublish(
-            host=args.host,
-            port=args.port,
-        )
+        # Create server application based on mode
+        if args.pull:
+            app = PubSubRESTServerPull(
+                host=args.host,
+                port=args.port,
+            )
+            server_type = 'Pull'
+        else:
+            app = PubSubRESTServerPublish(
+                host=args.host,
+                port=args.port,
+            )
+            server_type = 'Publish'
 
         # Configure gunicorn options
         options = {
@@ -200,7 +205,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         }
 
         # Start gunicorn application
-        logger.info(f'Starting PubSub REST API server on {args.host}:{args.port}')
+        logger.info(f'Starting PubSub REST API {server_type} server on {args.host}:{args.port}')
         worker_text = 'worker' if args.workers == 1 else 'workers'
         logger.info(f'Using {args.workers} {worker_text}')
 
