@@ -121,7 +121,10 @@ class GunicornApplication(BaseApplication):
         return self.application
 
     def on_post_fork(self, server, worker):
-        logger.info(f'Setting up PubSub REST Publish server at {self.cfg.address}') # type: ignore
+        address = self.cfg.address[0] # type: ignore
+        host, port = address[0], address[1] # type: ignore
+        address_str = f'{host}:{port}'
+        logger.info(f'Setting up PubSub REST server at {address_str}')
         self.application.init_broker_client()
         self.application.setup()
 
