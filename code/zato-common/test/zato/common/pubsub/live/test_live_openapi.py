@@ -67,6 +67,9 @@ class PubSubOpenAPITestCase(PubSubRESTServerBaseTestCase):
 
         logger.info('OpenAPI specification loaded successfully')
 
+        # We need to sleep a little to let the pub/sub servers load their configuration that enmasse gave them
+        time.sleep(5.5)
+
 # ################################################################################################################################
 
     def _validate_response_against_schema(self, response, endpoint_path, status_code):
