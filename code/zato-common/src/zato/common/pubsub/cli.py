@@ -104,9 +104,14 @@ def get_parser() -> 'argparse.ArgumentParser':
 
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
+    
+    # Create mutually exclusive group for push/pull
+    mode_group = start_parser.add_mutually_exclusive_group(required=True)
+    _ = mode_group.add_argument('--push', action='store_true', help='Start server in push mode')
+    _ = mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
+    
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
     _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
-
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
 
@@ -150,6 +155,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             'loglevel': 'has_debug' if args.has_debug else 'info',
             'proc_name': 'zato-pubsub-rest',
             'preload_app': True,
+            'reuse_port': True,
         }
 
         # Start gunicorn application
