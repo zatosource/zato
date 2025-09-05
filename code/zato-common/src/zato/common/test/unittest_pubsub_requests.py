@@ -176,12 +176,12 @@ class PubSubRESTServerBaseTestCase(TestCase):
         """
         try:
             diagnostics_url = f'{self.base_url}/pubsub/admin/diagnostics'
-            logger.info(f'Making diagnostics request to: {diagnostics_url}')
-            logger.info(f'Using auth: {self.auth}')
-            logger.info(f'Base URL: {self.base_url}')
+            # logger.info(f'Making diagnostics request to: {diagnostics_url}')
+            # logger.info(f'Using auth: {self.auth}')
+            # logger.info(f'Base URL: {self.base_url}')
             response = requests.get(diagnostics_url, auth=self.auth)
-            logger.info(f'Response status: {response.status_code}')
-            logger.info(f'Response headers: {dict(response.headers)}')
+            # logger.info(f'Response status: {response.status_code}')
+            # logger.info(f'Response headers: {dict(response.headers)}')
             if response.status_code == 200:
                 data = response.json()
                 # pretty_json = json.dumps(data, indent=2)
@@ -191,7 +191,6 @@ class PubSubRESTServerBaseTestCase(TestCase):
                 logger.info(f'Diagnostics failed with status {response.status_code}: {response.text}')
         except Exception as e:
             logger.error(f'Error calling diagnostics: {e}')
-
 
 # ################################################################################################################################
 # ################################################################################################################################
