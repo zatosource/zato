@@ -35,6 +35,7 @@ from yaml import safe_load as yaml_load
 import requests
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.util.api import get_absolute_path
 
 # ################################################################################################################################
@@ -46,6 +47,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -55,7 +58,7 @@ logger = getLogger(__name__)
 class ClientConfig:
     """ Client configuration parameters.
     """
-    server_url:'str' = 'http://127.0.0.1:44556/pubsub/topic/'
+    server_url:'str' = f'http://127.0.0.1:{_default_port_publish}/pubsub/topic/'
     request_timeout:'int' = 30
     retry_count:'int' = 3
 

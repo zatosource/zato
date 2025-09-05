@@ -14,10 +14,13 @@ from logging import getLogger
 from yaml import safe_load as yaml_load
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.test.users_yaml import calculate_expected_messages
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
 
 logger = getLogger(__name__)
 
@@ -29,7 +32,7 @@ class ServerConfig:
     """ Server configuration parameters.
     """
     host: str = '127.0.0.1'
-    port: int = 44556
+    port: int = _default_port_publish
 
 # ################################################################################################################################
 # ################################################################################################################################
