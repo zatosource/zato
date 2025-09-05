@@ -105,7 +105,7 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
         """ on_unsubscribe allows user with subscribe permission to unsubscribe.
         """
         # Mock backend unregister_subscription
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -144,7 +144,7 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
         """ on_unsubscribe allows users with wildcard permissions.
         """
         # Mock backend unregister_subscription
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -168,7 +168,7 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
         """ on_unsubscribe allows users with double wildcard permissions.
         """
         # Mock backend unregister_subscription
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -205,7 +205,7 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
             response.is_ok = True
             return response
 
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -243,7 +243,7 @@ class RESTOnUnsubscribeValidationTestCase(TestCase):
             response.is_ok = True
             return response
 
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
