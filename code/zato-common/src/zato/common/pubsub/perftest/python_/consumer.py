@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt
 import os
 import json
 from logging import getLogger
+from traceback import format_exc
 
 # requests
 import requests
@@ -25,7 +26,7 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict
     from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 
 # ################################################################################################################################
@@ -122,8 +123,8 @@ class Consumer(Client):
 
                 try:
                     self._consume_messages(base_url, headers, auth, max_messages)
-                except Exception as e:
-                    logger.error(f'Client {self.client_id}: Error in consume_messages: {e}')
+                except Exception:
+                    logger.error(f'Client {self.client_id}: Error in consume_messages: {format_exc()}')
 
                 end_time = utcnow()
                 time_diff = end_time - start_time
@@ -133,8 +134,8 @@ class Consumer(Client):
                 if sleep_time > 0:
                     sleep(sleep_time)
 
-        except Exception as e:
-            logger.error(f'Client {self.client_id}: Consumer crashed: {e}')
+        except Exception:
+            logger.error(f'Client {self.client_id}: Consumer crashed: {format_exc()}')
             raise
 
 # ################################################################################################################################
