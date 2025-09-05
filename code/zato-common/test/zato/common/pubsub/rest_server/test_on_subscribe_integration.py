@@ -55,6 +55,11 @@ class BrokerClientHelper:
         """
         pass
 
+    def notify_pubsub_counterpart(self, cid, action, source_server_type, **kwargs):
+        """ Mock counterpart notification.
+        """
+        pass
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -129,7 +134,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False, **kwargs):
             backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
@@ -160,7 +165,7 @@ class RESTOnSubscribeIntegrationTestCase(TestCase):
         """ on_subscribe propagates backend response correctly.
         """
         # Mock backend to return specific response
-        def mock_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
+        def mock_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False, **kwargs):
 
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
