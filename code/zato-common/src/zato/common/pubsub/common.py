@@ -15,6 +15,7 @@ class BrokerConfig:
     vhost:'str'
     username:'str'
     password:'str'
+    management_port:'int' = 15672
 
     def to_url(self) -> 'str':
         return f'amqp://{self.username}:********@{self.address}/{self.vhost}'
