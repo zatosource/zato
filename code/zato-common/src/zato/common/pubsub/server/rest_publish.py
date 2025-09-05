@@ -54,6 +54,7 @@ _default_expiration = PubSub.Message.Default_Expiration
 class PubSubRESTServerPublish(BaseRESTServer):
     """ A REST server for pub/sub operations.
     """
+    server_type = 'publish'
 
     def on_publish(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
         """ Publish a message to a topic.

@@ -72,12 +72,9 @@ class BadRequestException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class BaseServer:
+
+    server_type:'str'
 
     def __init__(
         self,
@@ -150,8 +147,9 @@ class BaseServer:
         # Delete the queue to remove any message we don't want to read since they were published when we were not running,
         # and then create it all again so we have a fresh start ..
         cid = new_cid_pubsub()
-        self.broker_client.delete_queue(cid, 'pubsub')
-        self.broker_client.create_internal_queue('pubsub')
+        queue_name = f'pubsub.{self.server_type}.1'
+        self.broker_client.delete_queue(cid, queue_name)
+        self.broker_client.create_internal_queue(queue_name)
 
         # .. and now, start our subscriber.
         self.backend.start_internal_pubusb_subscriber()
