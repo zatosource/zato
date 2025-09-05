@@ -25,7 +25,7 @@ from traceback import format_exc
 import gevent
 
 # Zato
-from zato.common.pubsub.server.rest_publish import PubSubRESTServer, GunicornApplication
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish, GunicornApplication
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid_cli
 
@@ -140,7 +140,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """
     try:
         # Create server application
-        app = PubSubRESTServer(
+        app = PubSubRESTServerPublish(
             host=args.host,
             port=args.port,
         )
@@ -213,7 +213,7 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
         # Create a temporary server instance to use its list_connections method
-        server = PubSubRESTServer(host='0.0.0.0', port=44556)
+        server = PubSubRESTServerPublish(host='0.0.0.0', port=44556)
 
         # Get connection information
         result = server.list_connections(cid, args.management_port)

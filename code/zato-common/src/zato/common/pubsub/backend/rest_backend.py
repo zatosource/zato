@@ -20,7 +20,7 @@ from zato.common.util.api import replace_secrets, spawn_greenlet
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.pubsub.server.rest_publish import PubSubRESTServer
+    from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
     from zato.common.typing_ import strdict
 
 # ################################################################################################################################

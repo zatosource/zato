@@ -63,7 +63,7 @@ _default_max_messages = PubSub.Message.Default_Max_Messages
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubRESTServer(BaseRESTServer):
+class PubSubRESTServerPublish(BaseRESTServer):
     """ A REST server for pub/sub operations.
     """
 
