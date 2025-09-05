@@ -140,7 +140,13 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         """
         get_messages_url = f'{self.base_url}/pubsub/messages/get'
         get_payload = {'max_messages': max_messages, 'max_len': max_len}
-        return requests.post(get_messages_url, json=get_payload, auth=self.auth)
+        logger.info(f'Making get messages request to: {get_messages_url}')
+        logger.info(f'Using auth: {self.auth}')
+        logger.info(f'Payload: {get_payload}')
+        response = requests.post(get_messages_url, json=get_payload, auth=self.auth)
+        logger.info(f'Get messages response status: {response.status_code}')
+        logger.info(f'Get messages response: {response.text}')
+        return response
 
 # ################################################################################################################################
 
@@ -152,17 +158,29 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         # Find the user's queue name by checking subscriptions
         user_queue_name = None
         diagnostics_data = self._call_diagnostics()
+
+        logger.debug(f'Diagnostics response: {diagnostics_data}')
+
         if diagnostics_data and 'data' in diagnostics_data:
             subscriptions = diagnostics_data['data'].get('subscriptions', {})
+            logger.debug(f'Subscriptions data: {subscriptions}')
+
             for subs in subscriptions.values():
                 user_sec_name = self.config['security'][0]['name']
+                logger.debug(f'Looking for user_sec_name: {user_sec_name} in subs: {subs}')
+
                 if user_sec_name in subs:
                     subscription = subs[user_sec_name]
                     user_queue_name = subscription.get('sub_key')
+                    logger.debug(f'Found subscription: {subscription}, queue name: {user_queue_name}')
                     break
+        else:
+            logger.error(f'No diagnostics data or malformed response: {diagnostics_data}')
 
         if not user_queue_name:
             logger.error('Could not find user queue name, cannot proceed')
+            logger.error(f'Config security: {self.config.get("security", [])}')
+            logger.error(f'Available subscriptions: {diagnostics_data.get("data", {}).get("subscriptions", {}) if diagnostics_data else "None"}')
             raise Exception('User queue name not found in diagnostics')
 
         logger.info(f'Looking for queue: {user_queue_name}')

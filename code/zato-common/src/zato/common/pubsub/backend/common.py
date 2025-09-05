@@ -120,8 +120,14 @@ class Backend:
 
         # Local aliases
         cid = msg['cid']
-        sub_key = msg['sub_key']
+        sub_key = msg.get('sub_key')
         sec_name = msg['sec_name']
+
+        logger.info(f'[{cid}] Received PUBSUB_SUBSCRIPTION_DELETE message: {msg}')
+
+        if not sub_key:
+            logger.warning(f'[{cid}] No sub_key in PUBSUB_SUBSCRIPTION_DELETE message, cannot process')
+            return
 
         logger.info(f'[{cid}] Processing delete for sub_key={sub_key}, sec_name={sec_name}')
 
@@ -423,8 +429,8 @@ class Backend:
             # .. notify the counterpart server ..
             if source_server_type:
                 self.broker_client.notify_pubsub_counterpart(
-                    cid, 
-                    'PUBSUB_SUBSCRIPTION_CREATE', 
+                    cid,
+                    'PUBSUB_SUBSCRIPTION_CREATE',
                     source_server_type,
                     sub_key=sub_key,
                     topic_name_list=[topic_name],
@@ -490,18 +496,21 @@ class Backend:
             if source_server_type:
                 # Get sub_key for the notification
                 with self._main_lock:
-                    subs_by_sec_name = self.subs_by_topic[topic_name]
-                    subscription = subs_by_sec_name[sec_name]
-                    notification_sub_key = subscription.sub_key
-                
-                self.broker_client.notify_pubsub_counterpart(
-                    cid,
-                    'PUBSUB_SUBSCRIPTION_DELETE',
-                    source_server_type,
-                    topic_name_list=[topic_name],
-                    sec_name=sec_name,
-                    sub_key=notification_sub_key
-                )
+                    subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
+                    if sec_name in subs_by_sec_name:
+                        subscription = subs_by_sec_name[sec_name]
+                        notification_sub_key = subscription.sub_key
+
+                        self.broker_client.notify_pubsub_counterpart(
+                            cid,
+                            'PUBSUB_SUBSCRIPTION_DELETE',
+                            source_server_type,
+                            topic_name_list=[topic_name],
+                            sec_name=sec_name,
+                            sub_key=notification_sub_key
+                        )
+                    else:
+                        logger.warning(f'[{cid}] Cannot notify counterpart - subscription not found for sec_name={sec_name} in topic={topic_name}')
 
             # .. remove subscription from memory ..
             with self._main_lock:
