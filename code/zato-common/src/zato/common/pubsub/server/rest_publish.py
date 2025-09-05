@@ -407,63 +407,6 @@ class PubSubRESTServerPublish(BaseRESTServer):
             return self._build_error_response(cid, 'Internal error retrieving messages')
 
 # ################################################################################################################################
-
-    def on_subscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
-        """ Handle subscription request.
-        """
-        # Log what we're doing ..
-        logger.info(f'[{cid}] Processing subscribe request')
-
-        # .. make sure the client is allowed to carry out this action ..
-        username = self.authenticate(cid, environ)
-
-        # .. validate topic name ..
-        validate_topic_name(topic_name)
-
-        # .. check if user has permission to subscribe to this topic ..
-        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
-        if not permission_result.is_ok:
-            logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
-            raise UnauthorizedException(cid, 'Permission denied')
-
-        # Subscribe to topic using backend
-        result = self.backend.register_subscription(cid, topic_name, username=username, should_invoke_server=True)
-
-        response = APIResponse()
-        response.cid = cid
-        response.is_ok = result.is_ok
-        response.status = result.status
-        return response
-
-# ################################################################################################################################
-
-    def on_unsubscribe(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
-        """ Handle unsubscribe request.
-        """
-        logger.info(f'[{cid}] Processing unsubscribe request')
-
-        # .. make sure the client is allowed to carry out this action ..
-        username = self.authenticate(cid, environ)
-
-        # .. validate topic name ..
-        validate_topic_name(topic_name)
-
-        # .. check if user has permission to subscribe to this topic ..
-        permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'subscribe')
-        if not permission_result.is_ok:
-            logger.warning(f'[{cid}] User {username} denied subscribe access to topic {topic_name}: {permission_result.reason}')
-            raise UnauthorizedException(cid, 'Permission denied')
-
-        # Unsubscribe from topic using backend
-        result = self.backend.unregister_subscription(cid, topic_name, username=username)
-
-        response = APIResponse()
-        response.is_ok = result.is_ok
-        response.cid = cid
-
-        return response
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class GunicornApplication(BaseApplication):
@@ -488,7 +431,7 @@ class GunicornApplication(BaseApplication):
         return self.application
 
     def on_post_fork(self, server, worker):
-        logger.info(f'Setting up PubSub REST server at {self.cfg.address}') # type: ignore
+        logger.info(f'Setting up PubSub REST Publish server at {self.cfg.address}') # type: ignore
         self.application.init_broker_client()
         self.application.setup()
 
