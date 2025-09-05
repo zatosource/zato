@@ -476,9 +476,6 @@ class GunicornApplication(BaseApplication):
         super().__init__()
 
     def load_config(self):
-        # Set SO_REUSEADDR socket option for faster port reuse
-        self.cfg.set('reuse_port', True) # type: ignore
-        
         # Apply valid configuration options
         for key, value in self.options.items():
             if key in self.cfg.settings and value is not None: # type: ignore
