@@ -488,12 +488,19 @@ class Backend:
 
             # .. notify the counterpart server ..
             if source_server_type:
+                # Get sub_key for the notification
+                with self._main_lock:
+                    subs_by_sec_name = self.subs_by_topic[topic_name]
+                    subscription = subs_by_sec_name[sec_name]
+                    notification_sub_key = subscription.sub_key
+                
                 self.broker_client.notify_pubsub_counterpart(
                     cid,
                     'PUBSUB_SUBSCRIPTION_DELETE',
                     source_server_type,
                     topic_name_list=[topic_name],
-                    sec_name=sec_name
+                    sec_name=sec_name,
+                    sub_key=notification_sub_key
                 )
 
             # .. remove subscription from memory ..
