@@ -43,7 +43,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', True))
 
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration

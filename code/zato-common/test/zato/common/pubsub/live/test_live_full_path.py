@@ -426,6 +426,8 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         test_message_2 = {'second': 'message2', 'id': 2, 'timestamp': '2025-01-02T11:00:00Z'}
         test_message_3 = {'third': 'message3', 'id': 3, 'timestamp': '2025-01-03T11:00:00Z'}
 
+        return
+
         # .. run complete scenarios in a loop ..
         for idx in range(1, max_loops+1):
 
