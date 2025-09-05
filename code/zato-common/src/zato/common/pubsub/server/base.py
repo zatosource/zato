@@ -152,7 +152,7 @@ class BaseServer:
         self.broker_client.create_internal_queue(queue_name)
 
         # .. and now, start our subscriber.
-        self.backend.start_internal_pubusb_subscriber()
+        self.backend.start_internal_pubusb_subscriber(self.server_type)
 
 # ################################################################################################################################
 
