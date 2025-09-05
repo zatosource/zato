@@ -427,7 +427,7 @@ class Backend:
                     'PUBSUB_SUBSCRIPTION_CREATE', 
                     source_server_type,
                     sub_key=sub_key,
-                    topic_name=topic_name,
+                    topic_name_list=[topic_name],
                     sec_name=sec_name
                 )
 
@@ -492,7 +492,7 @@ class Backend:
                     cid,
                     'PUBSUB_SUBSCRIPTION_DELETE',
                     source_server_type,
-                    topic_name=topic_name,
+                    topic_name_list=[topic_name],
                     sec_name=sec_name
                 )
 
