@@ -44,11 +44,14 @@ class RESTBackend(Backend):
 
 # ################################################################################################################################
 
-    def start_internal_pubusb_subscriber(self) -> 'None':
+    def start_internal_pubusb_subscriber(self, server_type:'str') -> 'None':
+
+        queue_name = f'pubsub.{server_type}.1'
+
         _ = spawn_greenlet(
             start_internal_consumer,
             'zato.pubsub',
-            'pubsub',
+            queue_name,
             'zato-pubsub',
             self._on_internal_message_callback
         )
