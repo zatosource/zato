@@ -237,6 +237,10 @@ class RESTBackend(Backend):
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
 
+        print()
+        print(111, msg)
+        print()
+
         # Local aliases
         new_topic_name:'str' = msg['new_topic_name']
         old_topic_name:'str' = msg['old_topic_name']
