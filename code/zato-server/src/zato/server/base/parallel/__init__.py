@@ -962,7 +962,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. publish the message for pub/sub ..
-        self.broker_client.publish(pubsub_msg, routing_key='pubsub')
+        self.broker_client.publish_to_pubsub(pubsub_msg)
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')
