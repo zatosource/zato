@@ -146,13 +146,15 @@ def get_parser() -> 'argparse.ArgumentParser':
 
     # Start server command
     start_parser = subparsers.add_parser('start', help='Start the PubSub REST API server')
-    start_parser.add_argument('--host', default=PubSub.REST_Server.Default_Host, help='Host to bind to')
-    start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
-    start_parser.add_argument('--workers', type=int, default=PubSub.REST_Server.Default_Threads, help='Number of worker processes')
-    start_parser.add_argument('--has-debug', action='store_true', help='Enable debug logging')
-    mode_group = start_parser.add_mutually_exclusive_group(required=True)
-    mode_group.add_argument('--publish', action='store_true', help='Start server in publish mode')
-    mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
+    _ = start_parser.add_argument('--host', default=PubSub.REST_Server.Default_Host, help='Host to bind to')
+    _ = start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
+    _ = start_parser.add_argument('--workers', type=int, default=PubSub.REST_Server.Default_Threads, help='Number of worker processes')
+    _ = start_parser.add_argument('--has-debug', action='store_true', help='Enable debug logging')
+
+    server_type_group = start_parser.add_mutually_exclusive_group(required=True)
+
+    _ = server_type_group.add_argument('--publish', action='store_true', help='Start server in publish mode')
+    _ = server_type_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
 
     # Cleanup command
     cleanup_parser = subparsers.add_parser('cleanup', help='Clean up AMQP bindings and queues')
@@ -179,18 +181,20 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """
     try:
         # Create server application based on mode
-        if args.pull:
-            app = PubSubRESTServerPull(
-                host=args.host,
-                port=args.port,
-            )
-            server_type = 'Pull'
-        else:
+        if args.publish:
             app = PubSubRESTServerPublish(
                 host=args.host,
                 port=args.port,
             )
             server_type = 'Publish'
+            proc_type = 'pub'
+        else:
+            app = PubSubRESTServerPull(
+                host=args.host,
+                port=args.port,
+            )
+            server_type = 'Pull'
+            proc_type = 'pull'
 
         # Configure gunicorn options
         options = {
@@ -200,7 +204,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             'timeout': 30,
             'keepalive': 2,
             'loglevel': 'has_debug' if args.has_debug else 'info',
-            'proc_name': 'zato-pubsub-rest',
+            'proc_name': f'zato-pubsub-rest-{proc_type}',
             'preload_app': False,
             'max_requests': 0,
         }
