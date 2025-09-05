@@ -56,6 +56,11 @@ class BrokerClientHelper:
         """
         pass
 
+    def notify_pubsub_counterpart(self, cid, action, source_server_type, **kwargs):
+        """ Mock counterpart notification.
+        """
+        pass
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -172,7 +177,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False, **kwargs):
             backend_calls.append((cid, topic_name, username, username_to_sec_name, sub_key, should_create_bindings))
 
             response = StatusResponse()
@@ -247,7 +252,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
             method_calls.append('authenticate')
             return original_authenticate(cid, environ)
 
-        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False, **kwargs):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
@@ -277,7 +282,7 @@ class RESTOnSubscribeAuthenticationTestCase(TestCase):
         method_calls = []
 
         # Override method to track calls
-        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False):
+        def track_register_subscription(cid, topic_name, username=None, username_to_sec_name=None, sub_key='', should_create_bindings=True, should_invoke_server=False, **kwargs):
             method_calls.append('register_subscription')
 
             response = StatusResponse()
