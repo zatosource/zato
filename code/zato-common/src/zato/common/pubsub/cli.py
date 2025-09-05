@@ -24,9 +24,12 @@ from traceback import format_exc
 # gevent
 import gevent
 
+# gunicorn
+from gunicorn.app.base import BaseApplication
+
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish, GunicornApplication
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid_cli
 
@@ -34,7 +37,8 @@ from zato.common.util.api import as_bool, new_cid_cli
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydictnone
+    from zato.common.typing_ import anydictnone, dictnone
+    from zato.common.pubsub.server.rest_base import PubSubRESTServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,6 +73,9 @@ class GreenletFormatter(logging.Formatter):
 
         return super().format(record)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 log_format = '%(asctime)s - %(levelname)s - %(process_id)s:%(thread_name)s:%(greenlet_name)s - %(name)s:%(lineno)d - %(message)s'
 if _needs_details:
     log_format += ', Greenlet id: %(greenlet_id)s'
@@ -82,7 +89,39 @@ if root_logger.handlers:
     for handler in root_logger.handlers:
         handler.setFormatter(formatter)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GunicornApplication(BaseApplication):
+    """ Gunicorn application wrapper for the PubSub REST API.
+    """
+    def __init__(self, app:'PubSubRESTServer', options:'dictnone'=None):
+        self.options = options or {}
+        self.options.setdefault('post_fork', self.on_post_fork)
+        self.application = app
+        super().__init__()
+
+    def load_config(self):
+        # Apply valid configuration options
+        for key, value in self.options.items():
+            if key in self.cfg.settings and value is not None: # type: ignore
+                self.cfg.set(key.lower(), value) # type: ignore
+
+        # We need to set this one explicitly because otherwise gunicorn insists it be an int (min=1)
+        object.__setattr__(self.cfg, 'graceful_timeout', 0.05)
+
+    def load(self):
+        return self.application
+
+    def on_post_fork(self, server, worker):
+        logger.info(f'Setting up PubSub REST Publish server at {self.cfg.address}') # type: ignore
+        self.application.init_broker_client()
+        self.application.setup()
 
 # ################################################################################################################################
 # ################################################################################################################################
