@@ -88,7 +88,7 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
         """ on_unsubscribe returns success response when all conditions are met.
         """
         # Mock backend unregister_subscription
-        def mock_unregister_subscription(cid, topic_name, username=''):
+        def mock_unregister_subscription(cid, topic_name, username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = True
@@ -114,7 +114,7 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
         # Track backend calls
         backend_calls = []
 
-        def track_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
+        def track_unregister_subscription(cid, topic_name, *, sec_name='', username='', **kwargs):
             backend_calls.append((cid, topic_name, sec_name, username))
 
             response = StatusResponse()
@@ -143,7 +143,7 @@ class RESTOnUnsubscribeIntegrationTestCase(TestCase):
         """ on_unsubscribe propagates backend response correctly.
         """
         # Mock backend to return specific response
-        def mock_unregister_subscription(cid, topic_name, *, sec_name='', username=''):
+        def mock_unregister_subscription(cid, topic_name, *, sec_name='', username='', **kwargs):
 
             response = StatusResponse()
             response.is_ok = False  # Simulate failure
