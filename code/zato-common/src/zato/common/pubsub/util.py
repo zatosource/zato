@@ -46,6 +46,7 @@ def get_broker_config() -> 'BrokerConfig':
     config.vhost = os.environ['Zato_Broker_Virtual_Host']
     config.username = os.environ['Zato_Broker_Username']
     config.password = os.environ['Zato_Broker_Password']
+    config.management_port = int(os.environ.get('Zato_Broker_Management_Port') or 15672)
 
     return config
 
