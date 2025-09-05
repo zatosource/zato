@@ -25,6 +25,7 @@ from traceback import format_exc
 import gevent
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish, GunicornApplication
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
 from zato.common.util.api import as_bool, new_cid_cli
@@ -39,6 +40,7 @@ if 0:
 # ################################################################################################################################
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +113,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     _ = mode_group.add_argument('--pull', action='store_true', help='Start server in pull mode')
 
     _ = start_parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
-    _ = start_parser.add_argument('--port', type=int, default=44556, help='Port to bind to')
+    _ = start_parser.add_argument('--port', type=int, default=_default_port_publish, help='Port to bind to')
     _ = start_parser.add_argument('--workers', type=int, default=1, help='Number of gunicorn workers')
     _ = start_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
 
@@ -213,7 +215,7 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
         # Create a temporary server instance to use its list_connections method
-        server = PubSubRESTServerPublish(host='0.0.0.0', port=44556)
+        server = PubSubRESTServerPublish(host='0.0.0.0', port=_default_port_publish)
 
         # Get connection information
         result = server.list_connections(cid, args.management_port)
@@ -283,32 +285,32 @@ if __name__ == '__main__':
 
 """
 # Health check endpoint:
-curl http://localhost:44556/pubsub/health; echo
+curl http://localhost:40100/pubsub/health; echo
 
 echo '{"data":"Hello World"}' > post_data.json
-ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:44556/pubsub/topic/demo.1
+ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:40100/pubsub/topic/demo.1
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
 
-echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:44556/pubsub/topic/demo.1
-N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
+echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:40100/pubsub/topic/demo.1
+N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
 
 # Subscribe to a topic:
-curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/demo.1; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
 
 # Unsubscribe from a topic:
-curl -u demo:demo -X DELETE http://localhost:44556/pubsub/subscribe/topic/demo.1
+curl -u demo:demo -X DELETE http://localhost:40100/pubsub/subscribe/topic/demo.1
 
 # Get admin diagnostics (logs topics, users, subscriptions etc.):
-curl -u demo:demo -X GET http://localhost:44556/pubsub/admin/diagnostics; echo
+curl -u demo:demo -X GET http://localhost:40100/pubsub/admin/diagnostics; echo
 
-curl -u demo:demo -X POST http://localhost:44556/pubsub/subscribe/topic/demo.1; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, "expiration": 250000000}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/messages/get -d '{"max_messages": 10}'; echo
-curl -u demo:demo -X POST http://localhost:44556/pubsub/unsubscribe/topic/demo.1; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, "expiration": 250000000}'; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/messages/get -d '{"max_messages": 10}'; echo
+curl -u demo:demo -X POST http://localhost:40100/pubsub/unsubscribe/topic/demo.1; echo
 """
 
 # ################################################################################################################################
