@@ -1173,6 +1173,8 @@ class PubSub:
         Default_Host = '0.0.0.0'
         Default_Threads = 1
 
+        Public_Port = 44556
+
         Default_Port_Publish = 40100
         Default_Port_Get = 40200
 

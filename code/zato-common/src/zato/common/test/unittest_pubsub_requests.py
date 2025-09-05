@@ -44,7 +44,7 @@ logging.basicConfig(
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_port_publish = PubSub.REST_Server.Default_Port_Publish
+_public_port = PubSub.REST_Server.Public_Port
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class PubSubRESTServerBaseTestCase(TestCase):
         cls.auth = HTTPBasicAuth(cls.username, cls.password)
 
         # Server configuration
-        cls.base_url = f'http://127.0.0.1:{_default_port_publish}'
+        cls.base_url = f'http://127.0.0.1:{_public_port}'
 
         # Test topics from config
         cls.test_topics = [
