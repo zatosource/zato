@@ -19,7 +19,7 @@ from io import BytesIO
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.server.rest_publish import PubSubRESTServer
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 from zato.common.pubsub.server.rest_base import UnauthorizedException
 from zato.broker.client import BrokerClient
 
@@ -34,7 +34,7 @@ class RESTOnPublishSecurityAuthTestCase(TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         self.broker_client = BrokerClient()
-        self.rest_server = PubSubRESTServer('localhost', 8080, should_init_broker_client=False)
+        self.rest_server = PubSubRESTServerPublish('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client)
 
         # Test data constants

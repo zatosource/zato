@@ -16,7 +16,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
-from zato.common.pubsub.server.rest_publish import PubSubRESTServer
+from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +40,7 @@ class BrokerClientHelper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTServerHelper(PubSubRESTServer):
+class RESTServerHelper(PubSubRESTServerPublish):
     """ Test REST server that overrides HTTP requests to RabbitMQ.
     """
 
