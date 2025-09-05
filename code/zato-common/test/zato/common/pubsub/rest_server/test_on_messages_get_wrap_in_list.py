@@ -16,7 +16,7 @@ from unittest.mock import Mock
 # Zato
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.pubsub.models import APIResponse
-from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
+from zato.common.pubsub.server.rest_pull import PubSubRESTServerPull
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +50,7 @@ class RESTWrapInListTestCase(unittest.TestCase):
         warnings.filterwarnings('ignore', category=ResourceWarning)
 
         self.broker_client = BrokerClientHelper()
-        self.rest_server = PubSubRESTServerPublish('localhost', 8080, should_init_broker_client=False)
+        self.rest_server = PubSubRESTServerPull('localhost', 8080, should_init_broker_client=False)
         self.rest_server.backend = RESTBackend(self.rest_server, self.broker_client) # type: ignore
         self.rest_server.logger = Mock()
         self.test_cid = 'test-cid-123'
