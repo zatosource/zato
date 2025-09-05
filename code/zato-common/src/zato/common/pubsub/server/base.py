@@ -133,6 +133,11 @@ class BaseServer:
             Rule('/pubsub/health', endpoint='on_health_check', methods=['GET']),
 
             #
+            # Status endpoint for load balancer health checks
+            #
+            Rule('/status', endpoint='on_status_check', methods=['GET']),
+
+            #
             # Internal details
             #
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
