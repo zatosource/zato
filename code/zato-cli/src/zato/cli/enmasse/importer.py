@@ -570,6 +570,64 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_outgoing_rest(self, outgoing_list:'list', session:'SASession') -> 'tuple':
+        """Synchronizes outgoing REST connection definitions from a YAML configuration with the database.
+        """
+        return self.outgoing_rest_importer.sync_outgoing_rest(outgoing_list, session)
+
+# ################################################################################################################################
+
+    def sync_outgoing_soap(self, outgoing_list:'list', session:'SASession') -> 'tuple':
+        """Synchronizes outgoing SOAP connection definitions from a YAML configuration with the database.
+        """
+        return self.outgoing_soap_importer.sync_outgoing_soap(outgoing_list, session)
+
+# ################################################################################################################################
+
+    def sync_pubsub_permission(self, permission_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub permission definitions from a YAML configuration with the database.
+        """
+        if not permission_list:
+            return [], []
+
+        logger.info('Processing %d pubsub permission definitions', len(permission_list))
+
+        # Examine each pubsub permission item
+        for idx, item in enumerate(permission_list):
+            logger.info('Pubsub permission item %d: %s', idx, item)
+
+        permission_created, permission_updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_list, session)
+
+        # Get pubsub permission definitions from the pubsub permission importer
+        self.pubsub_permission_defs = self.pubsub_permission_importer.pubsub_permission_defs
+        logger.info('Processed pubsub permission definitions: created=%d updated=%d', len(permission_created), len(permission_updated))
+
+        return permission_created, permission_updated
+
+# ################################################################################################################################
+
+    def sync_pubsub_subscription(self, subscription_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes pubsub subscription definitions from a YAML configuration with the database.
+        """
+        if not subscription_list:
+            return [], []
+
+        logger.info('Processing %d pubsub subscription definitions', len(subscription_list))
+
+        # Examine each pubsub subscription item
+        for idx, item in enumerate(subscription_list):
+            logger.info('Pubsub subscription item %d: %s', idx, item)
+
+        subscription_created, subscription_updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_list, session)
+
+        # Get pubsub subscription definitions from the pubsub subscription importer
+        self.pubsub_subscription_defs = self.pubsub_subscription_importer.pubsub_subscription_defs
+        logger.info('Processed pubsub subscription definitions: created=%d updated=%d', len(subscription_created), len(subscription_updated))
+
+        return subscription_created, subscription_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(
         self,
         yaml_config:'stranydict',
@@ -729,68 +787,6 @@ class EnmasseYAMLImporter:
         logger.info('YAML synchronization completed')
 
         return self.created_objects, self.updated_objects
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def sync_outgoing_rest(self, outgoing_list:'list', session:'SASession') -> 'tuple':
-        """Synchronizes outgoing REST connection definitions from a YAML configuration with the database.
-        """
-        return self.outgoing_rest_importer.sync_outgoing_rest(outgoing_list, session)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def sync_outgoing_soap(self, outgoing_list:'list', session:'SASession') -> 'tuple':
-        """Synchronizes outgoing SOAP connection definitions from a YAML configuration with the database.
-        """
-        return self.outgoing_soap_importer.sync_outgoing_soap(outgoing_list, session)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def sync_pubsub_permission(self, permission_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes pubsub permission definitions from a YAML configuration with the database.
-        """
-        if not permission_list:
-            return [], []
-
-        logger.info('Processing %d pubsub permission definitions', len(permission_list))
-
-        # Examine each pubsub permission item
-        for idx, item in enumerate(permission_list):
-            logger.info('Pubsub permission item %d: %s', idx, item)
-
-        permission_created, permission_updated = self.pubsub_permission_importer.sync_pubsub_permission_definitions(permission_list, session)
-
-        # Get pubsub permission definitions from the pubsub permission importer
-        self.pubsub_permission_defs = self.pubsub_permission_importer.pubsub_permission_defs
-        logger.info('Processed pubsub permission definitions: created=%d updated=%d', len(permission_created), len(permission_updated))
-
-        return permission_created, permission_updated
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def sync_pubsub_subscription(self, subscription_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes pubsub subscription definitions from a YAML configuration with the database.
-        """
-        if not subscription_list:
-            return [], []
-
-        logger.info('Processing %d pubsub subscription definitions', len(subscription_list))
-
-        # Examine each pubsub subscription item
-        for idx, item in enumerate(subscription_list):
-            logger.info('Pubsub subscription item %d: %s', idx, item)
-
-        subscription_created, subscription_updated = self.pubsub_subscription_importer.sync_pubsub_subscription_definitions(subscription_list, session)
-
-        # Get pubsub subscription definitions from the pubsub subscription importer
-        self.pubsub_subscription_defs = self.pubsub_subscription_importer.pubsub_subscription_defs
-        logger.info('Processed pubsub subscription definitions: created=%d updated=%d', len(subscription_created), len(subscription_updated))
-
-        return subscription_created, subscription_updated
 
 # ################################################################################################################################
 # ################################################################################################################################
