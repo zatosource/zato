@@ -141,15 +141,6 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
     """
     gunicorn_app = None
 
-    def signal_handler(signum, frame):
-        logger.info('Received signal, shutting down server')
-        if gunicorn_app:
-            gunicorn_app.close()
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
     try:
         # Create server application
         app = PubSubRESTServer(
