@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass, field
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, UNAUTHORIZED
+from typing import TypedDict
 
 # Zato
 from zato.common.api import PubSub
@@ -23,146 +24,133 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class PubMessage:
+class PubMessage(TypedDict, total=False):
     """ Model representing a message to be published to a topic.
     """
     data: 'any_'
-    priority: 'int' = PubSub.Message.Priority_Default
-    expiration: 'int' = PubSub.Message.Default_Expiration
-    correl_id: 'str' = ''
-    in_reply_to: 'str' = ''
-    ext_client_id: 'str' = ''
-    pub_time: 'str' = ''
+    priority: 'int'  # Default: PubSub.Message.Priority_Default
+    expiration: 'int'  # Default: PubSub.Message.Default_Expiration
+    correl_id: 'str'  # Default: ''
+    in_reply_to: 'str'  # Default: ''
+    ext_client_id: 'str'  # Default: ''
+    pub_time: 'str'  # Default: ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class PubResponse:
+class PubResponse(TypedDict, total=False):
     """ Response model for publish operations.
     """
     is_ok: 'bool'
-    msg_id: 'str' = ''
-    cid: 'str' = ''
-    details: 'str' = ''
+    msg_id: 'str'  # Default: ''
+    cid: 'str'  # Default: ''
+    details: 'str'  # Default: ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class Message:
+class Message(TypedDict, total=False):
     """ Model for a single message as returned by retrieve/read operations.
     """
     data: 'any_'
     topic_name: 'str'
     msg_id: 'str'
-    correl_id: 'str' = ''
-    in_reply_to: 'str' = ''
-    priority: 'int' = PubSub.Message.Priority_Default
-    mime_type: 'str' = 'application/json'
-    ext_client_id: 'str' = ''
-    pub_time_iso: 'str' = ''
-    ext_pub_time_iso: 'str' = ''
-    recv_time_iso: 'str' = ''
-    expiration: 'int' = PubSub.Message.Default_Expiration
-    expiration_time_iso: 'str' = ''
-    size: 'int' = 0
-    sub_key: 'str' = ''
+    correl_id: 'str'  # Default: ''
+    in_reply_to: 'str'  # Default: ''
+    priority: 'int'  # Default: PubSub.Message.Priority_Default
+    mime_type: 'str'  # Default: 'application/json'
+    ext_client_id: 'str'  # Default: ''
+    pub_time_iso: 'str'  # Default: ''
+    ext_pub_time_iso: 'str'  # Default: ''
+    recv_time_iso: 'str'  # Default: ''
+    expiration: 'int'  # Default: PubSub.Message.Default_Expiration
+    expiration_time_iso: 'str'  # Default: ''
+    size: 'int'  # Default: 0
+    sub_key: 'str'  # Default: ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class MessagesResponse:
+class MessagesResponse(TypedDict, total=False):
     """ Response model containing a list of messages.
     """
     is_ok: 'bool'
-    messages: 'list_[Message]' = field(default_factory=list)
+    messages: 'list_[Message]'  # Default: []
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class StatusResponse:
+class StatusResponse(TypedDict, total=False):
     is_ok: 'bool'
-    status: 'int' = OK
+    status: 'int'  # Default: OK
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class APIResponse:
+class APIResponse(TypedDict, total=False):
     """ Base API response model with common fields.
     """
     is_ok: 'bool'
     cid: 'str'
-    details: 'str' = ''
-    status: 'int' = OK
-    msg_id: 'str' = ''
+    details: 'str'  # Default: ''
+    status: 'int'  # Default: OK
+    msg_id: 'str'  # Default: ''
     meta: 'dict'
-    data: 'any_' = None
-    messages: 'list_' = field(default_factory=list)
-    message_count: 'int' = 0
+    data: 'any_'  # Default: None
+    messages: 'list_'  # Default: []
+    message_count: 'int'  # Default: 0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
 class ErrorResponse(APIResponse):
     """ Error response with default is_ok=False.
     """
-    is_ok: 'bool' = False
+    is_ok: 'bool'  # Default: False
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
 class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
-    details: 'str' = 'Authentication failed'
-    status: 'str' = UNAUTHORIZED # type: ignore
+    details: 'str'  # Default: 'Authentication failed'
+    status: 'str'  # Default: UNAUTHORIZED
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
 class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
-    details: 'str' = 'Invalid request data'
-    status: 'str' = BAD_REQUEST # type: ignore
+    details: 'str'  # Default: 'Invalid request data'
+    status: 'str'  # Default: BAD_REQUEST
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
 class MethodNotAllowedResponse(ErrorResponse):
     """ 405 Method Not Allowed response.
     """
-    details: 'str' = 'Method not allowed'
-    status: 'str' = METHOD_NOT_ALLOWED # type: ignore
+    details: 'str'  # Default: 'Method not allowed'
+    status: 'str'  # Default: METHOD_NOT_ALLOWED
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
 class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
-    details: 'str' = 'Endpoint not implemented'
-    status: 'str' = NOT_IMPLEMENTED # type: ignore
+    details: 'str'  # Default: 'Endpoint not implemented'
+    status: 'str'  # Default: NOT_IMPLEMENTED
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class HealthCheckResponse:
+class HealthCheckResponse(TypedDict, total=False):
     """ Health check response.
     """
-    status: 'str' = 'ok'
-    status: 'str' = OK # type: ignore
+    status: 'str'  # Default: 'ok' or OK
 
 # ################################################################################################################################
 # ################################################################################################################################
