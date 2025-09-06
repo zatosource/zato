@@ -124,6 +124,8 @@ class Consumer(Client):
 
                 try:
                     self._consume_messages(base_url, headers, auth, max_messages)
+                except ConnectionError as e:
+                    logger.error(f'Client {self.client_id}: Error in consume_messages: {e}')
                 except Exception:
                     logger.error(f'Client {self.client_id}: Error in consume_messages: {format_exc()}')
 
