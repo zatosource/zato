@@ -12,7 +12,6 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from dataclasses import asdict
 from http.client import responses as http_responses, OK, METHOD_NOT_ALLOWED
 from json import dumps, loads
 from logging import getLogger
@@ -40,8 +39,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Zato
 from zato.common.api import PubSub
 from zato.common.util.api import as_bool, new_cid_pubsub
-from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, MethodNotAllowedResponse, \
-    NotImplementedResponse, UnauthorizedResponse, _base_response
+from zato.common.pubsub.models import APIResponse, _base_response, HealthCheckResponse
 from zato.common.pubsub.server.base import BaseServer
 from zato.common.pubsub.util import get_broker_config
 
@@ -241,6 +239,9 @@ class BaseRESTServer(BaseServer):
         # We always need our own new Correlation ID ..
         cid = new_cid_pubsub()
 
+        # Declare response variable with union type
+        response:'_base_response'
+
         # .. log what we're doing ..
         path_info = environ.get('PATH_INFO', '').encode('latin1').decode('utf-8', errors='replace')
         if _needs_details:
@@ -263,7 +264,7 @@ class BaseRESTServer(BaseServer):
                 return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
-                response:'NotImplementedResponse' = {
+                response = {
                     'is_ok': False,
                     'cid': cid,
                     'details': 'Endpoint not implemented',
@@ -273,16 +274,16 @@ class BaseRESTServer(BaseServer):
 
         except ValueError as e:
             logger.warning(f'[{cid}] {e}')
-            response:'BadRequestResponse' = {
+            response = {
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
-                'status': 'BAD_REQUEST'
+                'status': 'BAD_REQUEST',
             }
             return self._json_response(start_response, response)
 
         except UnauthorizedException:
-            response:'UnauthorizedResponse' = {
+            response = {
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Authentication failed',
@@ -292,7 +293,7 @@ class BaseRESTServer(BaseServer):
 
         except BadRequestException as e:
             logger.warning(f'[{cid}] {e.message}')
-            response:'BadRequestResponse' = {
+            response = {
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
@@ -302,7 +303,7 @@ class BaseRESTServer(BaseServer):
 
         except MethodNotAllowed as e:
             logger.warning(f'[{cid}] Method not allowed')
-            response:'MethodNotAllowedResponse' = {
+            response = {
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Method not allowed',
@@ -312,7 +313,7 @@ class BaseRESTServer(BaseServer):
 
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
-            response:'BadRequestResponse' = {
+            response = {
                 'is_ok': False,
                 'cid': cid,
                 'details': 'URL not found',
