@@ -440,12 +440,12 @@ class Backend:
                 )
 
             # .. build our response ..
-            response.is_ok = is_ok
-            response.status = status
+            response['is_ok'] = is_ok
+            response['status'] = status
 
         # .. we go here if we don't invoke the server, in which case we simply indicate success ..
         else:
-            response.is_ok = True
+            response['is_ok'] = True
 
         # .. and now we can return it to our caller.
         return response
