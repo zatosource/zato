@@ -187,16 +187,16 @@ class BaseRESTServer(BaseServer):
         """ Return a JSON response.
         """
         # Check if this is a 405 response before status gets modified
-        is_method_not_allowed = data.get('status') == METHOD_NOT_ALLOWED
+        status_value = data.get('status')
+        is_method_not_allowed = status_value == METHOD_NOT_ALLOWED
 
-        # Get the textual part of the status code ..
-        response_text = http_responses[data.get('status')] # type: ignore
-
-        # .. build a full status field ..
-        status = f'{data["status"]} {response_text}'
-
-        # .. replace the status we were given on input ..
-        data['status'] = status
+        # Get the textual part of the status code if it's numeric
+        if isinstance(status_value, int):
+            response_text = http_responses[status_value]
+            # .. build a full status field ..
+            status = f'{status_value} {response_text}'
+            # .. replace the status we were given on input ..
+            data['status'] = status
 
         # .. now we can serialize it ..
         response_data = data
