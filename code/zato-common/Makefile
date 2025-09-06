@@ -46,10 +46,6 @@ endif
 	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 #	st run $Zato_Test_PubSub_OpenAPI_File --url http://localhost:44556/ -a $Zato_Test_PubSub_OpenAPI_Username:$Zato_Test_PubSub_OpenAPI_Password --output-sanitize false --warnings off -n 500
 
-perftest:
+generate-enmasse:
 	echo "Perftest called"
-	py $(CURDIR)/test/zato/common/pubsub/perftest/generate_enmasse.py $(if $(USERS),--users $(USERS)) $(if $(TOPICS_MULTIPLIER),--topics-multiplier $(TOPICS_MULTIPLIER))
-
-perftest-python:
-	echo "Python perftest called"
-	py $(CURDIR)/test/zato/common/pubsub/perftest/python_/__init__.py $(if $(NUM_INVOKERS),--num-invokers $(NUM_INVOKERS)) $(if $(REQS_PER_INVOKER),--reqs-per-invoker $(REQS_PER_INVOKER)) $(if $(REQS_PER_SECOND),--reqs-per-second $(REQS_PER_SECOND))
+	py $(CURDIR)/src/zato/common/pubsub/perftest/python_/generate_enmasse.py $(if $(USERS),--users $(USERS)) $(if $(TOPICS_MULTIPLIER),--topics-multiplier $(TOPICS_MULTIPLIER))
