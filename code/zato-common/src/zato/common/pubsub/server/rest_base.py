@@ -41,7 +41,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from zato.common.api import PubSub
 from zato.common.util.api import as_bool, new_cid_pubsub
 from zato.common.pubsub.models import APIResponse, BadRequestResponse, HealthCheckResponse, MethodNotAllowedResponse, \
-    NotImplementedResponse, UnauthorizedResponse
+    NotImplementedResponse, UnauthorizedResponse, _base_response
 from zato.common.pubsub.server.base import BaseServer
 from zato.common.pubsub.util import get_broker_config
 
@@ -185,7 +185,7 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
-    def _json_response(self, start_response:'any_', data:'APIResponse | HealthCheckResponse') -> 'list_[bytes]':
+    def _json_response(self, start_response:'any_', data:'_base_response') -> 'list_[bytes]':
         """ Return a JSON response.
         """
         # Check if this is a 405 response before status gets modified
@@ -237,8 +237,6 @@ class BaseRESTServer(BaseServer):
     def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
-        # Type hints
-        response:'any_'
 
         # We always need our own new Correlation ID ..
         cid = new_cid_pubsub()

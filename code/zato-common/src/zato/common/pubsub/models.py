@@ -13,6 +13,7 @@ from typing import TypedDict
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.typing_ import union_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +83,7 @@ class MessagesResponse(TypedDict, total=False):
 
 class StatusResponse(TypedDict, total=False):
     is_ok: 'bool'
-    status: 'int'  # Default: OK
+    status: 'str'  # Default: OK
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,7 +94,7 @@ class APIResponse(TypedDict, total=False):
     is_ok: 'bool'
     cid: 'str'
     details: 'str'  # Default: ''
-    status: 'int'  # Default: OK
+    status: 'str'  # Default: OK
     msg_id: 'str'  # Default: ''
     meta: 'dict'
     data: 'any_'  # Default: None
@@ -200,6 +201,20 @@ topic_list = 'list_[Topic]'
 message_optional = 'optional[Message]'
 subscription_optional = 'optional[Subscription]'
 topic_optional = 'optional[Topic]'
+
+# Union type for all response types
+_base_response = union_[
+    APIResponse,
+    ErrorResponse,
+    UnauthorizedResponse,
+    BadRequestResponse,
+    MethodNotAllowedResponse,
+    NotImplementedResponse,
+    HealthCheckResponse,
+    StatusResponse,
+    MessagesResponse,
+    PubResponse
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
