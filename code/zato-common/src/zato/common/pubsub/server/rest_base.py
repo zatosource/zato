@@ -12,8 +12,8 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from http.client import responses as BAD_REQUEST, http_responses, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, \
-    OK, UNAUTHORIZED
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, \
+    responses as http_responses, UNAUTHORIZED
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -198,7 +198,7 @@ class BaseRESTServer(BaseServer):
         status_value = data.get('status') or OK
         is_method_not_allowed = status_value == METHOD_NOT_ALLOWED # type: ignore
 
-        response_text = http_responses[status_value]
+        response_text = http_responses[status_value] # type: ignore
 
         # .. build a full status field ..
         status = f'{status_value} {response_text}'
