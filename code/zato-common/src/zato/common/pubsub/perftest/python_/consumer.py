@@ -58,7 +58,7 @@ class Consumer(Client):
     def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
-        base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL']
+        base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL_Consumer']
         username = f'user.{self.client_id}'
         password = f'password.{self.client_id}'
         max_topics = self.max_topics

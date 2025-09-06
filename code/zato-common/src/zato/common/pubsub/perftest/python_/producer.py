@@ -7,11 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt
 """
 
 # stdlib
+import os
 from json import dumps
 from logging import getLogger
 
 # requests
 import requests
+from requests.exceptions import ConnectionError
 
 # Zato
 from zato.common.util.api import utcnow
@@ -221,13 +223,24 @@ class Producer(Client):
     def _get_config(self) -> 'anydict':
         """ Get configuration from environment variables.
         """
-        config = super()._get_config()
-        config['reqs_per_producer'] = self.reqs_per_producer
-        config['topic_spec'] = self.topic_spec
-        config['burst_multiplier'] = self.burst_multiplier
-        config['burst_duration'] = self.burst_duration
-        config['burst_interval'] = self.burst_interval
-        return config
+        base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL_Producer']
+        username = os.environ['Zato_Test_PubSub_OpenAPI_Username']
+        password = os.environ['Zato_Test_PubSub_OpenAPI_Password']
+        reqs_per_second = self.reqs_per_second
+        max_topics = self.max_topics
+
+        return {
+            'base_url': base_url,
+            'username': username,
+            'password': password,
+            'max_topics': max_topics,
+            'reqs_per_second': reqs_per_second,
+            'reqs_per_producer': self.reqs_per_producer,
+            'topic_spec': self.topic_spec,
+            'burst_multiplier': self.burst_multiplier,
+            'burst_duration': self.burst_duration,
+            'burst_interval': self.burst_interval,
+        }
 
 # ################################################################################################################################
 
@@ -248,15 +261,19 @@ class Producer(Client):
     def _publish_message(self, url:'str', payload:'anydict', headers:'anydict', auth:'tuple') -> 'None':
         """ Publish a single message to the broker.
         """
-        response = requests.post(url, data=dumps(payload), headers=headers, auth=auth)
+        try:
+            response = requests.post(url, data=dumps(payload), headers=headers, auth=auth)
+            topic_name = payload['data']['topic']
+            success = response.status_code == 200
 
-        topic_name = payload['data']['topic']
-        success = response.status_code == 200
+            self.progress_tracker.update_progress(success)
 
-        self.progress_tracker.update_progress(success)
-
-        if not success:
-            logger.error(f'Client {self.client_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
+            if not success:
+                logger.error(f'Client {self.client_id}: Failed to publish to {topic_name}: {response.status_code} - {response.text}')
+        except ConnectionError as e:
+            topic_name = payload['data']['topic']
+            logger.error(f'Client {self.client_id}: Failed to publish to {topic_name}: {e}')
+            self.progress_tracker.update_progress(False)
 
 # ################################################################################################################################
 
