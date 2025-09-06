@@ -205,14 +205,15 @@ class Producer(Client):
         reqs_per_producer:'int'=1,
         producer_id:'int'=0,
         reqs_per_second:'float'=1.0,
-        max_topics:'int'=3,
+        topic_spec:'str'='3',
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
         burst_interval:'int'=60
     ) -> 'None':
 
-        super().__init__(progress_tracker, producer_id, reqs_per_second, max_topics)
+        super().__init__(progress_tracker, producer_id, reqs_per_second, 3)
         self.reqs_per_producer = reqs_per_producer
+        self.topic_spec = topic_spec
         self.burst_multiplier = burst_multiplier
         self.burst_duration = burst_duration
         self.burst_interval = burst_interval
@@ -222,6 +223,7 @@ class Producer(Client):
         """
         config = super()._get_config()
         config['reqs_per_producer'] = self.reqs_per_producer
+        config['topic_spec'] = self.topic_spec
         config['burst_multiplier'] = self.burst_multiplier
         config['burst_duration'] = self.burst_duration
         config['burst_interval'] = self.burst_interval
@@ -267,34 +269,48 @@ class Producer(Client):
 
         reqs_per_producer = config['reqs_per_producer']
         reqs_per_second = config['reqs_per_second']
-        max_topics = config['max_topics']
-        max_topics_range = max_topics + 1
+        topic_spec = config['topic_spec']
         burst_multiplier = config['burst_multiplier']
         burst_duration = config['burst_duration']
         burst_interval = config['burst_interval']
 
+        # Parse topic range
+        if '-' in topic_spec:
+            start_topic_str, end_topic_str = topic_spec.split('-', 1)
+            start_topic = int(start_topic_str)
+            end_topic = int(end_topic_str)
+        else:
+            topic_count = int(topic_spec)
+            start_topic = 1
+            end_topic = topic_count
+
         normal_interval = 1.0 / reqs_per_second
-        burst_interval_time = 1.0 / (reqs_per_second * burst_multiplier)
+        if burst_multiplier > 0:
+            burst_interval_time = 1.0 / (reqs_per_second * burst_multiplier)
+        else:
+            burst_interval_time = normal_interval
 
         start_time = utcnow()
         last_burst_time = start_time
         message_count = 0
 
         for _ in range(reqs_per_producer):
-            for topic_num in range(1, max_topics_range):
+            for topic_num in range(start_topic, end_topic + 1):
                 message_count += 1
                 current_time = utcnow()
 
-                # Check if we should start a burst
-                time_since_last_burst = (current_time - last_burst_time).total_seconds()
-                time_since_start = (current_time - start_time).total_seconds()
+                # Check if we should start a burst (only if burst mode is enabled)
+                is_in_burst = False
+                if burst_interval > 0 and burst_duration > 0:
+                    time_since_last_burst = (current_time - last_burst_time).total_seconds()
+                    time_since_start = (current_time - start_time).total_seconds()
 
-                is_burst_time = time_since_last_burst >= burst_interval
-                is_in_burst = is_burst_time and (time_since_start % burst_interval) < burst_duration
+                    is_burst_time = time_since_last_burst >= burst_interval
+                    is_in_burst = is_burst_time and (time_since_start % burst_interval) < burst_duration
 
-                if is_burst_time and not is_in_burst:
-                    last_burst_time = current_time
-                    is_in_burst = True
+                    if is_burst_time and not is_in_burst:
+                        last_burst_time = current_time
+                        is_in_burst = True
 
                 request_start = utcnow()
 
