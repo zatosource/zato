@@ -191,10 +191,6 @@ class BaseRESTServer(BaseServer):
         """ Return a JSON response.
         """
 
-        print()
-        print(111, data)
-        print()
-
         status_value = data.get('status') or OK
         is_method_not_allowed = status_value == METHOD_NOT_ALLOWED # type: ignore
 
@@ -347,7 +343,7 @@ class BaseRESTServer(BaseServer):
         """ Status check endpoint for load balancer health checks.
         """
         response:'HealthCheckResponse' = {
-            'status': 'OK'
+            'status': OK
         }
 
         return response

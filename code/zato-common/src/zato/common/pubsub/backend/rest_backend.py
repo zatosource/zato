@@ -20,7 +20,6 @@ from zato.common.util.api import replace_secrets, spawn_greenlet
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
     from zato.common.typing_ import strdict
 
 # ################################################################################################################################
@@ -239,10 +238,6 @@ class RESTBackend(Backend):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'strdict') -> 'None':
-
-        print()
-        print(111, msg)
-        print()
 
         # Local aliases
         new_topic_name:'str' = msg['new_topic_name']
