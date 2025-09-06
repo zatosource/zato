@@ -12,7 +12,8 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from http.client import responses as http_responses, OK, METHOD_NOT_ALLOWED
+from http.client import responses as BAD_REQUEST, http_responses, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, \
+    OK, UNAUTHORIZED
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -186,26 +187,21 @@ class BaseRESTServer(BaseServer):
     def _json_response(self, start_response:'any_', data:'_base_response') -> 'list_[bytes]':
         """ Return a JSON response.
         """
-        # Check if this is a 405 response before status gets modified
-        status_value = data.get('status')
+
+        print()
+        print(111, data)
+        print()
+
+        status_value = data.get('status') or OK
         is_method_not_allowed = status_value == METHOD_NOT_ALLOWED # type: ignore
 
-        # Get the textual part of the status code if it's numeric
-        if isinstance(status_value, int):
-            response_text = http_responses[status_value]
-            # .. build a full status field ..
-            status = f'{status_value} {response_text}'
-            # .. replace the status we were given on input ..
-            data['status'] = status
+        response_text = http_responses[status_value]
 
-        else:
-            # Map string status to HTTP status code
-            if status_value == 'ok':
-                status = '200 OK'
-                data['status'] = status
+        # .. build a full status field ..
+        status = f'{status_value} {response_text}'
 
-            else:
-                status = str(status_value)
+        # .. replace the status we were given on input ..
+        data['status'] = status
 
         # .. now we can serialize it ..
         response_data = data
@@ -271,9 +267,7 @@ class BaseRESTServer(BaseServer):
                 # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
                 handler_response = handler(cid, environ, start_response, **args)
-                logger.info(f'[{cid}] Handler response: {handler_response}')
                 response_bytes = self._json_response(start_response, handler_response)
-                logger.info(f'[{cid}] JSON response created successfully')
                 return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
@@ -281,7 +275,7 @@ class BaseRESTServer(BaseServer):
                     'is_ok': False,
                     'cid': cid,
                     'details': 'Endpoint not implemented',
-                    'status': 'NOT_IMPLEMENTED'
+                    'status': NOT_IMPLEMENTED
                 }
                 return self._json_response(start_response, response)
 
@@ -291,7 +285,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
-                'status': 'BAD_REQUEST',
+                'status': BAD_REQUEST,
             }
             return self._json_response(start_response, response)
 
@@ -300,7 +294,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Authentication failed',
-                'status': 'UNAUTHORIZED'
+                'status': UNAUTHORIZED
             }
             return self._json_response(start_response, response)
 
@@ -310,7 +304,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
-                'status': 'BAD_REQUEST'
+                'status': BAD_REQUEST
             }
             return self._json_response(start_response, response)
 
@@ -320,7 +314,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Method not allowed',
-                'status': 'METHOD_NOT_ALLOWED'
+                'status': METHOD_NOT_ALLOWED
             }
             return self._json_response(start_response, response)
 
@@ -330,7 +324,17 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'URL not found',
-                'status': 'BAD_REQUEST'
+                'status': BAD_REQUEST
+            }
+            return self._json_response(start_response, response)
+
+        except Exception as e:
+            logger.error(f'[{cid}] Unhandled exception: {format_exc()}')
+            response = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'Internal server error',
+                'status': INTERNAL_SERVER_ERROR
             }
             return self._json_response(start_response, response)
 
@@ -340,7 +344,7 @@ class BaseRESTServer(BaseServer):
         """ Status check endpoint for load balancer health checks.
         """
         response:'HealthCheckResponse' = {
-            'status': 'ok'
+            'status': 'OK'
         }
 
         return response

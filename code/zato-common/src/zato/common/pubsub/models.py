@@ -46,7 +46,7 @@ class PubResponse(TypedDict, total=False):
     msg_id: 'str'  # Default: ''
     cid: 'str'  # Default: ''
     details: 'str'  # Default: ''
-    status: 'str'  # Default: OK
+    status: 'int | str'  # Default: OK
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,14 +78,14 @@ class MessagesResponse(TypedDict, total=False):
     """
     is_ok: 'bool'
     messages: 'list_[Message]'  # Default: []
-    status: 'str'  # Default: OK
+    status: 'int | str'  # Default: OK
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class StatusResponse(TypedDict, total=False):
     is_ok: 'bool'
-    status: 'str'  # Default: OK
+    status: 'int | str'  # Default: OK
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,7 +96,7 @@ class APIResponse(TypedDict, total=False):
     is_ok: 'bool'
     cid: 'str'
     details: 'str'  # Default: ''
-    status: 'str'  # Default: OK
+    status: 'int | str'  # Default: OK
     msg_id: 'str'  # Default: ''
     meta: 'dict'
     data: 'any_'  # Default: None
@@ -118,7 +118,7 @@ class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
     details: 'str'  # Default: 'Authentication failed'
-    status: 'str'  # Default: UNAUTHORIZED
+    status: 'int | str'  # Default: UNAUTHORIZED
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +127,7 @@ class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
     details: 'str'  # Default: 'Invalid request data'
-    status: 'str'  # Default: BAD_REQUEST
+    status: 'int | str'  # Default: BAD_REQUEST
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,7 +136,7 @@ class MethodNotAllowedResponse(ErrorResponse):
     """ 405 Method Not Allowed response.
     """
     details: 'str'  # Default: 'Method not allowed'
-    status: 'str'  # Default: METHOD_NOT_ALLOWED
+    status: 'int | str'  # Default: METHOD_NOT_ALLOWED
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,7 +145,7 @@ class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
     details: 'str'  # Default: 'Endpoint not implemented'
-    status: 'str'  # Default: NOT_IMPLEMENTED
+    status: 'int | str'  # Default: NOT_IMPLEMENTED
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +153,7 @@ class NotImplementedResponse(ErrorResponse):
 class HealthCheckResponse(TypedDict, total=False):
     """ Health check response.
     """
-    status: 'str'  # Default: 'ok' or OK
+    status: 'int | str'  # Default: 'ok' or OK
 
 # ################################################################################################################################
 # ################################################################################################################################
