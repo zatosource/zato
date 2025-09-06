@@ -24,7 +24,7 @@ from werkzeug.wrappers import Request
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.models import APIResponse, BadRequestResponse, UnauthorizedResponse
+from zato.common.pubsub.models import APIResponse, BadRequestResponse, UnauthorizedResponse, _base_response
 from zato.common.pubsub.server.rest_base import BaseRESTServer
 from zato.common.pubsub.util import set_time_since
 from zato.common.util.api import as_bool, utcnow
@@ -212,14 +212,15 @@ class PubSubRESTServerPull(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _build_success_response(self, cid:'str', messages:'list', max_messages:'int', wrap_in_list:'bool') -> 'APIResponse':
+    def _build_success_response(self, cid:'str', messages:'list', max_messages:'int', wrap_in_list:'bool') -> '_base_response':
         """ Create successful APIResponse with messages.
         """
-        response = APIResponse()
-        response.is_ok = True
-        response.cid = cid
-        response.data = None
-        response.message_count = len(messages)
+        response:'APIResponse' = {
+            'is_ok': True,
+            'cid': cid,
+            'data': None,
+            'message_count': len(messages)
+        }
 
         # If max_messages is 1 and wrap_in_list is False, return single message format
         needs_single_message = max_messages == 1
@@ -227,11 +228,11 @@ class PubSubRESTServerPull(BaseRESTServer):
 
         if needs_single_message and not wrap_in_list and len_messages == 1:
             message = messages[0]
-            response.data = message['data']
-            response.meta = message['meta']
+            response['data'] = message['data']
+            response['meta'] = message['meta']
         else:
             # Always wrap in list for max_messages > 1 or when wrap_in_list is True
-            response.messages = messages
+            response['messages'] = messages
 
         return response
 
@@ -243,17 +244,19 @@ class PubSubRESTServerPull(BaseRESTServer):
         details:'str',
         *,
         response_class:'any_'=BadRequestResponse,
-    ) -> 'BadRequestResponse | UnauthorizedResponse':
+    ) -> '_base_response':
         """ Create error responses for various failure cases.
         """
-        response = response_class()
-        response.cid = cid
-        response.details = details
+        response:'_base_response' = {
+            'is_ok': False,
+            'cid': cid,
+            'details': details
+        }
         return response
 
 # ################################################################################################################################
 
-    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> 'APIResponse':
+    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> '_base_response':
         """ Get messages from the user's queue.
         """
         if _needs_details:
