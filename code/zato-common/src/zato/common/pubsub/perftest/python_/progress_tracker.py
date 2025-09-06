@@ -30,6 +30,7 @@ class ProgressTracker:
         self.start_time = utcnow()
         self.lock = Lock()
         self.message_timestamps = []
+        self.last_trim_time = utcnow()
 
 # ################################################################################################################################
 
