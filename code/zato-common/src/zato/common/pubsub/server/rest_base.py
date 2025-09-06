@@ -188,7 +188,7 @@ class BaseRESTServer(BaseServer):
         """
         # Check if this is a 405 response before status gets modified
         status_value = data.get('status')
-        is_method_not_allowed = status_value == METHOD_NOT_ALLOWED
+        is_method_not_allowed = status_value == METHOD_NOT_ALLOWED # type: ignore
 
         # Get the textual part of the status code if it's numeric
         if isinstance(status_value, int):
