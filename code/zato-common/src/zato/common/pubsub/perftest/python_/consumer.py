@@ -14,6 +14,7 @@ from traceback import format_exc
 
 # requests
 import requests
+from requests.exceptions import ConnectionError
 
 # gevent
 from gevent import sleep
