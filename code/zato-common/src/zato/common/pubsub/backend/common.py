@@ -273,40 +273,37 @@ class Backend:
 
         # Generate message ID and calculate size
         msg_id = new_msg_id()
-        data_str = dumps(msg.data) if not isinstance(msg.data, str) else msg.data
-        size = len(data_str.encode('utf-8'))
 
         # Set timestamps
         now = utcnow()
         recv_time_iso = now.isoformat()
-        expiration_time = now + timedelta(seconds=msg.expiration)
+        expiration_time = now + timedelta(seconds=msg['expiration'])
         expiration_time_iso = expiration_time.isoformat()
 
         # This is optional on input so we need to our own timestamp if not given
-        pub_time_iso = msg.pub_time or recv_time_iso
+        pub_time_iso = msg['pub_time'] or recv_time_iso
 
         # Create message object
         message = {
-            'data': msg.data,
+            'data': msg['data'],
             'topic_name': topic_name,
             'msg_id': msg_id,
-            'priority': msg.priority,
+            'priority': msg['priority'],
             'pub_time_iso': pub_time_iso,
             'recv_time_iso': recv_time_iso,  # Same as pub_time for direct API calls
-            'expiration': msg.expiration,
+            'expiration': msg['expiration'],
             'expiration_time_iso': expiration_time_iso,
-            'size': size,
             'publisher': username,
         }
 
-        if msg.ext_client_id:
-            message['ext_client_id'] = msg.ext_client_id
+        if msg.get('ext_client_id'):
+            message['ext_client_id'] = msg['ext_client_id']
 
-        if msg.correl_id:
-            message['correl_id'] = msg.correl_id
+        if msg.get('correl_id'):
+            message['correl_id'] = msg['correl_id']
 
-        if msg.in_reply_to:
-            message['in_reply_to'] = msg.in_reply_to
+        if msg.get('in_reply_to'):
+            message['in_reply_to'] = msg['in_reply_to']
 
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
 
