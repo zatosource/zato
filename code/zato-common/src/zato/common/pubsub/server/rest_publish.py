@@ -20,8 +20,7 @@ from werkzeug.wrappers import Request
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.models import PubMessage
-from zato.common.pubsub.models import APIResponse
+from zato.common.pubsub.models import PubMessage, APIResponse, _base_response
 from zato.common.pubsub.server.rest_base import BadRequestException, BaseRESTServer, UnauthorizedException
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import as_bool
@@ -56,7 +55,7 @@ class PubSubRESTServerPublish(BaseRESTServer):
     """
     server_type = 'publish'
 
-    def on_publish(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> 'APIResponse':
+    def on_publish(self, cid:'str', environ:'anydict', start_response:'any_', topic_name:'str') -> '_base_response':
         """ Publish a message to a topic.
         """
         # Log what we're doing ..
@@ -116,23 +115,25 @@ class PubSubRESTServerPublish(BaseRESTServer):
             expiration = 1
 
         # .. build a business message ..
-        msg = PubMessage()
-        msg.data = msg_data
-        msg.priority = priority
-        msg.expiration = expiration
-        msg.correl_id = correl_id
-        msg.ext_client_id = ext_client_id
-        msg.pub_time = pub_time
-        msg.in_reply_to = in_reply_to
+        msg:'PubMessage' = {
+            'data': msg_data,
+            'priority': priority,
+            'expiration': expiration,
+            'correl_id': correl_id,
+            'ext_client_id': ext_client_id,
+            'pub_time': pub_time,
+            'in_reply_to': in_reply_to
+        }
 
         # .. let the backend handle it ..
         result = self.backend.publish_impl(cid, topic_name, msg, username, ext_client_id)
 
         # .. build our response ..
-        response = APIResponse()
-        response.is_ok = result.is_ok
-        response.cid = cid
-        response.msg_id = result.msg_id
+        response:'APIResponse' = {
+            'is_ok': result.is_ok,
+            'cid': cid,
+            'msg_id': result.msg_id
+        }
 
         # .. and return it to the caller.
         return response
