@@ -81,7 +81,7 @@ run-producers:
 		--num-producers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
 		--reqs-per-producer $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1) \
 		--reqs-per-second $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),1.0) \
-		--max-topics $(if $(word 5,$(MAKECMDGOALS)),$(word 5,$(MAKECMDGOALS)),3) \
+		--topics $(if $(word 5,$(MAKECMDGOALS)),$(word 5,$(MAKECMDGOALS)),3) \
 		--burst-multiplier $(if $(word 6,$(MAKECMDGOALS)),$(word 6,$(MAKECMDGOALS)),10) \
 		--burst-interval $(if $(word 7,$(MAKECMDGOALS)),$(word 7,$(MAKECMDGOALS)),60) \
 		--burst-duration $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),10)
@@ -91,4 +91,4 @@ run-consumers:
 		--num-consumers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
 		--pull-interval $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1.0) \
 		--max-messages $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),100) \
-		--max-topics 1
+		--topics 1
