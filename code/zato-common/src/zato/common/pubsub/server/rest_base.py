@@ -65,6 +65,9 @@ _default_expiration = PubSub.Message.Default_Expiration
 _max_messages_limit = 1000
 _max_len_limit = 5_000_000
 
+# This is needed to satisfy the type checker
+_BAD_REQUEST = int(BAD_REQUEST) # type: ignore
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -285,7 +288,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
-                'status': BAD_REQUEST,
+                'status': _BAD_REQUEST,
             }
             return self._json_response(start_response, response)
 
@@ -304,7 +307,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'Invalid request data',
-                'status': BAD_REQUEST
+                'status': _BAD_REQUEST
             }
             return self._json_response(start_response, response)
 
@@ -324,7 +327,7 @@ class BaseRESTServer(BaseServer):
                 'is_ok': False,
                 'cid': cid,
                 'details': 'URL not found',
-                'status': BAD_REQUEST
+                'status': _BAD_REQUEST
             }
             return self._json_response(start_response, response)
 
