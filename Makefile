@@ -73,8 +73,8 @@ unify:
 	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/__init__.py
 	python3 $(CURDIR)/code/util/unify.py
 
-perftest:
-	cd $(CURDIR)/code/zato-common && $(MAKE) perftest USERS=$(word 2,$(MAKECMDGOALS)) TOPICS_MULTIPLIER=$(word 3,$(MAKECMDGOALS))
+generate-enmasse:
+	cd $(CURDIR)/code/zato-common && $(MAKE) generate-enmasse USERS=$(word 2,$(MAKECMDGOALS)) TOPICS_MULTIPLIER=$(word 3,$(MAKECMDGOALS))
 
 run-producers:
 	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
