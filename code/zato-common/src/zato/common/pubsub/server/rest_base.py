@@ -201,7 +201,7 @@ class BaseRESTServer(BaseServer):
         data.status = status
 
         # .. now we can serialize it ..
-        response_data = asdict(data)
+        response_data = data
 
         # .. drop the fields that may be empty ..
         fields_to_check = ['details', 'msg_id', 'data']
@@ -237,6 +237,9 @@ class BaseRESTServer(BaseServer):
     def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
+        # Type hints
+        response:'any_'
+
         # We always need our own new Correlation ID ..
         cid = new_cid_pubsub()
 
@@ -262,39 +265,61 @@ class BaseRESTServer(BaseServer):
                 return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
-                response = NotImplementedResponse()
-                response.cid = cid
+                response:'NotImplementedResponse' = {
+                    'is_ok': False,
+                    'cid': cid,
+                    'details': 'Endpoint not implemented',
+                    'status': 'NOT_IMPLEMENTED'
+                }
                 return self._json_response(start_response, response)
 
         except ValueError as e:
             logger.warning(f'[{cid}] {e}')
-            response = BadRequestResponse()
-            response.cid = cid
+            response:'BadRequestResponse' = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'Invalid request data',
+                'status': 'BAD_REQUEST'
+            }
             return self._json_response(start_response, response)
 
         except UnauthorizedException:
-            response = UnauthorizedResponse()
-            response.cid = cid
+            response:'UnauthorizedResponse' = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'Authentication failed',
+                'status': 'UNAUTHORIZED'
+            }
             return self._json_response(start_response, response)
 
         except BadRequestException as e:
             logger.warning(f'[{cid}] {e.message}')
-            response = BadRequestResponse()
-            response.cid = cid
+            response:'BadRequestResponse' = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'Invalid request data',
+                'status': 'BAD_REQUEST'
+            }
             return self._json_response(start_response, response)
 
         except MethodNotAllowed as e:
             logger.warning(f'[{cid}] Method not allowed')
-            response = MethodNotAllowedResponse()
-            response.cid = cid
-            response.details = 'Method not allowed'
+            response:'MethodNotAllowedResponse' = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'Method not allowed',
+                'status': 'METHOD_NOT_ALLOWED'
+            }
             return self._json_response(start_response, response)
 
         except NotFound:
             logger.warning('No URL match found for path: %s', environ.get('PATH_INFO'))
-            response = BadRequestResponse()
-            response.cid = cid
-            response.details = 'URL not found'
+            response:'BadRequestResponse' = {
+                'is_ok': False,
+                'cid': cid,
+                'details': 'URL not found',
+                'status': 'BAD_REQUEST'
+            }
             return self._json_response(start_response, response)
 
 # ################################################################################################################################
@@ -302,9 +327,9 @@ class BaseRESTServer(BaseServer):
     def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
         """ Health check endpoint.
         """
-        response = HealthCheckResponse()
-        response.is_ok = True
-        response.cid = new_cid_pubsub()
+        response:'HealthCheckResponse' = {
+            'status': 'ok'
+        }
 
         return response
 
@@ -313,9 +338,9 @@ class BaseRESTServer(BaseServer):
     def on_status_check(self, cid:'str', environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
         """ Status check endpoint for load balancer health checks.
         """
-        response = HealthCheckResponse()
-        response.is_ok = True
-        response.cid = cid
+        response:'HealthCheckResponse' = {
+            'status': 'ok'
+        }
 
         return response
 
@@ -364,11 +389,11 @@ class BaseRESTServer(BaseServer):
         logger.debug(f'[{cid}] Admin diagnostics: \n{yaml_output}')
 
         # Return diagnostics data in response
-        response = APIResponse()
-        response.is_ok = True
-        response.cid = cid
-        response.details = 'Diagnostics retrieved successfully'
-        response.data = diagnostics
+        response:'APIResponse' = {
+            'is_ok': True,
+            'cid': cid,
+            'data': diagnostics
+        }
 
         return response
 
@@ -479,10 +504,11 @@ class BaseRESTServer(BaseServer):
         # Subscribe to topic using backend
         result = self.backend.register_subscription(cid, topic_name, username=username, should_invoke_server=True, source_server_type=self.server_type)
 
-        response = APIResponse()
-        response.cid = cid
-        response.is_ok = result.is_ok
-        response.status = result.status
+        response:'APIResponse' = {
+            'cid': cid,
+            'is_ok': result.is_ok,
+            'status': result.status
+        }
         return response
 
 # ################################################################################################################################
@@ -508,9 +534,10 @@ class BaseRESTServer(BaseServer):
         # Unsubscribe from topic using backend
         result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
-        response = APIResponse()
-        response.is_ok = result.is_ok
-        response.cid = cid
+        response:'APIResponse' = {
+            'is_ok': result.is_ok,
+            'cid': cid
+        }
 
         return response
 
