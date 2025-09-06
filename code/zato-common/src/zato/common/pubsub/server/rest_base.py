@@ -263,7 +263,9 @@ class BaseRESTServer(BaseServer):
                 # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
                 handler_response = handler(cid, environ, start_response, **args)
+                logger.info(f'[{cid}] Handler response: {handler_response}')
                 response_bytes = self._json_response(start_response, handler_response)
+                logger.info(f'[{cid}] JSON response created successfully')
                 return response_bytes
             else:
                 logger.warning(f'No handler for endpoint: {endpoint}')
@@ -323,17 +325,6 @@ class BaseRESTServer(BaseServer):
                 'status': 'BAD_REQUEST'
             }
             return self._json_response(start_response, response)
-
-# ################################################################################################################################
-
-    def on_health_check(self, environ:'anydict', start_response:'any_') -> 'HealthCheckResponse':
-        """ Health check endpoint.
-        """
-        response:'HealthCheckResponse' = {
-            'status': 'ok'
-        }
-
-        return response
 
 # ################################################################################################################################
 
