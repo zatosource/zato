@@ -34,9 +34,9 @@ if 0:
 
 logger = getLogger(__name__)
 
-data = {'text': 'Integer urna. Vivamus molestie dapibus ligula. Aliquam erat volutpat. Nulla'}
+data2 = {'text': 'Integer urna. Vivamus molestie dapibus ligula. Aliquam erat volutpat. Nulla'}
 
-data2 = [{
+data = [{
         'name': 'Eaton Freeman',
         'phone': '1-487-522-2778',
         'time': '3:24 AM',
