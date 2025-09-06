@@ -12,7 +12,6 @@ from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, UN
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,10 +100,10 @@ class APIResponse:
     details: 'str' = ''
     status: 'int' = OK
     msg_id: 'str' = ''
-    meta: 'dict' = None
+    meta: 'dict'
     data: 'any_' = None
-    messages: 'list' = None
-    message_count: 'int' = None
+    messages: 'list_' = field(default_factory=list)
+    message_count: 'int' = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,7 +122,7 @@ class UnauthorizedResponse(ErrorResponse):
     """ 401 Unauthorized response.
     """
     details: 'str' = 'Authentication failed'
-    status: 'str' = UNAUTHORIZED
+    status: 'str' = UNAUTHORIZED # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,7 +132,7 @@ class BadRequestResponse(ErrorResponse):
     """ 400 Bad Request response.
     """
     details: 'str' = 'Invalid request data'
-    status: 'str' = BAD_REQUEST
+    status: 'str' = BAD_REQUEST # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,7 +142,7 @@ class MethodNotAllowedResponse(ErrorResponse):
     """ 405 Method Not Allowed response.
     """
     details: 'str' = 'Method not allowed'
-    status: 'str' = METHOD_NOT_ALLOWED
+    status: 'str' = METHOD_NOT_ALLOWED # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +152,7 @@ class NotImplementedResponse(ErrorResponse):
     """ 501 Not Implemented response.
     """
     details: 'str' = 'Endpoint not implemented'
-    status: 'str' = NOT_IMPLEMENTED
+    status: 'str' = NOT_IMPLEMENTED # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,7 +162,7 @@ class HealthCheckResponse:
     """ Health check response.
     """
     status: 'str' = 'ok'
-    status: 'str' = OK
+    status: 'str' = OK # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
