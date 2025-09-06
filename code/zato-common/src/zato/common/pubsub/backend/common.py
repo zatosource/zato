@@ -321,10 +321,11 @@ class Backend:
             logger.info(f'[{cid}] Published message `{msg_id}` ({current_count:015d}) to topic `{topic_name}` (username={username}{ext_client_part}')
 
         # Return success response
-        response = PubResponse()
-        response.is_ok = True
-        response.msg_id = msg_id
-        response.cid = cid
+        response: 'PubResponse' = {
+            'is_ok': True,
+            'msg_id': msg_id,
+            'cid': cid
+        }
 
         return response
 
@@ -345,7 +346,7 @@ class Backend:
         """ Subscribe to a topic.
         """
         # Reusable
-        response = StatusResponse()
+        response: 'StatusResponse' = {}
 
         # Get sec_name from username or use directly if it's already sec_name
         if username:
@@ -357,9 +358,10 @@ class Backend:
             subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
             if sec_name in subs_by_sec_name:
                 logger.info(f'[{cid}] User `{sec_name}` already subscribed to topic `{topic_name}` - no action needed')
-                response = StatusResponse()
-                response.is_ok = True
-                response.status = OK
+                response = {
+                    'is_ok': True,
+                    'status': OK
+                }
                 return response
 
         # This is optional and will be empty if it's an external subscription (e.g. via REST)
@@ -471,8 +473,9 @@ class Backend:
             subs_by_sec_name = self.subs_by_topic.get(topic_name, {})
             if sec_name not in subs_by_sec_name:
                 logger.info(f'[{cid}] Sec. def. `{sec_name}` not subscribed to topic `{topic_name}` - no action needed')
-                response = StatusResponse()
-                response.is_ok = True
+                response: 'StatusResponse' = {
+                    'is_ok': True
+                }
                 return response
 
         # Log what we're doing ..
@@ -525,8 +528,9 @@ class Backend:
         logger.info(f'[{cid}] Successfully unsubscribed `{sec_name}` from `{topic_name}`')
 
         # .. build are OK response ..
-        response = StatusResponse()
-        response.is_ok = True
+        response: 'StatusResponse' = {
+            'is_ok': True
+        }
 
         # .. and return it to the caller.
         return response
