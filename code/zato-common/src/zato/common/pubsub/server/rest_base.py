@@ -197,6 +197,9 @@ class BaseRESTServer(BaseServer):
             status = f'{status_value} {response_text}'
             # .. replace the status we were given on input ..
             data['status'] = status
+        else:
+            # Use the string status as-is
+            status = str(status_value)
 
         # .. now we can serialize it ..
         response_data = data
