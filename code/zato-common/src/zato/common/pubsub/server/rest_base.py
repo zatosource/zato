@@ -197,9 +197,15 @@ class BaseRESTServer(BaseServer):
             status = f'{status_value} {response_text}'
             # .. replace the status we were given on input ..
             data['status'] = status
+
         else:
-            # Use the string status as-is
-            status = str(status_value)
+            # Map string status to HTTP status code
+            if status_value == 'ok':
+                status = '200 OK'
+                data['status'] = status
+
+            else:
+                status = str(status_value)
 
         # .. now we can serialize it ..
         response_data = data
@@ -223,6 +229,7 @@ class BaseRESTServer(BaseServer):
         # .. prepare our headers ..
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
 
+
         # .. add Allow header for 405 responses ..
         if is_method_not_allowed:
             headers.append(('Allow', 'POST'))
@@ -231,6 +238,7 @@ class BaseRESTServer(BaseServer):
         start_response(status, headers)
 
         # .. and return the response to our WSGI caller.
+
         return [json_data]
 
 # ################################################################################################################################
