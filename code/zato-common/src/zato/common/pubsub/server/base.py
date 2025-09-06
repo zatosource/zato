@@ -127,7 +127,7 @@ class BaseServer:
             #
             # Ping endpoint
             #
-            Rule('/pubsub/health', endpoint='on_health_check', methods=['GET']),
+
 
             #
             # Status endpoint for load balancer health checks
