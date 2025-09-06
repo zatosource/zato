@@ -119,20 +119,20 @@ class ProducerManager:
         reqs_per_producer:'int',
         producer_id:'int',
         reqs_per_second:'float',
-        max_topics:'int',
+        topic_spec:'str',
         progress_tracker:'ProgressTracker',
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
         burst_interval:'int'=60
     ) -> 'any_':
 
-        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, max_topics, burst_multiplier, burst_duration, burst_interval)
+        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, topic_spec, burst_multiplier, burst_duration, burst_interval)
         greenlet = spawn(producer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_producers:'int', reqs_per_producer:'int'=1, reqs_per_second:'float'=1.0, max_topics:'int'=3, burst_multiplier:'int'=10, burst_duration:'int'=10, burst_interval:'int'=60) -> 'None':
+    def run(self, num_producers:'int', reqs_per_producer:'int'=1, reqs_per_second:'float'=1.0, topic_spec:'str'='3', burst_multiplier:'int'=10, burst_duration:'int'=10, burst_interval:'int'=60) -> 'None':
         """ Run the specified number of producers and wait for completion.
         """
         if num_producers == 1:
@@ -140,7 +140,9 @@ class ProducerManager:
         else:
             noun = 'producers'
 
-        total_messages = num_producers * reqs_per_producer * max_topics
+        start_topic, end_topic = _parse_topic_range(topic_spec)
+        topic_count = end_topic - start_topic + 1
+        total_messages = num_producers * reqs_per_producer * topic_count
         progress_tracker = ProgressTracker(num_producers, total_messages)
 
         if reqs_per_second >= 1:
@@ -151,14 +153,23 @@ class ProducerManager:
 
         burst_rate = reqs_per_second * burst_multiplier
 
+        if start_topic == end_topic:
+            topic_display = f'{topic_count}'
+        else:
+            topic_display = f'{start_topic}-{end_topic} ({topic_count} topics)'
+
         print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
-        print(f'{Fore.CYAN}Rate: {rate_display}, Topics: {max_topics}{Style.RESET_ALL}')
-        print(f'{Fore.CYAN}Burst: {burst_rate} req/s per producer for {burst_duration}s every {burst_interval}s{Style.RESET_ALL}')
+        print(f'{Fore.CYAN}Rate: {rate_display}, Topics: {topic_display}{Style.RESET_ALL}')
+        
+        if burst_interval > 0 and burst_duration > 0:
+            print(f'{Fore.CYAN}Burst: {burst_rate} req/s per producer for {burst_duration}s every {burst_interval}s{Style.RESET_ALL}')
+        else:
+            print(f'{Fore.CYAN}Burst: Disabled{Style.RESET_ALL}')
         print()
 
         greenlets = []
         for producer_id in range(1, num_producers + 1):
-            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, max_topics, progress_tracker, burst_multiplier, burst_duration, burst_interval)
+            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, topic_spec, progress_tracker, burst_multiplier, burst_duration, burst_interval)
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -184,6 +195,20 @@ def _parse_consumer_range(consumer_spec:'str') -> 'tuple[int, int]':
 
 # ################################################################################################################################
 
+def _parse_topic_range(topic_spec:'str') -> 'tuple[int, int]':
+    """ Parse topic specification like "3" or "1-200" into (start, end) tuple.
+    """
+    if '-' in topic_spec:
+        start_str, end_str = topic_spec.split('-', 1)
+        start = int(start_str)
+        end = int(end_str)
+        return start, end
+    else:
+        count = int(topic_spec)
+        return 1, count
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
@@ -196,7 +221,7 @@ if __name__ == '__main__':
     _ = parser.add_argument('--reqs-per-second', type=float, default=1.0, help='Number of requests per second each producer should make')
     _ = parser.add_argument('--pull-interval', type=float, default=1.0, help='Pull interval for consumers in seconds')
     _ = parser.add_argument('--max-messages', type=int, default=100, help='Max messages per pull for consumers')
-    _ = parser.add_argument('--max-topics', type=int, default=3, help='Number of topics to publish to')
+    _ = parser.add_argument('--topics', type=str, default='3', help='Topics to publish to (e.g., "3" or "1-200")')
     _ = parser.add_argument('--burst-multiplier', type=int, default=10, help='Multiplier for burst rate (default: 10x normal rate)')
     _ = parser.add_argument('--burst-duration', type=int, default=10, help='Duration of burst in seconds (default: 10)')
     _ = parser.add_argument('--burst-interval', type=int, default=60, help='Interval between bursts in seconds (default: 60)')
@@ -204,10 +229,12 @@ if __name__ == '__main__':
 
     if args.num_producers:
         manager = ProducerManager()
-        manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.max_topics, args.burst_multiplier, args.burst_duration, args.burst_interval)
+        manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.topics, args.burst_multiplier, args.burst_duration, args.burst_interval)
     elif args.num_consumers:
         manager = ConsumerManager()
-        manager.run(args.num_consumers, args.pull_interval, args.max_topics, args.max_messages)
+        start_topic, end_topic = _parse_topic_range(args.topics)
+        topic_count = end_topic - start_topic + 1
+        manager.run(args.num_consumers, args.pull_interval, topic_count, args.max_messages)
     else:
         parser.error('Must specify either --num-producers or --num-consumers')
 
