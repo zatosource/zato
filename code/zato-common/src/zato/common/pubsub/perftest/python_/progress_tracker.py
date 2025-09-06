@@ -48,9 +48,12 @@ class ProgressTracker:
                 self.message_timestamps.append(current_time)
                 self.failed_messages += 1
 
-            # Trim timestamps older than 60 seconds
-            cutoff_time = current_time - timedelta(seconds=60)
-            self.message_timestamps = [ts for ts in self.message_timestamps if ts >= cutoff_time]
+            # Trim timestamps older than 60 seconds, but only every 20 seconds
+            time_since_last_trim = (current_time - self.last_trim_time).total_seconds()
+            if time_since_last_trim >= 20.0:
+                cutoff_time = current_time - timedelta(seconds=60)
+                self.message_timestamps = [ts for ts in self.message_timestamps if ts >= cutoff_time]
+                self.last_trim_time = current_time
 
             self._display_progress()
 
