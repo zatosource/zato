@@ -94,4 +94,8 @@ run-consumers:
 		--topics 1
 
 prometheus:
-	prometheus --config.file=code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
+	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
+
+
+grafana:
+	sudo docker run -d -p 3000:3000 -v $(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_:/etc/grafana/provisioning grafana/grafana
