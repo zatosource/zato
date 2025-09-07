@@ -1,0 +1,47 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "RabbitMQ PubSub Performance",
+    "tags": ["rabbitmq", "pubsub"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Message Rates (AMQP 0.9.1 Classic Queues)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m])",
+            "legendFormat": "Delivered",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(rabbitmq_global_messages_received_confirm_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m])",
+            "legendFormat": "Received Confirm",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Messages/sec",
+            "min": 0
+          }
+        ],
+        "xAxis": {
+          "show": true
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}
