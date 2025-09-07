@@ -48,6 +48,7 @@ code/zato_extra_paths*
 code/zato-exeagent
 code/*/build
 code/*/dist
+/data
 geckodriver.log
 hotfixes
 lib/
