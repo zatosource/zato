@@ -125,6 +125,8 @@ class GunicornApplication(BaseApplication):
         host, port = address[0], address[1] # type: ignore
         address_str = f'{host}:{port}'
         logger.info(f'Setting up PubSub REST server at {address_str}')
+
+
         self.application.init_broker_client()
         self.application.setup()
 
@@ -220,6 +222,8 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             'proc_name': f'zato-pubsub-rest-{proc_type}',
             'preload_app': False,
             'max_requests': 0,
+            'worker_connections': 20000,
+            'backlog': 20000,
         }
 
         # Start gunicorn application
