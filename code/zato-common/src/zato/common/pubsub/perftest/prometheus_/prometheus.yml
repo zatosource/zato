@@ -27,3 +27,15 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9256']
     scrape_interval: 5s
+
+  - job_name: 'pubsub-publish'
+    static_configs:
+      - targets: ['localhost:40100']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  - job_name: 'pubsub-pull'
+    static_configs:
+      - targets: ['localhost:40200']
+    scrape_interval: 5s
+    metrics_path: /metrics

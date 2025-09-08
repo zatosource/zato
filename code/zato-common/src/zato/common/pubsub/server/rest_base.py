@@ -266,6 +266,11 @@ class BaseRESTServer(BaseServer):
                 # The actual handler will be one of our on_* methods, e.g. on_publish, on_subscribe etc.
                 handler = getattr(self, endpoint)
                 handler_response = handler(cid, environ, start_response, **args)
+
+                # Special case for metrics endpoint - it handles its own response
+                if endpoint == 'on_metrics':
+                    return handler_response
+
                 response_bytes = self._json_response(start_response, handler_response)
                 return response_bytes
             else:
