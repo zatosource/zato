@@ -908,19 +908,14 @@
       "targets": [
         {
           "expr": "python_gc_objects_collected_total{job=\"pubsub-publish\"}",
-          "legendFormat": "Publish Server - GC Objects Collected",
+          "legendFormat": "GC Objects Collected",
           "refId": "A"
-        },
-        {
-          "expr": "python_gc_objects_collected_total{job=\"pubsub-pull\"}",
-          "legendFormat": "Pull Server - GC Objects Collected",
-          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Python GC Objects Collected",
+      "title": "Python GC Objects Collected - Publish Server",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -989,12 +984,89 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"pubsub-publish\"}",
+          "expr": "python_gc_objects_collected_total{job=\"pubsub-pull\"}",
+          "legendFormat": "GC Objects Collected",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Python GC Objects Collected - Pull Server",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yAxes": [
+        {
+          "label": null,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "label": null,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ]
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 13,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "repeat": null,
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"pubsub-publish\"} / 1024 / 1024",
           "legendFormat": "Publish Server - Resident Memory",
           "refId": "A"
         },
         {
-          "expr": "process_resident_memory_bytes{job=\"pubsub-pull\"}",
+          "expr": "process_resident_memory_bytes{job=\"pubsub-pull\"} / 1024 / 1024",
           "legendFormat": "Pull Server - Resident Memory",
           "refId": "B"
         }
@@ -1018,7 +1090,7 @@
       },
       "yAxes": [
         {
-          "label": "bytes",
+          "label": "MB",
           "max": null,
           "min": null,
           "show": true
