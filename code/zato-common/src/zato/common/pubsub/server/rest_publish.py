@@ -130,9 +130,9 @@ class PubSubRESTServerPublish(BaseRESTServer):
 
         # .. build our response ..
         response:'APIResponse' = {
-            'is_ok': result['is_ok'],
+            'is_ok': result['is_ok'], # type: ignore
             'cid': cid,
-            'msg_id': result['msg_id']
+            'msg_id': result['msg_id'], # type: ignore
         }
 
         # .. and return it to the caller.
