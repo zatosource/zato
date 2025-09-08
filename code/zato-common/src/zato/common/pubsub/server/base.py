@@ -107,8 +107,11 @@ class BaseServer:
             self.init_broker_client()
 
         # Enable Prometheus collectors
-        REGISTRY.register(PlatformCollector())
-        REGISTRY.register(ProcessCollector())
+        try:
+            REGISTRY.register(PlatformCollector())
+            REGISTRY.register(ProcessCollector())
+        except ValueError:
+            pass
 
         # URL routing configuration
         self.url_map = Map([
