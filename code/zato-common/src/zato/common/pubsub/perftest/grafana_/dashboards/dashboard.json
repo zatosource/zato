@@ -145,7 +145,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "HAProxy Request Rates",
+      "title": "API req/s",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -231,7 +231,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "HAProxy Client Response Times",
+      "title": "API Response Time",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -398,7 +398,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "RabbitMQ Queue Messages",
+      "title": "Queue Messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -446,6 +446,6 @@
   "timepicker": {},
   "timezone": "browser",
   "uid": "rabbitmq-pubsub-perf",
-  "title": "RabbitMQ PubSub Performance",
+  "title": "PubSub Performance",
   "version": 0
 }
