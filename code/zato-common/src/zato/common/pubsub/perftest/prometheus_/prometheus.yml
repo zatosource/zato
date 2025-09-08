@@ -22,3 +22,8 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9100']
     scrape_interval: 5s
+
+  - job_name: 'process'
+    static_configs:
+      - targets: ['localhost:9256']
+    scrape_interval: 5s

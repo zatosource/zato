@@ -686,7 +686,7 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 24
       },
@@ -717,15 +717,40 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "topk(5, rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]) * 100)",
-          "legendFormat": "{{mode}} - {{cpu}}",
+          "expr": "rate(haproxy_backend_bytes_in_total{proxy=\"publish_backend\"}[1m])",
+          "legendFormat": "Publish backend bytes received",
           "refId": "A"
+        },
+        {
+          "expr": "rate(haproxy_backend_bytes_out_total{proxy=\"publish_backend\"}[1m])",
+          "legendFormat": "Publish backend bytes sent",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(haproxy_backend_bytes_in_total{proxy=\"pull_backend\"}[1m])",
+          "legendFormat": "Pull backend bytes received",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(haproxy_backend_bytes_out_total{proxy=\"pull_backend\"}[1m])",
+          "legendFormat": "Pull backend bytes sent",
+          "refId": "D"
+        },
+        {
+          "expr": "rate(haproxy_frontend_bytes_in_total{proxy=\"pubsub_frontend\"}[1m])",
+          "legendFormat": "Frontend bytes received",
+          "refId": "E"
+        },
+        {
+          "expr": "rate(haproxy_frontend_bytes_out_total{proxy=\"pubsub_frontend\"}[1m])",
+          "legendFormat": "Frontend bytes sent",
+          "refId": "F"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Top CPU Usage",
+      "title": "Network Traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -741,7 +766,7 @@
       },
       "yaxes": [
         {
-          "format": "percent",
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
