@@ -53,6 +53,7 @@ passlib==1.7.1
 pbr==5.11.1
 pg8000==1.13.1
 prettytable==3.5.0
+prometheus-client==0.22.1
 psutil==5.9.4
 py-cpuinfo==3.3.0
 pyaml==20.4.0
