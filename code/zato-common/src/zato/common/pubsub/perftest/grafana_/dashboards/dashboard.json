@@ -1010,7 +1010,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Current CPU Usage",
+      "title": "Per-CPU Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1079,15 +1079,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "RAM Usage %",
+          "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / 1024 / 1024 / 1024",
+          "legendFormat": "RAM Used GB",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Current RAM Usage",
+      "title": "RAM Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1103,8 +1103,8 @@
       },
       "yAxes": [
         {
-          "label": "%",
-          "max": 100,
+          "label": "GB",
+          "max": null,
           "min": 0,
           "show": true
         },
