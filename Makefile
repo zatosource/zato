@@ -97,8 +97,10 @@ prometheus:
 	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
 
 grafana:
-	docker run -d -p 3000:3000 \
-		-v $(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml \
-		-v $(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml \
-		-v $(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_/dashboards:/etc/grafana/provisioning/dashboards \
-		grafana/grafana
+	grafana-server \
+		--homepath=/usr/share/grafana \
+		--config=/dev/null \
+		cfg:default.paths.data=/tmp/grafana-data \
+		cfg:default.paths.logs=/tmp/grafana-logs \
+		cfg:default.paths.plugins=/tmp/grafana-plugins \
+		cfg:default.paths.provisioning=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_
