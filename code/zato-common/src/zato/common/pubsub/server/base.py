@@ -21,6 +21,11 @@ from zato.common.typing_ import any_
 # werkzeug
 from werkzeug.routing import Map, Rule
 
+# prometheus
+from prometheus_client import REGISTRY, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client.platform_collector import PlatformCollector
+from prometheus_client.process_collector import ProcessCollector
+
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import PubSub
@@ -101,6 +106,10 @@ class BaseServer:
         if should_init_broker_client:
             self.init_broker_client()
 
+        # Enable Prometheus collectors
+        REGISTRY.register(PlatformCollector())
+        REGISTRY.register(ProcessCollector())
+
         # URL routing configuration
         self.url_map = Map([
 
@@ -138,6 +147,11 @@ class BaseServer:
             # Internal details
             #
             Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
+
+            #
+            # Prometheus metrics
+            #
+            Rule('/metrics', endpoint='on_metrics', methods=['GET']),
         ])
 
 # ################################################################################################################################
@@ -466,6 +480,13 @@ class BaseServer:
         logger.info(f'[{cid}] 🠊 {topic_count} {"topic" if topic_count == 1 else "topics"}')
         logger.info(f'[{cid}] 🠊 {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
         logger.info(f'[{cid}] 🠊 {client_count} {"user" if client_count == 1 else "users"} with {permission_count} {"permission" if permission_count == 1 else "permissions"}')
+
+# ################################################################################################################################
+
+    def on_metrics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'bytes':
+        metrics_data = generate_latest()
+        start_response('200 OK', [('Content-Type', CONTENT_TYPE_LATEST)])
+        return [metrics_data]
 
 # ################################################################################################################################
 # ################################################################################################################################
