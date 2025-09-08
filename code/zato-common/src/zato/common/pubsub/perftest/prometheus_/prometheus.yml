@@ -11,3 +11,9 @@ scrape_configs:
       password: guest
     scrape_interval: 5s
     metrics_path: /metrics
+
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['localhost:8404']
+    scrape_interval: 5s
+    metrics_path: /metrics
