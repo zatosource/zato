@@ -17,3 +17,8 @@ scrape_configs:
       - targets: ['localhost:8404']
     scrape_interval: 5s
     metrics_path: /metrics
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 5s
