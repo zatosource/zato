@@ -51,14 +51,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(rabbitmq_global_messages_delivered_total[1m]))",
-          "legendFormat": "Messages Delivered/sec",
+          "expr": "rate(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m]) or rate(rabbitmq_global_messages_received_confirm_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m])",
+          "legendFormat": "Messages/sec",
           "refId": "A"
-        },
-        {
-          "expr": "sum(rate(rabbitmq_global_messages_published_total[1m]))",
-          "legendFormat": "Messages Published/sec",
-          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -84,7 +79,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": 0,
           "show": true
         },
         {
