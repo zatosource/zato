@@ -19,8 +19,8 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 16,
+        "w": 24,
         "x": 0,
         "y": 0
       },
@@ -51,12 +51,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(rabbitmq_global_messages_delivered_total[1m])",
+          "expr": "sum(rate(rabbitmq_global_messages_delivered_total[1m]))",
           "legendFormat": "Messages Delivered/sec",
           "refId": "A"
         },
         {
-          "expr": "rate(rabbitmq_global_messages_published_total[1m])",
+          "expr": "sum(rate(rabbitmq_global_messages_published_total[1m]))",
           "legendFormat": "Messages Published/sec",
           "refId": "B"
         }
