@@ -114,8 +114,8 @@ class BaseServer:
             pass
 
         # Add server type info metric
-        server_info = Info('pubsub_server_info', 'PubSub server information')
-        server_info.info({'server_type': self.server_type})
+        server_info = Info('zato_pubsub_server_info', 'PubSub server information')
+        server_info.info({'zato_server_type': self.server_type})
 
         # URL routing configuration
         self.url_map = Map([
