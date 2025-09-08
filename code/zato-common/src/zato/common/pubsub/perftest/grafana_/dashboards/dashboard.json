@@ -12,7 +12,10 @@
   "links": [],
   "panels": [
     {
-      "aliasColors": {},
+      "aliasColors": {
+        "Delivered messages/sec": "#EAB839",
+        "Received messages/sec": "#73BF69"
+      },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -51,8 +54,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m]) or rate(rabbitmq_global_messages_received_confirm_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m])",
-          "legendFormat": "Messages/sec",
+          "expr": "label_replace(rate(rabbitmq_global_messages_received_confirm_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m]), \"type\", \"Received\", \"\", \"\") or label_replace(rate(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\",queue_type=~\"rabbit_classic_queue|^$\"}[1m]), \"type\", \"Delivered\", \"\", \"\")",
+          "legendFormat": "{{type}} messages/sec",
           "refId": "A"
         }
       ],
