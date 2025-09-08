@@ -975,7 +975,7 @@
         "x": 0,
         "y": 32
       },
-      "id": 11,
+      "id": 18,
       "legend": {
         "alignAsTable": false,
         "avg": false,
@@ -1002,15 +1002,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "python_gc_objects_collected_total{job=\"pubsub-publish\"}",
-          "legendFormat": "GC Objects Collected",
+          "expr": "(1 - irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100",
+          "legendFormat": "CPU {{cpu}}",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Python GC Objects Collected - Publish Server",
+      "title": "Current CPU Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1026,9 +1026,9 @@
       },
       "yAxes": [
         {
-          "label": null,
-          "max": null,
-          "min": null,
+          "label": "%",
+          "max": 100,
+          "min": 0,
           "show": true
         },
         {
@@ -1052,7 +1052,7 @@
         "x": 12,
         "y": 32
       },
-      "id": 12,
+      "id": 19,
       "legend": {
         "alignAsTable": false,
         "avg": false,
@@ -1079,15 +1079,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "python_gc_objects_collected_total{job=\"pubsub-pull\"}",
-          "legendFormat": "GC Objects Collected",
+          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100",
+          "legendFormat": "RAM Usage %",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Python GC Objects Collected - Pull Server",
+      "title": "Current RAM Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1103,173 +1103,9 @@
       },
       "yAxes": [
         {
-          "label": null,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "label": null,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ]
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "Prometheus",
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 40
-      },
-      "id": 13,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "process_resident_memory_bytes{job=\"pubsub-publish\"} / 1024 / 1024",
-          "legendFormat": "Publish Server - Resident Memory",
-          "refId": "A"
-        },
-        {
-          "expr": "process_resident_memory_bytes{job=\"pubsub-pull\"} / 1024 / 1024",
-          "legendFormat": "Pull Server - Resident Memory",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Process Memory Usage",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yAxes": [
-        {
-          "label": "MB",
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "label": null,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ]
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "Prometheus",
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 40
-      },
-      "id": 13,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "process_open_fds{job=\"pubsub-publish\"}",
-          "legendFormat": "Publish Server - Open FDs",
-          "refId": "A"
-        },
-        {
-          "expr": "process_open_fds{job=\"pubsub-pull\"}",
-          "legendFormat": "Pull Server - Open FDs",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Open File Descriptors",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yAxes": [
-        {
-          "label": null,
-          "max": null,
-          "min": null,
+          "label": "%",
+          "max": 100,
+          "min": 0,
           "show": true
         },
         {
