@@ -22,7 +22,7 @@ from zato.common.typing_ import any_
 from werkzeug.routing import Map, Rule
 
 # prometheus
-from prometheus_client import REGISTRY, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import REGISTRY, generate_latest, CONTENT_TYPE_LATEST, Info
 from prometheus_client.platform_collector import PlatformCollector
 from prometheus_client.process_collector import ProcessCollector
 
@@ -112,6 +112,10 @@ class BaseServer:
             REGISTRY.register(ProcessCollector())
         except ValueError:
             pass
+
+        # Add server type info metric
+        server_info = Info('pubsub_server_info', 'PubSub server information')
+        server_info.info({'server_type': self.server_type})
 
         # URL routing configuration
         self.url_map = Map([
