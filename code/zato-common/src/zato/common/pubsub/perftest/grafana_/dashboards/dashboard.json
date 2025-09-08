@@ -304,20 +304,20 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "haproxy_backend_connect_time_average_seconds{proxy=\"publish_backend\"}",
-          "legendFormat": "Publish server response time",
+          "expr": "haproxy_server_check_duration_seconds{proxy=\"publish_backend\"}",
+          "legendFormat": "Publish health check duration",
           "refId": "A"
         },
         {
-          "expr": "haproxy_backend_connect_time_average_seconds{proxy=\"pull_backend\"}",
-          "legendFormat": "Pull server response time",
+          "expr": "haproxy_server_check_duration_seconds{proxy=\"pull_backend\"}",
+          "legendFormat": "Pull health check duration",
           "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "HAProxy Server Response Times",
+      "title": "Health Check Duration",
       "tooltip": {
         "shared": true,
         "sort": 0,
