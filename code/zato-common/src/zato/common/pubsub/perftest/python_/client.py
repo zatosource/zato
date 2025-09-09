@@ -30,7 +30,8 @@ class Client:
         client_id:'int'=0,
         reqs_per_second:'float'=1.0,
         max_topics:'int'=3,
-        cpu_num:'intnone'=None
+        cpu_num:'intnone'=None,
+        use_new_requests:'bool'=False
     ) -> 'None':
 
         self.client_id = client_id
@@ -38,7 +39,12 @@ class Client:
         self.max_topics = max_topics
         self.progress_tracker = progress_tracker
         self.cpu_num = cpu_num
-        self.session = requests.Session()
+        self.use_new_requests = use_new_requests
+
+        if use_new_requests:
+            self.session = requests
+        else:
+            self.session = requests.Session()
 
         if cpu_num is not None:
             os.sched_setaffinity(0, {cpu_num})

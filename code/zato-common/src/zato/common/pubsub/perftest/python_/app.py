@@ -58,16 +58,17 @@ class ConsumerManager:
         pull_interval:'float',
         max_messages:'int',
         progress_tracker:'ProgressTracker',
-        cpu_num:'intnone'=None
+        cpu_num:'intnone'=None,
+        use_new_requests:'bool'=False
     ) -> 'any_':
 
-        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_messages, cpu_num)
+        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_messages, cpu_num, use_new_requests)
         greenlet = spawn(consumer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_messages:'int'=100, cpu_num:'intnone'=None) -> 'None':
+    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_messages:'int'=100, cpu_num:'intnone'=None, use_new_requests:'bool'=False) -> 'None':
         """ Run consumers.
         """
         start_id, end_id = _parse_consumer_range(consumer_spec)
@@ -87,7 +88,7 @@ class ConsumerManager:
 
         greenlets = []
         for consumer_id in range(start_id, end_id + 1):
-            greenlet = self._start_consumer(consumer_id, pull_interval, max_messages, progress_tracker, cpu_num)
+            greenlet = self._start_consumer(consumer_id, pull_interval, max_messages, progress_tracker, cpu_num, use_new_requests)
             greenlets.append(greenlet)
 
             # Add jitter to prevent all consumers starting at the same time
@@ -129,7 +130,8 @@ class ProducerManager:
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
         burst_interval:'int'=60,
-        cpu_num:'intnone'=None
+        cpu_num:'intnone'=None,
+        use_new_requests:'bool'=False
     ) -> 'any_':
 
         producer = Producer(
@@ -141,7 +143,8 @@ class ProducerManager:
             burst_multiplier,
             burst_duration,
             burst_interval,
-            cpu_num
+            cpu_num,
+            use_new_requests
         )
         greenlet = spawn(producer.start)
         return greenlet
@@ -156,7 +159,8 @@ class ProducerManager:
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
         burst_interval:'int'=60,
-        cpu_num:'intnone'=None
+        cpu_num:'intnone'=None,
+        use_new_requests:'bool'=False
     ) -> 'None':
 
         if num_producers == 1:
@@ -202,7 +206,8 @@ class ProducerManager:
                 burst_multiplier,
                 burst_duration,
                 burst_interval,
-                cpu_num
+                cpu_num,
+                use_new_requests
             )
             greenlets.append(greenlet)
 
@@ -260,6 +265,7 @@ if __name__ == '__main__':
     _ = parser.add_argument('--burst-duration', type=int, default=10, help='Duration of burst in seconds (default: 10)')
     _ = parser.add_argument('--burst-interval', type=int, default=60, help='Interval between bursts in seconds (default: 60)')
     _ = parser.add_argument('--cpu-num', type=int, help='CPU core number to pin process to')
+    _ = parser.add_argument('--use-new-requests', action='store_true', help='Use new requests for each call instead of session')
     args = parser.parse_args()
 
     if args.cpu_num is not None:
@@ -276,12 +282,13 @@ if __name__ == '__main__':
             args.burst_multiplier,
             args.burst_duration,
             args.burst_interval,
-            args.cpu_num
+            args.cpu_num,
+            args.use_new_requests
         )
 
     elif args.num_consumers:
         manager = ConsumerManager()
-        manager.run(args.num_consumers, args.pull_interval, args.max_messages, args.cpu_num)
+        manager.run(args.num_consumers, args.pull_interval, args.max_messages, args.cpu_num, args.use_new_requests)
 
     else:
         parser.error('Must specify either --num-producers or --num-consumers')
