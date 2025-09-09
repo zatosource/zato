@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from datetime import timedelta
 from http.client import BAD_REQUEST, OK
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
