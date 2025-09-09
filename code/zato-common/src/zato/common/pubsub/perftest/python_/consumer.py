@@ -27,7 +27,7 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, intnone
     from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 
 # ################################################################################################################################
@@ -46,10 +46,11 @@ class Consumer(Client):
         consumer_id:'int'=0,
         pull_interval:'float'=1.0,
         max_topics:'int'=3,
-        max_messages:'int'=100
+        max_messages:'int'=100,
+        cpu_num:'intnone'=None
     ) -> 'None':
 
-        super().__init__(progress_tracker, consumer_id, 1.0, max_topics)
+        super().__init__(progress_tracker, consumer_id, 1.0, max_topics, cpu_num)
         self.pull_interval = pull_interval
         self.max_messages = max_messages
 
