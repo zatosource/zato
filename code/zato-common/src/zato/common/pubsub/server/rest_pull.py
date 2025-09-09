@@ -13,12 +13,14 @@ _ = monkey.patch_all()
 # stdlib
 import os
 import logging
-from http.client import HTTPSConnection, HTTPConnection, OK
-from urllib.parse import urlparse
+from http.client import OK
 import base64
 # orjson
 import orjson
 from logging import getLogger
+
+# urllib3
+import urllib3
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -60,6 +62,13 @@ class PubSubRESTServerPull(BaseRESTServer):
     """ A REST server for pub/sub message pulling operations.
     """
     server_type = 'pull'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._http_pool = urllib3.PoolManager(
+            maxsize=500,
+            block=False
+        )
 
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
@@ -119,13 +128,6 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
         """ Make HTTP request to RabbitMQ API.
         """
-        parsed_url = urlparse(api_url)
-
-        if parsed_url.scheme == 'https':
-            conn = HTTPSConnection(parsed_url.hostname, parsed_url.port or 443)
-        else:
-            conn = HTTPConnection(parsed_url.hostname, parsed_url.port or 80)
-
         # Prepare auth header
         auth_string = f'{self._broker_config.username}:{self._broker_config.password}'
         auth_bytes = auth_string.encode('ascii')
@@ -138,19 +140,19 @@ class PubSubRESTServerPull(BaseRESTServer):
 
         # Send request
         json_data = orjson.dumps(payload)
-        conn.request('POST', parsed_url.path, body=json_data, headers=headers)
 
-        response = conn.getresponse()
+        response = self._http_pool.request(
+            'POST',
+            api_url,
+            body=json_data,
+            headers=headers
+        )
 
         if response.status != OK:
-            response_text = response.read().decode('utf-8')
-            logger.error(f'[{cid}] RabbitMQ API error: {response.status} - {response_text}')
-            conn.close()
+            logger.error(f'[{cid}] RabbitMQ API error: {response.status} - {response.data.decode("utf-8")}')
             return None
 
-        response_data = response.read()
-        conn.close()
-        return orjson.loads(response_data)
+        return orjson.loads(response.data)
 
 # ################################################################################################################################
 
