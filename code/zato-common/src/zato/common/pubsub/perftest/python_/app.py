@@ -12,6 +12,7 @@ _ = patch_all()
 
 # stdlib
 import logging
+import random
 from logging import getLogger
 
 # colorama
@@ -55,19 +56,18 @@ class ConsumerManager:
     def _start_consumer(self,
         consumer_id:'int',
         pull_interval:'float',
-        max_topics:'int',
         max_messages:'int',
         progress_tracker:'ProgressTracker',
         cpu_num:'intnone'=None
     ) -> 'any_':
 
-        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_topics, max_messages, cpu_num)
+        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_messages, cpu_num)
         greenlet = spawn(consumer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_topics:'int'=1, max_messages:'int'=100, cpu_num:'intnone'=None) -> 'None':
+    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_messages:'int'=100, cpu_num:'intnone'=None) -> 'None':
         """ Run consumers.
         """
         start_id, end_id = _parse_consumer_range(consumer_spec)
@@ -87,8 +87,12 @@ class ConsumerManager:
 
         greenlets = []
         for consumer_id in range(start_id, end_id + 1):
-            greenlet = self._start_consumer(consumer_id, pull_interval, max_topics, max_messages, progress_tracker, cpu_num)
+            greenlet = self._start_consumer(consumer_id, pull_interval, max_messages, progress_tracker, cpu_num)
             greenlets.append(greenlet)
+
+            # Add jitter to prevent all consumers starting at the same time
+            jitter = random.uniform(0, 2.0)
+            sleep(jitter)
 
         # Monitor greenlets periodically
         try:
@@ -277,9 +281,7 @@ if __name__ == '__main__':
 
     elif args.num_consumers:
         manager = ConsumerManager()
-        start_topic, end_topic = _parse_topic_range(args.topics)
-        topic_count = end_topic - start_topic + 1
-        manager.run(args.num_consumers, args.pull_interval, topic_count, args.max_messages, args.cpu_num)
+        manager.run(args.num_consumers, args.pull_interval, args.max_messages, args.cpu_num)
 
     else:
         parser.error('Must specify either --num-producers or --num-consumers')
