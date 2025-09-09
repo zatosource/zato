@@ -108,7 +108,8 @@ class Consumer(Client):
         """ Start the consumer.
         """
         try:
-            logger.info(f'Client {self.client_id}: Consumer starting')
+            cpu_info = f' (CPU: {self.cpu_num})' if self.cpu_num is not None else ''
+            logger.info(f'Client {self.client_id}: Consumer starting{cpu_info}')
             config = self._get_config()
             auth = (config['username'], config['password'])
             headers = {'Content-Type': 'application/json'}
