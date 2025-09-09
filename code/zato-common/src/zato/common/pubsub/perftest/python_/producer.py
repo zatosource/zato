@@ -210,10 +210,11 @@ class Producer(Client):
         topic_spec:'str'='3',
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
-        burst_interval:'int'=60
+        burst_interval:'int'=60,
+        cpu_num:'intnone'=None
     ) -> 'None':
 
-        super().__init__(progress_tracker, producer_id, reqs_per_second, 3)
+        super().__init__(progress_tracker, producer_id, reqs_per_second, 3, cpu_num)
         self.reqs_per_producer = reqs_per_producer
         self.topic_spec = topic_spec
         self.burst_multiplier = burst_multiplier

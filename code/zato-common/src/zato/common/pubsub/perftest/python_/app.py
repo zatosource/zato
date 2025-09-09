@@ -29,7 +29,7 @@ from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,16 +57,17 @@ class ConsumerManager:
         pull_interval:'float',
         max_topics:'int',
         max_messages:'int',
-        progress_tracker:'ProgressTracker'
+        progress_tracker:'ProgressTracker',
+        cpu_num:'intnone'=None
     ) -> 'any_':
 
-        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_topics, max_messages)
+        consumer = Consumer(progress_tracker, consumer_id, pull_interval, max_topics, max_messages, cpu_num)
         greenlet = spawn(consumer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_topics:'int'=1, max_messages:'int'=100) -> 'None':
+    def run(self, consumer_spec:'str', pull_interval:'float'=1.0, max_topics:'int'=1, max_messages:'int'=100, cpu_num:'intnone'=None) -> 'None':
         """ Run consumers.
         """
         start_id, end_id = _parse_consumer_range(consumer_spec)
@@ -86,7 +87,7 @@ class ConsumerManager:
 
         greenlets = []
         for consumer_id in range(start_id, end_id + 1):
-            greenlet = self._start_consumer(consumer_id, pull_interval, max_topics, max_messages, progress_tracker)
+            greenlet = self._start_consumer(consumer_id, pull_interval, max_topics, max_messages, progress_tracker, cpu_num)
             greenlets.append(greenlet)
 
         # Monitor greenlets periodically
@@ -123,18 +124,37 @@ class ProducerManager:
         progress_tracker:'ProgressTracker',
         burst_multiplier:'int'=10,
         burst_duration:'int'=10,
-        burst_interval:'int'=60
+        burst_interval:'int'=60,
+        cpu_num:'intnone'=None
     ) -> 'any_':
 
-        producer = Producer(progress_tracker, reqs_per_producer, producer_id, reqs_per_second, topic_spec, burst_multiplier, burst_duration, burst_interval)
+        producer = Producer(
+            progress_tracker,
+            reqs_per_producer,
+            producer_id,
+            reqs_per_second,
+            topic_spec,
+            burst_multiplier,
+            burst_duration,
+            burst_interval,
+            cpu_num
+        )
         greenlet = spawn(producer.start)
         return greenlet
 
 # ################################################################################################################################
 
-    def run(self, num_producers:'int', reqs_per_producer:'int'=1, reqs_per_second:'float'=1.0, topic_spec:'str'='3', burst_multiplier:'int'=10, burst_duration:'int'=10, burst_interval:'int'=60) -> 'None':
-        """ Run the specified number of producers and wait for completion.
-        """
+    def run(self,
+        num_producers:'int',
+        reqs_per_producer:'int'=1,
+        reqs_per_second:'float'=1.0,
+        topic_spec:'str'='3',
+        burst_multiplier:'int'=10,
+        burst_duration:'int'=10,
+        burst_interval:'int'=60,
+        cpu_num:'intnone'=None
+    ) -> 'None':
+
         if num_producers == 1:
             noun = 'producer'
         else:
@@ -160,7 +180,7 @@ class ProducerManager:
 
         print(f'{Fore.CYAN}Starting {num_producers} {noun} with {total_messages:,} total messages{Style.RESET_ALL}')
         print(f'{Fore.CYAN}Rate: {rate_display}, Topics: {topic_display}{Style.RESET_ALL}')
-        
+
         if burst_interval > 0 and burst_duration > 0:
             print(f'{Fore.CYAN}Burst: {burst_rate} req/s per producer for {burst_duration}s every {burst_interval}s{Style.RESET_ALL}')
         else:
@@ -169,7 +189,17 @@ class ProducerManager:
 
         greenlets = []
         for producer_id in range(1, num_producers + 1):
-            greenlet = self._start_producer(reqs_per_producer, producer_id, reqs_per_second, topic_spec, progress_tracker, burst_multiplier, burst_duration, burst_interval)
+            greenlet = self._start_producer(
+                reqs_per_producer,
+                producer_id,
+                reqs_per_second,
+                topic_spec,
+                progress_tracker,
+                burst_multiplier,
+                burst_duration,
+                burst_interval,
+                cpu_num
+            )
             greenlets.append(greenlet)
 
         # Wait for all greenlets to complete
@@ -225,16 +255,32 @@ if __name__ == '__main__':
     _ = parser.add_argument('--burst-multiplier', type=int, default=10, help='Multiplier for burst rate (default: 10x normal rate)')
     _ = parser.add_argument('--burst-duration', type=int, default=10, help='Duration of burst in seconds (default: 10)')
     _ = parser.add_argument('--burst-interval', type=int, default=60, help='Interval between bursts in seconds (default: 60)')
+    _ = parser.add_argument('--cpu-num', type=int, help='CPU core number to pin process to')
     args = parser.parse_args()
+
+    if args.cpu_num is not None:
+        import os
+        os.sched_setaffinity(0, {args.cpu_num})
 
     if args.num_producers:
         manager = ProducerManager()
-        manager.run(args.num_producers, args.reqs_per_producer, args.reqs_per_second, args.topics, args.burst_multiplier, args.burst_duration, args.burst_interval)
+        manager.run(
+            args.num_producers,
+            args.reqs_per_producer,
+            args.reqs_per_second,
+            args.topics,
+            args.burst_multiplier,
+            args.burst_duration,
+            args.burst_interval,
+            args.cpu_num
+        )
+
     elif args.num_consumers:
         manager = ConsumerManager()
         start_topic, end_topic = _parse_topic_range(args.topics)
         topic_count = end_topic - start_topic + 1
-        manager.run(args.num_consumers, args.pull_interval, topic_count, args.max_messages)
+        manager.run(args.num_consumers, args.pull_interval, topic_count, args.max_messages, args.cpu_num)
+
     else:
         parser.error('Must specify either --num-producers or --num-consumers')
 

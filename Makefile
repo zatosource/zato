@@ -84,14 +84,16 @@ run-producers:
 		--topics $(if $(word 5,$(MAKECMDGOALS)),$(word 5,$(MAKECMDGOALS)),3) \
 		--burst-multiplier $(if $(word 6,$(MAKECMDGOALS)),$(word 6,$(MAKECMDGOALS)),10) \
 		--burst-interval $(if $(word 7,$(MAKECMDGOALS)),$(word 7,$(MAKECMDGOALS)),60) \
-		--burst-duration $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),10)
+		--burst-duration $(if $(word 8,$(MAKECMDGOALS)),$(word 8,$(MAKECMDGOALS)),10) \
+		$(if $(word 9,$(MAKECMDGOALS)),--cpu-num $(word 9,$(MAKECMDGOALS)),)
 
 run-consumers:
 	py code/zato-common/src/zato/common/pubsub/perftest/python_/app.py \
 		--num-consumers $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),1) \
 		--pull-interval $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),1.0) \
 		--max-messages $(if $(word 4,$(MAKECMDGOALS)),$(word 4,$(MAKECMDGOALS)),100) \
-		--topics 1
+		--topics 1 \
+		$(if $(word 5,$(MAKECMDGOALS)),--cpu-num $(word 5,$(MAKECMDGOALS)),)
 
 prometheus:
 	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
