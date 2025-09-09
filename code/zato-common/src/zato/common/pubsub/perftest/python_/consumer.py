@@ -46,10 +46,11 @@ class Consumer(Client):
         consumer_id:'int'=0,
         pull_interval:'float'=1.0,
         max_messages:'int'=100,
-        cpu_num:'intnone'=None
+        cpu_num:'intnone'=None,
+        use_new_requests:'bool'=False
     ) -> 'None':
 
-        super().__init__(progress_tracker, consumer_id, 1.0, 1, cpu_num)
+        super().__init__(progress_tracker, consumer_id, 1.0, 1, cpu_num, use_new_requests)
         self.pull_interval = pull_interval
         self.max_messages = max_messages
 
