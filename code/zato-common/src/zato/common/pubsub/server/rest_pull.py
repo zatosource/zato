@@ -12,7 +12,8 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from json import loads
+# orjson
+import orjson
 from http.client import OK
 from logging import getLogger
 
@@ -139,7 +140,7 @@ class PubSubRESTServerPull(BaseRESTServer):
 
             # Parse the payload to extract the original data
             if isinstance(payload_data, str):
-                payload = loads(payload_data)
+                payload = orjson.loads(payload_data)
             else:
                 payload = payload_data
 
@@ -308,6 +309,5 @@ class PubSubRESTServerPull(BaseRESTServer):
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
             return self._build_error_response(cid, 'Internal error retrieving messages')
-
 # ################################################################################################################################
 # ################################################################################################################################
