@@ -140,7 +140,7 @@ class PubSubRESTServerPull(BaseRESTServer):
             logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
             return None
 
-        return rabbitmq_response.json()
+        return orjson.loads(rabbitmq_response.content)
 
 # ################################################################################################################################
 
