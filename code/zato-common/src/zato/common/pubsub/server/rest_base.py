@@ -14,7 +14,8 @@ _ = monkey.patch_all()
 import os
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, \
     responses as http_responses, UNAUTHORIZED
-from json import dumps, loads
+# orjson
+import orjson
 from logging import getLogger
 from traceback import format_exc
 
@@ -166,17 +167,11 @@ class BaseRESTServer(BaseServer):
     def _parse_json(self, cid:'str', request:'Request') -> 'dict_':
         """ Parse JSON from request.
         """
-        # Initialize raw_data to avoid unbound variable in exception handler
-        raw_data = None
-
         try:
-            # Get raw data from environ['wsgi.input']
             raw_data = request.get_data()
 
             if raw_data:
-                # Decode and parse
-                text_data = raw_data.decode('utf-8')
-                data = loads(text_data)
+                data = orjson.loads(raw_data)
                 return data
             else:
                 logger.warning(f'[{cid}] No request data provided')
@@ -202,24 +197,21 @@ class BaseRESTServer(BaseServer):
         # .. replace the status we were given on input ..
         data['status'] = status
 
-        # .. now we can serialize it ..
-        response_data = data
-
         # .. drop the fields that may be empty ..
         fields_to_check = ['details', 'msg_id', 'data']
 
         # .. add fields that should only be dropped if None ..
         for field in ['messages', 'message_count', 'meta', 'messages']:
-            value = response_data.get(field)
+            value = data.get(field)
             if value is None:
                 fields_to_check.append(field)
 
         for key in fields_to_check:
-            if not response_data.get(key):
-                _ = response_data.pop(key, None)
+            if not data.get(key):
+                _ = data.pop(key, None)
 
         # .. now we can serialize it ..
-        json_data = dumps(response_data).encode('utf-8')
+        json_data = orjson.dumps(data)
 
         # .. prepare our headers ..
         headers = [('Content-Type', 'application/json'), ('Content-Length', str(len(json_data)))]
