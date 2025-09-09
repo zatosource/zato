@@ -17,10 +17,8 @@ import orjson
 from http.client import OK
 from logging import getLogger
 
-# requests
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+# httpx
+import httpx
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -65,20 +63,19 @@ class PubSubRESTServerPull(BaseRESTServer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._session = self._create_session()
+        self._client = self._create_client()
 
-    def _create_session(self):
-        """ Create requests session with connection pooling.
+    def _create_client(self):
+        """ Create httpx client with connection pooling.
         """
-        session = requests.Session()
-        adapter = HTTPAdapter(
-            pool_connections=500,
-            pool_maxsize=500,
-            max_retries=Retry(total=3, backoff_factor=0.1)
+        limits = httpx.Limits(
+            max_keepalive_connections=500,
+            max_connections=500
         )
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+        return httpx.Client(
+            limits=limits,
+            auth=(self._broker_config.username, self._broker_config.password)
+        )
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
@@ -137,7 +134,7 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
         """ Make HTTP request to RabbitMQ API.
         """
-        rabbitmq_response = self._session.post(api_url, json=payload, auth=self._broker_auth)
+        rabbitmq_response = self._client.post(api_url, json=payload)
 
         if rabbitmq_response.status_code != OK:
             logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
