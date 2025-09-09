@@ -12,6 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
+import logging
 # orjson
 import orjson
 from http.client import OK
@@ -72,6 +73,10 @@ class PubSubRESTServerPull(BaseRESTServer):
             max_keepalive_connections=500,
             max_connections=500
         )
+
+        # Disable httpx request logging
+        logging.getLogger('httpx').setLevel(logging.WARNING)
+
         return httpx.Client(
             limits=limits,
             auth=(self._broker_config.username, self._broker_config.password)
