@@ -13,13 +13,12 @@ _ = monkey.patch_all()
 # stdlib
 import os
 import logging
+from http.client import HTTPSConnection, HTTPConnection, OK
+from urllib.parse import urlparse
+import base64
 # orjson
 import orjson
-from http.client import OK
 from logging import getLogger
-
-# httpx
-import httpx
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -62,25 +61,6 @@ class PubSubRESTServerPull(BaseRESTServer):
     """
     server_type = 'pull'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._client = self._create_client()
-
-    def _create_client(self):
-        """ Create httpx client with connection pooling.
-        """
-        limits = httpx.Limits(
-            max_keepalive_connections=500,
-            max_connections=500
-        )
-
-        # Disable httpx request logging
-        logging.getLogger('httpx').setLevel(logging.WARNING)
-
-        return httpx.Client(
-            limits=limits,
-            auth=(self._broker_config.username, self._broker_config.password)
-        )
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
@@ -139,13 +119,38 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
         """ Make HTTP request to RabbitMQ API.
         """
-        rabbitmq_response = self._client.post(api_url, json=payload)
+        parsed_url = urlparse(api_url)
 
-        if rabbitmq_response.status_code != OK:
-            logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
+        if parsed_url.scheme == 'https':
+            conn = HTTPSConnection(parsed_url.hostname, parsed_url.port or 443)
+        else:
+            conn = HTTPConnection(parsed_url.hostname, parsed_url.port or 80)
+
+        # Prepare auth header
+        auth_string = f'{self._broker_config.username}:{self._broker_config.password}'
+        auth_bytes = auth_string.encode('ascii')
+        auth_header = base64.b64encode(auth_bytes).decode('ascii')
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Basic {auth_header}'
+        }
+
+        # Send request
+        json_data = orjson.dumps(payload)
+        conn.request('POST', parsed_url.path, body=json_data, headers=headers)
+
+        response = conn.getresponse()
+
+        if response.status != OK:
+            response_text = response.read().decode('utf-8')
+            logger.error(f'[{cid}] RabbitMQ API error: {response.status} - {response_text}')
+            conn.close()
             return None
 
-        return orjson.loads(rabbitmq_response.content)
+        response_data = response.read()
+        conn.close()
+        return orjson.loads(response_data)
 
 # ################################################################################################################################
 
