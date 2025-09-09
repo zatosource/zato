@@ -263,7 +263,7 @@ class Producer(Client):
         """ Publish a single message to the broker.
         """
         try:
-            response = requests.post(url, data=dumps(payload), headers=headers, auth=auth)
+            response = self.session.post(url, data=dumps(payload), headers=headers, auth=auth)
             topic_name = payload['data']['topic']
             success = response.status_code == 200
 
