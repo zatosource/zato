@@ -45,12 +45,11 @@ class Consumer(Client):
         progress_tracker:'ProgressTracker',
         consumer_id:'int'=0,
         pull_interval:'float'=1.0,
-        max_topics:'int'=3,
         max_messages:'int'=100,
         cpu_num:'intnone'=None
     ) -> 'None':
 
-        super().__init__(progress_tracker, consumer_id, 1.0, max_topics, cpu_num)
+        super().__init__(progress_tracker, consumer_id, 1.0, 1, cpu_num)
         self.pull_interval = pull_interval
         self.max_messages = max_messages
 
@@ -62,14 +61,12 @@ class Consumer(Client):
         base_url = os.environ['Zato_Test_PubSub_OpenAPI_URL_Consumer']
         username = f'user.{self.client_id}'
         password = f'password.{self.client_id}'
-        max_topics = self.max_topics
         pull_interval = self.pull_interval
 
         return {
             'base_url': base_url,
             'username': username,
             'password': password,
-            'max_topics': max_topics,
             'pull_interval': pull_interval,
             'max_messages': self.max_messages,
         }
