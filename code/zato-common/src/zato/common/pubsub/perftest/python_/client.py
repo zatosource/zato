@@ -26,13 +26,17 @@ class Client:
         progress_tracker:'ProgressTracker',
         client_id:'int'=0,
         reqs_per_second:'float'=1.0,
-        max_topics:'int'=3
+        max_topics:'int'=3,
+        cpu_num:'int'=None
     ) -> 'None':
 
         self.client_id = client_id
         self.reqs_per_second = reqs_per_second
         self.max_topics = max_topics
         self.progress_tracker = progress_tracker
+
+        if cpu_num is not None:
+            os.sched_setaffinity(0, {cpu_num})
 
 # ################################################################################################################################
 
