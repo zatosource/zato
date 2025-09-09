@@ -281,6 +281,8 @@ class Producer(Client):
     def start(self) -> 'None':
         """ Start the producer.
         """
+        cpu_info = f' (CPU: {self.cpu_num})' if self.cpu_num is not None else ''
+        logger.info(f'Client {self.client_id}: Producer starting{cpu_info}')
         config = self._get_config()
         auth = (config['username'], config['password'])
         headers = {'Content-Type': 'application/json'}

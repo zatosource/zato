@@ -34,6 +34,7 @@ class Client:
         self.reqs_per_second = reqs_per_second
         self.max_topics = max_topics
         self.progress_tracker = progress_tracker
+        self.cpu_num = cpu_num
 
         if cpu_num is not None:
             os.sched_setaffinity(0, {cpu_num})
