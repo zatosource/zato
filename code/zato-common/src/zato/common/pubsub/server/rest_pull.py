@@ -19,6 +19,8 @@ from logging import getLogger
 
 # requests
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -60,6 +62,23 @@ class PubSubRESTServerPull(BaseRESTServer):
     """ A REST server for pub/sub message pulling operations.
     """
     server_type = 'pull'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._session = self._create_session()
+
+    def _create_session(self):
+        """ Create requests session with connection pooling.
+        """
+        session = requests.Session()
+        adapter = HTTPAdapter(
+            pool_connections=500,
+            pool_maxsize=500,
+            max_retries=Retry(total=3, backoff_factor=0.1)
+        )
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
@@ -118,7 +137,7 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
         """ Make HTTP request to RabbitMQ API.
         """
-        rabbitmq_response = requests.post(api_url, json=payload, auth=self._broker_auth)
+        rabbitmq_response = self._session.post(api_url, json=payload, auth=self._broker_auth)
 
         if rabbitmq_response.status_code != OK:
             logger.error(f'[{cid}] RabbitMQ API error: {rabbitmq_response.status_code} - {rabbitmq_response.text}')
