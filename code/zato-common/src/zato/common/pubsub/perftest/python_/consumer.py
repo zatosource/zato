@@ -79,7 +79,7 @@ class Consumer(Client):
         url = f'{base_url}/pubsub/messages/get'
         payload = {'max_messages': max_messages}
         logger.debug(f'Client {self.client_id}: Attempting to consume messages')
-        response = requests.post(url, json=payload, headers=headers, auth=auth)
+        response = self.session.post(url, json=payload, headers=headers, auth=auth)
 
         success = response.status_code == 200
 

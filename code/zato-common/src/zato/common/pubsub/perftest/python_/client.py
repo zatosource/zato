@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt
 # stdlib
 import os
 
+# requests
+import requests
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -35,6 +38,7 @@ class Client:
         self.max_topics = max_topics
         self.progress_tracker = progress_tracker
         self.cpu_num = cpu_num
+        self.session = requests.Session()
 
         if cpu_num is not None:
             os.sched_setaffinity(0, {cpu_num})
