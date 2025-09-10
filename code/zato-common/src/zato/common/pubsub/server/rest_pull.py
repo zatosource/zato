@@ -23,6 +23,9 @@ from logging import getLogger
 from kombu import Connection
 from kombu.exceptions import OperationalError
 
+# prometheus
+from prometheus_client import Histogram
+
 # werkzeug
 from werkzeug.wrappers import Request
 
@@ -55,6 +58,12 @@ _default_expiration = PubSub.Message.Default_Expiration
 _max_messages_limit = 1000
 _max_len_limit = PubSub.Message.Default_Max_Len
 _default_max_messages = PubSub.Message.Default_Max_Messages
+
+# Metrics
+conn_acquire_time = Histogram('zato_pubsub_connection_acquire_seconds', 'Time to acquire AMQP connection')
+amqp_fetch_time = Histogram('zato_pubsub_amqp_fetch_seconds', 'AMQP fetch operation duration')
+msg_transform_time = Histogram('zato_pubsub_transform_seconds', 'Message transformation time')
+queue_op_time = Histogram('zato_pubsub_queue_op_seconds', 'Queue operation latency')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,17 +122,18 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _get_connection(self) -> 'Connection':
         """ Get a connection from the pool or create a new one.
         """
-        try:
-            connection = self._connection_pool.get(block=False)
-            # Test if connection is still alive
-            if not connection.connected:
-                connection.connect()
-            return connection
-        except Empty:
-            # Pool is empty, create a new connection and expand the pool
-            connection = self._create_amqp_connection()
-            self._connection_pool.put(connection, block=False)
-            return connection
+        with conn_acquire_time.time():
+            try:
+                connection = self._connection_pool.get(block=False)
+                # Test if connection is still alive
+                if not connection.connected:
+                    connection.connect()
+                return connection
+            except Empty:
+                # Pool is empty, create a new connection and expand the pool
+                connection = self._create_amqp_connection()
+                self._connection_pool.put(connection, block=False)
+                return connection
 
 # ################################################################################################################################
 
@@ -199,121 +209,120 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _fetch_from_rabbitmq(self, cid:'str', queue_name:'str', max_messages:'int') -> 'list':
         """ Fetch messages from RabbitMQ queue using AMQP connection pool.
         """
-        connection = None
-        messages = []
-
-        try:
+        with amqp_fetch_time.time():
             connection = self._get_connection()
+            messages_data = []
 
-            if _needs_details:
-                logger.info(f'[{cid}] Got AMQP connection for queue: {queue_name}')
-
-            # Access the queue using SimpleQueue
             try:
-                with connection.SimpleQueue(queue_name) as simple_queue:
+                channel = connection.channel()
 
-                    messages_retrieved = 0
+                # Declare the queue to ensure it exists
+                channel.queue_declare(queue_name, passive=True)
 
-                    while messages_retrieved < max_messages:
-                        try:
-                            # Try to get a message with timeout
-                            message = simple_queue.get(block=False)
-
-                            if message is None:
-                                break
-
-                            messages.append(message.payload)
-                            messages_retrieved += 1
-
-                            # Acknowledge the message
-                            message.ack()
-
-                        except Empty:
-                            break
-                        except Exception as e:
-                            logger.error(f'[{cid}] Error getting message: {format_exc()}')
+                # Fetch messages using basic_get
+                with queue_op_time.time():
+                    for _ in range(max_messages):
+                        method, properties, body = channel.basic_get(queue_name)
+                        if method is None:
+                            # No more messages
                             break
 
-            except Exception as queue_error:
-                logger.error(f'[{cid}] Error accessing queue {queue_name}: {queue_error}')
-                return []
+                        # Acknowledge the message
+                        channel.basic_ack(method.delivery_tag)
 
-            return messages
+                        # Store message data
+                        message_data = {
+                            'body': body,
+                            'properties': properties,
+                            'method': method
+                        }
+                        messages_data.append(message_data)
 
-        except OperationalError as e:
-            logger.error(f'[{cid}] AMQP operational error for queue {queue_name}: {e}')
-            return []
-        except Exception as e:
-            logger.error(f'[{cid}] Error fetching messages from queue {queue_name}: {e}')
-            return []
-        finally:
-            if connection:
+                channel.close()
+
+            except OperationalError as e:
+                logger.error(f'[{cid}] AMQP operational error: {e}')
+                # Don't return connection to pool if it's broken
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+                raise
+            except Exception as e:
+                logger.error(f'[{cid}] Error fetching from RabbitMQ: {e}')
+                logger.error(format_exc())
+                raise
+            finally:
+                # Return connection to pool
                 self._return_connection(connection)
+
+            return messages_data
 
 # ################################################################################################################################
 
     def _transform_messages(self, messages_data:'list') -> 'list':
         """ Convert AMQP message format to Zato API format.
         """
-        messages = []
-        current_time = utcnow()
+        with msg_transform_time.time():
+            messages = []
+            current_time = utcnow()
 
-        for payload in messages_data:
+            for payload in messages_data:
 
-            actual_data = payload.get('data', payload)
-            msg_id = payload.get('msg_id', '')
-            priority = payload.get('priority', _default_priority)
+                actual_data = payload.get('data', payload)
+                msg_id = payload.get('msg_id', '')
+                priority = payload.get('priority', _default_priority)
 
-            pub_time_iso = payload.get('pub_time_iso', '')
-            pub_time_iso = pub_time_iso.replace('Z', '+00:00')
+                pub_time_iso = payload.get('pub_time_iso', '')
+                pub_time_iso = pub_time_iso.replace('Z', '+00:00')
 
-            recv_time_iso = payload.get('recv_time_iso', '')
-            recv_time_iso = recv_time_iso.replace('Z', '+00:00')
+                recv_time_iso = payload.get('recv_time_iso', '')
+                recv_time_iso = recv_time_iso.replace('Z', '+00:00')
 
-            expiration = payload.get('expiration', _default_expiration)
-            topic_name = payload.get('topic_name', '')
-            expiration_time_iso = payload.get('expiration_time_iso', '')
-            size = payload.get('size', len(str(actual_data).encode('utf-8')))
+                expiration = payload.get('expiration', _default_expiration)
+                topic_name = payload.get('topic_name', '')
+                expiration_time_iso = payload.get('expiration_time_iso', '')
+                size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
-            correl_id = payload.get('correl_id', '')
-            ext_client_id = payload.get('ext_client_id', '')
-            in_reply_to = payload.get('in_reply_to', '')
+                correl_id = payload.get('correl_id', '')
+                ext_client_id = payload.get('ext_client_id', '')
+                in_reply_to = payload.get('in_reply_to', '')
 
-            # We want for the keys to be serialized in a specific order ..
-            meta = {
-                'topic_name': topic_name,
-                'size': size,
-                'priority': priority,
-                'expiration': expiration,
+                # We want for the keys to be serialized in a specific order ..
+                meta = {
+                    'topic_name': topic_name,
+                    'size': size,
+                    'priority': priority,
+                    'expiration': expiration,
 
-                'msg_id': msg_id,
-                'correl_id': correl_id,
+                    'msg_id': msg_id,
+                    'correl_id': correl_id,
 
-                'pub_time_iso': pub_time_iso,
-                'recv_time_iso': recv_time_iso,
-                'expiration_time_iso': expiration_time_iso,
-            }
+                    'pub_time_iso': pub_time_iso,
+                    'recv_time_iso': recv_time_iso,
+                    'expiration_time_iso': expiration_time_iso,
+                }
 
-            # .. this is optional ..
-            if ext_client_id := payload.get('ext_client_id'):
-                meta['ext_client_id'] = ext_client_id
+                # .. this is optional ..
+                if ext_client_id := payload.get('ext_client_id'):
+                    meta['ext_client_id'] = ext_client_id
 
-            # .. so is this ..
-            if in_reply_to := payload.get('in_reply_to'):
-                meta['in_reply_to'] = in_reply_to
+                # .. so is this ..
+                if in_reply_to := payload.get('in_reply_to'):
+                    meta['in_reply_to'] = in_reply_to
 
-            # .. calculate and set time deltas ..
-            set_time_since(meta, pub_time_iso, recv_time_iso, current_time)
+                # .. calculate and set time deltas ..
+                set_time_since(meta, pub_time_iso, recv_time_iso, current_time)
 
-            # .. create the message structure with meta and data ..
-            message = {
-                'meta': meta,
-                'data': actual_data
-            }
+                # .. create the message structure with meta and data ..
+                message = {
+                    'meta': meta,
+                    'data': actual_data
+                }
 
-            messages.append(message)
+                messages.append(message)
 
-        return messages
+            return messages
 
 # ################################################################################################################################
 
