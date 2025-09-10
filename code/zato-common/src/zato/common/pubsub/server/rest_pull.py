@@ -65,6 +65,9 @@ amqp_fetch_time = Histogram('zato_pubsub_amqp_fetch_seconds', 'AMQP fetch operat
 msg_transform_time = Histogram('zato_pubsub_transform_seconds', 'Message transformation time')
 queue_op_time = Histogram('zato_pubsub_queue_op_seconds', 'Queue operation latency')
 queue_setup_time = Histogram('zato_pubsub_queue_setup_seconds', 'SimpleQueue setup time')
+auth_time = Histogram('zato_pubsub_auth_seconds', 'Authentication time')
+json_parse_time = Histogram('zato_pubsub_json_parse_seconds', 'JSON parsing time')
+sub_lookup_time = Histogram('zato_pubsub_sub_lookup_seconds', 'Subscription lookup time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -385,20 +388,23 @@ class PubSubRESTServerPull(BaseRESTServer):
         if _needs_details:
             logger.info(f'[{cid}] Processing messages/get request')
 
-        username = self.authenticate(cid, environ)
+        with auth_time.time():
+            username = self.authenticate(cid, environ)
 
         if _needs_details:
             logger.info(f'[{cid}] Authenticated user for messages/get: `{username}`')
 
         request = Request(environ)
-        data = self._parse_json(cid, request)
+        with json_parse_time.time():
+            data = self._parse_json(cid, request)
 
         max_len, max_messages, wrap_in_list = self._validate_get_params(data)
 
         if _needs_details:
             logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}, wrap_in_list={wrap_in_list}')
 
-        sub_key = self._find_user_sub_key(cid, username)
+        with sub_lookup_time.time():
+            sub_key = self._find_user_sub_key(cid, username)
 
         if not sub_key:
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
