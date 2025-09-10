@@ -136,7 +136,7 @@ class GunicornApplication(BaseApplication):
         def timing_middleware(environ, start_response):
             start_time = time.time()
             try:
-                result = app(environ, start_response)
+                result = self.original_app(environ, start_response)
                 return result
             finally:
                 duration = time.time() - start_time
