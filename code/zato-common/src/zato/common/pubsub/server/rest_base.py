@@ -12,6 +12,10 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
+import gc
+import time
+import threading
+import psutil
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, \
     responses as http_responses, UNAUTHORIZED
 # orjson
@@ -23,7 +27,7 @@ from traceback import format_exc
 from yaml import dump as yaml_dump
 
 # prometheus
-from prometheus_client import Histogram
+from prometheus_client import Histogram, Gauge, Counter
 
 # requests
 import requests
@@ -74,6 +78,16 @@ _BAD_REQUEST = int(BAD_REQUEST) # type: ignore
 
 # Metrics
 wsgi_call_time = Histogram('zato_pubsub_wsgi_call_seconds', 'WSGI call processing time')
+memory_usage = Gauge('zato_pubsub_memory_bytes', 'Process memory usage')
+gc_collections = Counter('zato_pubsub_gc_collections_total', 'GC collections', ['generation'])
+gc_objects = Gauge('zato_pubsub_gc_objects', 'GC tracked objects')
+thread_count = Gauge('zato_pubsub_threads', 'Active thread count')
+greenlet_count = Gauge('zato_pubsub_greenlets', 'Active greenlet count')
+socket_wait_time = Histogram('zato_pubsub_socket_wait_seconds', 'Socket wait time')
+gil_wait_time = Histogram('zato_pubsub_gil_wait_seconds', 'GIL acquisition time')
+request_queue_depth = Gauge('zato_pubsub_request_queue_depth', 'Request queue depth')
+fd_count = Gauge('zato_pubsub_file_descriptors', 'Open file descriptors')
+context_switches = Counter('zato_pubsub_context_switches_total', 'Context switches', ['type'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -345,8 +359,38 @@ class BaseRESTServer(BaseServer):
     def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
+        start_time = time.time()
+
+        # Update system metrics
+        try:
+            process = psutil.Process()
+            memory_usage.set(process.memory_info().rss)
+            fd_count.set(process.num_fds())
+            thread_count.set(threading.active_count())
+
+            # GC stats
+            gc_stats = gc.get_stats()
+            for i, stat in enumerate(gc_stats):
+                gc_collections.labels(generation=str(i)).inc(stat['collections'])
+            gc_objects.set(len(gc.get_objects()))
+
+            # Context switches
+            ctx_switches = process.num_ctx_switches()
+            context_switches.labels(type='voluntary').inc(ctx_switches.voluntary)
+            context_switches.labels(type='involuntary').inc(ctx_switches.involuntary)
+
+        except Exception:
+            pass
+
         with wsgi_call_time.time():
-            return self._call(environ, start_response)
+            result = self._call(environ, start_response)
+
+        # Measure total time including metrics overhead
+        total_time = time.time() - start_time
+        if total_time > 0.001:  # Log if overhead > 1ms
+            pass
+
+        return result
 
 # ################################################################################################################################
 
