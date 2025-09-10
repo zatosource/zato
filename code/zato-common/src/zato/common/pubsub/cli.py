@@ -27,6 +27,7 @@ import gevent
 
 # gunicorn
 from gunicorn.app.base import BaseApplication
+from gunicorn.workers.sync import SyncWorker
 
 # prometheus
 from prometheus_client import Histogram
@@ -54,6 +55,19 @@ _default_port_pull = PubSub.REST_Server.Default_Port_Get
 
 # Metrics
 gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunicorn request processing time')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TimingWorker(SyncWorker):
+    def handle_request(self, listener, req, client, addr):
+        start_time = time.time()
+        try:
+            result = super().handle_request(listener, req, client, addr)
+            return result
+        finally:
+            duration = time.time() - start_time
+            gunicorn_request_time.observe(duration)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -245,7 +259,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         options = {
             'bind': f'{args.host}:{port}',
             'workers': args.workers,
-            'worker_class': 'sync',
+            'worker_class': 'zato.common.pubsub.cli:TimingWorker',
             'timeout': 30,
             'keepalive': 2,
             'loglevel': 'has_debug' if args.has_debug else 'info',
