@@ -217,7 +217,7 @@ class PubSubRESTServerPull(BaseRESTServer):
                     while messages_retrieved < max_messages:
                         try:
                             # Try to get a message with timeout
-                            message = simple_queue.get(block=True, timeout=1.0)
+                            message = simple_queue.get(block=False)
 
                             if message is None:
                                 break
