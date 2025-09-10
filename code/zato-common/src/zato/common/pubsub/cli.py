@@ -397,7 +397,7 @@ def main() -> 'int':
 if __name__ == '__main__':
     sys.exit(main())
 
-f"""
+"""
 # Health check endpoint:
 curl http://localhost:40100/pubsub/health; echo
 
