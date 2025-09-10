@@ -2463,6 +2463,11 @@
           "expr": "zato_pubsub_gc_objects",
           "legendFormat": "GC Objects",
           "refId": "A"
+        },
+        {
+          "expr": "rate(zato_pubsub_gc_collections_total[1m])",
+          "legendFormat": "GC Collections/sec - Gen {{generation}}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
