@@ -77,19 +77,18 @@ class TimingWorker(SyncWorker):
         client.setblocking(1)
         util.close_on_exec(client)
         
-        # Store socket accept time using client fileno as key
-        self._socket_times[client.fileno()] = socket_start
+        # Store socket accept time using client object as key
+        self._socket_times[client] = socket_start
         self.handle(listener, client, addr)
     
     def handle_request(self, listener, req, client, addr):
         wsgi_start = time.time()
         
         # Calculate time from socket accept to WSGI
-        client_fd = client.fileno()
-        if client_fd in self._socket_times:
-            socket_to_wsgi_duration = wsgi_start - self._socket_times[client_fd]
+        if client in self._socket_times:
+            socket_to_wsgi_duration = wsgi_start - self._socket_times[client]
             socket_to_wsgi_time.observe(socket_to_wsgi_duration)
-            del self._socket_times[client_fd]
+            del self._socket_times[client]
         
         try:
             result = super().handle_request(listener, req, client, addr)
