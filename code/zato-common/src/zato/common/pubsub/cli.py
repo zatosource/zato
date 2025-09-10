@@ -292,7 +292,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'Using {args.workers} {worker_text}')
 
         # Run the gunicorn application
-        gunicorn_app = GunicornApplication(wrapped_app, options)
+        gunicorn_app = GunicornApplication(app, options)
         gunicorn_app.run()
 
         return OperationResult(is_ok=True, message='Server stopped')
