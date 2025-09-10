@@ -664,7 +664,10 @@ class BaseRESTServer(BaseServer):
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
         """
-        server = WSGIServer((self.host, self.port), self._wsgi_wrapper)
+        def wsgi_app(environ, start_response):
+            return self._wsgi_wrapper(environ, start_response)
+
+        server = WSGIServer((self.host, self.port), wsgi_app)
         logger.info(f'Starting PubSub REST API server on {self.host}:{self.port}')
         server.serve_forever()
 
