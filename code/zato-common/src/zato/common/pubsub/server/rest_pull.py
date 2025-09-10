@@ -12,14 +12,15 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-from threading import RLock
 from queue import Queue, Empty
+from threading import RLock
+from traceback import format_exc
 
 # orjson
 from logging import getLogger
 
 # Kombu
-from kombu import Connection, Queue as KombuQueue
+from kombu import Connection
 from kombu.exceptions import OperationalError
 
 # werkzeug
@@ -203,10 +204,7 @@ class PubSubRESTServerPull(BaseRESTServer):
             if _needs_details:
                 logger.info(f'[{cid}] Got AMQP connection for queue: {queue_name}')
 
-            # Create a queue object - ensure it matches the actual queue configuration
-            queue = KombuQueue(queue_name, durable=True, auto_delete=False, exclusive=False)
-
-            # First, check if queue exists and has messages
+            # Access the queue using SimpleQueue
             try:
                 with connection.SimpleQueue(queue_name) as simple_queue:
 
@@ -220,15 +218,20 @@ class PubSubRESTServerPull(BaseRESTServer):
                             if message is None:
                                 break
 
+                            print()
+                            print(111, message)
+                            print(222, message.payload)
+                            print()
+
                             # Extract message data
                             message_data = {
                                 'payload': message.payload,
                                 'properties': {
-                                    'message_id': getattr(message, 'message_id', ''),
-                                    'timestamp': getattr(message, 'timestamp', ''),
-                                    'priority': getattr(message, 'priority', _default_priority),
-                                    'expiration': getattr(message, 'expiration', _default_expiration),
-                                    'headers': getattr(message, 'headers', {}) or {}
+                                    'message_id': message.message_id,
+                                    'timestamp': message.timestamp,
+                                    'priority': message.priority,
+                                    'expiration': message.expiration,
+                                    'headers': message.headers
                                 }
                             }
 
@@ -239,8 +242,7 @@ class PubSubRESTServerPull(BaseRESTServer):
                             message.ack()
 
                         except Exception as e:
-                            if _needs_details:
-                                logger.info(f'[{cid}] No more messages or timeout getting message from {queue_name}: {e}')
+                            logger.info(f'[{cid}] Caught an exception: {format_exc()}')
                             break
 
             except Exception as queue_error:
