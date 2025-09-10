@@ -133,7 +133,7 @@ class GunicornApplication(BaseApplication):
         # Apply valid configuration options
         for key, value in self.options.items():
             if key == 'worker_class':
-                self.cfg.worker_class = value
+                self.cfg.set('worker_class', value)
             elif key in self.cfg.settings and value is not None: # type: ignore
                 self.cfg.set(key.lower(), value) # type: ignore
 
