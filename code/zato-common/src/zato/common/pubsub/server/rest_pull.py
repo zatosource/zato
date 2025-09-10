@@ -68,6 +68,7 @@ queue_setup_time = Histogram('zato_pubsub_queue_setup_seconds', 'SimpleQueue set
 auth_time = Histogram('zato_pubsub_auth_seconds', 'Authentication time')
 json_parse_time = Histogram('zato_pubsub_json_parse_seconds', 'JSON parsing time')
 sub_lookup_time = Histogram('zato_pubsub_sub_lookup_seconds', 'Subscription lookup time')
+total_request_time = Histogram('zato_pubsub_total_request_seconds', 'Total request processing time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -382,7 +383,7 @@ class PubSubRESTServerPull(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> '_base_response':
+    def _on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> '_base_response':
         """ Get messages from the user's queue.
         """
         if _needs_details:
@@ -425,5 +426,13 @@ class PubSubRESTServerPull(BaseRESTServer):
         except Exception as e:
             logger.error(f'[{cid}] Error retrieving messages: {e}')
             return self._build_error_response(cid, 'Internal error retrieving messages')
+
+# ################################################################################################################################
+
+    def on_messages_get(self, cid:'str', environ:'anydict', start_response:'any_') -> '_base_response':
+        """ Get messages from the user's queue.
+        """
+        with total_request_time.time():
+            return self._on_messages_get(cid, environ, start_response)
 # ################################################################################################################################
 # ################################################################################################################################
