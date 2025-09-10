@@ -253,8 +253,8 @@
           "format": "s",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": 0,
+          "max": 10,
+          "min": 1,
           "show": true
         },
         {
@@ -339,8 +339,8 @@
           "format": "s",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": 0,
+          "max": 10,
+          "min": 1,
           "show": true
         },
         {
@@ -538,9 +538,9 @@
       "fill": 0,
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 24
+        "w": 6,
+        "x": 12,
+        "y": 16
       },
       "id": 6,
       "legend": {
@@ -1052,9 +1052,9 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 0,
-        "y": 32
+        "y": 16
       },
       "id": 18,
       "legend": {
@@ -1133,8 +1133,8 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
+        "w": 6,
+        "x": 6,
         "y": 16
       },
       "id": 20,
@@ -1214,8 +1214,8 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 6,
+        "x": 18,
         "y": 16
       },
       "id": 19,
