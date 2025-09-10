@@ -130,7 +130,19 @@ class GunicornApplication(BaseApplication):
     def __init__(self, app:'PubSubRESTServer', options:'dictnone'=None):
         self.options = options or {}
         self.options.setdefault('post_fork', self.on_post_fork)
-        self.application = app
+        self.original_app = app
+        
+        # Wrap app with timing middleware
+        def timing_middleware(environ, start_response):
+            start_time = time.time()
+            try:
+                result = app(environ, start_response)
+                return result
+            finally:
+                duration = time.time() - start_time
+                gunicorn_request_time.observe(duration)
+        
+        self.application = timing_middleware
         super().__init__()
 
     def load_config(self):
@@ -152,8 +164,8 @@ class GunicornApplication(BaseApplication):
         logger.info(f'Setting up PubSub REST server at {address_str}')
 
 
-        self.application.init_broker_client()
-        self.application.setup()
+        self.original_app.init_broker_client()
+        self.original_app.setup()
 
 # ################################################################################################################################
 # ################################################################################################################################
