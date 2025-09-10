@@ -22,6 +22,9 @@ from traceback import format_exc
 # PyYAML
 from yaml import dump as yaml_dump
 
+# prometheus
+from prometheus_client import Histogram
+
 # requests
 import requests
 from requests.auth import HTTPBasicAuth
@@ -68,6 +71,9 @@ _max_len_limit = 5_000_000
 
 # This is needed to satisfy the type checker
 _BAD_REQUEST = int(BAD_REQUEST) # type: ignore
+
+# Metrics
+wsgi_call_time = Histogram('zato_pubsub_wsgi_call_seconds', 'WSGI call processing time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,7 +236,7 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
-    def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+    def _call(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
         """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
         """
 
@@ -333,6 +339,14 @@ class BaseRESTServer(BaseServer):
                 'status': INTERNAL_SERVER_ERROR
             }
             return self._json_response(start_response, response)
+
+# ################################################################################################################################
+
+    def __call__(self, environ:'anydict', start_response:'any_') -> 'list_[bytes]':
+        """ WSGI entry point for the server using dynamic dispatch based on Werkzeug URL routing.
+        """
+        with wsgi_call_time.time():
+            return self._call(environ, start_response)
 
 # ################################################################################################################################
 
