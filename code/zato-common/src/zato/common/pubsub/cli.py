@@ -28,6 +28,7 @@ import gevent
 # gunicorn
 from gunicorn.app.base import BaseApplication
 from gunicorn.workers.sync import SyncWorker
+from gunicorn import util
 
 # prometheus
 from prometheus_client import Histogram
@@ -56,22 +57,40 @@ _default_port_pull = PubSub.REST_Server.Default_Port_Get
 # Metrics
 try:
     gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunicorn request processing time')
+    socket_to_wsgi_time = Histogram('zato_pubsub_socket_to_wsgi_seconds', 'Time from socket accept to WSGI call')
 except ValueError:
     from prometheus_client import REGISTRY
     gunicorn_request_time = REGISTRY._names_to_collectors['zato_pubsub_gunicorn_request_seconds']
+    socket_to_wsgi_time = REGISTRY._names_to_collectors['zato_pubsub_socket_to_wsgi_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TimingWorker(SyncWorker):
+    def accept(self, listener):
+        socket_start = time.time()
+        client, addr = listener.accept()
+        client.setblocking(1)
+        util.close_on_exec(client)
+
+        # Store socket accept time on the client socket
+        client._socket_accept_time = socket_start
+        self.handle(listener, client, addr)
+
     def handle_request(self, listener, req, client, addr):
-        start_time = time.time()
+        wsgi_start = time.time()
+
+        # Calculate time from socket accept to WSGI
+        if hasattr(client, '_socket_accept_time'):
+            socket_to_wsgi_duration = wsgi_start - client._socket_accept_time
+            socket_to_wsgi_time.observe(socket_to_wsgi_duration)
+
         try:
             result = super().handle_request(listener, req, client, addr)
             return result
         finally:
-            duration = time.time() - start_time
-            gunicorn_request_time.observe(duration)
+            total_duration = time.time() - wsgi_start
+            gunicorn_request_time.observe(total_duration)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +150,7 @@ class GunicornApplication(BaseApplication):
         self.options = options or {}
         self.options.setdefault('post_fork', self.on_post_fork)
         self.original_app = app
-        
+
         # Wrap app with timing middleware
         def timing_middleware(environ, start_response):
             start_time = time.time()
@@ -141,7 +160,7 @@ class GunicornApplication(BaseApplication):
             finally:
                 duration = time.time() - start_time
                 gunicorn_request_time.observe(duration)
-        
+
         self.application = timing_middleware
         super().__init__()
 
