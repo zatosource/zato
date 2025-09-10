@@ -132,7 +132,9 @@ class GunicornApplication(BaseApplication):
     def load_config(self):
         # Apply valid configuration options
         for key, value in self.options.items():
-            if key in self.cfg.settings and value is not None: # type: ignore
+            if key == 'worker_class':
+                self.cfg.worker_class = value
+            elif key in self.cfg.settings and value is not None: # type: ignore
                 self.cfg.set(key.lower(), value) # type: ignore
 
         # We need to set this one explicitly because otherwise gunicorn insists it be an int (min=1)
@@ -259,7 +261,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         options = {
             'bind': f'{args.host}:{port}',
             'workers': args.workers,
-            'worker_class': 'zato.common.pubsub.cli:TimingWorker',
+            'worker_class': TimingWorker,
             'timeout': 30,
             'keepalive': 2,
             'loglevel': 'has_debug' if args.has_debug else 'info',
