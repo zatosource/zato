@@ -54,7 +54,11 @@ _default_port_publish = PubSub.REST_Server.Default_Port_Publish
 _default_port_pull = PubSub.REST_Server.Default_Port_Get
 
 # Metrics
-gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunicorn request processing time')
+try:
+    gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunicorn request processing time')
+except ValueError:
+    from prometheus_client import REGISTRY
+    gunicorn_request_time = REGISTRY._names_to_collectors['zato_pubsub_gunicorn_request_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
