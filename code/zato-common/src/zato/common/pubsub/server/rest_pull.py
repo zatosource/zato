@@ -218,31 +218,16 @@ class PubSubRESTServerPull(BaseRESTServer):
                             if message is None:
                                 break
 
-                            print()
-                            print(111, message)
-                            print(222, message.payload)
-                            print()
-
-                            # Extract message data
-                            message_data = {
-                                'payload': message.payload,
-                                'properties': {
-                                    'message_id': message.message_id,
-                                    'timestamp': message.timestamp,
-                                    'priority': message.priority,
-                                    'expiration': message.expiration,
-                                    'headers': message.headers
-                                }
-                            }
-
-                            messages.append(message_data)
+                            messages.append(message.payload)
                             messages_retrieved += 1
 
                             # Acknowledge the message
                             message.ack()
 
+                        except Empty:
+                            break
                         except Exception as e:
-                            logger.info(f'[{cid}] Caught an exception: {format_exc()}')
+                            logger.error(f'[{cid}] Error getting message: {e}')
                             break
 
             except Exception as queue_error:
@@ -269,8 +254,7 @@ class PubSubRESTServerPull(BaseRESTServer):
         messages = []
         current_time = utcnow()
 
-        for msg_data in messages_data:
-            payload = msg_data.get('payload')
+        for payload in messages_data:
 
             actual_data = payload.get('data', payload)
             msg_id = payload.get('msg_id', '')
