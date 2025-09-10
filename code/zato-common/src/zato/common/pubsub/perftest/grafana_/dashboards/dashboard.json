@@ -2949,6 +2949,11 @@
           "expr": "rate(zato_pubsub_gevent_request_seconds_sum[1m]) / rate(zato_pubsub_gevent_request_seconds_count[1m])",
           "legendFormat": "Gevent Request Time",
           "refId": "A"
+        },
+        {
+          "expr": "rate(zato_pubsub_gunicorn_request_seconds_sum[1m]) / rate(zato_pubsub_gunicorn_request_seconds_count[1m])",
+          "legendFormat": "Gunicorn Request Time",
+          "refId": "B"
         }
       ],
       "thresholds": [],
