@@ -68,7 +68,7 @@ class PubSubRESTServerPull(BaseRESTServer):
         super().__init__(*args, **kwargs)
 
         # Connection pool for AMQP connections
-        self._connection_pool = Queue(maxsize=10)
+        self._connection_pool = Queue()
         self._pool_lock = RLock()
         self._pool_initialized = False
 
@@ -85,7 +85,7 @@ class PubSubRESTServerPull(BaseRESTServer):
                 return
 
             # Create initial connections
-            pool_size = 5
+            pool_size = 200
             for _ in range(pool_size):
                 try:
                     connection = self._create_amqp_connection()
@@ -118,8 +118,10 @@ class PubSubRESTServerPull(BaseRESTServer):
                 connection.connect()
             return connection
         except Empty:
-            # Pool is empty, create a new connection
-            return self._create_amqp_connection()
+            # Pool is empty, create a new connection and expand the pool
+            connection = self._create_amqp_connection()
+            self._connection_pool.put(connection, block=False)
+            return connection
 
 # ################################################################################################################################
 
@@ -227,7 +229,7 @@ class PubSubRESTServerPull(BaseRESTServer):
                         except Empty:
                             break
                         except Exception as e:
-                            logger.error(f'[{cid}] Error getting message: {e}')
+                            logger.error(f'[{cid}] Error getting message: {format_exc()}')
                             break
 
             except Exception as queue_error:
