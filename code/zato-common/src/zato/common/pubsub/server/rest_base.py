@@ -365,22 +365,10 @@ class BaseRESTServer(BaseServer):
         try:
             process = psutil.Process()
             memory_usage.set(process.memory_info().rss)
-            fd_count.set(process.num_fds())
             thread_count.set(threading.active_count())
-
-            # GC stats
-            gc_stats = gc.get_stats()
-            for i, stat in enumerate(gc_stats):
-                gc_collections.labels(generation=str(i)).inc(stat['collections'])
             gc_objects.set(len(gc.get_objects()))
-
-            # Context switches
-            ctx_switches = process.num_ctx_switches()
-            context_switches.labels(type='voluntary').inc(ctx_switches.voluntary)
-            context_switches.labels(type='involuntary').inc(ctx_switches.involuntary)
-
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f'Metrics collection error: {format_exc()}')
 
         with wsgi_call_time.time():
             result = self._call(environ, start_response)
