@@ -2711,7 +2711,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "GC Objects by Type",
+      "title": "GC Objects by Type (Sample)",
       "tooltip": {
         "shared": true,
         "sort": 0,
