@@ -12,15 +12,15 @@ _ = monkey.patch_all()
 
 # stdlib
 import os
-import logging
-from http.client import OK
-import base64
+from threading import RLock
+from queue import Queue, Empty
+
 # orjson
-import orjson
 from logging import getLogger
 
-# urllib3
-import urllib3
+# Kombu
+from kombu import Connection, Queue as KombuQueue
+from kombu.exceptions import OperationalError
 
 # werkzeug
 from werkzeug.wrappers import Request
@@ -65,11 +65,77 @@ class PubSubRESTServerPull(BaseRESTServer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._http_pool = urllib3.PoolManager(
-            maxsize=500,
-            block=False
-        )
 
+        # Connection pool for AMQP connections
+        self._connection_pool = Queue(maxsize=10)
+        self._pool_lock = RLock()
+        self._pool_initialized = False
+
+        # Initialize the connection pool
+        self._init_connection_pool()
+
+# ################################################################################################################################
+
+    def _init_connection_pool(self) -> 'None':
+        """ Initialize the AMQP connection pool.
+        """
+        with self._pool_lock:
+            if self._pool_initialized:
+                return
+
+            # Create initial connections
+            pool_size = 5
+            for _ in range(pool_size):
+                try:
+                    connection = self._create_amqp_connection()
+                    self._connection_pool.put(connection, block=False)
+                except Exception as e:
+                    logger.error(f'Failed to create AMQP connection for pool: {e}')
+
+            self._pool_initialized = True
+            logger.info(f'Initialized AMQP connection pool with {self._connection_pool.qsize()} connections')
+
+# ################################################################################################################################
+
+    def _create_amqp_connection(self) -> 'Connection':
+        """ Create a new AMQP connection.
+        """
+        broker_url = f'{self._broker_config.protocol}://{self._broker_config.username}:{self._broker_config.password}@{self._broker_config.address}/{self._broker_config.vhost}'
+        connection = Connection(broker_url)
+        _ = connection.connect()
+        return connection
+
+# ################################################################################################################################
+
+    def _get_connection(self) -> 'Connection':
+        """ Get a connection from the pool or create a new one.
+        """
+        try:
+            connection = self._connection_pool.get(block=False)
+            # Test if connection is still alive
+            if not connection.connected:
+                connection.connect()
+            return connection
+        except Empty:
+            # Pool is empty, create a new connection
+            return self._create_amqp_connection()
+
+# ################################################################################################################################
+
+    def _return_connection(self, connection: 'Connection') -> 'None':
+        """ Return a connection to the pool.
+        """
+        try:
+            if connection.connected:
+                self._connection_pool.put(connection, block=False)
+            else:
+                # Connection is dead, don't return it to pool
+                pass
+        except Exception:
+            # Pool is full or connection is bad, just ignore
+            pass
+
+# ################################################################################################################################
 
     def _validate_get_params(self, data:'dict') -> 'tuple[int, int, bool]':
         """ Extract and validate max_len/max_messages parameters.
@@ -125,54 +191,86 @@ class PubSubRESTServerPull(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _fetch_from_rabbitmq(self, cid:'str', api_url:'str', payload:'dict') -> 'list | None':
-        """ Make HTTP request to RabbitMQ API.
+    def _fetch_from_rabbitmq(self, cid:'str', queue_name:'str', max_messages:'int') -> 'list':
+        """ Fetch messages from RabbitMQ queue using AMQP connection pool.
         """
-        # Prepare auth header
-        auth_string = f'{self._broker_config.username}:{self._broker_config.password}'
-        auth_bytes = auth_string.encode('ascii')
-        auth_header = base64.b64encode(auth_bytes).decode('ascii')
+        connection = None
+        messages = []
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Basic {auth_header}'
-        }
+        try:
+            connection = self._get_connection()
 
-        # Send request
-        json_data = orjson.dumps(payload)
+            if _needs_details:
+                logger.info(f'[{cid}] Got AMQP connection for queue: {queue_name}')
 
-        response = self._http_pool.request(
-            'POST',
-            api_url,
-            body=json_data,
-            headers=headers
-        )
+            # Create a queue object - ensure it matches the actual queue configuration
+            queue = KombuQueue(queue_name, durable=True, auto_delete=False, exclusive=False)
 
-        if response.status != OK:
-            logger.error(f'[{cid}] RabbitMQ API error: {response.status} - {response.data.decode("utf-8")}')
-            return None
+            # First, check if queue exists and has messages
+            try:
+                with connection.SimpleQueue(queue_name) as simple_queue:
 
-        return orjson.loads(response.data)
+                    messages_retrieved = 0
+
+                    while messages_retrieved < max_messages:
+                        try:
+                            # Try to get a message with timeout
+                            message = simple_queue.get(block=True, timeout=1.0)
+
+                            if message is None:
+                                break
+
+                            # Extract message data
+                            message_data = {
+                                'payload': message.payload,
+                                'properties': {
+                                    'message_id': getattr(message, 'message_id', ''),
+                                    'timestamp': getattr(message, 'timestamp', ''),
+                                    'priority': getattr(message, 'priority', _default_priority),
+                                    'expiration': getattr(message, 'expiration', _default_expiration),
+                                    'headers': getattr(message, 'headers', {}) or {}
+                                }
+                            }
+
+                            messages.append(message_data)
+                            messages_retrieved += 1
+
+                            # Acknowledge the message
+                            message.ack()
+
+                        except Exception as e:
+                            if _needs_details:
+                                logger.info(f'[{cid}] No more messages or timeout getting message from {queue_name}: {e}')
+                            break
+
+            except Exception as queue_error:
+                logger.error(f'[{cid}] Error accessing queue {queue_name}: {queue_error}')
+                return []
+
+            return messages
+
+        except OperationalError as e:
+            logger.error(f'[{cid}] AMQP operational error for queue {queue_name}: {e}')
+            return []
+        except Exception as e:
+            logger.error(f'[{cid}] Error fetching messages from queue {queue_name}: {e}')
+            return []
+        finally:
+            if connection:
+                self._return_connection(connection)
 
 # ################################################################################################################################
 
     def _transform_messages(self, messages_data:'list') -> 'list':
-        """ Convert RabbitMQ format to Zato API format.
+        """ Convert AMQP message format to Zato API format.
         """
-        current_time = utcnow()
         messages = []
+        current_time = utcnow()
 
-        for msg in messages_data:
+        for msg_data in messages_data:
+            payload = msg_data.get('payload')
 
-            payload_data = msg.get('payload', '')
-
-            # Parse the payload to extract the original data
-            if isinstance(payload_data, str):
-                payload = orjson.loads(payload_data)
-            else:
-                payload = payload_data
-
-            actual_data = payload.get('data', payload_data)
+            actual_data = payload.get('data', payload)
             msg_id = payload.get('msg_id', '')
             priority = payload.get('priority', _default_priority)
 
@@ -187,12 +285,6 @@ class PubSubRESTServerPull(BaseRESTServer):
             expiration_time_iso = payload.get('expiration_time_iso', '')
             size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
-            # Disabled until it's added to publishers
-            # headers = properties.get('headers', {})
-            # properties = msg.get('properties', {})
-            # mime_type = properties.get('content_type', 'application/json')
-            # ext_pub_time_iso = headers.get('ext_pub_time_iso', '')
-
             correl_id = payload.get('correl_id', '')
             ext_client_id = payload.get('ext_client_id', '')
             in_reply_to = payload.get('in_reply_to', '')
@@ -206,10 +298,6 @@ class PubSubRESTServerPull(BaseRESTServer):
 
                 'msg_id': msg_id,
                 'correl_id': correl_id,
-
-                # Disabled until it's added to publishers
-                # 'mime_type': mime_type,
-                # 'ext_pub_time_iso': ext_pub_time_iso,
 
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
@@ -233,10 +321,8 @@ class PubSubRESTServerPull(BaseRESTServer):
                 'data': actual_data
             }
 
-            # .. OK, the message is ready ..
             messages.append(message)
 
-        # .. and now we can return them all.
         return messages
 
 # ################################################################################################################################
@@ -306,23 +392,11 @@ class PubSubRESTServerPull(BaseRESTServer):
 
         sub_key = self._find_user_sub_key(cid, username)
 
-        if _needs_details:
-            logger.info(f'[{cid}] Found sub_key: {sub_key}')
-
         if not sub_key:
-            logger.info(f'[{cid}] No sub_key found, returning error response')
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
 
-        if _needs_details:
-            logger.info(f'[{cid}] Found subscription: user={username}, sub_key={sub_key}')
-
-        api_url, rabbitmq_payload = self._build_rabbitmq_request(sub_key, max_messages, max_len)
-
         try:
-            messages_data = self._fetch_from_rabbitmq(cid, api_url, rabbitmq_payload)
-            if messages_data is None:
-                return self._build_error_response(cid, 'Subscription not found')
-
+            messages_data = self._fetch_from_rabbitmq(cid, sub_key, max_messages)
             messages = self._transform_messages(messages_data)
 
             message_count = len(messages)
