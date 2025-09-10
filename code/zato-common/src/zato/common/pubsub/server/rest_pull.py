@@ -64,6 +64,7 @@ conn_acquire_time = Histogram('zato_pubsub_connection_acquire_seconds', 'Time to
 amqp_fetch_time = Histogram('zato_pubsub_amqp_fetch_seconds', 'AMQP fetch operation duration')
 msg_transform_time = Histogram('zato_pubsub_transform_seconds', 'Message transformation time')
 queue_op_time = Histogram('zato_pubsub_queue_op_seconds', 'Queue operation latency')
+queue_setup_time = Histogram('zato_pubsub_queue_setup_seconds', 'SimpleQueue setup time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -221,7 +222,10 @@ class PubSubRESTServerPull(BaseRESTServer):
 
                 # Access the queue using SimpleQueue
                 try:
-                    with connection.SimpleQueue(queue_name) as simple_queue:
+                    with queue_setup_time.time():
+                        simple_queue = connection.SimpleQueue(queue_name)
+
+                    with simple_queue:
 
                         messages_retrieved = 0
 
