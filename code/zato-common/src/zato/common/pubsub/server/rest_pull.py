@@ -210,55 +210,57 @@ class PubSubRESTServerPull(BaseRESTServer):
         """ Fetch messages from RabbitMQ queue using AMQP connection pool.
         """
         with amqp_fetch_time.time():
-            connection = self._get_connection()
-            messages_data = []
+            connection = None
+            messages = []
 
             try:
-                channel = connection.channel()
+                connection = self._get_connection()
 
-                # Declare the queue to ensure it exists
-                channel.queue_declare(queue_name, passive=True)
+                if _needs_details:
+                    logger.info(f'[{cid}] Got AMQP connection for queue: {queue_name}')
 
-                # Fetch messages using basic_get
-                with queue_op_time.time():
-                    for _ in range(max_messages):
-                        result = channel.basic_get(queue_name)
-                        if result is None:
-                            # No more messages
-                            break
+                # Access the queue using SimpleQueue
+                try:
+                    with connection.SimpleQueue(queue_name) as simple_queue:
 
-                        method, properties, body = result
+                        messages_retrieved = 0
 
-                        # Acknowledge the message
-                        channel.basic_ack(method.delivery_tag)
+                        with queue_op_time.time():
+                            while messages_retrieved < max_messages:
+                                try:
+                                    # Try to get a message with timeout
+                                    message = simple_queue.get(block=False)
 
-                        # Store message data
-                        message_data = {
-                            'body': body,
-                            'properties': properties,
-                            'method': method
-                        }
-                        messages_data.append(message_data)
+                                    if message is None:
+                                        break
 
-                channel.close()
+                                    messages.append(message.payload)
+                                    messages_retrieved += 1
+
+                                    # Acknowledge the message
+                                    message.ack()
+
+                                except Empty:
+                                    break
+                                except Exception as e:
+                                    logger.error(f'[{cid}] Error getting message: {format_exc()}')
+                                    break
+
+                except Exception as queue_error:
+                    logger.error(f'[{cid}] Error accessing queue {queue_name}: {queue_error}')
+                    return []
+
+                return messages
 
             except OperationalError as e:
-                logger.error(f'[{cid}] AMQP operational error: {e}')
-                # Don't return connection to pool if it's broken
-                try:
-                    connection.close()
-                except Exception:
-                    pass
-                raise
+                logger.error(f'[{cid}] AMQP operational error for queue {queue_name}: {e}')
+                return []
             except Exception as e:
-                logger.error(f'[{cid}] Error fetching from RabbitMQ: {e}')
-                logger.error(format_exc())
-                raise
+                logger.error(f'[{cid}] Error fetching messages from queue {queue_name}: {e}')
+                return []
             finally:
-                # Return connection to pool
-                self._return_connection(connection)
-
-            return messages_data
+                if connection:
+                    self._return_connection(connection)
 
 # ################################################################################################################################
 
