@@ -651,7 +651,7 @@ class BaseRESTServer(BaseServer):
         active_greenlets.set(len(gevent._get_hub().loop._callbacks))
         
         with gevent_request_time.time():
-            result = self(environ, start_response)
+            result = self._call(environ, start_response)
         
         return result
 
