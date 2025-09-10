@@ -60,10 +60,10 @@ gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunic
 # ################################################################################################################################
 
 class TimingWorker(SyncWorker):
-    def handle_request(self, listener, req, client, addr):
+    def handle(self, listener, client, addr):
         start_time = time.time()
         try:
-            result = super().handle_request(listener, req, client, addr)
+            result = super().handle(listener, client, addr)
             return result
         finally:
             duration = time.time() - start_time
