@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 import threading
+import time
 from dataclasses import dataclass
 from json import dumps
 from logging import getLogger
@@ -26,6 +27,9 @@ import gevent
 
 # gunicorn
 from gunicorn.app.base import BaseApplication
+
+# prometheus
+from prometheus_client import Histogram
 
 # Zato
 from zato.common.api import PubSub
@@ -47,6 +51,9 @@ if 0:
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 _default_port_publish = PubSub.REST_Server.Default_Port_Publish
 _default_port_pull = PubSub.REST_Server.Default_Port_Get
+
+# Metrics
+gunicorn_request_time = Histogram('zato_pubsub_gunicorn_request_seconds', 'Gunicorn request processing time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,6 +227,20 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
                 port=port,
             )
 
+        # Wrap app with timing middleware
+        def timing_middleware(app):
+            def middleware(environ, start_response):
+                start_time = time.time()
+                try:
+                    result = app(environ, start_response)
+                    return result
+                finally:
+                    duration = time.time() - start_time
+                    gunicorn_request_time.observe(duration)
+            return middleware
+
+        wrapped_app = timing_middleware(app)
+
         # Configure gunicorn options
         options = {
             'bind': f'{args.host}:{port}',
@@ -241,7 +262,7 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
         logger.info(f'Using {args.workers} {worker_text}')
 
         # Run the gunicorn application
-        gunicorn_app = GunicornApplication(app, options)
+        gunicorn_app = GunicornApplication(wrapped_app, options)
         gunicorn_app.run()
 
         return OperationResult(is_ok=True, message='Server stopped')
