@@ -67,24 +67,30 @@ except ValueError:
 # ################################################################################################################################
 
 class TimingWorker(SyncWorker):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._socket_times = {}
+    
     def accept(self, listener):
         socket_start = time.time()
         client, addr = listener.accept()
         client.setblocking(1)
         util.close_on_exec(client)
-
-        # Store socket accept time on the client socket
-        client._socket_accept_time = socket_start
+        
+        # Store socket accept time using client fileno as key
+        self._socket_times[client.fileno()] = socket_start
         self.handle(listener, client, addr)
-
+    
     def handle_request(self, listener, req, client, addr):
         wsgi_start = time.time()
-
+        
         # Calculate time from socket accept to WSGI
-        if hasattr(client, '_socket_accept_time'):
-            socket_to_wsgi_duration = wsgi_start - client._socket_accept_time
+        client_fd = client.fileno()
+        if client_fd in self._socket_times:
+            socket_to_wsgi_duration = wsgi_start - self._socket_times[client_fd]
             socket_to_wsgi_time.observe(socket_to_wsgi_duration)
-
+            del self._socket_times[client_fd]
+        
         try:
             result = super().handle_request(listener, req, client, addr)
             return result
