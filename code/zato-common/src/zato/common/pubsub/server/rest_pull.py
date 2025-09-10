@@ -101,7 +101,9 @@ class PubSubRESTServerPull(BaseRESTServer):
     def _create_amqp_connection(self) -> 'Connection':
         """ Create a new AMQP connection.
         """
-        broker_url = f'{self._broker_config.protocol}://{self._broker_config.username}:{self._broker_config.password}@{self._broker_config.address}/{self._broker_config.vhost}'
+        broker_url = f'{self._broker_config.protocol}://' + \
+                     f'{self._broker_config.username}:{self._broker_config.password}@' + \
+                     f'{self._broker_config.address}/{self._broker_config.vhost}'
         connection = Connection(broker_url)
         _ = connection.connect()
         return connection
