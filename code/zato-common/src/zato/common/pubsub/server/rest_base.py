@@ -81,6 +81,7 @@ wsgi_call_time = Histogram('zato_pubsub_wsgi_call_seconds', 'WSGI call processin
 memory_usage = Gauge('zato_pubsub_memory_bytes', 'Process memory usage')
 gc_collections = Counter('zato_pubsub_gc_collections_total', 'GC collections', ['generation'])
 gc_objects = Gauge('zato_pubsub_gc_objects', 'GC tracked objects')
+gc_objects_by_type = Gauge('zato_pubsub_gc_objects_by_type', 'GC objects by type', ['type'])
 thread_count = Gauge('zato_pubsub_threads', 'Active thread count')
 greenlet_count = Gauge('zato_pubsub_greenlets', 'Active greenlet count')
 socket_wait_time = Histogram('zato_pubsub_socket_wait_seconds', 'Socket wait time')
@@ -88,6 +89,9 @@ gil_wait_time = Histogram('zato_pubsub_gil_wait_seconds', 'GIL acquisition time'
 request_queue_depth = Gauge('zato_pubsub_request_queue_depth', 'Request queue depth')
 fd_count = Gauge('zato_pubsub_file_descriptors', 'Open file descriptors')
 context_switches = Counter('zato_pubsub_context_switches_total', 'Context switches', ['type'])
+tcp_connections = Gauge('zato_pubsub_tcp_connections', 'TCP connections', ['state'])
+cpu_percent = Gauge('zato_pubsub_cpu_percent', 'CPU usage percent')
+io_counters = Gauge('zato_pubsub_io_bytes', 'IO bytes', ['direction'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -372,8 +376,37 @@ class BaseRESTServer(BaseServer):
                 process = psutil.Process()
                 memory_usage.set(process.memory_info().rss)
                 thread_count.set(threading.active_count())
-                gc_objects.set(len(gc.get_objects()))
+                
+                # GC object tracking
+                all_objects = gc.get_objects()
+                gc_objects.set(len(all_objects))
+                
+                # Count objects by type
+                type_counts = {}
+                for obj in all_objects[:1000]:  # Sample first 1000 to avoid overhead
+                    obj_type = type(obj).__name__
+                    type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
+                
+                for obj_type, count in type_counts.items():
+                    gc_objects_by_type.labels(type=obj_type).set(count)
+                
                 fd_count.set(process.num_fds())
+                cpu_percent.set(process.cpu_percent())
+                
+                # IO stats
+                io_stats = process.io_counters()
+                io_counters.labels(direction='read').set(io_stats.read_bytes)
+                io_counters.labels(direction='write').set(io_stats.write_bytes)
+                
+                # TCP connections
+                connections = process.connections()
+                conn_states = {}
+                for conn in connections:
+                    state = conn.status
+                    conn_states[state] = conn_states.get(state, 0) + 1
+                
+                for state, count in conn_states.items():
+                    tcp_connections.labels(state=state).set(count)
                 
                 # Track GC collection counts
                 gc_stats = gc.get_stats()
@@ -383,7 +416,7 @@ class BaseRESTServer(BaseServer):
                 ctx_switches = process.num_ctx_switches()
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
                 context_switches.labels(type='involuntary')._value._value = ctx_switches.involuntary
-
+                
             except Exception as e:
                 logger.error(f'Metrics collection error: {format_exc()}')
 
