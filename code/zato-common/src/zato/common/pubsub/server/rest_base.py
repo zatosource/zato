@@ -647,7 +647,6 @@ class BaseRESTServer(BaseServer):
     def _wsgi_wrapper(self, environ, start_response):
         """ WSGI wrapper to measure gevent-level timing.
         """
-        logger.error(f'WSGI wrapper called for {environ.get("PATH_INFO", "unknown")}')
         try:
             # Track active greenlets
             active_greenlets.set(len(gevent._get_hub().loop._callbacks))
@@ -655,17 +654,14 @@ class BaseRESTServer(BaseServer):
             with gevent_request_time.time():
                 result = self._call(environ, start_response)
 
-            logger.error(f'WSGI wrapper completed')
             return result
         except Exception as e:
-            logger.error(f'WSGI wrapper error: {format_exc()}')
             return self._call(environ, start_response)
 
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
         """
         def wsgi_wrapper(environ, start_response):
-            logger.error(f'Gevent wrapper called for {environ.get("PATH_INFO", "unknown")}')
             with gevent_request_time.time():
                 return self(environ, start_response)
 
