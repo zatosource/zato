@@ -662,8 +662,13 @@ class BaseRESTServer(BaseServer):
         """ Run the server using gevent's WSGIServer.
         """
         def wsgi_wrapper(environ, start_response):
-            with gevent_request_time.time():
-                return self(environ, start_response)
+            start_time = time.time()
+            try:
+                result = self(environ, start_response)
+                return result
+            finally:
+                duration = time.time() - start_time
+                gevent_request_time.observe(duration)
 
         server = WSGIServer((self.host, self.port), wsgi_wrapper)
         logger.info(f'Starting PubSub REST API server on {self.host}:{self.port}')
