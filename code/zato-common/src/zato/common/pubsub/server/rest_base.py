@@ -38,6 +38,7 @@ from zato.common.typing_ import any_, anydict, dict_, list_, strnone
 from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # gevent
+import gevent
 from gevent.pywsgi import WSGIServer
 
 # werkzeug
@@ -92,6 +93,9 @@ context_switches = Counter('zato_pubsub_context_switches_total', 'Context switch
 tcp_connections = Gauge('zato_pubsub_tcp_connections', 'TCP connections', ['state'])
 cpu_percent = Gauge('zato_pubsub_cpu_percent', 'CPU usage percent')
 io_counters = Gauge('zato_pubsub_io_bytes', 'IO bytes', ['direction'])
+gevent_request_time = Histogram('zato_pubsub_gevent_request_seconds', 'Gevent WSGI request time')
+gevent_queue_time = Histogram('zato_pubsub_gevent_queue_seconds', 'Gevent request queue time')
+active_greenlets = Gauge('zato_pubsub_active_greenlets', 'Active greenlets in gevent')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -640,10 +644,21 @@ class BaseRESTServer(BaseServer):
 
 # ################################################################################################################################
 
+    def _wsgi_wrapper(self, environ, start_response):
+        """ WSGI wrapper to measure gevent-level timing.
+        """
+        # Track active greenlets
+        active_greenlets.set(len(gevent._get_hub().loop._callbacks))
+        
+        with gevent_request_time.time():
+            result = self(environ, start_response)
+        
+        return result
+
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
         """
-        server = WSGIServer((self.host, self.port), ProxyFix(self))
+        server = WSGIServer((self.host, self.port), self._wsgi_wrapper)
         logger.info(f'Starting PubSub REST API server on {self.host}:{self.port}')
         server.serve_forever()
 
