@@ -228,7 +228,7 @@ class PubSubRESTServerPull(BaseRESTServer):
                         with queue_op_time.time():
                             while messages_retrieved < max_messages:
                                 try:
-                                    # Try to get a message with timeout
+                                    # Get messages without waiting for them if none is available
                                     message = simple_queue.get(block=False)
 
                                     if message is None:
@@ -242,6 +242,7 @@ class PubSubRESTServerPull(BaseRESTServer):
 
                                 except Empty:
                                     break
+
                                 except Exception as e:
                                     logger.error(f'[{cid}] Error getting message: {format_exc()}')
                                     break
