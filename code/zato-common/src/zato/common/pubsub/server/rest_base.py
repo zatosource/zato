@@ -366,19 +366,19 @@ class BaseRESTServer(BaseServer):
             self._metrics_counter += 1
         else:
             self._metrics_counter = 1
-            
-        if self._metrics_counter % 10 == 0:
+
+        if self._metrics_counter % 100 == 0:
             try:
                 process = psutil.Process()
                 memory_usage.set(process.memory_info().rss)
                 thread_count.set(threading.active_count())
                 gc_objects.set(len(gc.get_objects()))
                 fd_count.set(process.num_fds())
-                
+
                 ctx_switches = process.num_ctx_switches()
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
                 context_switches.labels(type='involuntary')._value._value = ctx_switches.involuntary
-                
+
             except Exception as e:
                 logger.error(f'Metrics collection error: {format_exc()}')
 
