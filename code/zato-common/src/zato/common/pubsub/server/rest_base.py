@@ -380,38 +380,38 @@ class BaseRESTServer(BaseServer):
                 process = psutil.Process()
                 memory_usage.set(process.memory_info().rss)
                 thread_count.set(threading.active_count())
-                
+
                 # GC object tracking
                 all_objects = gc.get_objects()
                 gc_objects.set(len(all_objects))
-                
+
                 # Count objects by type
                 type_counts = {}
                 for obj in all_objects[:1000]:  # Sample first 1000 to avoid overhead
                     obj_type = type(obj).__name__
                     type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
-                
+
                 for obj_type, count in type_counts.items():
                     gc_objects_by_type.labels(type=obj_type).set(count)
-                
+
                 fd_count.set(process.num_fds())
                 cpu_percent.set(process.cpu_percent())
-                
+
                 # IO stats
                 io_stats = process.io_counters()
                 io_counters.labels(direction='read').set(io_stats.read_bytes)
                 io_counters.labels(direction='write').set(io_stats.write_bytes)
-                
+
                 # TCP connections
                 connections = process.connections()
                 conn_states = {}
                 for conn in connections:
                     state = conn.status
                     conn_states[state] = conn_states.get(state, 0) + 1
-                
+
                 for state, count in conn_states.items():
                     tcp_connections.labels(state=state).set(count)
-                
+
                 # Track GC collection counts
                 gc_stats = gc.get_stats()
                 for i, stat in enumerate(gc_stats):
@@ -420,7 +420,7 @@ class BaseRESTServer(BaseServer):
                 ctx_switches = process.num_ctx_switches()
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
                 context_switches.labels(type='involuntary')._value._value = ctx_switches.involuntary
-                
+
             except Exception as e:
                 logger.error(f'Metrics collection error: {format_exc()}')
 
@@ -647,13 +647,17 @@ class BaseRESTServer(BaseServer):
     def _wsgi_wrapper(self, environ, start_response):
         """ WSGI wrapper to measure gevent-level timing.
         """
-        # Track active greenlets
-        active_greenlets.set(len(gevent._get_hub().loop._callbacks))
-        
-        with gevent_request_time.time():
-            result = self._call(environ, start_response)
-        
-        return result
+        try:
+            # Track active greenlets
+            active_greenlets.set(len(gevent._get_hub().loop._callbacks))
+
+            with gevent_request_time.time():
+                result = self._call(environ, start_response)
+
+            return result
+        except Exception as e:
+            logger.error(f'WSGI wrapper error: {format_exc()}')
+            return self._call(environ, start_response)
 
     def run(self) -> 'None':
         """ Run the server using gevent's WSGIServer.
