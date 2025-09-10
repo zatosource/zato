@@ -222,10 +222,12 @@ class PubSubRESTServerPull(BaseRESTServer):
                 # Fetch messages using basic_get
                 with queue_op_time.time():
                     for _ in range(max_messages):
-                        method, properties, body = channel.basic_get(queue_name)
-                        if method is None:
+                        result = channel.basic_get(queue_name)
+                        if result is None:
                             # No more messages
                             break
+
+                        method, properties, body = result
 
                         # Acknowledge the message
                         channel.basic_ack(method.delivery_tag)
