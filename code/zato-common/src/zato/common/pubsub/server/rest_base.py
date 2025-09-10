@@ -374,6 +374,11 @@ class BaseRESTServer(BaseServer):
                 thread_count.set(threading.active_count())
                 gc_objects.set(len(gc.get_objects()))
                 fd_count.set(process.num_fds())
+                
+                # Track GC collection counts
+                gc_stats = gc.get_stats()
+                for i, stat in enumerate(gc_stats):
+                    gc_collections.labels(generation=str(i))._value._value = stat['collections']
 
                 ctx_switches = process.num_ctx_switches()
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
