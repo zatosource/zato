@@ -60,8 +60,20 @@ class Consumer(Client):
 
         # Prometheus metrics
         self.registry = CollectorRegistry()
-        self.messages_consumed = Counter('zato_messages_consumed_total', 'Total messages consumed', ['consumer_id'], registry=self.registry)
-        self.request_duration = Histogram('zato_consume_request_duration_seconds', 'Time spent on consume request', ['consumer_id'], registry=self.registry)
+
+        # Determine consumer range based on consumer_id
+        if consumer_id <= 50:
+            consumer_range = "1-50"
+        elif consumer_id <= 100:
+            consumer_range = "51-100"
+        elif consumer_id <= 150:
+            consumer_range = "101-150"
+        else:
+            consumer_range = f"{((consumer_id-1)//50)*50+1}-{((consumer_id-1)//50+1)*50}"
+
+        self.consumer_range = consumer_range
+        self.messages_consumed = Counter('zato_messages_consumed_total', 'Total messages consumed', ['consumer_range'], registry=self.registry)
+        self.request_duration = Histogram('zato_consume_request_duration_seconds', 'Time spent on consume request', ['consumer_range'], registry=self.registry)
 
 # ################################################################################################################################
 
@@ -94,7 +106,7 @@ class Consumer(Client):
         response = self.session.post(url, json=payload, headers=headers, auth=auth)
         duration = time.time() - start_time
 
-        self.request_duration.labels(consumer_id=str(self.client_id)).observe(duration)
+        self.request_duration.labels(consumer_range=self.consumer_range).observe(duration)
 
         success = response.status_code == 200
 
@@ -105,7 +117,7 @@ class Consumer(Client):
                 message_count = len(messages)
                 logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
-                self.messages_consumed.labels(consumer_id=str(self.client_id)).inc(message_count)
+                self.messages_consumed.labels(consumer_range=self.consumer_range).inc(message_count)
                 self.progress_tracker.update_progress(True, message_count)
 
             except Exception as e:
@@ -115,7 +127,7 @@ class Consumer(Client):
             logger.error(f'Client {self.client_id}: Failed to consume messages: {response.status_code} - {response.text}')
             self.progress_tracker.update_progress(False)
 
-        push_to_gateway('server:9091', job=f'consumer_{self.client_id}', registry=self.registry)
+        push_to_gateway('server:9091', job=f'consumer_{self.consumer_range}', registry=self.registry)
 
 # ################################################################################################################################
 
