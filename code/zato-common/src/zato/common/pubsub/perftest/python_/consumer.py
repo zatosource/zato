@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt
 # stdlib
 import os
 import json
+import time
 from logging import getLogger
 from traceback import format_exc
 
@@ -18,6 +19,9 @@ from requests.exceptions import ConnectionError
 
 # gevent
 from gevent import sleep
+
+# prometheus
+from prometheus_client import Counter, Histogram, push_to_gateway, CollectorRegistry
 
 # Zato
 from zato.common.pubsub.perftest.python_.client import Client
@@ -54,6 +58,11 @@ class Consumer(Client):
         self.pull_interval = pull_interval
         self.max_messages = max_messages
 
+        # Prometheus metrics
+        self.registry = CollectorRegistry()
+        self.messages_consumed = Counter('zato_messages_consumed_total', 'Total messages consumed', ['consumer_id'], registry=self.registry)
+        self.request_duration = Histogram('zato_consume_request_duration_seconds', 'Time spent on consume request', ['consumer_id'], registry=self.registry)
+
 # ################################################################################################################################
 
     def _get_config(self) -> 'anydict':
@@ -80,7 +89,12 @@ class Consumer(Client):
         url = f'{base_url}/pubsub/messages/get'
         payload = {'max_messages': max_messages}
         logger.debug(f'Client {self.client_id}: Attempting to consume messages')
+
+        start_time = time.time()
         response = self.session.post(url, json=payload, headers=headers, auth=auth)
+        duration = time.time() - start_time
+
+        self.request_duration.labels(consumer_id=str(self.client_id)).observe(duration)
 
         success = response.status_code == 200
 
@@ -91,6 +105,7 @@ class Consumer(Client):
                 message_count = len(messages)
                 logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
+                self.messages_consumed.labels(consumer_id=str(self.client_id)).inc(message_count)
                 self.progress_tracker.update_progress(True, message_count)
 
             except Exception as e:
@@ -99,6 +114,8 @@ class Consumer(Client):
         else:
             logger.error(f'Client {self.client_id}: Failed to consume messages: {response.status_code} - {response.text}')
             self.progress_tracker.update_progress(False)
+
+        push_to_gateway('server:9091', job=f'consumer_{self.client_id}', registry=self.registry)
 
 # ################################################################################################################################
 
