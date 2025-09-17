@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
+import urllib.request
 from logging import getLogger
 
 # gevent
@@ -57,25 +59,30 @@ def _get_connections_data(vhost:'str') -> 'dict_':
 def _get_consumers_data(vhost:'str') -> 'dict_':
     """ Get raw consumers data from rabbitmqctl.
     """
-    print('CALLING SUBPROCESS')
+    command_args = f'list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json'
 
-    result = subprocess_run(
-        f'/usr/lib/rabbitmq/bin/rabbitmqctl list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json',
-        shell=True,
-        capture_output=True,
-        text=True,
-        timeout=2
+    request_data = {
+        'args': command_args
+    }
+
+    data = json.dumps(request_data).encode('utf-8')
+
+    req = urllib.request.Request(
+        'http://127.0.0.1:25090',
+        data=data,
+        headers={'Content-Type': 'application/json'}
     )
 
-    print()
-    print(111, result)
-    print()
-
-    return {
-        'returncode': result.returncode,
-        'stdout': result.stdout,
-        'stderr': result.stderr
-    }
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            response_data = json.loads(response.read().decode('utf-8'))
+            return response_data
+    except Exception as e:
+        return {
+            'returncode': -1,
+            'stdout': '',
+            'stderr': f'Failed to connect to rabbitmqctl server: {e}'
+        }
 
 # ################################################################################################################################
 
