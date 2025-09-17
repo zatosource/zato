@@ -38,6 +38,7 @@ from zato.common.api import PubSub
 from zato.common.pubsub.server.rest_publish import PubSubRESTServerPublish
 from zato.common.pubsub.server.rest_pull import PubSubRESTServerPull
 from zato.common.pubsub.util import get_broker_config, cleanup_broker_impl
+from zato.common.pubsub.util_cli import list_connections as list_connections_cli
 from zato.common.util.api import as_bool, new_cid_cli
 
 # ################################################################################################################################
@@ -231,7 +232,7 @@ def get_parser() -> 'argparse.ArgumentParser':
     # List connections command
     connections_parser = subparsers.add_parser('list-connections', help='List and analyze RabbitMQ connections')
     _ = connections_parser.add_argument('--has_debug', action='store_true', help='Enable has_debug mode')
-    _ = connections_parser.add_argument('--management-port', type=int, default=15672, help='RabbitMQ management port')
+    _ = connections_parser.add_argument('--vhost', type=str, required=True, help='RabbitMQ vhost name')
     _ = connections_parser.add_argument('--output', type=str, default='json', choices=['json', 'pretty'], help='Output format')
 
 
@@ -364,17 +365,14 @@ def list_connections(args:'argparse.Namespace') -> 'OperationResult':
         cid = new_cid_cli()
         logger.info(f'[{cid}] Listing RabbitMQ connections')
 
-        # Create a temporary server instance to use its list_connections method
-        server = PubSubRESTServerPublish(host='0.0.0.0', port=_default_port_publish)
-
-        # Get connection information
-        result = server.list_connections(cid, args.management_port)
+        # Get connection information using CLI implementation
+        queue_name = getattr(args, 'queue_name', '')
+        result = list_connections_cli(cid, args.vhost, queue_name)
 
         # Format and print the output
         if args.output == 'pretty':
             print('\nRabbitMQ Connection Analysis:')
             print(f'Total connections: {result['total_connections']}')
-
             print('\nConnection Types:')
             for conn_type, count in result['connection_types'].items():
                 print(f'  - {conn_type}: {count}')
