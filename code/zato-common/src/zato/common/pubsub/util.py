@@ -319,50 +319,6 @@ class ConsumerManager:
 
 # ################################################################################################################################
 
-    def get_consumers_by_rest_api(self, queue_name: 'str') -> 'list':
-        """ Get the list of consumers for a given queue.
-        """
-
-        # URL encode the vhost and queue name
-        encoded_vhost = quote(self.broker_config.vhost, safe='')
-        encoded_queue_name = quote(queue_name, safe='')
-
-        # Build HTTP API URL for queue consumers
-        api_url = f'http://{self.host}:{self.management_port}/api/queues/{encoded_vhost}/{encoded_queue_name}'
-
-        try:
-            response = requests.get(api_url, auth=self.auth, timeout=self.request_timeout)
-
-            if _needs_details:
-                logger.info(f'[{self.cid}] Get Consumers response -> {response.json()}')
-
-            if response.status_code == OK:
-                queue_info = response.json()
-                consumers = queue_info['consumer_details']
-                consumer_count = len(consumers)
-
-                if consumer_count > -1:
-                    consumer_word = 'consumer' if consumer_count == 1 else 'consumers'
-                    if _needs_details:
-                        logger.info(f'[{self.cid}] Found {consumer_count} {consumer_word} for queue: `{queue_name}`')
-                return consumers
-
-            elif response.status_code == NOT_FOUND:
-                if _needs_details:
-                    logger.info(f'[{self.cid}] No consumers found for queue: `{queue_name}`')
-                return []
-            else:
-                msg = f'[{self.cid}] Failed to get consumers for queue `{queue_name}`: {response.status_code}, `{response.text}`'
-                logger.error(msg)
-                raise Exception(msg)
-
-        except RequestException as e:
-            msg = f'[{self.cid}] Could not get consumers for queue `{queue_name}`: `{e}`'
-            logger.warning(msg)
-            raise Exception(msg)
-
-# ################################################################################################################################
-
     def _close_consumers(self, queue_name: 'str') -> 'None':
         """ Close all consumers for a given queue by closing their channels.
         """
