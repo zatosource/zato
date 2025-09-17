@@ -73,25 +73,6 @@ def _get_consumers_data(vhost:'str') -> 'dict_':
 
 # ################################################################################################################################
 
-def _get_channels_data(vhost:'str') -> 'dict_':
-    """ Get raw channels data from rabbitmqctl.
-    """
-    result = subprocess_run(
-        f'sudo rabbitmqctl list_channels pid connection --vhost {vhost} --formatter json',
-        shell=True,
-        capture_output=True,
-        text=True,
-        timeout=30
-    )
-
-    return {
-        'returncode': result.returncode,
-        'stdout': result.stdout,
-        'stderr': result.stderr
-    }
-
-# ################################################################################################################################
-
 def _parse_client_properties(client_props_list:'list_') -> 'dict_':
     """ Parse client properties list into dictionary.
     """
