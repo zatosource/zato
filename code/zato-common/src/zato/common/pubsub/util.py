@@ -18,7 +18,7 @@ import requests
 from requests.exceptions import RequestException
 
 # Zato
-from zato.common.pubsub.util_cli import close_queue_consumers
+from zato.common.pubsub.util_cli import close_queue_consumers, get_queue_consumers
 
 # Zato
 from zato.common.api import PubSub
@@ -356,7 +356,7 @@ class ConsumerManager:
                 logger.info(f'[{self.cid}] Predicate called for queue: `{queue_name}`')
 
             try:
-                consumers = self.get_consumers_by_rest_api(queue_name)
+                consumers = get_queue_consumers(self.cid, self.broker_config.vhost, queue_name)
                 if _needs_details:
                     logger.info(f'[{self.cid}] Got consumers: {len(consumers)} for queue: `{queue_name}`')
 
