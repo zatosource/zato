@@ -18,6 +18,9 @@ import requests
 from requests.exceptions import RequestException
 
 # Zato
+from zato.common.pubsub.util_cli import close_queue_consumers
+
+# Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.common import BrokerConfig
 from zato.common.util.api import as_bool, utcnow, wait_for_predicate
@@ -320,47 +323,9 @@ class ConsumerManager:
 # ################################################################################################################################
 
     def _close_consumers(self, queue_name: 'str') -> 'None':
-        """ Close all consumers for a given queue by closing their channels.
+        """ Close all consumers for a given queue by closing their connections.
         """
-        consumers = self.get_consumers_by_rest_api(queue_name)
-
-        if not consumers:
-            if _needs_details:
-                logger.info(f'[{self.cid}] No consumers to close for queue: `{queue_name}`')
-            return
-
-        for consumer in consumers:
-            channel_details = consumer.get('channel_details', {})
-            connection_name = channel_details.get('connection_name')
-            consumer_tag = consumer['consumer_tag']
-
-            if not connection_name:
-                if _needs_details:
-                    msg = f'[{self.cid}] No connection_name in channel_details for consumer `{consumer_tag}` in queue `{queue_name}`'
-                    logger.info(msg)
-                continue
-
-            # URL encode the connection name
-            encoded_connection_name = quote(connection_name, safe='')
-
-            # Build API URL to close the connection (which closes all its channels)
-            api_url = f'http://{self.host}:{self.management_port}/api/connections/{encoded_connection_name}'
-
-            try:
-                response = requests.delete(api_url, auth=self.auth, timeout=self.request_timeout)
-
-                if response.status_code in (OK, NO_CONTENT):
-                    logger.info(f'[{self.cid}] Closed consumer: `{consumer_tag}` -> `{connection_name}` (`{queue_name}`)')
-                else:
-                    msg = f'[{self.cid}] Failed to close channel `{connection_name}` for consumer `{consumer_tag}` ' + \
-                           f'queue {queue_name}: {response.status_code}, {repr(response.text)}'
-                    logger.warning(msg)
-                    raise Exception(msg)
-
-            except RequestException as e:
-                msg = f'[{self.cid}] HTTP error closing `{connection_name}` for consumer `{consumer_tag}` ({queue_name}): {e}'
-                logger.warning(msg)
-                raise Exception(msg)
+        close_queue_consumers(self.cid, self.broker_config.vhost, queue_name)
 
 # ################################################################################################################################
 
