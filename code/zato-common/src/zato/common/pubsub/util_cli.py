@@ -304,4 +304,50 @@ def list_connections(cid:'str', vhost:'str', queue_name:'str'='') -> 'dict_':
         }
 
 # ################################################################################################################################
+
+def close_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'None':
+    """ Close all consumers for a given queue by closing their connections.
+    """
+    # Get consumers for the queue
+    consumers = get_queue_consumers(cid, vhost, queue_name)
+
+    if not consumers:
+        if _needs_details:
+            logger.info(f'[{cid}] No consumers to close for queue: `{queue_name}`')
+        return
+
+    # Get all connections
+    connections_data = _get_connections_data(vhost)
+    if connections_data['returncode'] != 0:
+        logger.warning(f'[{cid}] Failed to get connections: {connections_data["stderr"]}')
+        raise Exception(connections_data['stderr'])
+
+    connections = _parse_connections_output(connections_data['stdout'])
+
+    # Close each connection that has consumers for this queue
+    for connection in connections:
+        connection_name = connection['name']
+
+        try:
+            result = subprocess_run(
+                f'sudo rabbitmqctl close_connection "{connection_name}" "Closing consumers for queue {queue_name}"',
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                logger.info(f'[{cid}] Closed connection: `{connection_name}` (`{queue_name}`)')
+            else:
+                msg = f'[{cid}] Failed to close connection `{connection_name}` for queue {queue_name}: {result.stderr}'
+                logger.warning(msg)
+                raise Exception(msg)
+
+        except Exception as e:
+            msg = f'[{cid}] Error closing connection `{connection_name}` for queue {queue_name}: {e}'
+            logger.warning(msg)
+            raise Exception(msg)
+
+# ################################################################################################################################
 # ################################################################################################################################
