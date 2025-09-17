@@ -57,13 +57,19 @@ def _get_connections_data(vhost:'str') -> 'dict_':
 def _get_consumers_data(vhost:'str') -> 'dict_':
     """ Get raw consumers data from rabbitmqctl.
     """
+    print('CALLING SUBPROCESS')
+
     result = subprocess_run(
-        f'sudo rabbitmqctl list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json',
+        f'/usr/lib/rabbitmq/bin/rabbitmqctl list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json',
         shell=True,
         capture_output=True,
         text=True,
-        timeout=30
+        timeout=2
     )
+
+    print()
+    print(111, result)
+    print()
 
     return {
         'returncode': result.returncode,
