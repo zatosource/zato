@@ -14,7 +14,6 @@ from logging import getLogger
 from traceback import format_exc
 
 # requests
-import requests
 from requests.exceptions import ConnectionError
 
 # gevent
