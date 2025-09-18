@@ -117,8 +117,9 @@ class Consumer(Client):
                 message_count = len(messages)
                 logger.debug(f'Client {self.client_id}: Retrieved {message_count} messages')
 
-                self.messages_consumed.labels(consumer_range=self.consumer_range).inc(message_count)
-                self.progress_tracker.update_progress(True, message_count)
+                if message_count > 0:
+                    self.messages_consumed.labels(consumer_range=self.consumer_range).inc(message_count)
+                    self.progress_tracker.update_progress(True, message_count)
 
             except Exception as e:
                 logger.error(f'Client {self.client_id}: Failed to parse response: {e}')
