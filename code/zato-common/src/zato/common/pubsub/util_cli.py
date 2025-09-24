@@ -214,8 +214,8 @@ def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
         consumers_data = _get_consumers_data(vhost)
 
         if consumers_data['returncode'] != 0:
-            logger.warning(f'Failed to get consumers: {consumers_data["stderr"]}')
-            raise Exception(consumers_data['stderr'])
+            msg = f'Failed to get consumers: {consumers_data["stderr"]}'
+            raise Exception(msg)
 
         all_consumers = _parse_consumers_details(consumers_data['stdout'], vhost)
 
