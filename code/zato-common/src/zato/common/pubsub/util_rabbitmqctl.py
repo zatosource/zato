@@ -73,14 +73,14 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
 
                 # Extract JSON from output - parse from end backwards
                 lines = raw_content.strip().split('\n')
-                
+
                 # Find the last line that ends with ] or }
                 end_idx = -1
                 for i in range(len(lines) - 1, -1, -1):
                     if lines[i].endswith(']') or lines[i].endswith('}'):
                         end_idx = i
                         break
-                
+
                 if end_idx >= 0:
                     # Find the first line before end_idx that starts with [ or {
                     start_idx = -1
@@ -88,9 +88,12 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                         if lines[i].startswith('[') or lines[i].startswith('{'):
                             start_idx = i
                             break
-                    
+
                     if start_idx >= 0:
-                        stdout_content = '\n'.join(lines[start_idx:end_idx + 1])
+                        json_content = '\n'.join(lines[start_idx:end_idx + 1])
+                        if json_content.startswith('{') and json_content.endswith(']'):
+                            json_content = '[' + json_content[:-1] + '}]'
+                        stdout_content = json_content
 
             response_data = {
                 'returncode': result.returncode,
