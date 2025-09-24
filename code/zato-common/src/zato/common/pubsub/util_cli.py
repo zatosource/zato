@@ -82,7 +82,7 @@ def _get_consumers_data(vhost:'str') -> 'dict_':
         return {
             'returncode': -1,
             'stdout': '',
-            'stderr': f'Failed to connect to rabbitmqctl server -> {response_data} -> {format_exc()}'
+            'stderr': f'Failed to connect to rabbitmqctl server -> {format_exc()}'
         }
 
 # ################################################################################################################################
