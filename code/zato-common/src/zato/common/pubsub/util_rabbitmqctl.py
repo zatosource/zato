@@ -71,31 +71,20 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                 with open(temp_file, 'r') as f:
                     raw_content = f.read()
 
-                # Extract JSON from output - parse from end backwards
                 lines = raw_content.strip().split('\n')
-
-                # Find the last line that ends with ] or }
-                end_idx = -1
-                for i in range(len(lines) - 1, -1, -1):
-                    if lines[i].endswith(']') or lines[i].endswith('}'):
-                        end_idx = i
-                        break
-
-                if end_idx >= 0:
-                    # Find the first line before end_idx that starts with [ or {
-                    start_idx = -1
-                    for i in range(end_idx, -1, -1):
-                        if lines[i].startswith('[') or lines[i].startswith('{'):
-                            start_idx = i
-                            break
-
-                    if start_idx >= 0:
-                        json_content = '\n'.join(lines[start_idx:end_idx + 1])
-                        if json_content.startswith('{') and json_content.endswith(']'):
-                            json_content = '[' + json_content[:-1] + '}]'
-                        elif json_content.startswith('[') and '\n}]' in json_content:
-                            json_content = json_content.replace('\n}]', ']')
-                        stdout_content = json_content
+                
+                json_start = -1
+                json_end = -1
+                
+                for i, line in enumerate(lines):
+                    if line.startswith('[') or line.startswith('{'):
+                        json_start = i
+                    if line.endswith(']') or line.endswith('}'):
+                        json_end = i
+                
+                if json_start >= 0 and json_end >= 0:
+                    json_lines = lines[json_start:json_end + 1]
+                    stdout_content = ''.join(json_lines)
 
             response_data = {
                 'returncode': result.returncode,
