@@ -935,7 +935,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 def _pubsub_subscription(session, cluster_id):
 
-    # Use distinct on subscription ID to avoid duplicates from topic joins
+    # Use subquery to handle multiple topics per subscription
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
@@ -947,20 +947,35 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.push_type,
         PubSubSubscription.rest_push_endpoint_id,
         PubSubSubscription.push_service_name,
-        PubSubTopic.name.label('topic_name'),
+        func.min(PubSubTopic.name).label('topic_name'),
         SecurityBase.name.label('sec_name'),
         SecurityBase.username,
         SecurityBase.password.label('password'),
         HTTPSOAP.name.label('rest_push_endpoint_name') # type: ignore
     ).\
-        distinct(PubSubSubscription.id).\
         join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
         join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
         join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
         filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
-        order_by(PubSubSubscription.id, PubSubTopic.name, SecurityBase.name)
+        group_by(
+            PubSubSubscription.id,
+            PubSubSubscription.sub_key,
+            PubSubSubscription.is_active,
+            PubSubSubscription.sec_base_id,
+            PubSubSubscription.created,
+            PubSubSubscription.last_updated,
+            PubSubSubscription.delivery_type,
+            PubSubSubscription.push_type,
+            PubSubSubscription.rest_push_endpoint_id,
+            PubSubSubscription.push_service_name,
+            SecurityBase.name,
+            SecurityBase.username,
+            SecurityBase.password,
+            HTTPSOAP.name
+        ).\
+        order_by(PubSubSubscription.id, SecurityBase.name)
 
 def pubsub_subscription(session, cluster_id, id):
     """ An individual Pub/Sub subscription.
