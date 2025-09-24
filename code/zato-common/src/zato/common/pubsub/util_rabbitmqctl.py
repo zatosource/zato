@@ -70,13 +70,21 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
             if os.path.exists(temp_file):
                 with open(temp_file, 'r') as f:
                     raw_content = f.read()
-                
+
                 # Extract JSON from output
                 lines = raw_content.strip().split('\n')
+                json_started = False
+                json_lines = []
+
                 for line in lines:
-                    if (line.startswith('[') and line.endswith(']')) or (line.startswith('{') and line.endswith('}')):
-                        stdout_content = line
-                        break
+                    if line.startswith('[') or line.startswith('{'):
+                        json_started = True
+                        json_lines = [line]
+                    elif json_started:
+                        json_lines.append(line)
+                        if line.endswith(']') or line.endswith('}'):
+                            stdout_content = '\n'.join(json_lines)
+                            break
 
             response_data = {
                 'returncode': result.returncode,
