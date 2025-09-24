@@ -1241,7 +1241,7 @@ class ServiceStore:
             return imported
         except Exception as e:
             logger.info('Could not import module `%s` (internal:%d) -> `%s` -> `%s`',
-                mod_name, is_internal, e.args, e)
+                mod_name, is_internal, e.args, format_exc())
             return []
 
 # ################################################################################################################################
