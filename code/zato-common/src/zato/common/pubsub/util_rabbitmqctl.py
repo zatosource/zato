@@ -71,20 +71,26 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                 with open(temp_file, 'r') as f:
                     raw_content = f.read()
 
-                # Extract JSON from output
+                # Extract JSON from output - parse from end backwards
                 lines = raw_content.strip().split('\n')
-                json_started = False
-                json_lines = []
-
-                for line in lines:
-                    if line.startswith('[') or line.startswith('{'):
-                        json_started = True
-                        json_lines = [line]
-                    elif json_started:
-                        json_lines.append(line)
-                        if line.endswith(']') or line.endswith('}'):
-                            stdout_content = '\n'.join(json_lines)
+                
+                # Find the last line that ends with ] or }
+                end_idx = -1
+                for i in range(len(lines) - 1, -1, -1):
+                    if lines[i].endswith(']') or lines[i].endswith('}'):
+                        end_idx = i
+                        break
+                
+                if end_idx >= 0:
+                    # Find the first line before end_idx that starts with [ or {
+                    start_idx = -1
+                    for i in range(end_idx, -1, -1):
+                        if lines[i].startswith('[') or lines[i].startswith('{'):
+                            start_idx = i
                             break
+                    
+                    if start_idx >= 0:
+                        stdout_content = '\n'.join(lines[start_idx:end_idx + 1])
 
             response_data = {
                 'returncode': result.returncode,
