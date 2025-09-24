@@ -51,15 +51,18 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
 
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
             temp_file = f'/tmp/rabbitmq_output_{timestamp}.txt'
-            
-            full_command = f'sudo -u rabbitmq /usr/lib/rabbitmq/bin/rabbitmqctl {command_args} > {temp_file} 2>&1'
+
+            full_command = f'sudo -u rabbitmq /usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
             logger.info(f'Executing: {full_command}')
 
-            result = subprocess.run(
-                full_command,
-                shell=True,
-                timeout=30
-            )
+            with open(temp_file, 'w') as f:
+                result = subprocess.run(
+                    full_command,
+                    shell=True,
+                    stdout=f,
+                    stderr=subprocess.STDOUT,
+                    timeout=30
+                )
 
             logger.info(f'Command completed with returncode: {result.returncode}')
 
