@@ -77,8 +77,6 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                     if (line.startswith('[') and line.endswith(']')) or (line.startswith('{') and line.endswith('}')):
                         stdout_content = line
                         break
-                
-                os.remove(temp_file)
 
             response_data = {
                 'returncode': result.returncode,
