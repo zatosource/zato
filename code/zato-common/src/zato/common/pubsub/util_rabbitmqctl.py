@@ -84,7 +84,10 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                 
                 if json_start >= 0 and json_end >= 0:
                     json_lines = lines[json_start:json_end + 1]
-                    stdout_content = ''.join(json_lines)
+                    json_content = ''.join(json_lines)
+                    if json_content.startswith('{') and json_content.endswith(']'):
+                        json_content = '[' + json_content[:-1] + '}]'
+                    stdout_content = json_content
 
             response_data = {
                 'returncode': result.returncode,
