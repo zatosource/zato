@@ -9,7 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import os
 import subprocess
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import getLogger
 
@@ -47,25 +49,30 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
             command_args = request_data.get('args', '')
             logger.info(f'Command args: {command_args}')
 
-            full_command = f'sudo -u rabbitmq /usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+            temp_file = f'/tmp/rabbitmq_output_{timestamp}.txt'
+            
+            full_command = f'sudo -u rabbitmq /usr/lib/rabbitmq/bin/rabbitmqctl {command_args} > {temp_file} 2>&1'
             logger.info(f'Executing: {full_command}')
 
             result = subprocess.run(
                 full_command,
                 shell=True,
-                capture_output=True,
-                text=True,
                 timeout=30
             )
 
             logger.info(f'Command completed with returncode: {result.returncode}')
-            if result.stderr:
-                logger.warning(f'Command stderr: {result.stderr}')
+
+            stdout_content = ''
+            if os.path.exists(temp_file):
+                with open(temp_file, 'r') as f:
+                    stdout_content = f.read()
+                os.remove(temp_file)
 
             response_data = {
                 'returncode': result.returncode,
-                'stdout': result.stdout,
-                'stderr': result.stderr
+                'stdout': stdout_content,
+                'stderr': ''
             }
 
             logger.info(f'Response data: {response_data}')
