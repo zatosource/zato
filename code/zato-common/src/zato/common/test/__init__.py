@@ -18,9 +18,6 @@ from uuid import uuid4
 # Bunch
 from bunch import Bunch, bunchify
 
-# mock
-from mock import MagicMock, Mock
-
 # six
 from six import string_types
 
@@ -443,6 +440,10 @@ class ServiceTestCase(TestCase):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
+
+        # Mock
+        from mock import MagicMock, Mock
+
         mock_data = mock_data or {}
         class_.component_enabled_email = True
         class_.component_enabled_search = True
