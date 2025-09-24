@@ -93,6 +93,8 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                         json_content = '\n'.join(lines[start_idx:end_idx + 1])
                         if json_content.startswith('{') and json_content.endswith(']'):
                             json_content = '[' + json_content[:-1] + '}]'
+                        elif json_content.startswith('[') and '\n}]' in json_content:
+                            json_content = json_content.replace('\n}]', ']')
                         stdout_content = json_content
 
             response_data = {
