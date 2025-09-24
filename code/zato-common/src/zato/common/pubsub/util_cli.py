@@ -42,7 +42,7 @@ def _get_connections_data(vhost:'str') -> 'dict_':
     """ Get raw connections data from rabbitmqctl.
     """
     result = subprocess_run(
-        f"sudo rabbitmqctl list_connections name user client_properties connected_at channels --vhost {vhost} --formatter json 2>&1 | sed -n '/^\[/,/^\]$/p",
+        f"sudo rabbitmqctl list_connections name user client_properties connected_at channels --vhost {vhost} --formatter json",
         shell=True,
         capture_output=True,
         text=True,
@@ -60,7 +60,7 @@ def _get_connections_data(vhost:'str') -> 'dict_':
 def _get_consumers_data(vhost:'str') -> 'dict_':
     """ Get raw consumers data from rabbitmqctl.
     """
-    command_args = f"list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json 2>&1 | sed -n '/^\[/,/^\]$/p"
+    command_args = f"list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json"
 
     request_data = {
         'args': command_args
