@@ -11,6 +11,7 @@ import json
 import os
 import urllib.request
 from logging import getLogger
+from traceback import format_exc
 
 # gevent
 from gevent.subprocess import run as subprocess_run
@@ -77,11 +78,11 @@ def _get_consumers_data(vhost:'str') -> 'dict_':
         with urllib.request.urlopen(req, timeout=5) as response:
             response_data = json.loads(response.read().decode('utf-8'))
             return response_data
-    except Exception as e:
+    except Exception:
         return {
             'returncode': -1,
             'stdout': '',
-            'stderr': f'Failed to connect to rabbitmqctl server: {e}'
+            'stderr': f'Failed to connect to rabbitmqctl server: {format_exc()}'
         }
 
 # ################################################################################################################################
