@@ -72,24 +72,26 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
                     raw_content = f.read()
 
                 lines = raw_content.strip().split('\n')
-                
+
                 json_start = -1
                 json_end = -1
-                
-                for i, line in enumerate(lines):
-                    if line.startswith('[') or line.startswith('{'):
-                        json_start = i
-                    if line.endswith(']') or line.endswith('}'):
+
+                for i in range(len(lines) - 1, -1, -1):
+                    line = lines[i].strip()
+                    if line == ']' or line == '}':
                         json_end = i
-                
+                        break
+
+                if json_end >= 0:
+                    for i in range(json_end, -1, -1):
+                        line = lines[i].strip()
+                        if line == '[' or line == '{':
+                            json_start = i
+                            break
+
                 if json_start >= 0 and json_end >= 0:
                     json_lines = lines[json_start:json_end + 1]
-                    json_content = ''.join(json_lines)
-                    if json_content.startswith('{') and json_content.endswith(']'):
-                        json_content = '[' + json_content[:-1] + '}]'
-                    elif json_content.startswith('[') and '}}]' in json_content:
-                        json_content = json_content.replace('}}]', '}]')
-                    stdout_content = json_content
+                    stdout_content = '\n'.join(json_lines)
 
             response_data = {
                 'returncode': result.returncode,
