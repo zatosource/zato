@@ -207,6 +207,8 @@ def _analyze_connections(connections:'list_') -> 'dict_':
 def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
     """ Get detailed consumer information for a specific queue.
     """
+    consumers_data = None
+
     if _needs_details:
         logger.info(f'[{cid}] Getting consumers for queue {queue_name}')
 
@@ -232,8 +234,8 @@ def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
 
         return queue_consumers
 
-    except Exception as e:
-        logger.error(f'[{cid}] Error getting queue consumers: {e}')
+    except Exception:
+        logger.error(f'[{cid}] Error getting queue consumers -> {consumers_data} -> {format_exc()}')
         raise
 
 # ################################################################################################################################
