@@ -47,7 +47,7 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
             command_args = request_data.get('args', '')
             logger.info(f'Command args: {command_args}')
 
-            full_command = f'/usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
+            full_command = f'sudo /usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
             logger.info(f'Executing: {full_command}')
 
             result = subprocess.run(
