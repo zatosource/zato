@@ -10,7 +10,7 @@
   "hideControls": false,
   "id": null,
   "uid": "pubsub-perf-detail",
-  "title": "Pub/Sub Performance Details",
+  "title": "Pub/Sub Message Broker",
   "links": [],
   "tags": ["pubsub", "default"],
   "panels": [
