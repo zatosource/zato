@@ -93,18 +93,28 @@ class Create(ZatoCommand):
 
             session.flush()
 
+            # Create services
             admin_invoke_service_name = 'zato.server.service.internal.service.Invoke'
             admin_invoke_service = Service(None, admin_invoke_service_name, True, admin_invoke_service_name, True, cluster)
+            session.add(admin_invoke_service)
 
             ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
             ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
+            session.add(ide_publisher_service)
 
-            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
-            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
+            metrics_service_name = 'zato.metrics.get'
+            metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
+            session.add(metrics_service)
 
             ping_service = self.add_ping_service(session, cluster)
 
-            # Rule Engine Security Group
+            # Create channels
+            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
+            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
+            self.add_metrics_channel(session, cluster, metrics_service)
+
+            # Add other configurations
+            self.add_default_caches(session, cluster)
             self.add_rule_engine_configuration(session, cluster, ping_service)
 
             # Run ODB post-processing tasks
@@ -177,6 +187,24 @@ class Create(ZatoCommand):
         session.add(ping_no_sec_channel)
 
         return ping_service
+
+# ################################################################################################################################
+
+    def add_metrics_channel(self, session, cluster, service):
+        """ Adds a channel for the metrics service.
+        """
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
+
+        security = HTTPBasicAuth(
+            None, 'monitoring', True, 'monitoring', 'Metrics user', 'monitoring', cluster)
+        session.add(security)
+
+        channel = HTTPSOAP(
+            None, 'Zato Metrics', True, True, 'channel',
+            'plain_http', None, '/zato/metrics', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=security)
+        session.add(channel)
 
 # ################################################################################################################################
 
