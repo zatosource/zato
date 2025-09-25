@@ -234,7 +234,7 @@ class ConfigLoader:
         _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
 
         if not _has_rest_log_ignore:
-            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path]
+            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path, '/zato/metrics']
         else:
             rest_log_ignore = _logging_stanza['rest_log_ignore']
             rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]
