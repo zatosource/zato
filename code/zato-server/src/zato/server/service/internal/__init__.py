@@ -204,7 +204,7 @@ class Ping(AdminService):
 
 # ################################################################################################################################
 
-class GetMetrics(AdminService):
+class GetMetrics(Service):
     """ Returns metrics in Prometheus format.
     """
     name = 'zato.metrics.get'
