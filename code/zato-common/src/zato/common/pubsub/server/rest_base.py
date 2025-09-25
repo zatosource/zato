@@ -607,8 +607,8 @@ class BaseRESTServer(BaseServer):
 
         response:'APIResponse' = {
             'cid': cid,
-            'is_ok': result.is_ok,
-            'status': result.status
+            'is_ok': result['is_ok'],
+            'status': result['status']
         }
         return response
 
@@ -636,7 +636,7 @@ class BaseRESTServer(BaseServer):
         result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
         response:'APIResponse' = {
-            'is_ok': result.is_ok,
+            'is_ok': result['is_ok'],
             'cid': cid
         }
 
