@@ -189,6 +189,7 @@ class HTTPHandler:
                 response_time = delta.total_seconds()
 
                 # Update metrics
+                logger.info('Metrics update: channel_name="%s" status_code="%s"', channel_name, status_code)
                 zato_http_requests_total.labels(channel_name=channel_name, status_code=status_code).inc()
                 zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
 
