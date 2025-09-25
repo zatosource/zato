@@ -180,18 +180,17 @@ class HTTPHandler:
                         'user_agent': user_agent,
                 })
 
+        # .. how long it took to produce the response ..
+        delta = _utcnow() - request_ts_utc
+        response_time = delta.total_seconds()
+
+        # Update metrics
+        zato_http_requests_total.labels(channel_name=channel_name, status_code=status_code).inc()
+        zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
+
         # .. this goes to the server log ..
         if _has_log_info:
             if not wsgi_environ['PATH_INFO'] in self.rest_log_ignore:
-
-                # .. how long it took to produce the response ..
-                delta = _utcnow() - request_ts_utc
-                response_time = delta.total_seconds()
-
-                # Update metrics
-                zato_http_requests_total.labels(channel_name=channel_name, status_code=status_code).inc()
-                zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
-
                 # .. log information about what we are returning ..
                 msg = f'REST cha ← cid={cid}; {status_code} time={delta}; len={response_size}'
                 logger.info(msg)
