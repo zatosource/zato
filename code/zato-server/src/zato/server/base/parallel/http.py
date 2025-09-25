@@ -21,6 +21,9 @@ from tzlocal import get_localzone
 from zato.common.api import NO_REMOTE_ADDRESS
 from zato.common.util.api import new_cid_server
 
+# prometheus_client
+from prometheus_client import Counter, Histogram
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -33,6 +36,20 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato_rest')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Metrics
+try:
+    zato_http_requests_total = Counter(
+        'zato_http_requests_total', 'Total HTTP requests', ['channel_name', 'status_code'])
+    zato_http_request_duration_seconds = Histogram(
+        'zato_http_request_duration_seconds', 'HTTP request duration', ['channel_name'])
+except ValueError:
+    from prometheus_client import REGISTRY
+    zato_http_requests_total = REGISTRY._names_to_collectors['zato_http_requests_total']
+    zato_http_request_duration_seconds = REGISTRY._names_to_collectors['zato_http_request_duration_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,6 +186,11 @@ class HTTPHandler:
 
                 # .. how long it took to produce the response ..
                 delta = _utcnow() - request_ts_utc
+                response_time = delta.total_seconds()
+
+                # Update metrics
+                zato_http_requests_total.labels(channel_name=channel_name, status_code=status_code).inc()
+                zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
 
                 # .. log information about what we are returning ..
                 msg = f'REST cha ← cid={cid}; {status_code} time={delta}; len={response_size}'
