@@ -10,7 +10,7 @@
   "hideControls": false,
   "id": null,
   "uid": "rest-perf-detail",
-  "title": "REST API Performance",
+  "title": "REST API Channels and Outgoing Connections",
   "links": [],
   "tags": ["rest", "default"],
   "panels": [
