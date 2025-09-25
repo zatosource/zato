@@ -275,11 +275,13 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
             app = PubSubRESTServerPublish(
                 host=args.host,
                 port=port,
+                should_init_broker_client=True,
             )
         else:
             app = PubSubRESTServerPull(
                 host=args.host,
                 port=port,
+                should_init_broker_client=True,
             )
 
         # Wrap app with timing middleware
