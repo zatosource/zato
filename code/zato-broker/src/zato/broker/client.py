@@ -550,7 +550,7 @@ class BrokerClient:
             def set_response(self, response):
                 self.data = response
                 self.ready = True
-                reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
+                # reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
                 # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
                 logger.info(f'Rsp 🠈 {cid} - `{self.service}`')
 
