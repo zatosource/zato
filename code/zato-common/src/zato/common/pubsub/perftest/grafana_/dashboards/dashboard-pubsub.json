@@ -969,7 +969,7 @@
       "targets": [
         {
           "expr": "node_filesystem_size_bytes",
-          "legendFormat": "Total Disk Space - {{device}}",
+          "legendFormat": "{{device}}",
           "refId": "A"
         }
       ],
