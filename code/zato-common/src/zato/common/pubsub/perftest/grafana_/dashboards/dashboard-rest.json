@@ -61,7 +61,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Channel Requests/sec",
+      "title": "REST channels req/s",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -132,7 +132,7 @@
         ],
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 Channels by Request Rate",
+        "title": "Top 10 channels by req/s",
         "type": "bargauge"
     },
     {
@@ -182,7 +182,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "P95 Request Duration",
+      "title": "Channels response time",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -253,7 +253,7 @@
         ],
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 Channels by P95 Duration",
+        "title": "Top 10 Channels by response time",
         "type": "bargauge"
     }
   ],
