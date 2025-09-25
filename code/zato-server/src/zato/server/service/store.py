@@ -1418,9 +1418,10 @@ class ServiceStore:
                     item.zato_set_module_name(fs_location)
 
                     # OK, we want to deploy that service
+
+                    # If we are here, it means that we don't want to deploy that
                     return True
 
-        # If we are here, it means that we don't want to deploy that
         return False
 
 # ################################################################################################################################
