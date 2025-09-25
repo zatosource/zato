@@ -16,9 +16,6 @@ from traceback import format_exc
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring
 
-# prometheus_client
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
 # Zato
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
@@ -201,17 +198,6 @@ class Ping(AdminService):
         # self.logger.warning('PING invoked %s', self.request.raw_request)
         pub_cid = make_cid_public(self.cid)
         self.response.payload = f'{{"is_ok":true, "cid":"{pub_cid}"}}'
-
-# ################################################################################################################################
-
-class GetMetrics(Service):
-    """ Returns metrics in Prometheus format.
-    """
-    name = 'zato.metrics.get'
-
-    def handle(self):
-        self.response.payload = generate_latest().decode('utf-8')
-        self.response.content_type = CONTENT_TYPE_LATEST
 
 # ################################################################################################################################
 

@@ -16,6 +16,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.const import ServiceConst
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 
@@ -43,7 +44,6 @@ class Create(ZatoCommand):
     def execute(self, args, show_output=True):
 
         # stdlib
-        from datetime import datetime
         from traceback import format_exc
 
         # SQLAlchemy
@@ -61,7 +61,7 @@ class Create(ZatoCommand):
 
             cluster = Cluster()
             cluster.name = args.cluster_name
-            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
+            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), utcnow().isoformat())
 
             for name in('odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
                 setattr(cluster, name, getattr(args, name))
@@ -102,7 +102,7 @@ class Create(ZatoCommand):
             ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
             session.add(ide_publisher_service)
 
-            metrics_service_name = 'zato.metrics.get'
+            metrics_service_name = 'zato.server.service.internal.helpers.GetMetrics'
             metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
             session.add(metrics_service)
 
@@ -230,7 +230,7 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import MISC, SIMPLE_IO
+        from zato.common.api import SIMPLE_IO
         from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
