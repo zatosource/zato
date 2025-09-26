@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,9 +15,6 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
 from urllib.parse import urlencode
-
-# gevent
-from gevent.lock import RLock
 
 # requests
 from requests import Response as _RequestsResponse
@@ -43,7 +40,6 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
-from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,12 +178,13 @@ class BaseHTTPSOAPWrapper:
         """
         duration = (datetime.utcnow() - start_time).total_seconds()
         connection_name = self.config['name']
-        
-        zato_outgoing_http_requests_total.labels(
-            connection_name=connection_name, 
+
+        _ = zato_outgoing_http_requests_total.labels(
+            connection_name=connection_name,
             status_code=status_code
         ).inc()
-        zato_outgoing_http_request_duration_seconds.labels(
+
+        _ = zato_outgoing_http_request_duration_seconds.labels(
             connection_name=connection_name
         ).observe(duration)
 
@@ -775,7 +772,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if needs_exception:
                 raise
             else:
-                logger.warn('Caught an exception -> %s -> %s', e, format_exc())
+                logger.warning('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..
