@@ -197,7 +197,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "REST channels response time",
+      "title": "REST channels response time (s)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -213,12 +213,13 @@
       },
       "yaxes": [
         {
-          "format": "s",
-          "label": "seconds",
+          "format": "none",
+          "label": "seconds", 
           "logBase": 1,
           "max": null,
           "min": 0,
-          "show": true
+          "show": true,
+          "decimals": 3
         },
         {
           "format": "short",
@@ -276,7 +277,7 @@
                     "indexByName": {},
                     "renameByName": {
                         "channel_name": "Channel name",
-                        "Value": "Avg. response time"
+                        "Value": "Avg. response time (s)"
                     }
                 }
             }
@@ -294,13 +295,14 @@
                         "type": "value"
                     }
                 ],
-                "noValue": "0"
+                "noValue": "0",
+                "decimals": 3
             },
             "overrides": []
         },
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 channels by response time",
+        "title": "Top 10 channels by response time (s)",
         "type": "table"
     }
   ],
