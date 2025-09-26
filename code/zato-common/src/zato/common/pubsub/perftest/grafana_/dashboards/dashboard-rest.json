@@ -338,7 +338,7 @@
         "min": true,
         "rightSide": true,
         "show": true,
-        "total": true,
+        "total": false,
         "values": true
       },
       "lines": true,
@@ -355,8 +355,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(increase(zato_http_requests_total[5m]), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
-          "legendFormat": "{{channel_name}}",
+          "expr": "label_replace(sum(zato_http_requests_total) by (channel_name), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -364,36 +366,41 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "REST channels total requests",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "Total requests",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true,
+      "type": "table",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [
+            {
+              "options": {
+                "NaN": {
+                  "text": "0"
+                },
+                "-": {
+                  "text": "404 Not Found"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "0",
           "decimals": 0
         },
+        "overrides": []
+      },
+      "transformations": [
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "channel_name": "Channel name",
+              "Value": "Total requests"
+            }
+          }
         }
       ]
     }
