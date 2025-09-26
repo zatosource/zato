@@ -419,10 +419,14 @@
             "excludeByName": {
               "Time": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "channel_name": 0,
+              "Human readable": 1,
+              "Value": 2
+            },
             "renameByName": {
               "channel_name": "Channel name",
-              "Value": "Total requests"
+              "Value": "Exact"
             }
           }
         }
