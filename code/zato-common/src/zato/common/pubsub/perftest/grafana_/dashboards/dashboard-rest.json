@@ -23,7 +23,7 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -112,9 +112,9 @@
         },
         "gridPos": {
             "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 8
+            "w": 12,
+            "x": 12,
+            "y": 0
         },
         "id": 2,
         "options": {
@@ -159,9 +159,9 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 16
+        "y": 8
       },
       "id": 3,
       "legend": {
@@ -197,7 +197,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Channels response time",
+      "title": "REST channels response time",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -248,9 +248,9 @@
         },
         "gridPos": {
             "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 24
+            "w": 12,
+            "x": 12,
+            "y": 8
         },
         "id": 4,
         "options": {
@@ -300,7 +300,7 @@
         },
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 Channels by response time",
+        "title": "Top 10 channels by response time",
         "type": "table"
     }
   ],
