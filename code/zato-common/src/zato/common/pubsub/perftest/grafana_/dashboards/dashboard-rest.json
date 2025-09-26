@@ -147,7 +147,7 @@
         ],
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 channels by req/s",
+        "title": "Top 10 REST channels by req/s",
         "type": "table"
     },
     {
@@ -214,7 +214,7 @@
       "yaxes": [
         {
           "format": "none",
-          "label": "seconds", 
+          "label": "Seconds",
           "logBase": 1,
           "max": null,
           "min": 0,
@@ -260,7 +260,7 @@
         "pluginVersion": "7.0.0",
         "targets": [
             {
-                "expr": "topk(10, histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name)))",
+                "expr": "topk(10, avg_over_time(histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name))[5m:]))",
                 "format": "table",
                 "instant": true,
                 "legendFormat": "",
@@ -302,7 +302,7 @@
         },
         "timeFrom": null,
         "timeShift": null,
-        "title": "Top 10 channels by response time (s)",
+        "title": "Top 10 REST channels by response time (s)",
         "type": "table"
     }
   ],
