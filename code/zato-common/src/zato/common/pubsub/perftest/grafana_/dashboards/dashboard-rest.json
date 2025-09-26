@@ -82,7 +82,8 @@
           "logBase": 1,
           "max": null,
           "min": 0,
-          "show": true
+          "show": true,
+          "decimals": 1
         },
         {
           "format": "short",
@@ -99,7 +100,18 @@
         "fieldConfig": {
             "defaults": {
                 "custom": {},
-                "mappings": [],
+                "mappings": [
+                    {
+                        "options": {
+                            "NaN": {
+                                "text": "0"
+                            }
+                        },
+                        "type": "value"
+                    }
+                ],
+                "noValue": "0",
+                "decimals": 1,
                 "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -140,7 +152,7 @@
                     "indexByName": {},
                     "renameByName": {
                         "channel_name": "Channel name",
-                        "Value": "Req/s"
+                        "Value": "Avg. req/s"
                     }
                 }
             }
@@ -236,7 +248,18 @@
         "fieldConfig": {
             "defaults": {
                 "custom": {},
-                "mappings": [],
+                "mappings": [
+                    {
+                        "options": {
+                            "NaN": {
+                                "text": "0"
+                            }
+                        },
+                        "type": "value"
+                    }
+                ],
+                "noValue": "0",
+                "decimals": 3,
                 "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -282,24 +305,6 @@
                 }
             }
         ],
-        "fieldConfig": {
-            "defaults": {
-                "custom": {},
-                "mappings": [
-                    {
-                        "options": {
-                            "NaN": {
-                                "text": "0"
-                            }
-                        },
-                        "type": "value"
-                    }
-                ],
-                "noValue": "0",
-                "decimals": 3
-            },
-            "overrides": []
-        },
         "timeFrom": null,
         "timeShift": null,
         "title": "Top 10 REST channels by response time (s)",
