@@ -386,9 +386,33 @@
           "noValue": "0",
           "decimals": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Human readable"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
       },
       "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Human readable",
+            "mode": "reduceRow",
+            "reduce": {
+              "include": ["Value"],
+              "reducer": "lastNotNull"
+            }
+          }
+        },
         {
           "id": "organize",
           "options": {
