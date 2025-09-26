@@ -130,10 +130,25 @@
                 "refId": "A"
             }
         ],
+        "transformations": [
+            {
+                "id": "organize",
+                "options": {
+                    "excludeByName": {
+                        "Time": true
+                    },
+                    "indexByName": {},
+                    "renameByName": {
+                        "channel_name": "Channel name",
+                        "Value": "Req/s"
+                    }
+                }
+            }
+        ],
         "timeFrom": null,
         "timeShift": null,
         "title": "Top 10 channels by req/s",
-        "type": "bargauge"
+        "type": "table"
     },
     {
       "aliasColors": {},
@@ -251,10 +266,42 @@
                 "refId": "A"
             }
         ],
+        "transformations": [
+            {
+                "id": "organize",
+                "options": {
+                    "excludeByName": {
+                        "Time": true
+                    },
+                    "indexByName": {},
+                    "renameByName": {
+                        "channel_name": "Channel name",
+                        "Value": "Avg. response time"
+                    }
+                }
+            }
+        ],
+        "fieldConfig": {
+            "defaults": {
+                "custom": {},
+                "mappings": [
+                    {
+                        "options": {
+                            "NaN": {
+                                "text": "0"
+                            }
+                        },
+                        "type": "value"
+                    }
+                ],
+                "noValue": "0"
+            },
+            "overrides": []
+        },
         "timeFrom": null,
         "timeShift": null,
         "title": "Top 10 Channels by response time",
-        "type": "bargauge"
+        "type": "table"
     }
   ],
   "refresh": "5s",
