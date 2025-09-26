@@ -53,7 +53,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(zato_http_requests_total[1m])) by (channel_name)",
+          "expr": "label_replace(sum(rate(zato_http_requests_total[1m])) by (channel_name), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
           "legendFormat": "{{channel_name}}",
           "refId": "A"
         }
@@ -105,6 +105,9 @@
                         "options": {
                             "NaN": {
                                 "text": "0"
+                            },
+                            "-": {
+                                "text": "404 Not Found"
                             }
                         },
                         "type": "value"
@@ -135,7 +138,7 @@
         "pluginVersion": "7.0.0",
         "targets": [
             {
-                "expr": "topk(10, sum by (channel_name) (rate(zato_http_requests_total[1m])))",
+                "expr": "topk(10, avg_over_time(sum by (channel_name) (rate(zato_http_requests_total[1m]))[5m:]))",
                 "format": "table",
                 "instant": true,
                 "legendFormat": "",
@@ -201,7 +204,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name))",
+          "expr": "label_replace(histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name)), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
           "legendFormat": "{{channel_name}}",
           "refId": "A"
         }
@@ -253,6 +256,9 @@
                         "options": {
                             "NaN": {
                                 "text": "0"
+                            },
+                            "-": {
+                                "text": "404 Not Found"
                             }
                         },
                         "type": "value"
