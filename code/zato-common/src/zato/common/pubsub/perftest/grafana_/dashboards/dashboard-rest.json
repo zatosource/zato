@@ -325,7 +325,7 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 15
       },
@@ -426,7 +426,7 @@
             },
             "renameByName": {
               "channel_name": "Channel name",
-              "Value": "Exact"
+              "Value": "Exact value"
             }
           }
         }
