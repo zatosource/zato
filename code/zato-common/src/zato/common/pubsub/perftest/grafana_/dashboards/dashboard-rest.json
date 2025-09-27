@@ -243,7 +243,7 @@
               "type": "value"
             }
           ],
-          "noValue": "0",
+          "noValue": "No data",
           "decimals": 0
         },
         "overrides": [
@@ -546,7 +546,7 @@
               "type": "value"
             }
           ],
-          "noValue": "0",
+          "noValue": "No data",
           "decimals": 0
         },
         "overrides": [
