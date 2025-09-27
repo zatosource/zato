@@ -44,7 +44,6 @@ from gevent.pywsgi import WSGIServer
 # werkzeug
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.wrappers import Request
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Zato
 from zato.common.api import PubSub
