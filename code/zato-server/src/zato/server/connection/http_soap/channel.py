@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from datetime import datetime
 from gzip import GzipFile
 from hashlib import sha256
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
@@ -27,7 +26,7 @@ from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.typing_ import cast_
-from zato.common.util.api import as_bool
+from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
@@ -83,7 +82,7 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 # ################################################################################################################################
 
 stack_format = None
-_utcnow=datetime.utcnow
+_utcnow=utcnow
 
 # ################################################################################################################################
 
@@ -279,13 +278,13 @@ class RequestDispatcher:
                 logger.info(msg)
 
         # .. we have a match and ee can possibly handle the incoming request ..
-        if url_match not in ModuleCtx.No_URL_Match:
+        if url_match not in ModuleCtx.No_URL_Match: # type: ignore
 
             try:
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
+                    logger.warninging('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
                 # This the string pointing to the URL path that we matched
@@ -493,7 +492,7 @@ class RequestDispatcher:
             response = response_404.format(cid)
 
             # .. this goes to logs and it includes the URL sent by the client.
-            logger.warning(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+            logger.warninging(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
 
             # This is the payload for the caller
             return response
@@ -519,7 +518,7 @@ class RequestDispatcher:
 
         # .. we cannot have both on input ..
         if basic_auth_info and apikey_header_value:
-            logger.warn('Received both Basic Auth and API key (groups)')
+            logger.warning('Received both Basic Auth and API key (groups)')
             raise BadRequest(cid)
 
         # Handle Basic Auth via groups ..
@@ -532,7 +531,7 @@ class RequestDispatcher:
             if security_id := security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
                 sec_def = self.url_data.basic_auth_get_by_id(security_id)
             else:
-                logger.warn('Invalid Basic Auth credentials (groups)')
+                logger.warning('Invalid Basic Auth credentials (groups)')
                 raise Forbidden(cid)
 
         # Handle API keys via groups ..
@@ -542,11 +541,11 @@ class RequestDispatcher:
             if security_id := security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
                 sec_def = self.url_data.apikey_get_by_id(security_id)
             else:
-                logger.warn('Invalid API key (groups)')
+                logger.warning('Invalid API key (groups)')
                 raise Forbidden(cid)
 
         else:
-            logger.warn('Received neither Basic Auth nor API key (groups)')
+            logger.warning('Received neither Basic Auth nor API key (groups)')
             raise Forbidden(cid)
 
         # Now we can enrich the WSGI environment with information
@@ -707,7 +706,7 @@ class RequestHandler:
         """
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
         if not is_active:
-            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
+            logger.warninging('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 
