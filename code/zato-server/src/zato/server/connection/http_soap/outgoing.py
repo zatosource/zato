@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from copy import deepcopy
-from datetime import datetime
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
@@ -37,7 +36,7 @@ from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_component_name
+from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
 
@@ -176,7 +175,7 @@ class BaseHTTPSOAPWrapper:
     def _push_metrics(self, start_time, status_code):
         """ Updates outgoing HTTP metrics with duration and status code.
         """
-        duration = (datetime.utcnow() - start_time).total_seconds()
+        duration = (utcnow() - start_time).total_seconds()
         connection_name = self.config['name']
 
         _ = zato_outgoing_http_requests_total.labels(
@@ -256,7 +255,7 @@ class BaseHTTPSOAPWrapper:
     ) -> '_RequestsResponse':
 
         # Record start time for metrics
-        start_time = datetime.utcnow()
+        start_time = utcnow()
 
         # Local variables
         params = kwargs.get('params')
@@ -383,12 +382,12 @@ class BaseHTTPSOAPWrapper:
         # Session object will write some info to it ..
         verbose = StringIO()
 
-        start = datetime.utcnow()
+        start = utcnow()
         ping_method = self.config['ping_method'] or 'HEAD'
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
 
-            entry = '{} (UTC)\n{} {}\n'.format(datetime.utcnow().isoformat(),
+            entry = '{} (UTC)\n{} {}\n'.format(utcnow().isoformat(),
                 ping_method, hook_data['request'].url)
             _ = verbose.write(entry)
 
@@ -402,7 +401,7 @@ class BaseHTTPSOAPWrapper:
 
         # .. store additional info, get and close the stream.
         _ = verbose.write('Code: {}'.format(response.status_code))
-        _ = verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
+        _ = verbose.write('\nResponse time: {}'.format(utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
 
@@ -449,7 +448,7 @@ class BaseHTTPSOAPWrapper:
         headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
-            'X-Zato-Msg-TS': now or datetime.utcnow().isoformat(),
+            'X-Zato-Msg-TS': now or utcnow().isoformat(),
         })
 
         if self.config.get('transport') == URL_TYPE.SOAP:
@@ -554,13 +553,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # We do not need an envelope if the data already has one ..
         if isinstance(data, bytes):
-            if b':Envelope' in data:
+            if b':Envelope' in data: # type: ignore
                 return data, headers # type: ignore
             else:
                 needs_soap_wrapper = True
 
         else:
-            if ':Envelope' in data:
+            if ':Envelope' in data: # type: ignore
                 return data, headers # type: ignore
             else:
                 needs_soap_wrapper = True
