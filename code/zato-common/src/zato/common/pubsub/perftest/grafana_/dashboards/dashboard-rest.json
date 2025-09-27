@@ -22,7 +22,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 0
@@ -103,7 +103,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 0
@@ -184,7 +184,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 20
@@ -312,7 +312,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 10
@@ -393,7 +393,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 10
@@ -474,7 +474,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 20
