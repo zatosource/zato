@@ -915,7 +915,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def publish(self, msg:'any_', topic:'str') -> 'None':
+    def publish(self, topic:'str', msg:'any_') -> 'None':
 
         if not isinstance(msg, dict):
             msg = {'msg': msg}
