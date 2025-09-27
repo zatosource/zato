@@ -134,7 +134,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(sum(rate(zato_http_request_duration_seconds_sum[1m])) by (channel_name) / sum(rate(zato_http_request_duration_seconds_count[1m])) by (channel_name), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
+          "expr": "label_replace((sum(rate(zato_http_request_duration_seconds_sum[1m])) by (channel_name) / sum(rate(zato_http_request_duration_seconds_count[1m])) by (channel_name)) and on(channel_name) (sum(rate(zato_http_request_duration_seconds_count[1m])) by (channel_name) > 0) or on(channel_name) (sum(rate(zato_http_requests_total[1m])) by (channel_name) * 0), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
           "legendFormat": "{{channel_name}}",
           "refId": "A"
         }
