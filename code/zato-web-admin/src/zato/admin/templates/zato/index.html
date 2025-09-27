@@ -97,6 +97,9 @@
         $(document).ready(function() {
             $('input[type="password"]').hidePassword(true);
 
+            // Set monitoring link href dynamically
+            $('.monitoring-link').attr('href', window.location.protocol + '//' + window.location.hostname + ':33033/');
+
             const centerAlignColumnNames = [
                 'Active',
                 'Auth type',
@@ -167,15 +170,11 @@
                 <nav class="menu">
                     <div class="nav-container">
                         <ul class="first-level left">
-                            {% if False %}
-                            <li class="first-level"><a class="menu-link" href="{% url "cluster" %}">Clusters</a></li>
-                            {% endif %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "service-ide" "service" "demo.my-service" %}?cluster={{ cluster_id|default:"1" }}">IDE</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "service" %}?cluster={{ cluster_id|default:"1" }}">List services</a></li>
-                                    <li class="child"><a class="menu-link" href="javascript:$.fn.zato.service.export_config()">Export config</a></li>
                                 </ul>
                             </li>
                             <li class="first-level" style="padding-left: 0.3rem">
@@ -318,6 +317,14 @@
                             </li>
 
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
+
+                            <li class="first-level" >
+                                <a class="menu-link"  style="padding-left: 0.3rem" href="#">System &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link monitoring-link" href="#">Monitoring</a></li>
+                                    <li class="child"><a class="menu-link" href="javascript:$.fn.zato.service.export_config()">Export config</a></li>
+                                </ul>
+                            </li>
 
                             {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}
                             <li class="first-level">
