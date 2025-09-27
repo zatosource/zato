@@ -96,76 +96,6 @@
       ]
     },
     {
-        "datasource": "Prometheus",
-        "fieldConfig": {
-            "defaults": {
-                "custom": {},
-                "mappings": [
-                    {
-                        "options": {
-                            "NaN": {
-                                "text": "0"
-                            },
-                            "-": {
-                                "text": "404 Not Found"
-                            }
-                        },
-                        "type": "value"
-                    }
-                ],
-                "noValue": "0",
-                "decimals": 1,
-                "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                        { "color": "green", "value": null },
-                        { "color": "red", "value": 80 }
-                    ]
-                }
-            },
-            "overrides": []
-        },
-        "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 0
-        },
-        "id": 2,
-        "options": {
-            "showVerticalAxis": true
-        },
-        "pluginVersion": "7.0.0",
-        "targets": [
-            {
-                "expr": "topk(10, avg_over_time(sum by (channel_name) (rate(zato_http_requests_total[1m]))[5m:]))",
-                "format": "table",
-                "instant": true,
-                "legendFormat": "",
-                "refId": "A"
-            }
-        ],
-        "transformations": [
-            {
-                "id": "organize",
-                "options": {
-                    "excludeByName": {
-                        "Time": true
-                    },
-                    "indexByName": {},
-                    "renameByName": {
-                        "channel_name": "Channel name",
-                        "Value": "Avg. req/s"
-                    }
-                }
-            }
-        ],
-        "timeFrom": null,
-        "timeShift": null,
-        "title": "Top 10 REST channels by req/s",
-        "type": "table"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -193,7 +123,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -245,76 +175,6 @@
           "show": true
         }
       ]
-    },
-    {
-        "datasource": "Prometheus",
-        "fieldConfig": {
-            "defaults": {
-                "custom": {},
-                "mappings": [
-                    {
-                        "options": {
-                            "NaN": {
-                                "text": "0"
-                            },
-                            "-": {
-                                "text": "404 Not Found"
-                            }
-                        },
-                        "type": "value"
-                    }
-                ],
-                "noValue": "0",
-                "decimals": 3,
-                "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                        { "color": "green", "value": null },
-                        { "color": "red", "value": 80 }
-                    ]
-                }
-            },
-            "overrides": []
-        },
-        "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 8
-        },
-        "id": 4,
-        "options": {
-            "showVerticalAxis": true
-        },
-        "pluginVersion": "7.0.0",
-        "targets": [
-            {
-                "expr": "topk(10, histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[5m])) by (le, channel_name)) > 0)",
-                "format": "table",
-                "instant": true,
-                "legendFormat": "",
-                "refId": "A"
-            }
-        ],
-        "transformations": [
-            {
-                "id": "organize",
-                "options": {
-                    "excludeByName": {
-                        "Time": true
-                    },
-                    "indexByName": {},
-                    "renameByName": {
-                        "channel_name": "Channel name",
-                        "Value": "Avg. response time (s)"
-                    }
-                }
-            }
-        ],
-        "timeFrom": null,
-        "timeShift": null,
-        "title": "Top 10 REST channels by response time (s)",
-        "type": "table"
     },
     {
       "aliasColors": {},
