@@ -211,7 +211,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.name);
 
     /* 4 */
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
 
     /* 5 */
     if(is_outgoing) {

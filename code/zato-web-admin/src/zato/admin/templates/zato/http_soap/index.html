@@ -303,6 +303,8 @@
                             {% else %}
                                 {{ item.security_name|safe }}
                             {% endif %}
+                        </td>
+
                         {% if connection == 'channel' %}
                             <td>
                                 {% if item.security_group_count %}
