@@ -10,7 +10,7 @@
   "hideControls": false,
   "id": null,
   "uid": "rest-perf-detail",
-  "title": "REST API Channels and Outgoing Connections",
+  "title": "REST API Channels",
   "links": [],
   "tags": ["rest", "default"],
   "panels": [
@@ -193,7 +193,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "connected",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -204,7 +204,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name)), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
+          "expr": "label_replace(sum(rate(zato_http_request_duration_seconds_sum[1m])) by (channel_name) / sum(rate(zato_http_request_duration_seconds_count[1m])) by (channel_name), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
           "legendFormat": "{{channel_name}}",
           "refId": "A"
         }
@@ -289,7 +289,7 @@
         "pluginVersion": "7.0.0",
         "targets": [
             {
-                "expr": "topk(10, avg_over_time(histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[1m])) by (le, channel_name))[5m:]))",
+                "expr": "topk(10, histogram_quantile(0.95, sum(rate(zato_http_request_duration_seconds_bucket[5m])) by (le, channel_name)) > 0)",
                 "format": "table",
                 "instant": true,
                 "legendFormat": "",
