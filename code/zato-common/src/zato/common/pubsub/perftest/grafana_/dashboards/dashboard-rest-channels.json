@@ -23,7 +23,7 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 0
       },
@@ -31,9 +31,9 @@
       "legend": {
         "alignAsTable": true,
         "avg": true,
-        "current": true,
+        "current": false,
         "max": true,
-        "min": true,
+        "min": false,
         "rightSide": true,
         "show": true,
         "total": false,
@@ -104,17 +104,17 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 0
       },
       "id": 3,
       "legend": {
         "alignAsTable": true,
         "avg": true,
-        "current": true,
+        "current": false,
         "max": true,
-        "min": true,
+        "min": false,
         "rightSide": true,
         "show": true,
         "total": false,
@@ -185,9 +185,9 @@
       "fill": 1,
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
+        "w": 8,
+        "x": 16,
+        "y": 0
       },
       "id": 5,
       "legend": {
