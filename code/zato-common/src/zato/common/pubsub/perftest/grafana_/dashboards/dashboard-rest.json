@@ -553,22 +553,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Human"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
-              },
-              {
-                "id": "custom.width",
-                "value": 90
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Exact"
             },
             "properties": [
@@ -581,17 +565,6 @@
         ]
       },
       "transformations": [
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "Human",
-            "mode": "reduceRow",
-            "reduce": {
-              "include": ["Value"],
-              "reducer": "lastNotNull"
-            }
-          }
-        },
         {
           "id": "sortBy",
           "options": {
@@ -612,8 +585,7 @@
             },
             "indexByName": {
               "connection_name": 0,
-              "Human": 1,
-              "Value": 2
+              "Value": 1
             },
             "renameByName": {
               "connection_name": "Connection name",
