@@ -215,7 +215,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(sum(zato_http_requests_total) by (channel_name), \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
+          "expr": "label_replace(sum(increase(zato_http_requests_total[$__range])) by (channel_name) > 0, \"channel_name\", \"404 Not Found\", \"channel_name\", \"-\")",
           "format": "table",
           "instant": true,
           "legendFormat": "",
