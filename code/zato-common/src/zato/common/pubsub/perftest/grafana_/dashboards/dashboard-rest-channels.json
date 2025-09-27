@@ -22,7 +22,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 8,
         "x": 0,
         "y": 0
@@ -103,7 +103,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 8,
         "x": 8,
         "y": 0
@@ -184,7 +184,7 @@
       "datasource": "Prometheus",
       "fill": 1,
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 8,
         "x": 16,
         "y": 0
