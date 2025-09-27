@@ -12,7 +12,7 @@
   "uid": "pubsub-perf-detail",
   "title": "Pub/Sub Message Broker",
   "links": [],
-  "tags": ["pubsub", "default"],
+  "tags": [],
   "panels": [
     {
       "aliasColors": {
