@@ -164,7 +164,7 @@
           "max": null,
           "min": 0,
           "show": true,
-          "decimals": 3
+          "decimals": 1
         },
         {
           "format": "short",
