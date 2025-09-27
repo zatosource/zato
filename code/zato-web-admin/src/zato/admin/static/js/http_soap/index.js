@@ -236,7 +236,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     /* 9, 9b */
     row += String.format('<td>{0}</td>', security_name);
-    row += String.format('<td>{0}</td>', data.security_groups_info);
+
+    if(is_channel) {
+        row += String.format('<td>{0}</td>', data.security_groups_info);
+    }
 
     /* 10, 11 */
     if(is_soap) {
