@@ -312,8 +312,8 @@ class OnUpdateUserConf(_OnUpdate):
 
             user_config_name = get_user_config_name(conf_key)
             entry:'Bunch' = self.server.user_config.setdefault(user_config_name, Bunch())
-            entry.clear()
-            entry.update(conf)
+            _ = entry.clear()
+            _ = entry.update(conf)
 
 # ################################################################################################################################
 
