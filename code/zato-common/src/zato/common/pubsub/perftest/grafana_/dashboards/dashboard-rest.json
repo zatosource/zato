@@ -260,6 +260,10 @@
               {
                 "id": "custom.width",
                 "value": 90
+              },
+              {
+                "id": "decimals",
+                "value": 1
               }
             ]
           },
@@ -563,6 +567,10 @@
               {
                 "id": "custom.width",
                 "value": 90
+              },
+              {
+                "id": "decimals",
+                "value": 1
               }
             ]
           },
