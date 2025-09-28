@@ -221,6 +221,7 @@
 
             'sub_key',
             '_is_delivery_active',
+            '_is_pub_active',
             '_delivery_type',
 
             'topic_link_list',
@@ -229,6 +230,7 @@
 
             'id',
             'is_delivery_active',
+            'is_pub_active',
             'delivery_type',
 
             'sec_base_id',
@@ -273,7 +275,8 @@
 
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
                         <th style="text-align:center"><a href="#">Active delivery</a></th>
-                        <th>Delivery type</th>
+                        <th style="text-align:center"><a href="#">Active publications</a></th>
+                        <th style="text-align:center">Delivery type</th>
 
                         <th>Topics</th>
                         <th>Edit</th>
@@ -304,7 +307,8 @@
 
                         <td>{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_delivery_active|yesno:"Yes,No" }}</td>
-                        <td>
+                        <td style="text-align:center">{{ item.is_pub_active|yesno:"Yes,No" }}</td>
+                        <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
                                 Pull
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
@@ -350,8 +354,12 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_is_delivery_active">Active</label></td>
-                            <td>{{ create_form.is_delivery_active }}</td>
+                            <td style="vertical-align:middle; width:14%"></td>
+                            <td>
+                                <label for="id_is_delivery_active">Delivery</label>: {{ create_form.is_delivery_active }}
+                                |
+                                <label for="id_is_pub_active">Publications</label>: {{ create_form.is_pub_active }}
+                            </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_sec_base_id">Security definition</label></td>
@@ -403,8 +411,12 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_edit-is_delivery_active">Active</label></td>
-                            <td>{{ edit_form.is_delivery_active }}</td>
+                            <td style="vertical-align:middle; width:14%"></td>
+                            <td>
+                                <label for="id_edit-is_delivery_active">Delivery</label>: {{ edit_form.is_delivery_active }}
+                                |
+                                <label for="id_edit-is_pub_active">Publications</label>: {{ edit_form.is_pub_active }}
+                            </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_edit-sec_base_id">Security definition</label></td>
