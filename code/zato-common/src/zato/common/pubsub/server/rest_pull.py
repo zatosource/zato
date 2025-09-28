@@ -197,15 +197,16 @@ class PubSubRESTServerPull(BaseRESTServer):
 # ################################################################################################################################
 
     def _find_user_subscription(self, username:'str') -> 'Subscription | None':
-        """ Find user's subscription from topics.
-        """
+
         # Get sec_name from username
         config = self.get_user_config(username)
         sec_name = config['sec_name']
 
         for subscriptions in self.backend.subs_by_topic.values():
             sub = subscriptions.get(sec_name)
-            return sub
+
+            if sub:
+                return sub
 
         return None
 
@@ -422,10 +423,6 @@ class PubSubRESTServerPull(BaseRESTServer):
 
         with sub_lookup_time.time():
             subscription = self._find_user_subscription(username)
-
-        print()
-        print(111, subscription)
-        print()
 
         if not subscription:
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
