@@ -459,6 +459,16 @@ $(document).ready(function() {
             }
         }
 
+        // Handle indeterminate checkboxes - set is_delivery_active to undetermined if any exist
+        var indeterminateCount = $(topicDivId + ' input[name="topic_name"].indeterminate').length;
+        if (indeterminateCount > 0) {
+            console.log('DEBUG on_submit: found ' + indeterminateCount + ' indeterminate topics, setting is_delivery_active to undetermined');
+            var deliveryActiveId = action === 'create' ? '#id_is_delivery_active' : '#id_edit-is_delivery_active';
+            var $deliveryActiveInput = $(deliveryActiveId);
+            $deliveryActiveInput.prop('checked', true);
+            $deliveryActiveInput.val('undetermined');
+        }
+
         // Call original on_submit if validation passes
         console.log('DEBUG on_submit: calling original on_submit');
         return originalOnSubmit.call(this, action);
@@ -779,7 +789,17 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     var form = $('#edit-form');
 
     let is_delivery_active = $.fn.zato.like_bool(instance.is_delivery_active)
-    form.find('#id_edit-is_delivery_active').prop('checked',  "HERE");
+    
+    // Check if is_delivery_active should be set to undetermined
+    if (instance.is_delivery_active === 'undetermined') {
+        console.log('DEBUG edit: setting is_delivery_active to undetermined state');
+        var $checkbox = form.find('#id_edit-is_delivery_active');
+        $checkbox.prop('checked', false);
+        $checkbox.addClass('indeterminate');
+        setupTriStateCheckbox($checkbox[0]);
+    } else {
+        form.find('#id_edit-is_delivery_active').prop('checked', is_delivery_active);
+    }
 
     // alert(is_delivery_active);
     // alert(instance.is_delivery_active);
