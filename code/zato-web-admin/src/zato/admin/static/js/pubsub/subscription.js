@@ -7,13 +7,17 @@ function setupTriStateCheckbox(checkbox) {
     var $checkbox = $(checkbox);
 
     if (!$checkbox.data('tri-state-initialized')) {
-        var initialState = 0;
+        var initialState;
 
         if ($checkbox.hasClass('indeterminate')) {
             initialState = 2;
         } else if ($checkbox.prop('checked')) {
             initialState = 1;
+        } else {
+            initialState = 0;
         }
+
+        console.log('DEBUG setupTriStateCheckbox: initializing checkbox with initialState=' + initialState + ', checked=' + $checkbox.prop('checked') + ', hasIndeterminate=' + $checkbox.hasClass('indeterminate'));
 
         $checkbox.data('tri-state', initialState);
         $checkbox.data('tri-state-initialized', true);
@@ -24,8 +28,29 @@ function setupTriStateCheckbox(checkbox) {
             e.preventDefault();
             e.stopPropagation();
 
-            var currentState = $checkbox.data('tri-state') || 0;
+            var currentState = $checkbox.data('tri-state');
+            var actualChecked = $checkbox.prop('checked');
+            var actualIndeterminate = $checkbox.hasClass('indeterminate');
+
+            console.log('DEBUG tristate mousedown: currentState=' + currentState + ', actualChecked=' + actualChecked + ', actualIndeterminate=' + actualIndeterminate);
+
+            var actualState = currentState;
+            if (actualIndeterminate) {
+                actualState = 2;
+            } else if (actualChecked) {
+                actualState = 1;
+            } else {
+                actualState = 0;
+            }
+
+            if (actualState !== currentState) {
+                console.log('DEBUG tristate mousedown: state mismatch detected, correcting from ' + currentState + ' to ' + actualState);
+                $checkbox.data('tri-state', actualState);
+                currentState = actualState;
+            }
+
             var newState = (currentState + 1) % 3;
+            console.log('DEBUG tristate mousedown: newState=' + newState);
 
             $checkbox.data('tri-state', newState);
 
@@ -34,20 +59,26 @@ function setupTriStateCheckbox(checkbox) {
             switch(newState) {
                 case 0:
                     $checkbox.prop('checked', false);
+                    console.log('DEBUG tristate mousedown: set to unchecked');
                     break;
                 case 1:
                     $checkbox.prop('checked', true);
+                    console.log('DEBUG tristate mousedown: set to checked');
                     break;
                 case 2:
                     $checkbox.prop('checked', false);
                     $checkbox.addClass('indeterminate');
+                    console.log('DEBUG tristate mousedown: set to indeterminate');
                     break;
             }
+
+            console.log('DEBUG tristate mousedown: after change - checked=' + $checkbox.prop('checked') + ', hasIndeterminate=' + $checkbox.hasClass('indeterminate') + ', storedState=' + $checkbox.data('tri-state'));
 
             return false;
         });
 
         $checkbox.on('click.tristate', function(e) {
+            console.log('DEBUG tristate click: preventing default click behavior');
             e.preventDefault();
             e.stopPropagation();
             return false;
