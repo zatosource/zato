@@ -4,20 +4,22 @@ $.namespace('zato.pubsub.subscription');
 
 // Tri-state checkbox functionality
 function setupTriStateCheckbox(checkbox) {
+    var Off = 0;
+    var On = 1;
+    var Indeterminate = 2;
+
     var $checkbox = $(checkbox);
 
     if (!$checkbox.data('tri-state-initialized')) {
         var initialState;
 
         if ($checkbox.hasClass('indeterminate')) {
-            initialState = 2;
+            initialState = Indeterminate;
         } else if ($checkbox.prop('checked')) {
-            initialState = 1;
+            initialState = On;
         } else {
-            initialState = 0;
+            initialState = Off;
         }
-
-        console.log('DEBUG setupTriStateCheckbox: initializing checkbox with initialState=' + initialState + ', checked=' + $checkbox.prop('checked') + ', hasIndeterminate=' + $checkbox.hasClass('indeterminate'));
 
         $checkbox.data('tri-state', initialState);
         $checkbox.data('tri-state-initialized', true);
@@ -31,21 +33,21 @@ function setupTriStateCheckbox(checkbox) {
             var currentState = $checkbox.data('tri-state');
             var actualChecked = $checkbox.prop('checked');
             var actualIndeterminate = $checkbox.hasClass('indeterminate');
-            
+
             var actualState = currentState;
             if (actualIndeterminate) {
-                actualState = 2;
+                actualState = Indeterminate;
             } else if (actualChecked) {
-                actualState = 1;
+                actualState = On;
             } else {
-                actualState = 0;
+                actualState = Off;
             }
-            
+
             if (actualState !== currentState) {
                 $checkbox.data('tri-state', actualState);
                 currentState = actualState;
             }
-            
+
             var newState = (currentState + 1) % 3;
 
             $checkbox.data('tri-state', newState);
@@ -53,13 +55,13 @@ function setupTriStateCheckbox(checkbox) {
             $checkbox.removeClass('indeterminate');
 
             switch(newState) {
-                case 0:
+                case Off:
                     $checkbox.prop('checked', false);
                     break;
-                case 1:
+                case On:
                     $checkbox.prop('checked', true);
                     break;
-                case 2:
+                case Indeterminate:
                     $checkbox.prop('checked', false);
                     $checkbox.addClass('indeterminate');
                     break;
