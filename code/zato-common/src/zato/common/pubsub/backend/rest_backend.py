@@ -346,9 +346,9 @@ class RESTBackend(Backend):
             # Remove existing subscription by sub_key from all topics
             _ = self._remove_subscriptions_by_sub_key(sub_key)
 
-        # Add subscription to new topics
-        for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
+            # Add subscription to new topics
+            for topic_name in topic_name_list:
+                _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key, is_active=is_active)
 
         log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list} (is_active:{is_active})'
         logger.info(log_msg)
