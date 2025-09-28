@@ -118,6 +118,7 @@ class Create(_CreateEdit):
 
             for form_field, service_field in field_mapping.items():
                 value = self.req.POST.get(form_field)
+
                 if value:
                     if service_field == 'is_delivery_active':
                         input_dict[service_field] = value == 'on'
@@ -172,7 +173,15 @@ class Edit(_CreateEdit):
 
             for form_field, service_field in field_mapping.items():
                 if form_field in self.req.POST and self.req.POST[form_field]:
+
                     value = self.req.POST[form_field]
+
+                    print()
+                    print(111, form_field)
+                    print(222, service_field)
+                    print(333, value)
+                    print()
+
                     if service_field == 'is_delivery_active':
                         input_dict[service_field] = value == 'on'
                     else:
