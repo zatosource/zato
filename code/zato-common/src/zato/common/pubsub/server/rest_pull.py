@@ -172,19 +172,40 @@ class PubSubRESTServerPull(BaseRESTServer):
 
 # ################################################################################################################################
 
+    def _find_user_sub_key(self, cid:'str', username:'str') -> 'str | None':
+        """ Find user's subscription key from topics.
+        """
+        # Get sec_name from username
+        config = self.get_user_config(username)
+        sec_name = config['sec_name']
+
+        for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
+            if sec_name in subs_by_sec_name:
+                subscription = subs_by_sec_name[sec_name]
+
+                if subscription is None:
+                    msg = f'[{cid}] Malformed subscription data for user `{username}` in topic `{topic_name}`'
+                    raise Exception(msg)
+
+                return subscription.sub_key
+
+        else:
+            msg = f'[{cid}] No subscription found for user `{username}`'
+            logger.warning(msg)
+            return None
+
+# ################################################################################################################################
+
     def _find_user_subscription(self, username:'str') -> 'Subscription | None':
         """ Find user's subscription from topics.
         """
-        for subs in self.backend.subs_by_topic.values():
-            print()
-            print(111, subs)
-            print()
-            for sub in subs.values():
-                print()
-                print(222, sub)
-                print()
-                if sub.username == username:
-                    return sub
+        # Get sec_name from username
+        config = self.get_user_config(username)
+        sec_name = config['sec_name']
+
+        for subscriptions in self.backend.subs_by_topic.values():
+            sub = subscriptions.get(sec_name)
+            return sub
 
         return None
 
@@ -402,11 +423,15 @@ class PubSubRESTServerPull(BaseRESTServer):
         with sub_lookup_time.time():
             subscription = self._find_user_subscription(username)
 
+        print()
+        print(111, subscription)
+        print()
+
         if not subscription:
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
 
         if not subscription.is_active:
-            return self._build_error_response(cid, 'Subscription is inactive', response_class=UnauthorizedResponse)
+            return self._build_error_response(cid, 'Delivery disabled', response_class=UnauthorizedResponse)
 
         # OK, we're sure we have a subscription now and it's active
         sub_key = subscription.sub_key

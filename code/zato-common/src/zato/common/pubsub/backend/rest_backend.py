@@ -335,6 +335,7 @@ class RESTBackend(Backend):
         cid = msg['cid']
         sub_key = msg['sub_key']
         sec_name = msg['sec_name']
+        is_active = msg['is_active']
         topic_name_list = msg['topic_name_list']
 
         if not sub_key:
@@ -349,7 +350,8 @@ class RESTBackend(Backend):
         for topic_name in topic_name_list:
             _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
 
-        logger.info(f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list}')
+        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list} (is_active:{is_active})'
+        logger.info(log_msg)
 
 # ################################################################################################################################
 
