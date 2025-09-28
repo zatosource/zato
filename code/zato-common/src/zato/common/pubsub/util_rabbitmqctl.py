@@ -15,10 +15,16 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import getLogger
 
+# Zato
+from zato.common.util.api import as_bool
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Configure logging format to match Zato format
 def setup_logging():
@@ -33,6 +39,14 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     root_logger.addHandler(handler)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_has_rabbitmq_group = os.environ.get('Zato_Has_RabbitMQ_Group')
+_has_rabbitmq_group = as_bool(_has_rabbitmq_group)
+
+needs_sudo = not _has_rabbitmq_group
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +66,9 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
             temp_file = f'/tmp/rabbitmq_output_{timestamp}.txt'
 
-            full_command = f'sudo -u rabbitmq /usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
+            prefix = 'sudo -u rabbitmq ' if needs_sudo else ''
+
+            full_command = f'{prefix}/usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
             logger.info(f'Executing: {full_command}')
 
             with open(temp_file, 'w') as f:
