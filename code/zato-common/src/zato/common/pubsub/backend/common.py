@@ -262,7 +262,7 @@ class Backend:
         msg:'PubMessage',
         username:'str',
         ext_client_id:'strnone'=None
-        ) -> 'PubResponse':
+    ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
 
@@ -335,10 +335,11 @@ class Backend:
         username: 'str'='',
         sec_name: 'str'='',
         sub_key: 'str'='',
+        is_active: 'bool'=True,
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
         source_server_type: 'str'='',
-        ) -> 'StatusResponse':
+    ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
         # Reusable
@@ -388,6 +389,7 @@ class Backend:
             sub.topic_name = topic_name
             sub.sec_name = sec_name
             sub.sub_key = sub_key
+            sub.is_active = is_active
             sub.creation_time = utcnow()
 
             # .. get or create a dict with subscriptions for users ..
@@ -409,7 +411,7 @@ class Backend:
                 'sub_key': sub_key,
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
-                'is_active': True,
+                'is_active': is_active,
                 'delivery_type': PubSub.Delivery_Type.Pull,
             }
 
