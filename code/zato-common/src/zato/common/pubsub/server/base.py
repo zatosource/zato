@@ -289,6 +289,9 @@ class BaseServer:
                 password = item['password']
                 topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
+                is_active = item.get('is_active', True)
+
+
 
                 # Add user credentials
                 self.create_user(cid, sec_name, username, password)
@@ -304,7 +307,7 @@ class BaseServer:
                         logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
 
                     # Create the subscription
-                    _ = self.backend.register_subscription(cid, topic_name, username=username, sub_key=sub_key)
+                    _ = self.backend.register_subscription(cid, topic_name, username=username, sub_key=sub_key, is_active=is_active)
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
