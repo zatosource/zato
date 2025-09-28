@@ -317,13 +317,13 @@ def to_form(_object):
 def _new_cid(prefix:'str'='0', needs_machine_id:'bool'=True) -> 'str':
     """ Returns a new correlation identifier using snowflake format.
     """
-    return new_snowflake(prefix)
+    return new_snowflake(prefix, needs_machine_id)
 
 new_cid = _new_cid
 
 # ################################################################################################################################
 
-def new_cid_server(needs_machine_id:'bool'=True) -> 'str':
+def new_cid_server(needs_machine_id:'bool'=False) -> 'str':
     """ Returns a new correlation identifier for server components.
     """
     return new_cid('a', needs_machine_id)

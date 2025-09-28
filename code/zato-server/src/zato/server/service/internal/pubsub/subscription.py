@@ -231,7 +231,7 @@ class Create(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
-                pubsub_msg.is_active = input.is_active
+                pubsub_msg.is_active = sub.is_active
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
@@ -392,7 +392,7 @@ class Edit(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
-                pubsub_msg.is_active = sec_base.is_active
+                pubsub_msg.is_active = sub.is_active
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
