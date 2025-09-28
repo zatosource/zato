@@ -186,6 +186,50 @@
             background: transparent !important;
         }
 
+        /* Tri-state checkbox styling */
+        input[type="checkbox"].tri-state {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #666;
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
+            background: white;
+        }
+
+        input[type="checkbox"].tri-state:checked {
+            background: #0936d5;
+            border-color: #0936d5;
+        }
+
+        input[type="checkbox"].tri-state:checked::after {
+            content: '✓';
+            position: absolute;
+            left: 2px;
+            top: -2px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        input[type="checkbox"].tri-state.indeterminate {
+            background: #999;
+            border-color: #999;
+        }
+
+        input[type="checkbox"].tri-state.indeterminate::after {
+            content: 'x';
+            position: absolute;
+            left: 2px;
+            top: -2px;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
     </style>
 {% endblock %}
 
@@ -275,8 +319,8 @@
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
-                        <th style="text-align:center"><a href="#">Active delivery</a></th>
-                        <th style="text-align:center"><a href="#">Active publications</a></th>
+                        <th style="text-align:center"><a href="#">Enabled for delivery</a></th>
+                        <th style="text-align:center"><a href="#">Enabled for publications</a></th>
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
@@ -359,11 +403,11 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Is active</td>
+                            <td style="vertical-align:middle; width:14%">Enabled for</td>
                             <td>
-                                <label for="id_is_delivery_active">Delivery</label>: {{ create_form.is_delivery_active }}
+                                <label for="id_is_delivery_active">Delivery</label> {{ create_form.is_delivery_active }}
                                 |
-                                <label for="id_is_pub_active">Publications</label>: {{ create_form.is_pub_active }}
+                                <label for="id_is_pub_active">Publications</label> {{ create_form.is_pub_active }}
                             </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
@@ -416,11 +460,11 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Is active</td>
+                            <td style="vertical-align:middle; width:14%">Enabled for</td>
                             <td>
-                                <label for="id_edit-is_delivery_active">Delivery</label>: {{ edit_form.is_delivery_active }}
+                                <label for="id_edit-is_delivery_active">Delivery</label> {{ edit_form.is_delivery_active }}
                                 |
-                                <label for="id_edit-is_pub_active">Publications</label>: {{ edit_form.is_pub_active }}
+                                <label for="id_edit-is_pub_active">Publications</label> {{ edit_form.is_pub_active }}
                             </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
