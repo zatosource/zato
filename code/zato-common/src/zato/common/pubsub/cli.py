@@ -71,32 +71,32 @@ class TimingWorker(SyncWorker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._socket_times = {}
-    
+
     def accept(self, listener):
         socket_start = time.time()
         client, addr = listener.accept()
         client.setblocking(1)
         util.close_on_exec(client)
-        
+
         # Store socket accept time using client object as key
         self._socket_times[client] = socket_start
         self.handle(listener, client, addr)
-    
+
     def handle_request(self, listener, req, client, addr):
         wsgi_start = time.time()
-        
+
         # Calculate time from socket accept to WSGI
         if client in self._socket_times:
             socket_to_wsgi_duration = wsgi_start - self._socket_times[client]
-            socket_to_wsgi_time.observe(socket_to_wsgi_duration)
+            _ = socket_to_wsgi_time.observe(socket_to_wsgi_duration)
             del self._socket_times[client]
-        
+
         try:
             result = super().handle_request(listener, req, client, addr)
             return result
         finally:
             total_duration = time.time() - wsgi_start
-            gunicorn_request_time.observe(total_duration)
+            _ = gunicorn_request_time.observe(total_duration)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,7 +165,7 @@ class GunicornApplication(BaseApplication):
                 return result
             finally:
                 duration = time.time() - start_time
-                gunicorn_request_time.observe(duration)
+                _ = gunicorn_request_time.observe(duration)
 
         self.application = timing_middleware
         super().__init__()
@@ -291,10 +291,11 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
                     return result
                 finally:
                     duration = time.time() - start_time
-                    gunicorn_request_time.observe(duration)
+                    _ = gunicorn_request_time.observe(duration)
             return middleware
 
-        wrapped_app = timing_middleware(app)
+        timing_middleware = timing_middleware
+        # wrapped_app = timing_middleware(app)
 
         # Configure gunicorn options
         options = {

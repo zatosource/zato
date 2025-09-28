@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,15 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from copy import deepcopy
-from datetime import datetime
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
 from urllib.parse import urlencode
-
-# gevent
-from gevent.lock import RLock
 
 # requests
 from requests import Response as _RequestsResponse
@@ -31,16 +27,18 @@ from requests_ntlm import HttpNtlmAuth
 # requests-toolbelt
 from requests_toolbelt import MultipartEncoder
 
+# prometheus_client
+from prometheus_client import Counter, Histogram
+
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_component_name
+from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
-from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +57,20 @@ if 0:
 
 logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Metrics
+try:
+    zato_outgoing_http_requests_total = Counter(
+        'zato_outgoing_http_requests_total', 'Total outgoing HTTP requests', ['connection_name', 'status_code'])
+    zato_outgoing_http_request_duration_seconds = Histogram(
+        'zato_outgoing_http_request_duration_seconds', 'Outgoing HTTP request duration', ['connection_name'])
+except ValueError:
+    from prometheus_client import REGISTRY
+    zato_outgoing_http_requests_total = REGISTRY._names_to_collectors['zato_outgoing_http_requests_total']
+    zato_outgoing_http_request_duration_seconds = REGISTRY._names_to_collectors['zato_outgoing_http_request_duration_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +172,23 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
+    def _push_metrics(self, start_time, status_code):
+        """ Updates outgoing HTTP metrics with duration and status code.
+        """
+        duration = (utcnow() - start_time).total_seconds()
+        connection_name = self.config['name']
+
+        _ = zato_outgoing_http_requests_total.labels(
+            connection_name=connection_name,
+            status_code=status_code
+        ).inc()
+
+        _ = zato_outgoing_http_request_duration_seconds.labels(
+            connection_name=connection_name
+        ).observe(duration)
+
+# ################################################################################################################################
+
     def set_auth(self) -> 'None':
 
         # Local variables
@@ -224,6 +253,9 @@ class BaseHTTPSOAPWrapper:
         *args:'any_',
         **kwargs:'any_'
     ) -> '_RequestsResponse':
+
+        # Record start time for metrics
+        start_time = utcnow()
 
         # Local variables
         params = kwargs.get('params')
@@ -313,6 +345,9 @@ class BaseHTTPSOAPWrapper:
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                 verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
 
+            # Update metrics
+            self._push_metrics(start_time, str(response.status_code))
+
             # .. log what we received ..
             msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
             logger.info(msg)
@@ -321,7 +356,11 @@ class BaseHTTPSOAPWrapper:
             return response
 
         except RequestsTimeout:
+            self._push_metrics(start_time, 'timeout')
             raise TimeoutException(cid, format_exc())
+        except Exception:
+            self._push_metrics(start_time, 'error')
+            raise
 
 # ################################################################################################################################
 
@@ -343,12 +382,12 @@ class BaseHTTPSOAPWrapper:
         # Session object will write some info to it ..
         verbose = StringIO()
 
-        start = datetime.utcnow()
+        start = utcnow()
         ping_method = self.config['ping_method'] or 'HEAD'
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
 
-            entry = '{} (UTC)\n{} {}\n'.format(datetime.utcnow().isoformat(),
+            entry = '{} (UTC)\n{} {}\n'.format(utcnow().isoformat(),
                 ping_method, hook_data['request'].url)
             _ = verbose.write(entry)
 
@@ -362,7 +401,7 @@ class BaseHTTPSOAPWrapper:
 
         # .. store additional info, get and close the stream.
         _ = verbose.write('Code: {}'.format(response.status_code))
-        _ = verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
+        _ = verbose.write('\nResponse time: {}'.format(utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
 
@@ -409,7 +448,7 @@ class BaseHTTPSOAPWrapper:
         headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
-            'X-Zato-Msg-TS': now or datetime.utcnow().isoformat(),
+            'X-Zato-Msg-TS': now or utcnow().isoformat(),
         })
 
         if self.config.get('transport') == URL_TYPE.SOAP:
@@ -514,13 +553,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # We do not need an envelope if the data already has one ..
         if isinstance(data, bytes):
-            if b':Envelope' in data:
+            if b':Envelope' in data: # type: ignore
                 return data, headers # type: ignore
             else:
                 needs_soap_wrapper = True
 
         else:
-            if ':Envelope' in data:
+            if ':Envelope' in data: # type: ignore
                 return data, headers # type: ignore
             else:
                 needs_soap_wrapper = True
@@ -732,7 +771,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if needs_exception:
                 raise
             else:
-                logger.warn('Caught an exception -> %s -> %s', e, format_exc())
+                logger.warning('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..

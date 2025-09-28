@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,13 +19,15 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
-from zato.common.util.api import new_cid_server
+from zato.common.util.api import make_cid_public, new_cid_server
+
+# prometheus_client
+from prometheus_client import Counter, Histogram
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from pytz.tzinfo import BaseTzInfo
     from zato.common.typing_ import any_, callable_, list_, stranydict
     from zato.server.base.parallel import ParallelServer
 
@@ -33,6 +35,20 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato_rest')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Metrics
+try:
+    zato_http_requests_total = Counter(
+        'zato_http_requests_total', 'Total HTTP requests', ['channel_name', 'status_code'])
+    zato_http_request_duration_seconds = Histogram(
+        'zato_http_request_duration_seconds', 'HTTP request duration', ['channel_name'])
+except ValueError:
+    from prometheus_client import REGISTRY
+    zato_http_requests_total = REGISTRY._names_to_collectors['zato_http_requests_total']
+    zato_http_request_duration_seconds = REGISTRY._names_to_collectors['zato_http_request_duration_seconds']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,8 +67,8 @@ class HTTPHandler:
         wsgi_environ,     # type: stranydict
         start_response,   # type: callable_
         _new_cid=new_cid_server, # type: callable_
-        _local_zone=get_localzone(), # type: BaseTzInfo
-        _utcnow=datetime.utcnow, # type: callable_
+        _local_zone=get_localzone(), # type: ignore
+        _utcnow=datetime.utcnow, # type: ignore
         _INFO=INFO, # type: int
         _UTC=UTC,   # type: any_
         _Access_Log_Date_Time_Format=Access_Log_Date_Time_Format, # type: str
@@ -163,13 +179,17 @@ class HTTPHandler:
                         'user_agent': user_agent,
                 })
 
+        # .. how long it took to produce the response ..
+        delta = _utcnow() - request_ts_utc
+        response_time = delta.total_seconds()
+
+        # Update metrics
+        _ = zato_http_requests_total.labels(channel_name=channel_name, status_code=status_code).inc()
+        _ = zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
+
         # .. this goes to the server log ..
         if _has_log_info:
             if not wsgi_environ['PATH_INFO'] in self.rest_log_ignore:
-
-                # .. how long it took to produce the response ..
-                delta = _utcnow() - request_ts_utc
-
                 # .. log information about what we are returning ..
                 msg = f'REST cha ← cid={cid}; {status_code} time={delta}; len={response_size}'
                 logger.info(msg)

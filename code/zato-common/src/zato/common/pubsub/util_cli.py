@@ -11,6 +11,7 @@ import json
 import os
 import urllib.request
 from logging import getLogger
+from traceback import format_exc
 
 # gevent
 from gevent.subprocess import run as subprocess_run
@@ -41,7 +42,7 @@ def _get_connections_data(vhost:'str') -> 'dict_':
     """ Get raw connections data from rabbitmqctl.
     """
     result = subprocess_run(
-        f'sudo rabbitmqctl list_connections name user client_properties connected_at channels --vhost {vhost} --formatter json',
+        f"sudo rabbitmqctl list_connections name user client_properties connected_at channels --vhost {vhost} --formatter json",
         shell=True,
         capture_output=True,
         text=True,
@@ -59,7 +60,7 @@ def _get_connections_data(vhost:'str') -> 'dict_':
 def _get_consumers_data(vhost:'str') -> 'dict_':
     """ Get raw consumers data from rabbitmqctl.
     """
-    command_args = f'list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json'
+    command_args = f"list_consumers queue_name consumer_tag channel_pid --vhost {vhost} --formatter json"
 
     request_data = {
         'args': command_args
@@ -77,11 +78,11 @@ def _get_consumers_data(vhost:'str') -> 'dict_':
         with urllib.request.urlopen(req, timeout=5) as response:
             response_data = json.loads(response.read().decode('utf-8'))
             return response_data
-    except Exception as e:
+    except Exception:
         return {
             'returncode': -1,
             'stdout': '',
-            'stderr': f'Failed to connect to rabbitmqctl server: {e}'
+            'stderr': f'Failed to connect to rabbitmqctl server -> {format_exc()}'
         }
 
 # ################################################################################################################################
@@ -206,6 +207,8 @@ def _analyze_connections(connections:'list_') -> 'dict_':
 def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
     """ Get detailed consumer information for a specific queue.
     """
+    consumers_data = None
+
     if _needs_details:
         logger.info(f'[{cid}] Getting consumers for queue {queue_name}')
 
@@ -213,8 +216,8 @@ def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
         consumers_data = _get_consumers_data(vhost)
 
         if consumers_data['returncode'] != 0:
-            logger.warning(f'Failed to get consumers: {consumers_data["stderr"]}')
-            raise Exception(consumers_data['stderr'])
+            msg = f'Failed to get consumers: {consumers_data["stderr"]}'
+            raise Exception(msg)
 
         all_consumers = _parse_consumers_details(consumers_data['stdout'], vhost)
 
@@ -231,8 +234,8 @@ def get_queue_consumers(cid:'str', vhost:'str', queue_name:'str') -> 'list_':
 
         return queue_consumers
 
-    except Exception as e:
-        logger.error(f'[{cid}] Error getting queue consumers: {e}')
+    except Exception:
+        logger.error(f'[{cid}] Error getting queue consumers -> {consumers_data} -> {format_exc()}')
         raise
 
 # ################################################################################################################################
