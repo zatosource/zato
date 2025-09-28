@@ -427,7 +427,7 @@ class PubSubRESTServerPull(BaseRESTServer):
         if not subscription:
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
 
-        if not subscription.is_active:
+        if not subscription.is_delivery_active:
             return self._build_error_response(cid, 'Delivery disabled', response_class=UnauthorizedResponse)
 
         # OK, we're sure we have a subscription now and it's active

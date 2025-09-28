@@ -335,7 +335,7 @@ class Backend:
         username: 'str'='',
         sec_name: 'str'='',
         sub_key: 'str'='',
-        delivery_is_active: 'bool'=True,
+        is_delivery_active: 'bool'=True,
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
         source_server_type: 'str'='',
@@ -389,7 +389,7 @@ class Backend:
             sub.topic_name = topic_name
             sub.sec_name = sec_name
             sub.sub_key = sub_key
-            sub.delivery_is_active = delivery_is_active
+            sub.is_delivery_active = is_delivery_active
             sub.creation_time = utcnow()
 
             # .. get or create a dict with subscriptions for users ..
@@ -411,7 +411,7 @@ class Backend:
                 'sub_key': sub_key,
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
-                'delivery_is_active': delivery_is_active,
+                'is_delivery_active': is_delivery_active,
                 'delivery_type': PubSub.Delivery_Type.Pull,
             }
 

@@ -289,7 +289,7 @@ class BaseServer:
                 password = item['password']
                 topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
-                delivery_is_active = item.get('delivery_is_active', True)
+                is_delivery_active = item.get('is_delivery_active', True)
 
                 # Add user credentials
                 self.create_user(cid, sec_name, username, password)
@@ -310,7 +310,7 @@ class BaseServer:
                         topic_name,
                         username=username,
                         sub_key=sub_key,
-                        delivery_is_active=delivery_is_active
+                        is_delivery_active=is_delivery_active
                     )
 
             except Exception:
