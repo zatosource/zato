@@ -1380,7 +1380,7 @@ class PubSubSubscription(Base):
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
-    pub_is_active = Column(Boolean, nullable=False, default=True)
+    is_pub_active = Column(Boolean, nullable=False, default=True)
     is_delivery_active = Column(Boolean, nullable=False, default=True)
 
     delivery_type = Column(String(20), nullable=False)
@@ -1415,6 +1415,9 @@ class PubSubSubscriptionTopic(Base):
 
     id = Column(Integer, Sequence('pubsub_subscription_topic_id_seq'), primary_key=True)
     pattern_matched = Column(String(400), nullable=False)
+
+    is_pub_enabled = Column(Boolean, nullable=False, default=True)
+    is_delivery_enabled = Column(Boolean, nullable=False, default=True)
 
     subscription_id = Column(Integer, ForeignKey('pubsub_subscription.id', ondelete='CASCADE'), nullable=False)
     subscription = relationship('PubSubSubscription', backref=backref('topics', order_by=id, cascade='all, delete, delete-orphan'))
