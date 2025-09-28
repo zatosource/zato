@@ -152,7 +152,10 @@ class Create(AdminService):
 
         # A part of what we're returning
         topic_link_list = []
-        topic_name_list = sorted(input.topic_name_list)
+
+        # topic_name_list is a list of dicts with topic_name and is_enabled
+        topic_data_list = input.topic_name_list
+        topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
 
         with closing(self.odb.session()) as session:
             try:
@@ -165,6 +168,11 @@ class Create(AdminService):
 
                 # Get topics
                 topics = []
+                topic_data_by_name = {}
+
+                for item in topic_data_list:
+                    topic_name = item['topic_name']
+                    topic_data_by_name[topic_name] = item
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
@@ -202,6 +210,10 @@ class Create(AdminService):
                     sub_topic.subscription = sub
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
+
+                    # Set is_pub_enabled based on the is_enabled flag from topic data
+                    topic_data = topic_data_by_name[topic.name]
+                    sub_topic.is_pub_enabled = topic_data['is_enabled']
 
                     with session.no_autoflush:
                         pattern_matched = evaluate_pattern_match(
@@ -307,9 +319,16 @@ class Edit(AdminService):
                     delete()
 
                 # Process topics if any are provided
-                topic_name_list = input.get('topic_name_list') or []
+                topic_data_list = input.get('topic_name_list') or []
+                topic_name_list = [item['topic_name'] for item in topic_data_list]
+
                 topic_link_list = []
                 topics = []
+                topic_data_by_name = {}
+
+                for item in topic_data_list:
+                    topic_name = item['topic_name']
+                    topic_data_by_name[topic_name] = item
 
                 # If we go here, it means we don't have any other topics for that subscription ..
                 if not topic_name_list:
@@ -355,6 +374,10 @@ class Edit(AdminService):
                             sub_topic.cluster_id = input.cluster_id
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
+
+                            # Set is_pub_enabled based on the is_enabled flag from topic data
+                            topic_data = topic_data_by_name[topic.name]
+                            sub_topic.is_pub_enabled = topic_data['is_enabled']
 
                             # Use no_autoflush to prevent premature flush during pattern evaluation
                             with session.no_autoflush:
