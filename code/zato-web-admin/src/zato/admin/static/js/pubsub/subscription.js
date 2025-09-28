@@ -2,6 +2,59 @@
 
 $.namespace('zato.pubsub.subscription');
 
+// Tri-state checkbox functionality
+function setupTriStateCheckbox(checkbox) {
+    var $checkbox = $(checkbox);
+
+    if (!$checkbox.data('tri-state-initialized')) {
+        var initialState = 0;
+
+        if ($checkbox.hasClass('indeterminate')) {
+            initialState = 2;
+        } else if ($checkbox.prop('checked')) {
+            initialState = 1;
+        }
+
+        $checkbox.data('tri-state', initialState);
+        $checkbox.data('tri-state-initialized', true);
+
+        $checkbox.off('click.tristate mousedown.tristate');
+
+        $checkbox.on('mousedown.tristate', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var currentState = $checkbox.data('tri-state') || 0;
+            var newState = (currentState + 1) % 3;
+
+            $checkbox.data('tri-state', newState);
+
+            $checkbox.removeClass('indeterminate');
+
+            switch(newState) {
+                case 0:
+                    $checkbox.prop('checked', false);
+                    break;
+                case 1:
+                    $checkbox.prop('checked', true);
+                    break;
+                case 2:
+                    $checkbox.prop('checked', false);
+                    $checkbox.addClass('indeterminate');
+                    break;
+            }
+
+            return false;
+        });
+
+        $checkbox.on('click.tristate', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+    }
+}
+
 // Constants
 var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>';
 
@@ -48,6 +101,11 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
     // Set the HTML content
     $(targetDivId).html(htmlContent);
+
+    // Convert all topic checkboxes to tri-state
+    $(targetDivId + ' input[name="topic_name"]').addClass('tri-state').each(function() {
+        setupTriStateCheckbox(this);
+    });
 
     // Verify content was set
     var afterContent = $(targetDivId).html();
