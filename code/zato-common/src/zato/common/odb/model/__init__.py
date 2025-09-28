@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,7 +20,6 @@ from zato.common.api import AMQP, CACHE, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODO
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
-
 
 # ################################################################################################################################
 # ################################################################################################################################
