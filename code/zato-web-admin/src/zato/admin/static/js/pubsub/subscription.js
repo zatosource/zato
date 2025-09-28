@@ -293,6 +293,7 @@ $(document).ready(function() {
                 console.log('DEBUG requestAnimationFrame: setupDeliveryTypeVisibility completed');
 
                 // Load topics for the current security definition in edit mode
+                console.log('DEBUG sec_base_id check: type=' + typeof(instance.sec_base_id) + ', value=' + JSON.stringify(instance.sec_base_id));
                 if(instance.sec_base_id) {
                     console.log('DEBUG requestAnimationFrame: loading topics for sec_base_id=' + instance.sec_base_id);
                     var cluster_id = $('#cluster_id').val();

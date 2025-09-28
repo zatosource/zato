@@ -343,6 +343,9 @@ $.fn.zato.data_table.parse = function() {
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
+                if(attr_name === 'sec_base_id') {
+                    console.log('DEBUG common.js: sec_base_id attr_value=' + JSON.stringify(attr_value) + ', td text=' + JSON.stringify($(td).text()));
+                }
                 instance[attr_name] = attr_value;
             }
         });

@@ -45,6 +45,7 @@ class Index(_Index):
         output_repeated = True
 
     def on_before_append_item(self, item):
+
         topic_name_list = item.topic_name_list
         item.topic_name_list = dumps(topic_name_list)
         return item
