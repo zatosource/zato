@@ -1377,9 +1377,11 @@ class PubSubSubscription(Base):
 
     id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
     sub_key = Column(String(200), nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    pub_is_active = Column(Boolean, nullable=False, default=True)
+    delivery_is_active = Column(Boolean, nullable=False, default=True)
 
     delivery_type = Column(String(20), nullable=False)
     push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
