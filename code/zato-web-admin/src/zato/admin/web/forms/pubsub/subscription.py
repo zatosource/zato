@@ -30,7 +30,7 @@ def get_rest_endpoint_choices(req):
     return choices
 
 class CreateForm(forms.Form):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    delivery_is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     topic_id = forms.MultipleChoiceField(widget=forms.SelectMultiple())
     sec_base_id = forms.ChoiceField(widget=forms.Select())
     delivery_type = forms.ChoiceField(
@@ -76,15 +76,19 @@ class CreateForm(forms.Form):
             self.fields['push_service_name'].choices = [('', 'Select a service')]
 
 class EditForm(CreateForm):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    delivery_is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(EditForm, self).__init__(prefix, post_data, req)
+
         if req:
             # Topics will be populated dynamically via AJAX
             self.fields['topic_id'].choices = []
+
             # Use filtered security definitions for edit (allows all available ones) with empty first option
             choices = [('', 'Select a security definition')] + get_pubsub_security_choices(req, 'edit', 'subscription')
+
             self.fields['sec_base_id'].choices = choices
+
             # Set default option for REST endpoints (will be populated via AJAX)
             self.fields['rest_push_endpoint_id'].choices = [('', 'Select a REST endpoint')]

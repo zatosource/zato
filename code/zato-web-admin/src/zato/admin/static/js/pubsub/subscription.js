@@ -586,13 +586,13 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_active = item.is_active == true
+    var delivery_is_active = item.delivery_is_active == true
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
 
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', delivery_is_active ? 'Yes' : 'No');
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
@@ -635,7 +635,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", delivery_is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
 
     row += String.format("<td class='ignore'>{0}</td>", item.sec_base_id);
@@ -692,15 +692,15 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     var form = $('#edit-form');
 
-    let is_active = $.fn.zato.like_bool(instance.is_active)
-    form.find('#id_edit-is_active').prop('checked',  "HERE");
+    let delivery_is_active = $.fn.zato.like_bool(instance.delivery_is_active)
+    form.find('#id_edit-delivery_is_active').prop('checked',  "HERE");
 
-    // alert(is_active);
-    // alert(instance.is_active);
+    // alert(delivery_is_active);
+    // alert(instance.delivery_is_active);
 
     console.log('DEBUG edit: setting form field values');
     form.find('#id_edit-sub_key').val(instance.sub_key);
-    form.find('#id_edit-is_active').prop('checked',  is_active);
+    form.find('#id_edit-delivery_is_active').prop('checked',  delivery_is_active);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);

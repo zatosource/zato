@@ -22,7 +22,7 @@ from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
-from zato.server.service import AsIs, PubSubMessage, Service
+from zato.server.service import AsIs, Bool, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -64,8 +64,8 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
         input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_link_list'), 'sec_base_id', 'sec_name', 'username', \
-            'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', Bool('delivery_is_active'), 'created', AsIs('topic_link_list'), 'sec_base_id', \
+            'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
         output_repeated = True
 
@@ -141,8 +141,8 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'sec_name', 'delivery_type'
+        input_optional = Bool('delivery_is_active'), 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
+        output_required = 'id', 'sub_key', Bool('delivery_is_active'), 'created', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -179,7 +179,7 @@ class Create(AdminService):
                 # Create the subscription
                 sub = PubSubSubscription()
                 sub.sub_key = sub_key # type: ignore
-                sub.is_active = input.is_active
+                sub.delivery_is_active = input.delivery_is_active
                 sub.cluster = cluster
                 sub.sec_base = sec_base
                 sub.delivery_type = input.delivery_type
@@ -231,7 +231,7 @@ class Create(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
-                pubsub_msg.is_active = sub.is_active
+                pubsub_msg.delivery_is_active = sub.delivery_is_active
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
@@ -246,7 +246,7 @@ class Create(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_active = sub.is_active
+                self.response.payload.delivery_is_active = sub.delivery_is_active
                 self.response.payload.created = sub.created
                 self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
@@ -266,8 +266,8 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type'
+        input_optional = Bool('delivery_is_active'), 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', Bool('delivery_is_active'), 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -326,7 +326,7 @@ class Edit(AdminService):
                     # .. produce the response for our caller ..
                     self.response.payload.id = sub.id
                     self.response.payload.sub_key = sub.sub_key
-                    self.response.payload.is_active = False
+                    self.response.payload.delivery_is_active = False
                     self.response.payload.sec_name = sec_base.name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
@@ -392,7 +392,7 @@ class Edit(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
-                pubsub_msg.is_active = sub.is_active
+                pubsub_msg.delivery_is_active = sub.delivery_is_active
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_name_list
@@ -410,7 +410,7 @@ class Edit(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_active = sub.is_active
+                self.response.payload.delivery_is_active = sub.delivery_is_active
                 self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
@@ -490,8 +490,8 @@ class _BaseModifyTopicList(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = AsIs('topic_name_list')
-        input_optional = 'username', 'sec_name', 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', \
-            'push_service_name', 'sub_key'
+        input_optional = 'username', 'sec_name', Bool('delivery_is_active'), 'delivery_type', 'push_type', \
+            'rest_push_endpoint_id', 'push_service_name', 'sub_key'
         output_optional = AsIs('topic_name_list')
         response_elem = None
 
@@ -550,7 +550,7 @@ class _BaseModifyTopicList(AdminService):
                         create_request.topic_name_list = input.topic_name_list
                         create_request.sec_base_id = sec_base_id
                         create_request.delivery_type = input.delivery_type
-                        create_request.is_active = input.is_active
+                        create_request.delivery_is_active = input.delivery_is_active
                         create_request.push_type = input.push_type
                         create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
                         create_request.push_service_name = input.push_service_name
@@ -629,7 +629,7 @@ class _BaseModifyTopicList(AdminService):
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
                 request.delivery_type = current_sub.delivery_type
-                request.is_active = current_sub.is_active
+                request.delivery_is_active = current_sub.delivery_is_active
                 request.push_service_name = current_sub.push_service_name
                 request.push_type = current_sub.push_type
                 request.rest_push_endpoint_id = current_sub.rest_push_endpoint_id

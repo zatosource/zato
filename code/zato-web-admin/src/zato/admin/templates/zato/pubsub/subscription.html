@@ -220,7 +220,7 @@
             'sec_name',
 
             'sub_key',
-            '_is_active',
+            '_delivery_is_active',
             '_delivery_type',
 
             'topic_link_list',
@@ -228,7 +228,7 @@
             '_delete',
 
             'id',
-            'is_active',
+            'delivery_is_active',
             'delivery_type',
 
             'sec_base_id',
@@ -272,7 +272,7 @@
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
-                        <th><a href="#">Active</a></th>
+                        <th style="text-align:center"><a href="#">Active delivery</a></th>
                         <th>Delivery type</th>
 
                         <th>Topics</th>
@@ -303,7 +303,7 @@
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
 
                         <td>{{ item.sub_key }}</td>
-                        <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
+                        <td style="text-align:center">{{ item.delivery_is_active|yesno:"Yes,No" }}</td>
                         <td>
                             {% if item.delivery_type == 'pull' %}
                                 Pull
@@ -321,7 +321,7 @@
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.delivery_is_active }}</td>
                         <td class='ignore'>{{ item.delivery_type }}</td>
 
                         <td class='ignore'>{{ item.sec_base_id }}</td>
@@ -350,8 +350,8 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_is_active">Active</label></td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_delivery_is_active">Active</label></td>
+                            <td>{{ create_form.delivery_is_active }}</td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_sec_base_id">Security definition</label></td>
@@ -403,8 +403,8 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_edit-is_active">Active</label></td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle; width:14%"><label for="id_edit-delivery_is_active">Active</label></td>
+                            <td>{{ edit_form.delivery_is_active }}</td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_edit-sec_base_id">Security definition</label></td>
