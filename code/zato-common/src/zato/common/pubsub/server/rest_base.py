@@ -44,7 +44,6 @@ from gevent.pywsgi import WSGIServer
 # werkzeug
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.wrappers import Request
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Zato
 from zato.common.api import PubSub
@@ -607,8 +606,8 @@ class BaseRESTServer(BaseServer):
 
         response:'APIResponse' = {
             'cid': cid,
-            'is_ok': result.is_ok,
-            'status': result.status
+            'is_ok': result['is_ok'],
+            'status': result['status']
         }
         return response
 
@@ -636,7 +635,7 @@ class BaseRESTServer(BaseServer):
         result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
         response:'APIResponse' = {
-            'is_ok': result.is_ok,
+            'is_ok': result['is_ok'],
             'cid': cid
         }
 

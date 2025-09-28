@@ -171,7 +171,7 @@ allow_loopback=False
 
 [logging]
 http_access_log_ignore=
-rest_log_ignore=/zato/admin/invoke,
+rest_log_ignore=/zato/admin/invoke, /zato/metrics
 
 [os_environ]
 sample_key=sample_value

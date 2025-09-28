@@ -100,7 +100,7 @@ prometheus:
 	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
 
 grafana:
-	grafana-server \
+	Zato_Grafana_Base_Path=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_ grafana-server \
 		--homepath=/usr/share/grafana \
 		--config=/dev/null \
 		cfg:default.paths.data=/tmp/grafana-data \

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,9 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from tempfile import gettempdir
 from unittest import TestCase
+
+# Prometheus
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 # Zato
 from zato.common.test import rand_csv, rand_string
@@ -109,6 +112,17 @@ class PubInputLogger(Service):
 
     def handle(self):
         self.logger.info('Received request: `%s`', self.request.raw_request)
+
+# ################################################################################################################################
+
+class GetMetrics(Service):
+    """ Returns metrics in Prometheus format.
+    """
+    name = 'zato.metrics.get'
+
+    def handle(self):
+        self.response.payload = generate_latest().decode('utf-8')
+        self.response.content_type = CONTENT_TYPE_LATEST
 
 # ################################################################################################################################
 # ################################################################################################################################

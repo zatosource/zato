@@ -153,7 +153,7 @@ class BaseServer:
             #
             # Internal details
             #
-            Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
+            # Rule('/pubsub/admin/diagnostics', endpoint='on_admin_diagnostics', methods=['GET']),
 
             #
             # Prometheus metrics

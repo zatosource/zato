@@ -9,5 +9,5 @@ providers:
     updateIntervalSeconds: 10
     allowUiUpdates: true
     options:
-      path: ./dashboards
+      path: ${Zato_Grafana_Base_Path}/dashboards
       foldersFromFilesStructure: true

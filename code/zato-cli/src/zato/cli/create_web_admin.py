@@ -200,6 +200,7 @@ class Create(ZatoCommand):
         from django.db import connection
         from django.db.utils import IntegrityError
 
+        call_command('migrate', interactive=False, verbosity=0)
         call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
         call_command('loaddata', initial_data_json_path, verbosity=0)
 

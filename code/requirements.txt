@@ -49,6 +49,7 @@ oslo.config==9.0.0
 parse-type==0.6.4
 parse==1.20.2
 passlib==1.7.1
+paste==3.10.1
 pbr==5.11.1
 pg8000==1.13.1
 prettytable==3.5.0
