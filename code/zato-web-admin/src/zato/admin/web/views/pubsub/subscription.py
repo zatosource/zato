@@ -75,6 +75,47 @@ class _CreateEdit(CreateEdit):
 
         return return_data
 
+    def _get_input_dict_common(self, topic_field_name):
+
+        input_dict = {}
+
+        if self.req.method == 'POST':
+            topic_name_list = self.req.POST.getlist(topic_field_name)
+            if topic_name_list:
+                input_dict['topic_name_list'] = topic_name_list
+
+        return input_dict
+
+    def _pre_process_input_dict_common(self, input_dict, field_prefix):
+
+        if self.req.method == 'POST':
+            topic_data_list = self.req.POST.getlist('topic_data')
+            topic_names = []
+
+            for topic_data_json in topic_data_list:
+                topic_data = loads(topic_data_json)
+                topic_names.append({
+                    'topic_name': topic_data['topic_name'],
+                    'is_enabled': topic_data['is_enabled']
+                })
+
+            input_dict['topic_name_list'] = topic_names
+
+            field_mapping = self._get_field_mapping(field_prefix)
+
+            for form_field, service_field in field_mapping.items():
+                if form_field in self.req.POST and self.req.POST[form_field]:
+
+                    value = self.req.POST[form_field]
+
+                    if service_field == 'is_delivery_active':
+                        input_dict[service_field] = value == 'on'
+                    else:
+                        input_dict[service_field] = value
+
+    def _get_field_mapping(self, prefix):
+        raise NotImplementedError('Subclasses must implement _get_field_mapping')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -90,49 +131,18 @@ class Create(_CreateEdit):
             'topic_name_list', 'topic_link_list',
 
     def _get_input_dict(self):
+        return self._get_input_dict_common('create-topic_name')
 
-        input_dict = {}
-
-        # Map topic_name form field (which can be multiple) to topic_name_list service input
-        if self.req.method == 'POST':
-            topic_name_list = self.req.POST.getlist('create-topic_name')
-            if topic_name_list:
-                input_dict['topic_name_list'] = topic_name_list
-
-        return input_dict
+    def _get_field_mapping(self, prefix):
+        return {
+            'sec_base_id': 'sec_base_id',
+            'delivery_type': 'delivery_type',
+            'is_delivery_active': 'is_delivery_active',
+            'rest_push_endpoint_id': 'rest_push_endpoint_id'
+        }
 
     def pre_process_input_dict(self, input_dict):
-
-        # Extract topic data from form POST data
-        if self.req.method == 'POST':
-            topic_data_list = self.req.POST.getlist('topic_data')
-            topic_names = []
-
-            for topic_data_json in topic_data_list:
-                topic_data = loads(topic_data_json)
-                topic_names.append({
-                    'topic_name': topic_data['topic_name'],
-                    'is_enabled': topic_data['is_enabled']
-                })
-
-            input_dict['topic_name_list'] = topic_names
-
-            # Map other form fields
-            field_mapping = {
-                'sec_base_id': 'sec_base_id',
-                'delivery_type': 'delivery_type',
-                'is_delivery_active': 'is_delivery_active',
-                'rest_push_endpoint_id': 'rest_push_endpoint_id'
-            }
-
-            for form_field, service_field in field_mapping.items():
-                value = self.req.POST.get(form_field)
-
-                if value:
-                    if service_field == 'is_delivery_active':
-                        input_dict[service_field] = value == 'on'
-                    else:
-                        input_dict[service_field] = value
+        self._pre_process_input_dict_common(input_dict, '')
 
     def success_message(self, item):
         return 'Successfully created pub/sub subscription'
@@ -151,53 +161,21 @@ class Edit(_CreateEdit):
         output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
+        return self._get_input_dict_common('topic_name')
 
-        input_dict = {}
-
-        # Map topic_name form field (which can be multiple) to topic_name_list service input
-        if self.req.method == 'POST':
-            topic_names = self.req.POST.getlist('topic_name')
-            if topic_names:
-                input_dict['topic_name_list'] = topic_names
-
-        return input_dict
+    def _get_field_mapping(self, prefix):
+        return {
+            f'{prefix}sub_key': 'sub_key',
+            f'{prefix}sec_base_id': 'sec_base_id',
+            f'{prefix}delivery_type': 'delivery_type',
+            f'{prefix}is_delivery_active': 'is_delivery_active',
+            f'{prefix}push_type': 'push_type',
+            f'{prefix}rest_push_endpoint_id': 'rest_push_endpoint_id',
+            f'{prefix}push_service_name': 'push_service_name',
+        }
 
     def pre_process_input_dict(self, input_dict):
-
-        # Extract topic data from form POST data
-        if self.req.method == 'POST':
-            topic_data_list = self.req.POST.getlist('topic_data')
-            topic_names = []
-
-            for topic_data_json in topic_data_list:
-                topic_data = loads(topic_data_json)
-                topic_names.append({
-                    'topic_name': topic_data['topic_name'],
-                    'is_enabled': topic_data['is_enabled']
-                })
-
-            input_dict['topic_name_list'] = topic_names
-
-            # Map other form fields
-            field_mapping = {
-                'edit-sub_key': 'sub_key',
-                'edit-sec_base_id': 'sec_base_id',
-                'edit-delivery_type': 'delivery_type',
-                'edit-is_delivery_active': 'is_delivery_active',
-                'edit-push_type': 'push_type',
-                'edit-rest_push_endpoint_id': 'rest_push_endpoint_id',
-                'edit-push_service_name': 'push_service_name',
-            }
-
-            for form_field, service_field in field_mapping.items():
-                if form_field in self.req.POST and self.req.POST[form_field]:
-
-                    value = self.req.POST[form_field]
-
-                    if service_field == 'is_delivery_active':
-                        input_dict[service_field] = value == 'on'
-                    else:
-                        input_dict[service_field] = value
+        self._pre_process_input_dict_common(input_dict, 'edit-')
 
     def success_message(self, item):
         return 'Successfully updated pub/sub subscription'
