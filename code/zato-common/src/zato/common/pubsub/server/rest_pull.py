@@ -40,6 +40,7 @@ from zato.common.util.api import as_bool, utcnow
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.models import Subscription
     from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
@@ -171,27 +172,21 @@ class PubSubRESTServerPull(BaseRESTServer):
 
 # ################################################################################################################################
 
-    def _find_user_sub_key(self, cid:'str', username:'str') -> 'str | None':
-        """ Find user's subscription key from topics.
+    def _find_user_subscription(self, username:'str') -> 'Subscription | None':
+        """ Find user's subscription from topics.
         """
-        # Get sec_name from username
-        config = self.get_user_config(username)
-        sec_name = config['sec_name']
+        for subs in self.backend.subs_by_topic.values():
+            print()
+            print(111, subs)
+            print()
+            for sub in subs.values():
+                print()
+                print(222, sub)
+                print()
+                if sub.username == username:
+                    return sub
 
-        for topic_name, subs_by_sec_name in self.backend.subs_by_topic.items():
-            if sec_name in subs_by_sec_name:
-                subscription = subs_by_sec_name[sec_name]
-
-                if subscription is None:
-                    msg = f'[{cid}] Malformed subscription data for user `{username}` in topic `{topic_name}`'
-                    raise Exception(msg)
-
-                return subscription.sub_key
-
-        else:
-            msg = f'[{cid}] No subscription found for user `{username}`'
-            logger.warning(msg)
-            return None
+        return None
 
 # ################################################################################################################################
 
@@ -405,10 +400,16 @@ class PubSubRESTServerPull(BaseRESTServer):
             logger.info(f'[{cid}] Validated params: max_len={max_len}, max_messages={max_messages}, wrap_in_list={wrap_in_list}')
 
         with sub_lookup_time.time():
-            sub_key = self._find_user_sub_key(cid, username)
+            subscription = self._find_user_subscription(username)
 
-        if not sub_key:
+        if not subscription:
             return self._build_error_response(cid, 'No subscription found for user', response_class=UnauthorizedResponse)
+
+        if not subscription.is_active:
+            return self._build_error_response(cid, 'Subscription is inactive', response_class=UnauthorizedResponse)
+
+        # OK, we're sure we have a subscription now and it's active
+        sub_key = subscription.sub_key
 
         try:
             messages_data = self._fetch_from_rabbitmq(cid, sub_key, max_messages)
