@@ -459,15 +459,31 @@ $(document).ready(function() {
             }
         }
 
-        // Handle indeterminate checkboxes - set is_delivery_active to undetermined if any exist
-        var indeterminateCount = $(topicDivId + ' input[name="topic_name"].indeterminate').length;
-        if (indeterminateCount > 0) {
-            console.log('DEBUG on_submit: found ' + indeterminateCount + ' indeterminate topics, setting is_delivery_active to undetermined');
-            var deliveryActiveId = action === 'create' ? '#id_is_delivery_active' : '#id_edit-is_delivery_active';
-            var $deliveryActiveInput = $(deliveryActiveId);
-            $deliveryActiveInput.prop('checked', true);
-            $deliveryActiveInput.val('undetermined');
-        }
+        // Create hidden inputs for topic data structure
+        var $form = $(topicDivId).closest('form');
+
+        // Remove any existing topic_data inputs
+        $form.find('input[name="topic_data"]').remove();
+
+        // Add checked topics as enabled
+        $(topicDivId + ' input[name="topic_name"]:checked:not(.indeterminate)').each(function() {
+            var $checkbox = $(this);
+            var topicName = $checkbox.val();
+            console.log('DEBUG on_submit: adding enabled topic=' + topicName);
+            var topicDataObj = {topic_name: topicName, is_enabled: true};
+            var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
+        });
+
+        // Add indeterminate topics as disabled
+        $(topicDivId + ' input[name="topic_name"].indeterminate').each(function() {
+            var $checkbox = $(this);
+            var topicName = $checkbox.val();
+            console.log('DEBUG on_submit: adding disabled topic=' + topicName);
+            var topicDataObj = {topic_name: topicName, is_enabled: false};
+            var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
+        });
 
         // Call original on_submit if validation passes
         console.log('DEBUG on_submit: calling original on_submit');
@@ -788,25 +804,11 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     var form = $('#edit-form');
 
-    let is_delivery_active = $.fn.zato.like_bool(instance.is_delivery_active)
-    
-    // Check if is_delivery_active should be set to undetermined
-    if (instance.is_delivery_active === 'undetermined') {
-        console.log('DEBUG edit: setting is_delivery_active to undetermined state');
-        var $checkbox = form.find('#id_edit-is_delivery_active');
-        $checkbox.prop('checked', false);
-        $checkbox.addClass('indeterminate');
-        setupTriStateCheckbox($checkbox[0]);
-    } else {
-        form.find('#id_edit-is_delivery_active').prop('checked', is_delivery_active);
-    }
-
-    // alert(is_delivery_active);
-    // alert(instance.is_delivery_active);
+    var is_delivery_active = $.fn.zato.like_bool(instance.is_delivery_active);
+    form.find('#id_edit-is_delivery_active').prop('checked', is_delivery_active);
 
     console.log('DEBUG edit: setting form field values');
     form.find('#id_edit-sub_key').val(instance.sub_key);
-    form.find('#id_edit-is_delivery_active').prop('checked',  is_delivery_active);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
