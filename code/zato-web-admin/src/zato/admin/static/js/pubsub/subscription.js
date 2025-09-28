@@ -669,12 +669,15 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     }
 
     var is_delivery_active = item.is_delivery_active == true
+    var is_pub_active = item.is_pub_active == true
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
 
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', is_pub_active ? 'Yes' : 'No');
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
