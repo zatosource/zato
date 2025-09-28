@@ -359,7 +359,7 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"></td>
+                            <td style="vertical-align:middle; width:14%">Is active</td>
                             <td>
                                 <label for="id_is_delivery_active">Delivery</label>: {{ create_form.is_delivery_active }}
                                 |
@@ -416,7 +416,7 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"></td>
+                            <td style="vertical-align:middle; width:14%">Is active</td>
                             <td>
                                 <label for="id_edit-is_delivery_active">Delivery</label>: {{ edit_form.is_delivery_active }}
                                 |
