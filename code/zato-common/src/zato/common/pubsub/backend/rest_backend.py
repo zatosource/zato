@@ -335,7 +335,7 @@ class RESTBackend(Backend):
         cid = msg['cid']
         sub_key = msg['sub_key']
         sec_name = msg['sec_name']
-        delivery_is_active = msg['delivery_is_active']
+        is_delivery_active = msg['is_delivery_active']
         topic_name_list = msg['topic_name_list']
 
         if not sub_key:
@@ -348,9 +348,9 @@ class RESTBackend(Backend):
 
             # Add subscription to new topics
             for topic_name in topic_name_list:
-                _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key, delivery_is_active=delivery_is_active)
+                _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key, is_delivery_active=is_delivery_active)
 
-        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list} (delivery_is_active:{delivery_is_active})'
+        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list} (is_delivery_active:{is_delivery_active})'
         logger.info(log_msg)
 
 # ################################################################################################################################

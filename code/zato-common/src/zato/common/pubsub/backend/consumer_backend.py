@@ -69,7 +69,7 @@ class ConsumerBackend(Backend):
         topic_name_list: 'strlist',
         sec_name: 'str',
         sub_key: 'str',
-        delivery_is_active: 'bool',
+        is_delivery_active: 'bool',
         on_msg_callback:'callable_',
     ) -> 'None':
 
@@ -99,7 +99,7 @@ class ConsumerBackend(Backend):
                     sec_name,
                     sub_key,
                     on_msg_callback,
-                    delivery_is_active
+                    is_delivery_active
                 )
 
                 # .. get the actual consumer object ..
@@ -112,10 +112,10 @@ class ConsumerBackend(Backend):
         added = binding_changes['added']
         removed = binding_changes['removed']
 
-        added_msg = f'[{cid}] Successfully subscribed `{sec_name}` to `{added}` with key `{sub_key}`, all topics `{topic_name_list}` (running={delivery_is_active})'
+        added_msg = f'[{cid}] Successfully subscribed `{sec_name}` to `{added}` with key `{sub_key}`, all topics `{topic_name_list}` (running={is_delivery_active})'
         remaining_topics = sorted(topic for topic in topic_name_list if topic not in removed)
         removed_msg = f'[{cid}] Unsubscribed `{sec_name}` from `{removed}` with key `{sub_key}`, still subscribed to `{remaining_topics}`'
-        not_changed_msg = f'[{cid}] Topics for `{sub_key}` are `{topic_name_list}` (running={delivery_is_active})'
+        not_changed_msg = f'[{cid}] Topics for `{sub_key}` are `{topic_name_list}` (running={is_delivery_active})'
 
         if added or removed:
             if added:
@@ -179,7 +179,7 @@ class ConsumerBackend(Backend):
         # Local aliases
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
-        delivery_is_active:'bool' = msg['delivery_is_active']
+        is_delivery_active:'bool' = msg['is_delivery_active']
         sec_name:'str' = msg['sec_name']
         topic_name_list:'strlist' = msg['topic_name_list']
         delivery_type:'str' = msg['delivery_type']
@@ -196,7 +196,7 @@ class ConsumerBackend(Backend):
                 topic_name_list,
                 sec_name,
                 sub_key,
-                delivery_is_active,
+                is_delivery_active,
                 self.worker_store.on_pubsub_public_message_callback
             )
 
@@ -207,7 +207,7 @@ class ConsumerBackend(Backend):
         # Local aliases
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
-        delivery_is_active:'bool' = msg['delivery_is_active']
+        is_delivery_active:'bool' = msg['is_delivery_active']
         sec_name:'str' = msg['sec_name']
         delivery_type:'str' = msg['delivery_type']
         old_delivery_type:'str' = msg['old_delivery_type']
@@ -254,7 +254,7 @@ class ConsumerBackend(Backend):
                     topic_name_list,
                     sec_name,
                     sub_key,
-                    delivery_is_active,
+                    is_delivery_active,
                     self.worker_store.on_pubsub_public_message_callback
                 )
                 return
@@ -280,9 +280,9 @@ class ConsumerBackend(Backend):
                 # .. get a queue for that consumer ..
                 queue_name = consumer.config.queue
 
-                # .. now, make sure the consumer is started or stopped, depending on what the delivery_is_active flag tells us ..
+                # .. now, make sure the consumer is started or stopped, depending on what the is_delivery_active flag tells us ..
 
-                if delivery_is_active:
+                if is_delivery_active:
                     if consumer.is_stopped:
 
                         # .. tell it should keep running - this is used in its .start methodd ..

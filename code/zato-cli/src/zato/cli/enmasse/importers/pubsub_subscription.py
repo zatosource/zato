@@ -61,7 +61,7 @@ class PubSubSubscriptionImporter:
                 'push_type': item.push_type,
                 'rest_push_endpoint_id': item.rest_push_endpoint_id,
                 'push_service_name': item.push_service_name,
-                'delivery_is_active': item.delivery_is_active,
+                'is_delivery_active': item.is_delivery_active,
                 'cluster_id': 1
             }
 
@@ -112,7 +112,7 @@ class PubSubSubscriptionImporter:
                 'push_type': subscription.push_type,
                 'rest_push_endpoint_id': subscription.rest_push_endpoint_id,
                 'push_service_name': subscription.push_service_name,
-                'delivery_is_active': subscription.delivery_is_active,
+                'is_delivery_active': subscription.is_delivery_active,
                 'cluster_id': subscription.cluster_id,
                 'topic_name_list': topic_names
             }
@@ -139,7 +139,7 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
-        instance.delivery_is_active = definition.get('delivery_is_active', True)
+        instance.is_delivery_active = definition.get('is_delivery_active', True)
 
         logger.info('Creating subscription: sub_key=%s, sec_base_id=%s, cluster_id=%s', instance.sub_key, instance.sec_base_id, instance.cluster_id)
 
@@ -189,7 +189,7 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
-        instance.delivery_is_active = definition.get('delivery_is_active', True)
+        instance.is_delivery_active = definition.get('is_delivery_active', True)
 
         set_instance_opaque_attrs(instance, definition)
 
@@ -260,12 +260,12 @@ class PubSubSubscriptionImporter:
             logger.info('push_type differs: YAML=%s, DB=%s', yaml_push_type, db_push_type)
             return True
 
-        # Compare delivery_is_active
-        yaml_is_active = yaml_def.get('delivery_is_active', True)
-        db_is_active = db_def.get('delivery_is_active', True)
+        # Compare is_delivery_active
+        yaml_is_active = yaml_def.get('is_delivery_active', True)
+        db_is_active = db_def.get('is_delivery_active', True)
 
         if yaml_is_active is not db_is_active:
-            logger.info('delivery_is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
+            logger.info('is_delivery_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
             return True
 
         # Compare topic lists
@@ -342,7 +342,7 @@ class PubSubSubscriptionImporter:
                 'sec_base_id': sec_base_id,
                 'delivery_type': delivery_type,
                 'topic_id_list': topic_id_list,
-                'delivery_is_active': yaml_def.get('delivery_is_active', True),
+                'is_delivery_active': yaml_def.get('is_delivery_active', True),
                 'username': security_name,
                 'name': yaml_def.get('name', security_name)
             }
@@ -359,7 +359,7 @@ class PubSubSubscriptionImporter:
 
             # Add other opaque attributes
             for key, value in yaml_def.items():
-                if key not in ['security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service', 'delivery_is_active']:
+                if key not in ['security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service', 'is_delivery_active']:
                     subscription_def[key] = value
 
             # Create a key for tracking
@@ -383,7 +383,7 @@ class PubSubSubscriptionImporter:
                     'push_type': instance.push_type,
                     'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                     'push_service_name': instance.push_service_name,
-                    'delivery_is_active': instance.delivery_is_active,
+                    'is_delivery_active': instance.is_delivery_active,
                     'cluster_id': instance.cluster_id
                 }
 
@@ -406,7 +406,7 @@ class PubSubSubscriptionImporter:
                         'push_type': instance.push_type,
                         'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                         'push_service_name': instance.push_service_name,
-                        'delivery_is_active': instance.delivery_is_active,
+                        'is_delivery_active': instance.is_delivery_active,
                         'cluster_id': instance.cluster_id
                     }
 

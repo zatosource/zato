@@ -892,7 +892,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
         func.count(PubSubSubscription.id).label('subscription_count')
     ).filter(
         PubSubSubscription.cluster_id == cluster_id,
-        PubSubSubscription.delivery_is_active == True
+        PubSubSubscription.is_delivery_active == True
     ).group_by(PubSubSubscription.sec_base_id).subquery()
 
     # Main query with subscription counts
@@ -939,7 +939,7 @@ def _pubsub_subscription(session, cluster_id):
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
-        PubSubSubscription.delivery_is_active,
+        PubSubSubscription.is_delivery_active,
         PubSubSubscription.sec_base_id,
         PubSubSubscription.created,
         PubSubSubscription.last_updated,
@@ -962,7 +962,7 @@ def _pubsub_subscription(session, cluster_id):
         group_by(
             PubSubSubscription.id,
             PubSubSubscription.sub_key,
-            PubSubSubscription.delivery_is_active,
+            PubSubSubscription.is_delivery_active,
             PubSubSubscription.sec_base_id,
             PubSubSubscription.created,
             PubSubSubscription.last_updated,

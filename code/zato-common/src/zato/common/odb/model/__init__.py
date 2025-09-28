@@ -1381,7 +1381,7 @@ class PubSubSubscription(Base):
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     pub_is_active = Column(Boolean, nullable=False, default=True)
-    delivery_is_active = Column(Boolean, nullable=False, default=True)
+    is_delivery_active = Column(Boolean, nullable=False, default=True)
 
     delivery_type = Column(String(20), nullable=False)
     push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
