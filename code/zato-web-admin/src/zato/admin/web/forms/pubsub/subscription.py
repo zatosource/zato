@@ -31,6 +31,7 @@ def get_rest_endpoint_choices(req):
 
 class CreateForm(forms.Form):
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     topic_id = forms.MultipleChoiceField(widget=forms.SelectMultiple())
     sec_base_id = forms.ChoiceField(widget=forms.Select())
     delivery_type = forms.ChoiceField(
@@ -77,6 +78,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_delivery_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_pub_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(EditForm, self).__init__(prefix, post_data, req)

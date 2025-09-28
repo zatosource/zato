@@ -222,22 +222,23 @@
             'sub_key',
             '_is_delivery_active',
             '_is_pub_active',
-            '_delivery_type',
 
+            '_delivery_type',
             'topic_link_list',
             '_edit',
-            '_delete',
 
+            '_delete',
             'id',
             'is_delivery_active',
+
             'is_pub_active',
             'delivery_type',
-
             'sec_base_id',
+
             'push_type',
             'rest_push_endpoint_id',
-
             'rest_push_endpoint_name',
+
             'push_service_name',
             'topic_name_list',
         ]
@@ -276,21 +277,23 @@
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
                         <th style="text-align:center"><a href="#">Active delivery</a></th>
                         <th style="text-align:center"><a href="#">Active publications</a></th>
-                        <th style="text-align:center">Delivery type</th>
 
+                        <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
                         <th>Edit</th>
+
                         <th>Delete</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -308,6 +311,7 @@
                         <td>{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_delivery_active|yesno:"Yes,No" }}</td>
                         <td style="text-align:center">{{ item.is_pub_active|yesno:"Yes,No" }}</td>
+
                         <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
                                 Pull
@@ -319,20 +323,21 @@
                                 Push
                             {% endif %}
                         </td>
-
                         <td>{{ item.topic_link_list|safe }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
 
+                        <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_delivery_active }}</td>
-                        <td class='ignore'>{{ item.delivery_type }}</td>
 
+                        <td class='ignore'>{{ item.is_pub_active }}</td>
+                        <td class='ignore'>{{ item.delivery_type }}</td>
                         <td class='ignore'>{{ item.sec_base_id }}</td>
+
                         <td class='ignore'>{{ item.push_type }}</td>
                         <td class='ignore'>{{ item.rest_push_endpoint_id }}</td>
-
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
+
                         <td class='ignore'>{{ item.push_service_name }}</td>
                         <td class='ignore'>{{ item.topic_name_list }}</td>
                     </tr>
