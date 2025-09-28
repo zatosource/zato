@@ -62,7 +62,9 @@
 
             // 9, 9b
             '_security',
-            '_security_groups',
+            {% if connection == 'channel' %}
+                '_security_groups',
+            {% endif %}
 
             // 10, 11
             {% if transport == 'soap' %}
@@ -178,7 +180,9 @@
 
                         <!-- 9, 9b -->
                         <th><a href="#">Security</a></th>
-                        <th><a href="#">Security groups</a></th>
+                        {% if connection == 'channel' %}
+                            <th><a href="#">Security groups</a></th>
+                        {% endif %}
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -299,13 +303,17 @@
                             {% else %}
                                 {{ item.security_name|safe }}
                             {% endif %}
-                        <td>
-                            {% if item.security_group_count %}
-                                {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
-                            {% else %}
-                            <span class="form_hint">---</span>
-                            {% endif %}
                         </td>
+
+                        {% if connection == 'channel' %}
+                            <td>
+                                {% if item.security_group_count %}
+                                    {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
+                                {% else %}
+                                <span class="form_hint">---</span>
+                                {% endif %}
+                            </td>
+                        {% endif %}
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -672,6 +680,7 @@
                             </td>
                         </tr>
                         {% endif %}
+
                         <tr class="api-client-groups-options-block hidden">
                             <td class="to-ignore"></td>
                             <td>

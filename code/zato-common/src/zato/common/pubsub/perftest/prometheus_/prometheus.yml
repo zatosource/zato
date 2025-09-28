@@ -39,3 +39,12 @@ scrape_configs:
       - targets: ['localhost:40200']
     scrape_interval: 5s
     metrics_path: /metrics
+
+  - job_name: 'zato-server'
+    static_configs:
+      - targets: ['localhost:17010']
+    scrape_interval: 5s
+    metrics_path: /zato/metrics
+    basic_auth:
+      username: monitoring
+      password: monitoring

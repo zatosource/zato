@@ -9,14 +9,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import os
 import subprocess
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import getLogger
+
+# Zato
+from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Configure logging format to match Zato format
 def setup_logging():
@@ -35,6 +43,14 @@ def setup_logging():
 # ################################################################################################################################
 # ################################################################################################################################
 
+_has_rabbitmq_group = os.environ.get('Zato_Has_RabbitMQ_Group')
+_has_rabbitmq_group = as_bool(_has_rabbitmq_group)
+
+needs_sudo = not _has_rabbitmq_group
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RabbitMQCtlHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
@@ -47,25 +63,56 @@ class RabbitMQCtlHandler(BaseHTTPRequestHandler):
             command_args = request_data.get('args', '')
             logger.info(f'Command args: {command_args}')
 
-            full_command = f'/usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+            temp_file = f'/tmp/rabbitmq_output_{timestamp}.txt'
+
+            prefix = 'sudo -u rabbitmq ' if needs_sudo else ''
+
+            full_command = f'{prefix}/usr/lib/rabbitmq/bin/rabbitmqctl {command_args}'
             logger.info(f'Executing: {full_command}')
 
-            result = subprocess.run(
-                full_command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            with open(temp_file, 'w') as f:
+                result = subprocess.run(
+                    full_command,
+                    shell=True,
+                    stdout=f,
+                    stderr=subprocess.STDOUT,
+                    timeout=30
+                )
 
             logger.info(f'Command completed with returncode: {result.returncode}')
-            if result.stderr:
-                logger.warning(f'Command stderr: {result.stderr}')
+
+            stdout_content = ''
+            if os.path.exists(temp_file):
+                with open(temp_file, 'r') as f:
+                    raw_content = f.read()
+
+                lines = raw_content.strip().split('\n')
+
+                json_start = -1
+                json_end = -1
+
+                for i in range(len(lines) - 1, -1, -1):
+                    line = lines[i].strip()
+                    if line == ']' or line == '}':
+                        json_end = i
+                        break
+
+                if json_end >= 0:
+                    for i in range(json_end, -1, -1):
+                        line = lines[i].strip()
+                        if line == '[' or line == '{':
+                            json_start = i
+                            break
+
+                if json_start >= 0 and json_end >= 0:
+                    json_lines = lines[json_start:json_end + 1]
+                    stdout_content = '\n'.join(json_lines)
 
             response_data = {
                 'returncode': result.returncode,
-                'stdout': result.stdout,
-                'stderr': result.stderr
+                'stdout': stdout_content,
+                'stderr': ''
             }
 
             logger.info(f'Response data: {response_data}')

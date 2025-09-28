@@ -1084,26 +1084,26 @@ class GenericObject(Base):
     {})
 
     id = Column(Integer, Sequence('generic_object_seq'), primary_key=True)
-    name = Column(Text(191), nullable=False)
+    name = Column(String(191), nullable=False)
 
-    type_ = Column(Text(191), nullable=False)
-    subtype = Column(Text(191), nullable=True)
+    type_ = Column(String(191), nullable=False)
+    subtype = Column(String(191), nullable=True)
 
-    category_id = Column(Text(191), nullable=True)
-    subcategory_id = Column(Text(191), nullable=True)
+    category_id = Column(String(191), nullable=True)
+    subcategory_id = Column(String(191), nullable=True)
 
     creation_time = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_modified = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    category_name = Column(Text(191), nullable=True)
-    subcategory_name = Column(Text(191), nullable=True)
+    category_name = Column(String(191), nullable=True)
+    subcategory_name = Column(String(191), nullable=True)
 
     # This references back to generic objects
     parent_object_id = Column(Integer, nullable=True)
 
     # This may reference objects other than the current model
-    parent_id = Column(Text(191), nullable=True)
-    parent_type = Column(Text(191), nullable=True)
+    parent_id = Column(String(191), nullable=True)
+    parent_type = Column(String(191), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)

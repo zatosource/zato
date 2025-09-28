@@ -16,6 +16,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.const import ServiceConst
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 
@@ -43,7 +44,6 @@ class Create(ZatoCommand):
     def execute(self, args, show_output=True):
 
         # stdlib
-        from datetime import datetime
         from traceback import format_exc
 
         # SQLAlchemy
@@ -61,7 +61,7 @@ class Create(ZatoCommand):
 
             cluster = Cluster()
             cluster.name = args.cluster_name
-            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
+            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), utcnow().isoformat())
 
             for name in('odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
                 setattr(cluster, name, getattr(args, name))
@@ -93,18 +93,28 @@ class Create(ZatoCommand):
 
             session.flush()
 
+            # Create services
             admin_invoke_service_name = 'zato.server.service.internal.service.Invoke'
             admin_invoke_service = Service(None, admin_invoke_service_name, True, admin_invoke_service_name, True, cluster)
+            session.add(admin_invoke_service)
 
             ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
             ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
+            session.add(ide_publisher_service)
 
-            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
-            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
+            metrics_service_name = 'zato.server.service.internal.helpers.GetMetrics'
+            metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
+            session.add(metrics_service)
 
             ping_service = self.add_ping_service(session, cluster)
 
-            # Rule Engine Security Group
+            # Create channels
+            self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
+            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
+            self.add_metrics_channel(session, cluster, metrics_service)
+
+            # Add other configurations
+            self.add_default_caches(session, cluster)
             self.add_rule_engine_configuration(session, cluster, ping_service)
 
             # Run ODB post-processing tasks
@@ -180,6 +190,24 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def add_metrics_channel(self, session, cluster, service):
+        """ Adds a channel for the metrics service.
+        """
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
+
+        security = HTTPBasicAuth(
+            None, 'monitoring', True, 'monitoring', 'Metrics user', 'monitoring', cluster)
+        session.add(security)
+
+        channel = HTTPSOAP(
+            None, 'zato.metrics', True, True, 'channel',
+            'plain_http', None, '/zato/metrics', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=security)
+        session.add(channel)
+
+# ################################################################################################################################
+
     def add_admin_invoke(self, session, cluster, service, security):
         """ Adds an admin channel for invoking services from web admin and CLI.
         """
@@ -202,7 +230,7 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import MISC, SIMPLE_IO
+        from zato.common.api import SIMPLE_IO
         from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
