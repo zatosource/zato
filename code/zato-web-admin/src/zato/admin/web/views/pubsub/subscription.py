@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from json import dumps
+from json import dumps, loads
 from traceback import format_exc
 
 # Django
@@ -103,10 +103,19 @@ class Create(_CreateEdit):
 
     def pre_process_input_dict(self, input_dict):
 
-        # Extract topic IDs from form POST data
+        # Extract topic data from form POST data
         if self.req.method == 'POST':
-            topic_name_list = self.req.POST.getlist('topic_name')
-            input_dict['topic_name_list'] = topic_name_list
+            topic_data_list = self.req.POST.getlist('topic_data')
+            topic_names = []
+
+            for topic_data_json in topic_data_list:
+                topic_data = loads(topic_data_json)
+                topic_names.append({
+                    'topic_name': topic_data['topic_name'],
+                    'is_enabled': topic_data['is_enabled']
+                })
+
+            input_dict['topic_name_list'] = topic_names
 
             # Map other form fields
             field_mapping = {
@@ -155,9 +164,18 @@ class Edit(_CreateEdit):
 
     def pre_process_input_dict(self, input_dict):
 
-        # Extract topic names from form POST data
+        # Extract topic data from form POST data
         if self.req.method == 'POST':
-            topic_names = self.req.POST.getlist('topic_name')
+            topic_data_list = self.req.POST.getlist('topic_data')
+            topic_names = []
+
+            for topic_data_json in topic_data_list:
+                topic_data = loads(topic_data_json)
+                topic_names.append({
+                    'topic_name': topic_data['topic_name'],
+                    'is_enabled': topic_data['is_enabled']
+                })
+
             input_dict['topic_name_list'] = topic_names
 
             # Map other form fields
@@ -175,12 +193,6 @@ class Edit(_CreateEdit):
                 if form_field in self.req.POST and self.req.POST[form_field]:
 
                     value = self.req.POST[form_field]
-
-                    print()
-                    print(111, form_field)
-                    print(222, service_field)
-                    print(333, value)
-                    print()
 
                     if service_field == 'is_delivery_active':
                         input_dict[service_field] = value == 'on'
