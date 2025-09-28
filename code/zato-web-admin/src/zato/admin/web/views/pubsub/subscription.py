@@ -39,7 +39,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'delivery_is_active', 'created', 'sec_base_id', 'sec_name', 'delivery_type', \
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'sec_base_id', 'sec_name', 'delivery_type', \
             'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
             'topic_link_list'
         output_repeated = True
@@ -84,8 +84,8 @@ class Create(_CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
-        input_optional = 'delivery_is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'delivery_is_active', 'created', 'sec_name', 'delivery_type', \
+        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'sec_name', 'delivery_type', \
             'topic_name_list', 'topic_link_list',
 
     def _get_input_dict(self):
@@ -111,14 +111,14 @@ class Create(_CreateEdit):
             field_mapping = {
                 'sec_base_id': 'sec_base_id',
                 'delivery_type': 'delivery_type',
-                'delivery_is_active': 'delivery_is_active',
+                'is_delivery_active': 'is_delivery_active',
                 'rest_push_endpoint_id': 'rest_push_endpoint_id'
             }
 
             for form_field, service_field in field_mapping.items():
                 value = self.req.POST.get(form_field)
                 if value:
-                    if service_field == 'delivery_is_active':
+                    if service_field == 'is_delivery_active':
                         input_dict[service_field] = value == 'on'
                     else:
                         input_dict[service_field] = value
@@ -136,8 +136,8 @@ class Edit(_CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
-        input_optional = 'delivery_is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'delivery_is_active', 'topic_name_list', 'topic_link_list'
+        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
 
@@ -163,7 +163,7 @@ class Edit(_CreateEdit):
                 'edit-sub_key': 'sub_key',
                 'edit-sec_base_id': 'sec_base_id',
                 'edit-delivery_type': 'delivery_type',
-                'edit-delivery_is_active': 'delivery_is_active',
+                'edit-is_delivery_active': 'is_delivery_active',
                 'edit-push_type': 'push_type',
                 'edit-rest_push_endpoint_id': 'rest_push_endpoint_id',
                 'edit-push_service_name': 'push_service_name',
@@ -172,7 +172,7 @@ class Edit(_CreateEdit):
             for form_field, service_field in field_mapping.items():
                 if form_field in self.req.POST and self.req.POST[form_field]:
                     value = self.req.POST[form_field]
-                    if service_field == 'delivery_is_active':
+                    if service_field == 'is_delivery_active':
                         input_dict[service_field] = value == 'on'
                     else:
                         input_dict[service_field] = value
