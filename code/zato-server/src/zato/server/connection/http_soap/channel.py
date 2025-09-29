@@ -284,7 +284,7 @@ class RequestDispatcher:
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warninging('url_data:`%s` is not active, raising NotFound', url_match)
+                    logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
                 # This the string pointing to the URL path that we matched
@@ -492,7 +492,7 @@ class RequestDispatcher:
             response = response_404.format(cid)
 
             # .. this goes to logs and it includes the URL sent by the client.
-            logger.warninging(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+            logger.warning(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
 
             # This is the payload for the caller
             return response
@@ -706,7 +706,7 @@ class RequestHandler:
         """
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
         if not is_active:
-            logger.warninging('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
+            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 
