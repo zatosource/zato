@@ -717,12 +717,12 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
 
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Yes' : 'No');
-    row += String.format('<td style="text-align:center">{0}</td>', is_pub_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Enabled' : 'Disabled');
+    row += String.format('<td style="text-align:center">{0}</td>', is_pub_active ? 'Enabled' : 'Disabled');
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
-        row += String.format('<td>{0}</td>', 'Pull');
+        row += String.format('<td style="text-align:center">{0}</td>', 'Pull');
     } else {
         // Push delivery type - check push_type to determine what to show
         if(item.push_type === 'rest' && item.rest_push_endpoint_id) {
@@ -744,21 +744,18 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             }
 
             // Add the endpoint link to the row
-            row += String.format('<td>Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
+            row += String.format('<td style="text-align:center">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
                 encodeURIComponent(endpointName), endpointName);
         } else if(item.push_type === 'service' && item.push_service_name) {
             // For service push type, show the service name
-            row += String.format('<td>Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
+            row += String.format('<td style="text-align:center">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
                 encodeURIComponent(item.push_service_name), item.push_service_name);
-        } else {
-            // Generic push with no details
-            row += String.format('<td>Push</td>');
         }
     }
 
-    row += String.format('<td>{0}</td>', item.topic_link_list);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
+    row += String.format('<td style="text-align:center">{0}</td>', item.topic_link_list);
+    row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
+    row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_delivery_active);
