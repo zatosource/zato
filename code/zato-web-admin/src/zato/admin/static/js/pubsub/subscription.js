@@ -818,6 +818,9 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     var is_delivery_active = $.fn.zato.like_bool(instance.is_delivery_active);
     form.find('#id_edit-is_delivery_active').prop('checked', is_delivery_active);
 
+    var is_pub_active = $.fn.zato.like_bool(instance.is_pub_active);
+    form.find('#id_edit-is_pub_active').prop('checked', is_pub_active);
+
     console.log('DEBUG edit: setting form field values');
     form.find('#id_edit-sub_key').val(instance.sub_key);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
