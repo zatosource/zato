@@ -101,7 +101,7 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
         input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
             'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
         output_repeated = True
@@ -208,6 +208,8 @@ class Create(AdminService):
 
         topic_data_list = input.topic_name_list
         topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
+        
+        self.logger.info('CREATE: Creating subscription for topics: %s', topic_data_list)
 
         # Build topic objects with flags for frontend
         topic_objects_list = _build_topic_objects_list(topic_data_list=topic_data_list)
@@ -322,7 +324,7 @@ class Create(AdminService):
                 self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
-                self.logger.info('Subscription(s) created for %s -> %s (%s)', sec_base.name, topic_name_list, sub.sub_key)
+                self.logger.info('CREATE: Subscription(s) created for %s -> %s (%s) with flags: %s', sec_base.name, topic_name_list, sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -377,6 +379,8 @@ class Edit(AdminService):
                 # Process topics if any are provided
                 topic_data_list = input.get('topic_name_list') or []
                 topic_name_list = [item['topic_name'] for item in topic_data_list]
+                
+                self.logger.info('EDIT: Editing subscription %s for topics: %s', sub.sub_key, topic_data_list)
 
                 topic_link_list = []
                 topics = []
@@ -498,6 +502,8 @@ class Edit(AdminService):
 
                 self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
+                
+                self.logger.info('EDIT: Subscription %s updated for topics with flags: %s', sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

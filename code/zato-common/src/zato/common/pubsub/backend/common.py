@@ -269,24 +269,36 @@ class Backend:
         # Get sec_name from username
         config = self.rest_server.get_user_config(username)
         sec_name = config['sec_name']
+        logger.info(f'[{cid}] publish_impl: username={username}, sec_name={sec_name}, topic_name={topic_name}')
 
         # Check if user has pub_active permission for this topic
         with self._main_lock:
+            logger.info(f'[{cid}] publish_impl: checking is_pub_active for topic {topic_name}')
             if topic_name in self.subs_by_topic:
                 subs_by_sec_name = self.subs_by_topic[topic_name]
+                logger.info(f'[{cid}] publish_impl: topic {topic_name} found in subs_by_topic, sec_names: {list(subs_by_sec_name.keys())}')
                 if sec_name in subs_by_sec_name:
                     sub = subs_by_sec_name[sec_name]
+                    logger.info(f'[{cid}] publish_impl: subscription found for sec_name {sec_name}, is_pub_active={sub.is_pub_active}')
                     if not sub.is_pub_active:
+                        logger.warning(f'[{cid}] publish_impl: publishing disabled for user {username} on topic {topic_name}')
                         response = {
                             'is_ok': False,
                             'status': BAD_REQUEST,
                             'details': 'Publishing disabled for this topic'
                         }
                         return response
+                else:
+                    logger.info(f'[{cid}] publish_impl: sec_name {sec_name} not found in subscriptions for topic {topic_name}')
+            else:
+                logger.info(f'[{cid}] publish_impl: topic {topic_name} not found in subs_by_topic')
 
         # Create topic if it doesn't exist
         if not self._has_topic(topic_name):
+            logger.info(f'[{cid}] publish_impl: creating topic {topic_name}')
             self.create_topic(cid, 'publish', topic_name)
+        else:
+            logger.info(f'[{cid}] publish_impl: topic {topic_name} already exists')
 
         # Generate message ID and calculate size
         msg_id = new_msg_id()
@@ -322,7 +334,9 @@ class Backend:
         if msg.get('in_reply_to'):
             message['in_reply_to'] = msg['in_reply_to']
 
+        logger.info(f'[{cid}] publish_impl: publishing message {msg_id} to broker for topic {topic_name}')
         self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
+        logger.info(f'[{cid}] publish_impl: message {msg_id} successfully published to broker')
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
 
@@ -361,6 +375,8 @@ class Backend:
     ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
+        logger.info(f'[{cid}] register_subscription: topic_name={topic_name}, username={username}, sec_name={sec_name}, sub_key={sub_key}, is_delivery_active={is_delivery_active}, is_pub_active={is_pub_active}')
+        
         # Reusable
         response: 'StatusResponse' = {}
 
