@@ -238,7 +238,7 @@ Examples:
         os.mkdir(tmp_path)
 
         # .. move the archive to the new location ..
-        shutil_copy(src_path, tmp_path)
+        _ = shutil_copy(src_path, tmp_path)
 
         # .. get the zip file new location's full path ..
         zip_file_path = os.path.join(tmp_path, zip_name)

@@ -350,9 +350,10 @@ class RESTBackend(Backend):
             # Add subscription to new topics
             for topic_item in topic_name_list:
 
-                topic_name = topic_item['topic_name']
-                is_pub_enabled = topic_item['is_pub_enabled']
-                is_delivery_enabled = topic_item['is_delivery_enabled']
+                topic_name = topic_item.topic_name
+
+                is_pub_enabled = topic_item.is_pub_enabled
+                is_delivery_enabled = topic_item.is_delivery_enabled
 
                 _ = self.register_subscription(
                     cid,
@@ -365,7 +366,7 @@ class RESTBackend(Backend):
                     is_delivery_enabled=is_delivery_enabled
                 )
 
-        topic_name_list_human = ', '.join([item['topic_name'] for item in topic_name_list])
+        topic_name_list_human = ', '.join([item.topic_name for item in topic_name_list])
         log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list_human} (is_delivery_active:{is_delivery_active}, is_pub_active:{is_pub_active})'
         logger.info(log_msg)
 

@@ -109,9 +109,9 @@ class Backend:
         # Process each topic in the list
         for topic_item in topic_name_list:
 
-            topic_name = topic_item['topic_name']
-            is_pub_enabled = topic_item['is_pub_enabled']
-            is_delivery_enabled = topic_item['is_delivery_enabled']
+            topic_name = topic_item.topic_name
+            is_pub_enabled = topic_item.is_pub_enabled
+            is_delivery_enabled = topic_item.is_delivery_enabled
 
             _ = self.register_subscription(
                 cid,
@@ -125,7 +125,7 @@ class Backend:
             )
 
         # Log all subscribed topics
-        topic_name_list_human = ', '.join([item['topic_name'] for item in topic_name_list])
+        topic_name_list_human = ', '.join([item.topic_name for item in topic_name_list])
         log_msg = f'[{cid}] Successfully subscribed {sec_name} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
 
