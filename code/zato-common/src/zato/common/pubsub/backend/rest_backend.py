@@ -366,7 +366,7 @@ class RESTBackend(Backend):
                 )
 
         topic_name_list_human = ', '.join([item['topic_name'] for item in topic_name_list])
-        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list_human} (is_delivery_active:{is_delivery_active})'
+        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list_human} (is_delivery_active:{is_delivery_active}, is_pub_active:{is_pub_active})'
         logger.info(log_msg)
 
 # ################################################################################################################################
