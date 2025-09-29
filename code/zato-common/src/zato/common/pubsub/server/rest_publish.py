@@ -135,8 +135,11 @@ class PubSubRESTServerPublish(BaseRESTServer):
         response:'APIResponse' = {
             'is_ok': result['is_ok'], # type: ignore
             'cid': cid,
-            'msg_id': result['msg_id'], # type: ignore
         }
+
+        # .. this is optional because the result may indicate an error ..
+        if msg_id := result.get('msg_id'):
+            response['msg_id'] = msg_id
 
         # .. and return it to the caller.
         return response

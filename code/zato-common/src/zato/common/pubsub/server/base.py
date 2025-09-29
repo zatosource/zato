@@ -289,7 +289,8 @@ class BaseServer:
                 password = item['password']
                 topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
-                is_delivery_active = item.get('is_delivery_active', True)
+                is_pub_active = item['is_pub_active']
+                is_delivery_active = item['is_delivery_active']
 
                 # Add user credentials
                 self.create_user(cid, sec_name, username, password)
@@ -306,13 +307,14 @@ class BaseServer:
                     if not topic_name:
                         continue
 
-                    logger.info(f'[{cid}] Loading subscription:')
-                    logger.info(f'[{cid}]   user={username}')
-                    logger.info(f'[{cid}]   topic={topic_name}')
-                    logger.info(f'[{cid}]   is_pub_enabled={is_pub_enabled}')
-                    logger.info(f'[{cid}]   is_delivery_enabled={is_delivery_enabled}')
-                    logger.info(f'[{cid}]   is_delivery_active={is_delivery_active}')
-                    logger.info(f'[{cid}]   is_pub_active={is_pub_enabled}')
+                    message = f'[{cid}] Loading subscription:\n' + \
+                              f'[{cid}]   user={username}\n' + \
+                              f'[{cid}]   topic={topic_name}\n' + \
+                              f'[{cid}]   is_pub_enabled={is_pub_enabled}\n' + \
+                              f'[{cid}]   is_delivery_enabled={is_delivery_enabled}\n' + \
+                              f'[{cid}]   is_pub_active={is_pub_active}\n' + \
+                              f'[{cid}]   is_delivery_active={is_delivery_active}\n'
+                    logger.info(message)
 
                     # Create the subscription
                     _ = self.backend.register_subscription(
@@ -321,7 +323,7 @@ class BaseServer:
                         username=username,
                         sub_key=sub_key,
                         is_delivery_active=is_delivery_active,
-                        is_pub_active=is_pub_enabled
+                        is_pub_active=is_pub_active,
                     )
 
             except Exception:
