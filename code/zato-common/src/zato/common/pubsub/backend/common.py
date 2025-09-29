@@ -382,7 +382,7 @@ class Backend:
     ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
-        logger.info(f'[{cid}] register_subscription: topic_name={topic_name}, username={username}, sec_name={sec_name}, sub_key={sub_key}, is_delivery_active={is_delivery_active}, is_pub_active={is_pub_active}')
+        logger.info(f'[{cid}] register_subscription: topic_name={topic_name}, username={username}, sec_name={sec_name}, sub_key={sub_key}, is_delivery_active={is_delivery_active}, is_pub_active={is_pub_active}, is_pub_enabled={is_pub_enabled}, is_delivery_enabled={is_delivery_enabled}')
 
         # Reusable
         response: 'StatusResponse' = {}
