@@ -335,8 +335,8 @@ class RESTBackend(Backend):
         cid = msg['cid']
         sub_key = msg['sub_key']
         sec_name = msg['sec_name']
+        is_pub_active = msg.['is_pub_active']
         is_delivery_active = msg['is_delivery_active']
-        is_pub_active = msg.get('is_pub_active', True)
         topic_name_list = msg['topic_name_list']
 
         if not sub_key:
