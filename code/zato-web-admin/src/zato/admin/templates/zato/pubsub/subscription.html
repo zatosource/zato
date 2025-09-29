@@ -230,6 +230,25 @@
             font-weight: 600;
         }
 
+        /* Topic link styling based on pub/delivery status */
+        a.is-pub-enabled-false {
+            color: #333 !important;
+            background-color: #f0f0f0 !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+        }
+
+        a.is-pub-enabled-false:hover {
+            color: #222 !important;
+        }
+
+        a.is-delivery-enabled-false {
+            color: #8b0000 !important;
+            background-color: #ffe6e6 !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+        }
+
     </style>
 {% endblock %}
 
@@ -319,8 +338,8 @@
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
-                        <th style="text-align:center"><a href="#">Enabled for delivery</a></th>
-                        <th style="text-align:center"><a href="#">Enabled for publications</a></th>
+                        <th style="text-align:center"><a href="#">Delivery</a></th>
+                        <th style="text-align:center"><a href="#">Publications</a></th>
 
                         <th style="text-align:center">Delivery type</th>
                         <th>Topics</th>
@@ -353,8 +372,8 @@
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
 
                         <td>{{ item.sub_key }}</td>
-                        <td style="text-align:center">{{ item.is_delivery_active|yesno:"Yes,No" }}</td>
-                        <td style="text-align:center">{{ item.is_pub_active|yesno:"Yes,No" }}</td>
+                        <td style="text-align:center">{{ item.is_delivery_active|yesno:"Enabled,Disabled" }}</td>
+                        <td style="text-align:center">{{ item.is_pub_active|yesno:"Enabled,Disabled" }}</td>
 
                         <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
