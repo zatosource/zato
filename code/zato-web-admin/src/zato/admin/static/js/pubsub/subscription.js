@@ -166,16 +166,30 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
                 console.log('DEBUG populate_sec_def_topics_callback: attempting to check ' + topicNames.length + ' topics');
                 // Check the checkboxes for subscribed topics
-                topicNames.forEach(function(topicName, index) {
-                    console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topicName));
-                    var checkbox = $('input[name="topic_name"][value="' + topicName + '"]');
-                    console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topicName) + ', exists=' + JSON.stringify(checkbox.length > 0));
+                topicNames.forEach(function(topic, index) {
+                    console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topic));
+                    var checkbox = $('input[name="topic_name"][value="' + topic.topic_name + '"]');
+                    console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topic) + ', exists=' + JSON.stringify(checkbox.length > 0));
 
                     if (checkbox.length) {
-                        checkbox.prop('checked', true);
-                        console.log('DEBUG populate_sec_def_topics_callback: checked topic=' + JSON.stringify(topicName));
+                        // Set tri-state based on pub/delivery flags
+                        checkbox.addClass('tri-state');
+
+                        if (topic.is_pub_enabled && topic.is_delivery_enabled) {
+                            checkbox.prop('checked', true);
+                            checkbox.removeClass('indeterminate');
+                        } else if (!topic.is_pub_enabled && !topic.is_delivery_enabled) {
+                            checkbox.prop('checked', false);
+                            checkbox.removeClass('indeterminate');
+                        } else {
+                            checkbox.prop('checked', false);
+                            checkbox.addClass('indeterminate');
+                        }
+
+                        setupTriStateCheckbox(checkbox[0]);
+                        console.log('DEBUG populate_sec_def_topics_callback: set tri-state for topic=' + topic.topic_name + ', pub=' + topic.is_pub_enabled + ', delivery=' + topic.is_delivery_enabled);
                     } else {
-                        console.log('DEBUG populate_sec_def_topics_callback: topic checkbox not found for=' + JSON.stringify(topicName));
+                        console.log('DEBUG populate_sec_def_topics_callback: topic checkbox not found for=' + JSON.stringify(topic));
                     }
                 });
 
