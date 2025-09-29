@@ -47,8 +47,13 @@ _push_type = PubSub.Push_Type
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_link(topic_name:'str') -> 'str':
-    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(quote(topic_name), topic_name)
+def get_topic_link(topic_name:'str', is_pub_enabled:'bool'=True, is_delivery_enabled:'bool'=True) -> 'str':
+
+    pub_class = 'is-pub-enabled-true' if is_pub_enabled else 'is-pub-enabled-false'
+    delivery_class = 'is-delivery-enabled-true' if is_delivery_enabled else 'is-delivery-enabled-false'
+
+    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}" class="{} {}">{}</a>'.format(
+        quote(topic_name), pub_class, delivery_class, topic_name)
     return topic_link
 
 # ################################################################################################################################
@@ -79,12 +84,14 @@ class GetList(AdminService):
 
         # Group by subscription ID
         subscriptions_by_id = {}
-        topic_names_by_id = {}
+        topics_by_id = {}
 
         for item in result:
 
             sub_id = item.id
             topic_name = item.topic_name
+            is_pub_enabled = item.is_pub_enabled
+            is_delivery_enabled = item.is_delivery_enabled
             password = item.password
 
             if sub_id not in subscriptions_by_id:
@@ -98,30 +105,49 @@ class GetList(AdminService):
 
                 subscriptions_by_id[sub_id] = item_dict
 
-                # Initialize topic names list for this subscription
-                topic_names_by_id[sub_id] = []
+                # Initialize topics list for this subscription
+                topics_by_id[sub_id] = []
 
-            # Store plain topic name if not already present
-            if topic_name not in topic_names_by_id[sub_id]:
-                topic_names_by_id[sub_id].append(topic_name)
+            # Store topic with flags if not already present
+            topic_dict = {
+                'topic_name': topic_name,
+                'is_pub_enabled': is_pub_enabled,
+                'is_delivery_enabled': is_delivery_enabled
+            }
+
+            # Check if this topic is already in the list
+            topic_exists = False
+            for existing_topic in topics_by_id[sub_id]:
+                if existing_topic['topic_name'] == topic_name:
+                    topic_exists = True
+                    break
+
+            if not topic_exists:
+                topics_by_id[sub_id].append(topic_dict)
 
         # Process data for each subscription
         data = []
         for sub_id, sub_dict in subscriptions_by_id.items():
 
-            # Sort topic names
-            sorted_topic_names = sorted(topic_names_by_id[sub_id])
+            # Sort topics by name
+            sorted_topics = sorted(topics_by_id[sub_id], key=lambda x: x['topic_name'])
 
-            # Create topic links
-            topic_link_list = [get_topic_link(name) for name in sorted_topic_names]
+            # Create topic links from sorted topics
+            topic_link_list = [get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled']) for topic in sorted_topics]
 
             # Store both fields
             sub_dict['topic_link_list'] = ', '.join(topic_link_list)
-            sub_dict['topic_name_list'] = sorted_topic_names
+            sub_dict['topic_name_list'] = sorted_topics
 
             data.append(sub_dict)
 
-        return elems_with_opaque(data)
+        out = elems_with_opaque(data)
+
+        print()
+        print(111, out)
+        print()
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

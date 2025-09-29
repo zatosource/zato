@@ -935,7 +935,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 def _pubsub_subscription(session, cluster_id):
 
-    # Use subquery to handle multiple topics per subscription
+    # Return all subscription-topic pairs without grouping
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
@@ -947,7 +947,9 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.push_type,
         PubSubSubscription.rest_push_endpoint_id,
         PubSubSubscription.push_service_name,
-        func.min(PubSubTopic.name).label('topic_name'),
+        PubSubTopic.name.label('topic_name'),
+        PubSubSubscriptionTopic.is_pub_enabled,
+        PubSubSubscriptionTopic.is_delivery_enabled,
         SecurityBase.name.label('sec_name'),
         SecurityBase.username,
         SecurityBase.password.label('password'),
@@ -959,23 +961,7 @@ def _pubsub_subscription(session, cluster_id):
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         filter(PubSubSubscription.cluster_id == cluster_id).\
         filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
-        group_by(
-            PubSubSubscription.id,
-            PubSubSubscription.sub_key,
-            PubSubSubscription.is_delivery_active,
-            PubSubSubscription.sec_base_id,
-            PubSubSubscription.created,
-            PubSubSubscription.last_updated,
-            PubSubSubscription.delivery_type,
-            PubSubSubscription.push_type,
-            PubSubSubscription.rest_push_endpoint_id,
-            PubSubSubscription.push_service_name,
-            SecurityBase.name,
-            SecurityBase.username,
-            SecurityBase.password,
-            HTTPSOAP.name
-        ).\
-        order_by(PubSubSubscription.id, SecurityBase.name)
+        order_by(PubSubTopic.name)
 
 def pubsub_subscription(session, cluster_id, id):
     """ An individual Pub/Sub subscription.
