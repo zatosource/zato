@@ -109,10 +109,12 @@ class _CreateEdit(CreateEdit):
 
                     value = self.req.POST[form_field]
 
-                    if service_field == 'is_delivery_active':
+                    if service_field in ('is_delivery_active', 'is_pub_active'):
                         input_dict[service_field] = value == 'on'
                     else:
                         input_dict[service_field] = value
+                elif service_field in ('is_delivery_active', 'is_pub_active'):
+                    input_dict[service_field] = False
 
     def _get_field_mapping(self, prefix):
         raise NotImplementedError('Subclasses must implement _get_field_mapping')
@@ -139,6 +141,7 @@ class Create(_CreateEdit):
             'sec_base_id': 'sec_base_id',
             'delivery_type': 'delivery_type',
             'is_delivery_active': 'is_delivery_active',
+            'is_pub_active': 'is_pub_active',
             'rest_push_endpoint_id': 'rest_push_endpoint_id'
         }
 
@@ -158,7 +161,7 @@ class Edit(_CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_required = 'id', 'sub_key', 'sec_name', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self):
@@ -170,6 +173,7 @@ class Edit(_CreateEdit):
             f'{prefix}sec_base_id': 'sec_base_id',
             f'{prefix}delivery_type': 'delivery_type',
             f'{prefix}is_delivery_active': 'is_delivery_active',
+            f'{prefix}is_pub_active': 'is_pub_active',
             f'{prefix}push_type': 'push_type',
             f'{prefix}rest_push_endpoint_id': 'rest_push_endpoint_id',
             f'{prefix}push_service_name': 'push_service_name',
