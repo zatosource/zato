@@ -402,7 +402,7 @@ class BaseRESTServer(BaseServer):
                 io_counters.labels(direction='write').set(io_stats.write_bytes)
 
                 # TCP connections
-                connections = process.connections()
+                connections = process.connections() # type: ignore
                 conn_states = {}
                 for conn in connections:
                     state = conn.status
@@ -420,7 +420,7 @@ class BaseRESTServer(BaseServer):
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
                 context_switches.labels(type='involuntary')._value._value = ctx_switches.involuntary
 
-            except Exception as e:
+            except Exception:
                 logger.error(f'Metrics collection error: {format_exc()}')
 
         with wsgi_call_time.time():
@@ -606,8 +606,8 @@ class BaseRESTServer(BaseServer):
 
         response:'APIResponse' = {
             'cid': cid,
-            'is_ok': result['is_ok'],
-            'status': result['status']
+            'is_ok': result['is_ok'],  # type: ignore
+            'status': result['status']  # type: ignore
         }
         return response
 
@@ -635,7 +635,7 @@ class BaseRESTServer(BaseServer):
         result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
         response:'APIResponse' = {
-            'is_ok': result['is_ok'],
+            'is_ok': result['is_ok'],  # type: ignore
             'cid': cid
         }
 
@@ -654,7 +654,7 @@ class BaseRESTServer(BaseServer):
                 result = self._call(environ, start_response)
 
             return result
-        except Exception as e:
+        except Exception:
             return self._call(environ, start_response)
 
     def run(self) -> 'None':
