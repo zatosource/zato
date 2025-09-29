@@ -307,14 +307,15 @@ class BaseServer:
                     if not topic_name:
                         continue
 
-                    message = f'[{cid}] Loading subscription:\n' + \
-                              f'[{cid}]   user={username}\n' + \
-                              f'[{cid}]   topic={topic_name}\n' + \
-                              f'[{cid}]   is_pub_enabled={is_pub_enabled}\n' + \
-                              f'[{cid}]   is_delivery_enabled={is_delivery_enabled}\n' + \
-                              f'[{cid}]   is_pub_active={is_pub_active}\n' + \
-                              f'[{cid}]   is_delivery_active={is_delivery_active}\n'
-                    logger.info(message)
+                    if _needs_details:
+                        message = f'[{cid}] Loading subscription:\n' + \
+                                f'[{cid}]   user={username}\n' + \
+                                f'[{cid}]   topic={topic_name}\n' + \
+                                f'[{cid}]   is_pub_enabled={is_pub_enabled}\n' + \
+                                f'[{cid}]   is_delivery_enabled={is_delivery_enabled}\n' + \
+                                f'[{cid}]   is_pub_active={is_pub_active}\n' + \
+                                f'[{cid}]   is_delivery_active={is_delivery_active}\n'
+                        logger.info(message)
 
                     # Create the subscription
                     _ = self.backend.register_subscription(
