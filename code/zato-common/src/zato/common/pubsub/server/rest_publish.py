@@ -137,6 +137,10 @@ class PubSubRESTServerPublish(BaseRESTServer):
             'cid': cid,
         }
 
+        # .. add status if present ..
+        if status := result.get('status'):
+            response['status'] = status
+
         # .. add error details if present ..
         if details := result.get('details'):
             response['details'] = details
