@@ -470,7 +470,7 @@ $(document).ready(function() {
             var $checkbox = $(this);
             var topicName = $checkbox.val();
             console.log('DEBUG on_submit: adding enabled topic=' + topicName);
-            var topicDataObj = {topic_name: topicName, is_enabled: true};
+            var topicDataObj = {topic_name: topicName, is_pub_enabled: true, is_delivery_enabled: true};
             var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
             $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
         });
@@ -480,7 +480,7 @@ $(document).ready(function() {
             var $checkbox = $(this);
             var topicName = $checkbox.val();
             console.log('DEBUG on_submit: adding disabled topic=' + topicName);
-            var topicDataObj = {topic_name: topicName, is_enabled: false};
+            var topicDataObj = {topic_name: topicName, is_pub_enabled: false, is_delivery_enabled: true};
             var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
             $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
         });
