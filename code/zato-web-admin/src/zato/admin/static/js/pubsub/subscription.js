@@ -898,24 +898,18 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
     var descriptor = 'Security: ' + instance.sec_name + '\nDelivery: ' + instance.delivery_type;
 
-    // Define callback to log security definitions after delete completes
+    // Define callback to repopulate security definitions after delete completes
     var afterDeleteCallback = function() {
-        console.log('DEBUG delete_: delete completed, logging security definitions');
-        var $secSelect = $('#id_sec_base_id');
-        if ($secSelect.length > 0) {
-            console.log('DEBUG delete_: security definition select found');
-            var secOptions = [];
-            $secSelect.find('option').each(function() {
-                var $option = $(this);
-                secOptions.push({
-                    value: $option.val(),
-                    text: $option.text()
-                });
-            });
-            console.log('DEBUG delete_: security definitions in select after delete=' + JSON.stringify(secOptions));
-        } else {
-            console.log('DEBUG delete_: security definition select not found after delete');
-        }
+        console.log('DEBUG delete_: delete completed, repopulating security definitions');
+        
+        // Repopulate security definitions for the create form
+        $.fn.zato.common.security.populateSecurityDefinitions(
+            'create', 
+            null, 
+            '/zato/pubsub/subscription/get-security-definitions/', 
+            '#id_sec_base_id'
+        );
+        console.log('DEBUG delete_: triggered security definitions repopulation');
     };
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
