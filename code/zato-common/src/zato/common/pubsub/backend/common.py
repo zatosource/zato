@@ -266,6 +266,24 @@ class Backend:
         """ Publish a message to a topic using the broker client.
         """
 
+        # Get sec_name from username
+        config = self.rest_server.get_user_config(username)
+        sec_name = config['sec_name']
+
+        # Check if user has pub_active permission for this topic
+        with self._main_lock:
+            if topic_name in self.subs_by_topic:
+                subs_by_sec_name = self.subs_by_topic[topic_name]
+                if sec_name in subs_by_sec_name:
+                    sub = subs_by_sec_name[sec_name]
+                    if not sub.is_pub_active:
+                        response = {
+                            'is_ok': False,
+                            'status': BAD_REQUEST,
+                            'details': 'Publishing disabled for this topic'
+                        }
+                        return response
+
         # Create topic if it doesn't exist
         if not self._has_topic(topic_name):
             self.create_topic(cid, 'publish', topic_name)
@@ -336,6 +354,7 @@ class Backend:
         sec_name: 'str'='',
         sub_key: 'str'='',
         is_delivery_active: 'bool'=True,
+        is_pub_active: 'bool'=True,
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
         source_server_type: 'str'='',
@@ -390,6 +409,7 @@ class Backend:
             sub.sec_name = sec_name
             sub.sub_key = sub_key
             sub.is_delivery_active = is_delivery_active
+            sub.is_pub_active = is_pub_active
             sub.creation_time = utcnow()
 
             # .. get or create a dict with subscriptions for users ..
@@ -412,6 +432,7 @@ class Backend:
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
                 'is_delivery_active': is_delivery_active,
+                'is_pub_active': is_pub_active,
                 'delivery_type': PubSub.Delivery_Type.Pull,
             }
 

@@ -294,8 +294,11 @@ class BaseServer:
                 # Add user credentials
                 self.create_user(cid, sec_name, username, password)
 
-                # Handle multiple topics (comma-separated)
-                for topic_name in topic_names:
+                # Handle multiple topics
+                for topic_item in topic_names:
+
+                    # Extract topic name from dict
+                    topic_name = topic_item['topic_name']
 
                     topic_name = topic_name.strip()
                     if not topic_name:
