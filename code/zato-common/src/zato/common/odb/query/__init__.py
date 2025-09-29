@@ -940,6 +940,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
         PubSubSubscription.is_delivery_active,
+        PubSubSubscription.is_pub_active,
         PubSubSubscription.sec_base_id,
         PubSubSubscription.created,
         PubSubSubscription.last_updated,

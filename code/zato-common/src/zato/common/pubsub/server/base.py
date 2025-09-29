@@ -299,13 +299,20 @@ class BaseServer:
 
                     # Extract topic name from dict
                     topic_name = topic_item['topic_name']
+                    is_pub_enabled = topic_item['is_pub_enabled']
+                    is_delivery_enabled = topic_item['is_delivery_enabled']
 
                     topic_name = topic_name.strip()
                     if not topic_name:
                         continue
 
-                    if _needs_details:
-                        logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
+                    logger.info(f'[{cid}] Loading subscription:')
+                    logger.info(f'[{cid}]   user={username}')
+                    logger.info(f'[{cid}]   topic={topic_name}')
+                    logger.info(f'[{cid}]   is_pub_enabled={is_pub_enabled}')
+                    logger.info(f'[{cid}]   is_delivery_enabled={is_delivery_enabled}')
+                    logger.info(f'[{cid}]   is_delivery_active={is_delivery_active}')
+                    logger.info(f'[{cid}]   is_pub_active={is_pub_enabled}')
 
                     # Create the subscription
                     _ = self.backend.register_subscription(
@@ -313,7 +320,8 @@ class BaseServer:
                         topic_name,
                         username=username,
                         sub_key=sub_key,
-                        is_delivery_active=is_delivery_active
+                        is_delivery_active=is_delivery_active,
+                        is_pub_active=is_pub_enabled
                     )
 
             except Exception:
