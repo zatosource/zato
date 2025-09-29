@@ -307,7 +307,7 @@ class BaseServer:
                     if not topic_name:
                         continue
 
-                    if 1:
+                    if _needs_details:
                         message = f'[{cid}] Loading subscription:\n' + \
                                 f'[{cid}]   user={username}\n' + \
                                 f'[{cid}]   topic={topic_name}\n' + \
