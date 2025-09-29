@@ -177,6 +177,17 @@ class Create(AdminService):
         topic_data_list = input.topic_name_list
         topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
 
+        # Build topic objects with flags for frontend
+        topic_objects_list = []
+        for item in topic_data_list:
+            topic_item = {
+                'topic_name': item['topic_name'],
+                'is_pub_enabled': item['is_pub_enabled'],
+                'is_delivery_enabled': item['is_delivery_enabled']
+            }
+            topic_objects_list.append(topic_item)
+        topic_objects_list.sort(key=lambda x: x['topic_name'])
+
         with closing(self.odb.session()) as session:
             try:
                 # Get cluster and security definition
@@ -284,7 +295,7 @@ class Create(AdminService):
                 self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
 
-                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
                 self.logger.info('Subscription(s) created for %s -> %s (%s)', sec_base.name, topic_name_list, sub.sub_key)
@@ -426,11 +437,22 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Plain topic names (without HTML)
+                # Build topic objects with flags for frontend
+                topic_objects_list = []
+                for topic in topics:
+                    topic_data = topic_data_by_name[topic.name]
+                    topic_item = {
+                        'topic_name': topic.name,
+                        'is_pub_enabled': topic_data['is_pub_enabled'],
+                        'is_delivery_enabled': topic_data['is_delivery_enabled']
+                    }
+                    topic_objects_list.append(topic_item)
+                topic_objects_list.sort(key=lambda x: x['topic_name'])
+
+                # Plain topic names (without HTML) for internal use
                 topic_name_list = []
                 for topic in topics:
                     topic_name_list.append(topic.name)
-
                 topic_name_list.sort()
 
                 # Notify our process and the pub/sub server about the creation of a new subscription ..
@@ -459,7 +481,7 @@ class Edit(AdminService):
                 self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
-                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
 # ################################################################################################################################
