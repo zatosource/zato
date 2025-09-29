@@ -217,7 +217,7 @@ class ConsumerBackend(Backend):
         push_service_name = msg['push_service_name']
 
         topic_name_list:'strlist' = msg['topic_name_list']
-        topic_name_list = sorted(topic_name_list)
+        topic_name_list = sorted([item['topic_name'] for item in topic_name_list])
 
         # Set new push endpoints
         for config_data in self.worker_store.worker_config.pubsub_subs.values():
