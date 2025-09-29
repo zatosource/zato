@@ -184,7 +184,7 @@ class BrokerClient:
         exchange        = kwargs.get('exchange') or 'components'
         routing_key     = kwargs.get('routing_key') or 'server'
         mandatory       = kwargs.get('mandatory', True)
-        publish_timeout = kwargs.get('publish_timeout', 25)
+        publish_timeout = kwargs.get('publish_timeout', 30)
 
         with self.producer.acquire() as client:
 
