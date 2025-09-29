@@ -306,7 +306,7 @@ class Create(AdminService):
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
-                pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = input.delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
@@ -484,7 +484,7 @@ class Edit(AdminService):
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
-                pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = sub.delivery_type
                 pubsub_msg.old_delivery_type = old_delivery_type
                 pubsub_msg.rest_push_endpoint_id = input.rest_push_endpoint_id

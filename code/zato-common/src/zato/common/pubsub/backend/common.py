@@ -102,14 +102,30 @@ class Backend:
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
         sec_name:'str' = msg['sec_name']
-        topic_name_list:'strlist' = msg['topic_name_list']
+        is_pub_active:'bool' = msg['is_pub_active']
+        is_delivery_active:'bool' = msg['is_delivery_active']
+        topic_name_list = msg['topic_name_list']
 
         # Process each topic in the list
-        for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
+        for topic_item in topic_name_list:
+
+            topic_name = topic_item['topic_name']
+            is_pub_enabled = topic_item['is_pub_enabled']
+            is_delivery_enabled = topic_item['is_delivery_enabled']
+
+            _ = self.register_subscription(
+                cid,
+                topic_name,
+                sec_name=sec_name,
+                sub_key=sub_key,
+                is_pub_active=is_pub_active,
+                is_delivery_active=is_delivery_active,
+                is_pub_enabled=is_pub_enabled,
+                is_delivery_enabled=is_delivery_enabled
+            )
 
         # Log all subscribed topics
-        topic_name_list_human = ', '.join(topic_name_list)
+        topic_name_list_human = ', '.join([item['topic_name'] for item in topic_name_list])
         log_msg = f'[{cid}] Successfully subscribed {sec_name} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
 
