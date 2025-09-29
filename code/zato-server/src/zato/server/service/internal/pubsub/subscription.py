@@ -701,8 +701,8 @@ class _BaseModifyTopicList(AdminService):
                 # Apply subclass-specific modification logic
                 all_topic_names = self._modify_topic_list(existing_topic_names, new_topic_names)
 
-                # Sort the final list
-                all_topic_names.sort()
+                # Sort the final list by topic name
+                all_topic_names.sort(key=itemgetter('topic_name'))
 
                 # Update existing subscription with the combined topics
                 request = Bunch()
