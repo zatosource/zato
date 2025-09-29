@@ -194,8 +194,8 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'sec_name', 'delivery_type'
+        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -317,6 +317,7 @@ class Create(AdminService):
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_delivery_active = sub.is_delivery_active
+                self.response.payload.is_pub_active = sub.is_pub_active
                 self.response.payload.created = sub.created
                 self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
@@ -336,8 +337,8 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'sec_name', 'delivery_type'
+        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -405,7 +406,8 @@ class Edit(AdminService):
                     # .. produce the response for our caller ..
                     self.response.payload.id = sub.id
                     self.response.payload.sub_key = sub.sub_key
-                    self.response.payload.is_delivery_active = False
+                    self.response.payload.is_delivery_active = sub.is_delivery_active
+                    self.response.payload.is_pub_active = sub.is_pub_active
                     self.response.payload.sec_name = sec_base.name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
@@ -497,6 +499,7 @@ class Edit(AdminService):
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_delivery_active = sub.is_delivery_active
+                self.response.payload.is_pub_active = sub.is_pub_active
                 self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
