@@ -153,7 +153,6 @@ class Create(AdminService):
         # A part of what we're returning
         topic_link_list = []
 
-        # topic_name_list is a list of dicts with topic_name and is_enabled
         topic_data_list = input.topic_name_list
         topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
 
@@ -211,9 +210,9 @@ class Create(AdminService):
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
 
-                    # Set is_pub_enabled based on the is_enabled flag from topic data
                     topic_data = topic_data_by_name[topic.name]
-                    sub_topic.is_pub_enabled = topic_data['is_enabled']
+                    sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
+                    sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
 
                     with session.no_autoflush:
                         pattern_matched = evaluate_pattern_match(
@@ -375,9 +374,9 @@ class Edit(AdminService):
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
 
-                            # Set is_pub_enabled based on the is_enabled flag from topic data
                             topic_data = topic_data_by_name[topic.name]
-                            sub_topic.is_pub_enabled = topic_data['is_enabled']
+                            sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
+                            sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
 
                             # Use no_autoflush to prevent premature flush during pattern evaluation
                             with session.no_autoflush:
