@@ -78,6 +78,9 @@ from sqlalchemy import orm
 # Texttable
 from texttable import Texttable
 
+# requests
+import requests
+
 # YAML
 import yaml
 
@@ -1768,6 +1771,20 @@ def wait_for_file(full_path:'str', timeout:'int'=9999, interval:'float'=0.01) ->
         return file_exists
 
     return wait_for_predicate(_predicate_wait_for_file, timeout, interval, log_msg_details=f'path -> `{full_path}`')
+
+# ################################################################################################################################
+
+def wait_for_200_ok(address):
+    """ Waits for an HTTP/HTTPS address to return a 200 OK response.
+    """
+    def _predicate_200_ok():
+        try:
+            response = requests.get(address, timeout=0.1)
+            return response.status_code == requests.codes.ok
+        except Exception:
+            return False
+
+    return wait_for_predicate(_predicate_200_ok, 123456789, 1.0)
 
 # ################################################################################################################################
 
