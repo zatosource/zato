@@ -39,7 +39,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'sec_base_id', 'sec_name', 'delivery_type', \
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'sec_name', 'delivery_type', \
             'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
             'topic_link_list'
         output_repeated = True
