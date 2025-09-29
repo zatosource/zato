@@ -208,7 +208,7 @@ class Create(AdminService):
 
         topic_data_list = input.topic_name_list
         topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
-        
+
         self.logger.info('CREATE: Creating subscription for topics: %s', topic_data_list)
 
         # Build topic objects with flags for frontend
@@ -244,6 +244,7 @@ class Create(AdminService):
                 # Create the subscription
                 sub = PubSubSubscription()
                 sub.sub_key = sub_key # type: ignore
+                sub.is_pub_active = input.is_pub_active
                 sub.is_delivery_active = input.is_delivery_active
                 sub.cluster = cluster
                 sub.sec_base = sec_base
@@ -301,6 +302,7 @@ class Create(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
+                pubsub_msg.is_pub_active = sub.is_pub_active
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
@@ -316,8 +318,8 @@ class Create(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.is_pub_active = sub.is_pub_active
+                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.created = sub.created
                 self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
@@ -380,7 +382,7 @@ class Edit(AdminService):
                 # Process topics if any are provided
                 topic_data_list = input.get('topic_name_list') or []
                 topic_name_list = [item['topic_name'] for item in topic_data_list]
-                
+
                 self.logger.info('EDIT: Editing subscription %s for topics: %s', sub.sub_key, topic_data_list)
 
                 topic_link_list = []
@@ -406,8 +408,8 @@ class Edit(AdminService):
                     # .. produce the response for our caller ..
                     self.response.payload.id = sub.id
                     self.response.payload.sub_key = sub.sub_key
-                    self.response.payload.is_delivery_active = sub.is_delivery_active
                     self.response.payload.is_pub_active = sub.is_pub_active
+                    self.response.payload.is_delivery_active = sub.is_delivery_active
                     self.response.payload.sec_name = sec_base.name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
@@ -480,6 +482,7 @@ class Edit(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
+                pubsub_msg.is_pub_active = sub.is_pub_active
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
@@ -498,14 +501,14 @@ class Edit(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.is_pub_active = sub.is_pub_active
+                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
-                
+
                 self.logger.info('EDIT: Subscription %s updated for topics with flags: %s', sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
