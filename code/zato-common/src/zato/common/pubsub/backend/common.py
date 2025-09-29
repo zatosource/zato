@@ -289,13 +289,13 @@ class Backend:
         if _needs_details:
             logger.info(f'[{cid}] publish_impl: username={username}, sec_name={sec_name}, topic_name={topic_name}')
 
-        # Check if user has pub_active permission for this topic
+        # Check if user has pub_active and pub_enabled permission for this topic
         with self._main_lock:
             if topic_name in self.subs_by_topic:
                 subs_by_sec_name = self.subs_by_topic[topic_name]
                 if sec_name in subs_by_sec_name:
                     sub = subs_by_sec_name[sec_name]
-                    if not sub.is_pub_active:
+                    if not sub.is_pub_active or not sub.is_pub_enabled:
                         response = {
                             'is_ok': False,
                             'status': BAD_REQUEST,
