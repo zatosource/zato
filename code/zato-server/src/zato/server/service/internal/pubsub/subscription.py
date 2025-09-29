@@ -47,7 +47,7 @@ _push_type = PubSub.Push_Type
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_link(topic_name:'str', is_pub_enabled:'bool'=True, is_delivery_enabled:'bool'=True) -> 'str':
+def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:'bool') -> 'str':
 
     pub_class = 'is-pub-enabled-true' if is_pub_enabled else 'is-pub-enabled-false'
     delivery_class = 'is-delivery-enabled-true' if is_delivery_enabled else 'is-delivery-enabled-false'
@@ -142,11 +142,6 @@ class GetList(AdminService):
             data.append(sub_dict)
 
         out = elems_with_opaque(data)
-
-        print()
-        print(111, out)
-        print()
-
         return out
 
 # ################################################################################################################################
@@ -253,7 +248,8 @@ class Create(AdminService):
 
                     session.add(sub_topic)
 
-                    topic_link = get_topic_link(topic.name)
+                    topic_data = topic_data_by_name[topic.name]
+                    topic_link = get_topic_link(topic.name, topic_data['is_pub_enabled'], topic_data['is_delivery_enabled'])
                     topic_link_list.append(topic_link)
 
                 session.commit()
@@ -417,7 +413,8 @@ class Edit(AdminService):
 
                             session.add(sub_topic)
 
-                            topic_link = get_topic_link(topic.name)
+                            topic_data = topic_data_by_name[topic.name]
+                            topic_link = get_topic_link(topic.name, topic_data['is_pub_enabled'], topic_data['is_delivery_enabled'])
                             topic_link_list.append(topic_link)
 
                 # Commit all changes
