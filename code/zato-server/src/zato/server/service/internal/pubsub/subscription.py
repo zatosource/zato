@@ -383,8 +383,6 @@ class Edit(AdminService):
                 topic_data_list = input.get('topic_name_list') or []
                 topic_name_list = [item['topic_name'] for item in topic_data_list]
 
-                self.logger.info('EDIT: Editing subscription %s for topics: %s', sub.sub_key, topic_data_list)
-
                 topic_link_list = []
                 topics = []
                 topic_data_by_name = {}
@@ -508,8 +506,6 @@ class Edit(AdminService):
 
                 self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
-
-                self.logger.info('EDIT: Subscription %s updated for topics with flags: %s', sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
