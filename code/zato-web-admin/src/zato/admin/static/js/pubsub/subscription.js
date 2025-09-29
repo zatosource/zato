@@ -168,7 +168,7 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
                 // Check the checkboxes for subscribed topics
                 topicNames.forEach(function(topic, index) {
                     console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topic));
-                    var checkbox = $('input[name="topic_name"][value="' + topic.topic_name + '"]');
+                    var checkbox = $(targetDivId + ' input[name="topic_name"][value="' + topic.topic_name + '"]');
                     console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topic) + ', exists=' + JSON.stringify(checkbox.length > 0));
 
                     if (checkbox.length) {
@@ -901,12 +901,12 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
     // Define callback to repopulate security definitions after delete completes
     var afterDeleteCallback = function() {
         console.log('DEBUG delete_: delete completed, repopulating security definitions');
-        
+
         // Repopulate security definitions for the create form
         $.fn.zato.common.security.populateSecurityDefinitions(
-            'create', 
-            null, 
-            '/zato/pubsub/subscription/get-security-definitions/', 
+            'create',
+            null,
+            '/zato/pubsub/subscription/get-security-definitions/',
             '#id_sec_base_id'
         );
         console.log('DEBUG delete_: triggered security definitions repopulation');
