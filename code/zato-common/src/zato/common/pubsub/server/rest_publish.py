@@ -137,6 +137,10 @@ class PubSubRESTServerPublish(BaseRESTServer):
             'cid': cid,
         }
 
+        # .. add error details if present ..
+        if details := result.get('details'):
+            response['details'] = details
+
         # .. this is optional because the result may indicate an error ..
         if msg_id := result.get('msg_id'):
             response['msg_id'] = msg_id
