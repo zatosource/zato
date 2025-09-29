@@ -325,6 +325,8 @@ class BaseServer:
                         sub_key=sub_key,
                         is_delivery_active=is_delivery_active,
                         is_pub_active=is_pub_active,
+                        is_pub_enabled=is_pub_enabled,
+                        is_delivery_enabled=is_delivery_enabled,
                     )
 
             except Exception:

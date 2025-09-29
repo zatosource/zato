@@ -358,6 +358,8 @@ class Backend:
         sub_key: 'str'='',
         is_delivery_active: 'bool'=True,
         is_pub_active: 'bool'=True,
+        is_pub_enabled: 'bool'=True,
+        is_delivery_enabled: 'bool'=True,
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
         source_server_type: 'str'='',
@@ -415,6 +417,8 @@ class Backend:
             sub.sub_key = sub_key
             sub.is_delivery_active = is_delivery_active
             sub.is_pub_active = is_pub_active
+            sub.is_pub_enabled = is_pub_enabled
+            sub.is_delivery_enabled = is_delivery_enabled
             sub.creation_time = utcnow()
 
             # .. get or create a dict with subscriptions for users ..
