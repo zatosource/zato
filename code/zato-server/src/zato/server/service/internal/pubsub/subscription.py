@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from operator import itemgetter
 from traceback import format_exc
 from urllib.parse import quote
 
@@ -26,6 +27,37 @@ from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_name=None):
+    """ Build topic objects with flags for frontend response.
+    """
+    topic_objects_list = []
+
+    if topic_data_list:
+        # For create - we have topic_data_list directly
+        for item in topic_data_list:
+            topic_item = {
+                'topic_name': item['topic_name'],
+                'is_pub_enabled': item['is_pub_enabled'],
+                'is_delivery_enabled': item['is_delivery_enabled']
+            }
+            topic_objects_list.append(topic_item)
+
+    elif topics and topic_data_by_name:
+        # For edit - we have topics and need to look up data
+        for topic in topics:
+            topic_data = topic_data_by_name[topic.name]
+            topic_item = {
+                'topic_name': topic.name,
+                'is_pub_enabled': topic_data['is_pub_enabled'],
+                'is_delivery_enabled': topic_data['is_delivery_enabled']
+            }
+            topic_objects_list.append(topic_item)
+
+    topic_objects_list.sort(key=itemgetter('topic_name'))
+    return topic_objects_list
+
 # ################################################################################################################################
 
 if 0:
@@ -178,15 +210,7 @@ class Create(AdminService):
         topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
 
         # Build topic objects with flags for frontend
-        topic_objects_list = []
-        for item in topic_data_list:
-            topic_item = {
-                'topic_name': item['topic_name'],
-                'is_pub_enabled': item['is_pub_enabled'],
-                'is_delivery_enabled': item['is_delivery_enabled']
-            }
-            topic_objects_list.append(topic_item)
-        topic_objects_list.sort(key=lambda x: x['topic_name'])
+        topic_objects_list = _build_topic_objects_list(topic_data_list=topic_data_list)
 
         with closing(self.odb.session()) as session:
             try:
@@ -438,16 +462,7 @@ class Edit(AdminService):
             else:
 
                 # Build topic objects with flags for frontend
-                topic_objects_list = []
-                for topic in topics:
-                    topic_data = topic_data_by_name[topic.name]
-                    topic_item = {
-                        'topic_name': topic.name,
-                        'is_pub_enabled': topic_data['is_pub_enabled'],
-                        'is_delivery_enabled': topic_data['is_delivery_enabled']
-                    }
-                    topic_objects_list.append(topic_item)
-                topic_objects_list.sort(key=lambda x: x['topic_name'])
+                topic_objects_list = _build_topic_objects_list(topics=topics, topic_data_by_name=topic_data_by_name)
 
                 # Plain topic names (without HTML) for internal use
                 topic_name_list = []
