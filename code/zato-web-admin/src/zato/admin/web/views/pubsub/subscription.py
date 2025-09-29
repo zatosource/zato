@@ -96,7 +96,8 @@ class _CreateEdit(CreateEdit):
                 topic_data = loads(topic_data_json)
                 topic_names.append({
                     'topic_name': topic_data['topic_name'],
-                    'is_enabled': topic_data['is_enabled']
+                    'is_pub_enabled': topic_data['is_pub_enabled'],
+                    'is_delivery_enabled': topic_data['is_delivery_enabled'],
                 })
 
             input_dict['topic_name_list'] = topic_names
