@@ -73,7 +73,10 @@ class PubSubRESTServerPublish(BaseRESTServer):
 
         # .. check if user has permission to publish to this topic ..
         permission_result = self.backend.pattern_matcher.evaluate(username, topic_name, 'publish')
-        logger.info(f'[{cid}] Permission check for user {username} on topic {topic_name}: is_ok={permission_result.is_ok}, reason={permission_result.reason}')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Permission check for user {username} on topic {topic_name}: is_ok={permission_result.is_ok}, reason={permission_result.reason}')
+
         if not permission_result.is_ok:
             logger.warning(f'[{cid}] User {username} denied publish access to topic {topic_name}: {permission_result.reason}')
             raise UnauthorizedException(cid, 'Permission denied')
@@ -127,9 +130,13 @@ class PubSubRESTServerPublish(BaseRESTServer):
         }
 
         # .. let the backend handle it ..
-        logger.info(f'[{cid}] Calling backend.publish_impl for user {username} on topic {topic_name}')
+        if _needs_details:
+            logger.info(f'[{cid}] Calling backend.publish_impl for user {username} on topic {topic_name}')
+
         result = self.backend.publish_impl(cid, topic_name, msg, username, ext_client_id)
-        logger.info(f'[{cid}] Backend publish_impl result: {result}')
+
+        if _needs_details:
+            logger.info(f'[{cid}] Backend publish_impl result: {result}')
 
         # .. build our response ..
         response:'APIResponse' = {
