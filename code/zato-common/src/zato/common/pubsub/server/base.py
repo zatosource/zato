@@ -565,6 +565,12 @@ class BaseServer:
             'metrics': {'password': metrics_password}
         }
 
+        # Authenticate the request
+        auth_result = self._authenticate(cid, environ, users)
+        if not auth_result:
+            start_response('401 Unauthorized', [('Content-Type', 'text/plain')])
+            return [b'Unauthorized']
+
         metrics_data = generate_latest()
         start_response('200 OK', [('Content-Type', CONTENT_TYPE_LATEST)])
         return [metrics_data]
