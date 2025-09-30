@@ -91,7 +91,7 @@ class SnowflakeGenerator:
         # .. build the complete ID ..
         result = f'{date_part}-{time_part}-{subsecond_part}-{random_part}'
 
-        if machine_part:
+        if False and machine_part:
             result += f'-{machine_part}'
 
         # .. and return it to our caller.
@@ -112,14 +112,12 @@ def create_snowflake_generator(machine_id:'str'='') -> 'SnowflakeGenerator':
 
     with _generators_lock:
         if thread_id not in _generators:
-            if not machine_id:
-                machine_id = _machine_id
             _generators[thread_id] = SnowflakeGenerator(machine_id)
         return _generators[thread_id]
 
 # ################################################################################################################################
 
-def new_snowflake(suffix:'str', needs_machine_id:'bool'=True) -> 'str':
+def new_snowflake(suffix:'str', needs_machine_id:'bool'=False) -> 'str':
     """ Generate a new human-readable snowflake ID.
 
     Format: YYYYMMDD-HHMMSS-ssss-rrrrrrrrrrrrrrrr[suffix][-mmm]

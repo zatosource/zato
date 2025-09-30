@@ -335,6 +335,8 @@ class RESTBackend(Backend):
         cid = msg['cid']
         sub_key = msg['sub_key']
         sec_name = msg['sec_name']
+        is_pub_active = msg['is_pub_active']
+        is_delivery_active = msg['is_delivery_active']
         topic_name_list = msg['topic_name_list']
 
         if not sub_key:
@@ -345,11 +347,28 @@ class RESTBackend(Backend):
             # Remove existing subscription by sub_key from all topics
             _ = self._remove_subscriptions_by_sub_key(sub_key)
 
-        # Add subscription to new topics
-        for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
+            # Add subscription to new topics
+            for topic_item in topic_name_list:
 
-        logger.info(f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list}')
+                topic_name = topic_item.topic_name
+
+                is_pub_enabled = topic_item.is_pub_enabled
+                is_delivery_enabled = topic_item.is_delivery_enabled
+
+                _ = self.register_subscription(
+                    cid,
+                    topic_name,
+                    sec_name=sec_name,
+                    sub_key=sub_key,
+                    is_pub_active=is_pub_active,
+                    is_delivery_active=is_delivery_active,
+                    is_pub_enabled=is_pub_enabled,
+                    is_delivery_enabled=is_delivery_enabled
+                )
+
+        topic_name_list_human = ', '.join([item.topic_name for item in topic_name_list])
+        log_msg = f'[{cid}] Updated subscription `{sub_key}` for {sec_name} to topics: {topic_name_list_human} (is_delivery_active:{is_delivery_active}, is_pub_active:{is_pub_active})'
+        logger.info(log_msg)
 
 # ################################################################################################################################
 

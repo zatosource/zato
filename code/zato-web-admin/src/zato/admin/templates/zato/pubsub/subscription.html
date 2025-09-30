@@ -186,6 +186,69 @@
             background: transparent !important;
         }
 
+        /* Tri-state checkbox styling */
+        input[type="checkbox"].tri-state {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #666;
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
+            background: white;
+        }
+
+        input[type="checkbox"].tri-state:checked {
+            background: #063c65;
+            border-color: #063c65;
+        }
+
+        input[type="checkbox"].tri-state:checked::after {
+            content: '✓';
+            position: absolute;
+            left: 2px;
+            top: -1px;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        input[type="checkbox"].tri-state.indeterminate {
+            background: #999;
+            border-color: #999;
+        }
+
+        input[type="checkbox"].tri-state.indeterminate::after {
+            content: 'x';
+            position: absolute;
+            left: 2px;
+            top: -2px;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Topic link styling based on pub/delivery status */
+        a.is-pub-enabled-false {
+            color: #333 !important;
+            background-color: #f0f0f0 !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+        }
+
+        a.is-pub-enabled-false:hover {
+            color: #222 !important;
+        }
+
+        a.is-delivery-enabled-false {
+            color: #8b0000 !important;
+            background-color: #ffe6e6 !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+        }
+
     </style>
 {% endblock %}
 
@@ -220,22 +283,25 @@
             'sec_name',
 
             'sub_key',
-            '_is_active',
-            '_delivery_type',
+            '_is_delivery_active',
+            '_is_pub_active',
 
+            '_delivery_type',
             'topic_link_list',
             '_edit',
+
             '_delete',
-
             'id',
-            'is_active',
-            'delivery_type',
+            'is_delivery_active',
 
+            'is_pub_active',
+            'delivery_type',
             'sec_base_id',
+
             'push_type',
             'rest_push_endpoint_id',
-
             'rest_push_endpoint_name',
+
             'push_service_name',
             'topic_name_list',
         ]
@@ -272,22 +338,25 @@
                         <th style="width:1%; white-space:nowrap;">Security definition</th>
 
                         <th style="width:1%; white-space:nowrap;">Sub key</th>
-                        <th><a href="#">Active</a></th>
-                        <th>Delivery type</th>
+                        <th style="text-align:center"><a href="#">Delivery</a></th>
+                        <th style="text-align:center"><a href="#">Publications</a></th>
 
-                        <th>Topics</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th style="text-align:center">Delivery type</th>
+                        <th style="text-align:center">Topics</th>
+                        <th style="text-align:center">Edit</th>
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
+                        <th style="text-align:center">Delete</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -303,8 +372,10 @@
                         <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
 
                         <td>{{ item.sub_key }}</td>
-                        <td style="text-align:center">{{ item.is_active|yesno:"Yes,No" }}</td>
-                        <td>
+                        <td style="text-align:center">{{ item.is_delivery_active|yesno:"Enabled,Disabled" }}</td>
+                        <td style="text-align:center">{{ item.is_pub_active|yesno:"Enabled,Disabled" }}</td>
+
+                        <td style="text-align:center">
                             {% if item.delivery_type == 'pull' %}
                                 Pull
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
@@ -315,20 +386,21 @@
                                 Push
                             {% endif %}
                         </td>
+                        <td style="text-align:center">{{ item.topic_link_list|safe }}</td>
+                        <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
 
-                        <td>{{ item.topic_link_list|safe }}</td>
-                        <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
-
+                        <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.delivery_type }}</td>
+                        <td class='ignore'>{{ item.is_delivery_active }}</td>
 
+                        <td class='ignore'>{{ item.is_pub_active }}</td>
+                        <td class='ignore'>{{ item.delivery_type }}</td>
                         <td class='ignore'>{{ item.sec_base_id }}</td>
+
                         <td class='ignore'>{{ item.push_type }}</td>
                         <td class='ignore'>{{ item.rest_push_endpoint_id }}</td>
-
                         <td class='ignore'>{{ item.rest_push_endpoint_name }}</td>
+
                         <td class='ignore'>{{ item.push_service_name }}</td>
                         <td class='ignore'>{{ item.topic_name_list }}</td>
                     </tr>
@@ -350,8 +422,12 @@
                 <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_is_active">Active</label></td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle; width:14%">Enabled for</td>
+                            <td>
+                                <label for="id_is_delivery_active">Delivery</label> {{ create_form.is_delivery_active }}
+                                |
+                                <label for="id_is_pub_active">Publications</label> {{ create_form.is_pub_active }}
+                            </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_sec_base_id">Security definition</label></td>
@@ -403,8 +479,12 @@
                 <form novalidate action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_edit-is_active">Active</label></td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle; width:14%">Enabled for</td>
+                            <td>
+                                <label for="id_edit-is_delivery_active">Delivery</label> {{ edit_form.is_delivery_active }}
+                                |
+                                <label for="id_edit-is_pub_active">Publications</label> {{ edit_form.is_pub_active }}
+                            </td>
                         </tr>
                         <tr style="height:20px; max-height:20px; line-height:20px;">
                             <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_edit-sec_base_id">Security definition</label></td>

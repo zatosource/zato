@@ -17,6 +17,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import any_
+from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # werkzeug
 from werkzeug.routing import Map, Rule
@@ -36,7 +37,7 @@ from zato.common.pubsub.backend.rest_backend import RESTBackend
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict
+    from zato.common.typing_ import any_, strdict, strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +161,48 @@ class BaseServer:
             #
             Rule('/metrics', endpoint='on_metrics', methods=['GET']),
         ])
+
+# ################################################################################################################################
+
+    def _authenticate(self, cid:'str', environ:'strdict', users:'strdictnone'=None) -> 'strnone':
+        """ Authenticate a request using HTTP Basic Authentication.
+        """
+        users = users or self.users
+
+        path_info = environ['PATH_INFO']
+        auth_header = environ.get('HTTP_AUTHORIZATION', '')
+
+        if not auth_header:
+            logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
+            return None
+
+        try:
+
+            # First, extract the username and password from the auth header ..
+            result = extract_basic_auth(cid, auth_header, raise_on_error=False)
+
+        except Exception as e:
+
+            # .. but if we failed to extract them, turn that into a 401 exception because we cannot log the user in.
+            raise UnauthorizedException(e.args[0])
+
+        username, _ = result
+
+        if not username:
+            logger.warning(f'[{cid}] Invalid Authorization header format; path_info:`{path_info}`')
+            return None
+
+        if username in users:
+            config = users[username]
+            password = config['password']
+            if check_basic_auth(cid, auth_header, username, password) is True:
+                return username
+            else:
+                logger.warning(f'[{cid}] Invalid password for `{username}`; path_info:`{path_info}`')
+        else:
+            logger.warning(f'[{cid}] No such user `{username}`; path_info:`{path_info}`')
+
+        return None
 
 # ################################################################################################################################
 
@@ -289,22 +332,45 @@ class BaseServer:
                 password = item['password']
                 topic_names = item.get('topic_name_list') or []
                 sub_key = item['sub_key']
+                is_pub_active = item['is_pub_active']
+                is_delivery_active = item['is_delivery_active']
 
                 # Add user credentials
                 self.create_user(cid, sec_name, username, password)
 
-                # Handle multiple topics (comma-separated)
-                for topic_name in topic_names:
+                # Handle multiple topics
+                for topic_item in topic_names:
+
+                    # Extract topic name from dict
+                    topic_name = topic_item['topic_name']
+                    is_pub_enabled = topic_item['is_pub_enabled']
+                    is_delivery_enabled = topic_item['is_delivery_enabled']
 
                     topic_name = topic_name.strip()
                     if not topic_name:
                         continue
 
                     if _needs_details:
-                        logger.debug(f'[{cid}] Registering subscription: `{username}` -> `{topic_name}`')
+                        message = f'[{cid}] Loading subscription:\n' + \
+                                f'[{cid}]   user={username}\n' + \
+                                f'[{cid}]   topic={topic_name}\n' + \
+                                f'[{cid}]   is_pub_enabled={is_pub_enabled}\n' + \
+                                f'[{cid}]   is_delivery_enabled={is_delivery_enabled}\n' + \
+                                f'[{cid}]   is_pub_active={is_pub_active}\n' + \
+                                f'[{cid}]   is_delivery_active={is_delivery_active}\n'
+                        logger.info(message)
 
                     # Create the subscription
-                    _ = self.backend.register_subscription(cid, topic_name, username=username, sub_key=sub_key)
+                    _ = self.backend.register_subscription(
+                        cid,
+                        topic_name,
+                        username=username,
+                        sub_key=sub_key,
+                        is_delivery_active=is_delivery_active,
+                        is_pub_active=is_pub_active,
+                        is_pub_enabled=is_pub_enabled,
+                        is_delivery_enabled=is_delivery_enabled,
+                    )
 
             except Exception:
                 logger.error(f'[{cid}] Error processing subscription {item}: {format_exc()}')
@@ -491,6 +557,21 @@ class BaseServer:
 # ################################################################################################################################
 
     def on_metrics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'bytes':
+
+        metrics_password = os.environ.get('Zato_Broker_Metrics_Password')
+        if not metrics_password:
+            raise Exception('Invalid metrics configuration')
+
+        users = {
+            'metrics': {'password': metrics_password}
+        }
+
+        # Authenticate the request
+        auth_result = self._authenticate(cid, environ, users)
+        if not auth_result:
+            start_response('401 Unauthorized', [('Content-Type', 'text/plain')])
+            return [b'Unauthorized']
+
         metrics_data = generate_latest()
         start_response('200 OK', [('Content-Type', CONTENT_TYPE_LATEST)])
         return [metrics_data]

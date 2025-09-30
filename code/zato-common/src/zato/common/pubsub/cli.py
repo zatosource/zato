@@ -437,30 +437,30 @@ if __name__ == '__main__':
 curl http://localhost:40100/pubsub/health; echo
 
 echo '{"data":"Hello World"}' > post_data.json
-ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'demo:demo' http://localhost:40100/pubsub/topic/demo.1
+ab -n 100000 -c 100 -p post_data.json -T 'application/json' -A 'user.1:password.1' http://localhost:40100/pubsub/topic/demo.1
 
 # Publish a message to a topic:
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}'; echo
 
-echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A demo:demo -T "application/json" -p /tmp/payload.json http://localhost:40100/pubsub/topic/demo.1
-N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
+echo '{"data":"Hello World"}' > /tmp/payload.json && ab -n ${1:-200000} -c 100 -A user.1:password.1 -T "application/json" -p /tmp/payload.json http://localhost:40100/pubsub/topic/demo.1
+N=${1:-100}; for ((i=1; i<=$N; i++)); do curl -s -u user.1:password.1 -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data":"Hello World"}' >/dev/null; printf "\rProgress: %d/%d" $i $N; done; echo
 
-curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
 
-curl -u demo:demo -X DELETE http://localhost:40100/pubsub/subscribe/topic/demo.1
+curl -u user.1:password.1 -X DELETE http://localhost:40100/pubsub/subscribe/topic/demo.1
 
 # Get admin diagnostics (logs topics, users, subscriptions etc.):
-curl -u demo:demo -X GET http://localhost:40100/pubsub/admin/diagnostics; echo
+curl -u user.1:password.1 -X GET http://localhost:40100/pubsub/admin/diagnostics; echo
 
 # Get messages from queue:
-curl -u demo:demo -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
-curl -u demo:demo -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10, "max_len": 1000000}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10}'; echo
 
-curl -u demo:demo -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, "expiration": 250000000}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
-curl -u demo:demo -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10}'; echo
-curl -u demo:demo -X POST http://localhost:40100/pubsub/unsubscribe/topic/demo.1; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/subscribe/topic/demo.1; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "First message", "priority": 7, "expiration": 250000000}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/topic/demo.1 -d '{"data": "Second message", "priority": 5}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40200/pubsub/messages/get -d '{"max_messages": 10}'; echo
+curl -u user.1:password.1 -X POST http://localhost:40100/pubsub/unsubscribe/topic/demo.1; echo
 """
 
 # ################################################################################################################################

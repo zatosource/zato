@@ -171,12 +171,18 @@ class User:
 @dataclass(init=False)
 class Subscription:
     """ Model representing a subscription to a topic.
+
+    This model more closely relates to PubSubSubscriptionTopic as it is organized per-topic,
+    but it borrows the _active flags from PubSubSubscription.
     """
     topic_name: 'str' = ''
     username: 'str' = ''
     sub_key: 'str' = ''
     creation_time: 'datetime'
-    is_active: 'bool' = True
+    is_delivery_active: 'bool' = True
+    is_pub_active: 'bool' = True
+    is_pub_enabled: 'bool' = True
+    is_delivery_enabled: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################

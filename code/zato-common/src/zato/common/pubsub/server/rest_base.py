@@ -33,10 +33,6 @@ from prometheus_client import Histogram, Gauge, Counter
 import requests
 from requests.auth import HTTPBasicAuth
 
-# Zato
-from zato.common.typing_ import any_, anydict, dict_, list_, strnone
-from zato.common.util.auth import check_basic_auth, extract_basic_auth
-
 # gevent
 import gevent
 from gevent.pywsgi import WSGIServer
@@ -56,7 +52,7 @@ from zato.common.pubsub.util import get_broker_config
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, dict_, list_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,46 +132,6 @@ class BaseRESTServer(BaseServer):
 
         http_protocol = 'https' if self._broker_config.protocol == 'amqps' else 'http'
         self._broker_api_base_url = f'{http_protocol}://{broker_host}:15672/api'
-
-# ################################################################################################################################
-
-    def _authenticate(self, cid:'str', environ:'anydict') -> 'strnone':
-        """ Authenticate a request using HTTP Basic Authentication.
-        """
-        path_info = environ['PATH_INFO']
-        auth_header = environ.get('HTTP_AUTHORIZATION', '')
-
-        if not auth_header:
-            logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
-            return None
-
-        try:
-
-            # First, extract the username and password from the auth header ..
-            result = extract_basic_auth(cid, auth_header, raise_on_error=False)
-
-        except Exception as e:
-
-            # .. but if we failed to extract them, turn that into a 401 exception because we cannot log the user in.
-            raise UnauthorizedException(e.args[0])
-
-        username, _ = result
-
-        if not username:
-            logger.warning(f'[{cid}] Invalid Authorization header format; path_info:`{path_info}`')
-            return None
-
-        if username in self.users:
-            config = self.users[username]
-            password = config['password']
-            if check_basic_auth(cid, auth_header, username, password) is True:
-                return username
-            else:
-                logger.warning(f'[{cid}] Invalid password for `{username}`; path_info:`{path_info}`')
-        else:
-            logger.warning(f'[{cid}] No such user `{username}`; path_info:`{path_info}`')
-
-        return None
 
 # ################################################################################################################################
 
@@ -402,7 +358,7 @@ class BaseRESTServer(BaseServer):
                 io_counters.labels(direction='write').set(io_stats.write_bytes)
 
                 # TCP connections
-                connections = process.connections()
+                connections = process.connections() # type: ignore
                 conn_states = {}
                 for conn in connections:
                     state = conn.status
@@ -420,7 +376,7 @@ class BaseRESTServer(BaseServer):
                 context_switches.labels(type='voluntary')._value._value = ctx_switches.voluntary
                 context_switches.labels(type='involuntary')._value._value = ctx_switches.involuntary
 
-            except Exception as e:
+            except Exception:
                 logger.error(f'Metrics collection error: {format_exc()}')
 
         with wsgi_call_time.time():
@@ -606,8 +562,8 @@ class BaseRESTServer(BaseServer):
 
         response:'APIResponse' = {
             'cid': cid,
-            'is_ok': result['is_ok'],
-            'status': result['status']
+            'is_ok': result['is_ok'],  # type: ignore
+            'status': result['status']  # type: ignore
         }
         return response
 
@@ -635,7 +591,7 @@ class BaseRESTServer(BaseServer):
         result = self.backend.unregister_subscription(cid, topic_name, username=username, source_server_type=self.server_type)
 
         response:'APIResponse' = {
-            'is_ok': result['is_ok'],
+            'is_ok': result['is_ok'],  # type: ignore
             'cid': cid
         }
 
@@ -654,7 +610,7 @@ class BaseRESTServer(BaseServer):
                 result = self._call(environ, start_response)
 
             return result
-        except Exception as e:
+        except Exception:
             return self._call(environ, start_response)
 
     def run(self) -> 'None':
