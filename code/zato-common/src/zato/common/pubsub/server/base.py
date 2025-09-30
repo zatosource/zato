@@ -36,7 +36,7 @@ from zato.common.pubsub.backend.rest_backend import RESTBackend
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict
+    from zato.common.typing_ import any_, strdict, strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +160,48 @@ class BaseServer:
             #
             Rule('/metrics', endpoint='on_metrics', methods=['GET']),
         ])
+
+# ################################################################################################################################
+
+    def _authenticate(self, cid:'str', environ:'strdict', users:'strdictnone'=None) -> 'strnone':
+        """ Authenticate a request using HTTP Basic Authentication.
+        """
+        users = users or self.users
+
+        path_info = environ['PATH_INFO']
+        auth_header = environ.get('HTTP_AUTHORIZATION', '')
+
+        if not auth_header:
+            logger.warning(f'[{cid}] No Authorization header present; path_info:`{path_info}`')
+            return None
+
+        try:
+
+            # First, extract the username and password from the auth header ..
+            result = extract_basic_auth(cid, auth_header, raise_on_error=False)
+
+        except Exception as e:
+
+            # .. but if we failed to extract them, turn that into a 401 exception because we cannot log the user in.
+            raise UnauthorizedException(e.args[0])
+
+        username, _ = result
+
+        if not username:
+            logger.warning(f'[{cid}] Invalid Authorization header format; path_info:`{path_info}`')
+            return None
+
+        if username in users:
+            config = users[username]
+            password = config['password']
+            if check_basic_auth(cid, auth_header, username, password) is True:
+                return username
+            else:
+                logger.warning(f'[{cid}] Invalid password for `{username}`; path_info:`{path_info}`')
+        else:
+            logger.warning(f'[{cid}] No such user `{username}`; path_info:`{path_info}`')
+
+        return None
 
 # ################################################################################################################################
 
@@ -514,6 +556,15 @@ class BaseServer:
 # ################################################################################################################################
 
     def on_metrics(self, cid:'str', environ:'anydict', start_response:'any_') -> 'bytes':
+
+        metrics_password = os.environ.get('Zato_Broker_Metrics_Password')
+        if not metrics_password:
+            raise Exception('Invalid metrics configuration')
+
+        users = {
+            'metrics': {'password': metrics_password}
+        }
+
         metrics_data = generate_latest()
         start_response('200 OK', [('Content-Type', CONTENT_TYPE_LATEST)])
         return [metrics_data]
