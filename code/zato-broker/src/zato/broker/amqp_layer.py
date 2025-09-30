@@ -79,6 +79,14 @@ class AMQP:
         # Get broker configuration
         broker_config = get_broker_config()
 
+        print()
+        print(111, broker_config.address)
+        print(222, broker_config.username)
+        print(333, broker_config.password)
+        print(444, broker_config.vhost)
+        print(555, broker_config.protocol)
+        print()
+
         # Split host and port from address
         host, port = broker_config.address.split(':')
         port = int(port)
