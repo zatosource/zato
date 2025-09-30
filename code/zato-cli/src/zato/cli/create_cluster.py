@@ -197,7 +197,7 @@ class Create(ZatoCommand):
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
         security = HTTPBasicAuth(
-            None, 'monitoring', True, 'monitoring', 'Metrics user', 'monitoring', cluster)
+            None, 'metrics', True, 'metrics', 'Metrics user', 'metrics', cluster)
         session.add(security)
 
         channel = HTTPSOAP(
