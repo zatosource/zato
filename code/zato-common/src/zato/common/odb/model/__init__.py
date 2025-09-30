@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,7 +20,6 @@ from zato.common.api import AMQP, CACHE, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODO
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1377,9 +1376,11 @@ class PubSubSubscription(Base):
 
     id = Column(Integer, Sequence('pubsub_subscription_id_seq'), primary_key=True)
     sub_key = Column(String(200), nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    is_pub_active = Column(Boolean, nullable=False, default=True)
+    is_delivery_active = Column(Boolean, nullable=False, default=True)
 
     delivery_type = Column(String(20), nullable=False)
     push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
@@ -1413,6 +1414,9 @@ class PubSubSubscriptionTopic(Base):
 
     id = Column(Integer, Sequence('pubsub_subscription_topic_id_seq'), primary_key=True)
     pattern_matched = Column(String(400), nullable=False)
+
+    is_pub_enabled = Column(Boolean, nullable=False, default=True)
+    is_delivery_enabled = Column(Boolean, nullable=False, default=True)
 
     subscription_id = Column(Integer, ForeignKey('pubsub_subscription.id', ondelete='CASCADE'), nullable=False)
     subscription = relationship('PubSubSubscription', backref=backref('topics', order_by=id, cascade='all, delete, delete-orphan'))

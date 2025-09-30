@@ -196,13 +196,14 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
-        security = HTTPBasicAuth(
-            None, 'monitoring', True, 'monitoring', 'Metrics user', 'monitoring', cluster)
+        metrics_password = os.environ['Zato_Server_Metrics_Password']
+
+        security = HTTPBasicAuth(None, 'metrics', True, 'metrics', 'Metrics user', metrics_password, cluster)
         session.add(security)
 
         channel = HTTPSOAP(
             None, 'zato.metrics', True, True, 'channel',
-            'plain_http', None, '/zato/metrics', None, '', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/metrics', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(channel)
 

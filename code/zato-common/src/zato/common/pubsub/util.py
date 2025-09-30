@@ -44,11 +44,11 @@ def get_broker_config() -> 'BrokerConfig':
 
     config = BrokerConfig()
 
-    config.protocol = os.environ['Zato_Broker_Protocol']
-    config.address = os.environ['Zato_Broker_Address']
-    config.vhost = os.environ['Zato_Broker_Virtual_Host']
+    config.protocol = os.environ.get('Zato_Broker_Protocol') or 'amqp'
+    config.address = os.environ.get('Zato_Broker_Address') or '127.0.0.1:5672'
+    config.vhost = os.environ.get('Zato_Broker_Virtual_Host') or '/'
     config.username = os.environ['Zato_Broker_Username']
-    config.password = os.environ['Zato_Broker_Password']
+    config.password = os.environ['Zato_Broker_Internal_Password']
     config.management_port = int(os.environ.get('Zato_Broker_Management_Port') or 15672)
 
     return config

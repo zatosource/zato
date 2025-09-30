@@ -68,7 +68,6 @@ dataclass = dataclass
 Date = Date
 DateTime = DateTime
 Decimal = Decimal
-Bool = Bool
 DataverseClient = DataverseClient
 Dict = Dict
 DictList = DictList

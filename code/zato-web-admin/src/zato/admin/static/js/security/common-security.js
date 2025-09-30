@@ -60,6 +60,15 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
                     select.empty();
 
                     if (response.security_definitions && response.security_definitions.length > 0) {
+                        // Add placeholder option for create forms
+                        if (formType === 'create') {
+                            var placeholderOption = $('<option></option>')
+                                .attr('value', '')
+                                .attr('selected', 'selected')
+                                .text('Select a security definition');
+                            select.append(placeholderOption);
+                        }
+
                         // Populate select with available security definitions
                         $.each(response.security_definitions, function(index, item) {
                             var option = $('<option></option>')
@@ -67,7 +76,7 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
                                 .text(item.name);
                             if (selectedId && item.id == selectedId) {
                                 option.attr('selected', 'selected');
-                            } else if (index === 0 && !selectedId) {
+                            } else if (index === 0 && !selectedId && formType !== 'create') {
                                 option.attr('selected', 'selected');
                             }
                             select.append(option);
