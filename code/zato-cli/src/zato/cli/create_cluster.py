@@ -202,7 +202,7 @@ class Create(ZatoCommand):
 
         channel = HTTPSOAP(
             None, 'zato.metrics', True, True, 'channel',
-            'plain_http', None, '/zato/metrics', None, '', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/metrics', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(channel)
 
