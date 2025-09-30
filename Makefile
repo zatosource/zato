@@ -99,8 +99,11 @@ run-consumers:
 prometheus:
 	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
 
+test-var:
+	@echo "Zato_Grafana_Password is: $$Zato_Grafana_Password"
+
 grafana:
-	GF_SECURITY_ADMIN_PASSWORD=$(Zato_Grafana_Password) \
+	env GF_SECURITY_ADMIN_PASSWORD=$$Zato_Grafana_Password \
 	Zato_Grafana_Base_Path=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_ \
 	grafana-server \
 		--homepath=/usr/share/grafana \
