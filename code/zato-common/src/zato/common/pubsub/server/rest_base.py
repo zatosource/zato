@@ -33,10 +33,6 @@ from prometheus_client import Histogram, Gauge, Counter
 import requests
 from requests.auth import HTTPBasicAuth
 
-# Zato
-from zato.common.typing_ import any_, anydict, dict_, list_, strnone
-from zato.common.util.auth import check_basic_auth, extract_basic_auth
-
 # gevent
 import gevent
 from gevent.pywsgi import WSGIServer
@@ -56,7 +52,7 @@ from zato.common.pubsub.util import get_broker_config
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, dict_, list_
 
 # ################################################################################################################################
 # ################################################################################################################################
