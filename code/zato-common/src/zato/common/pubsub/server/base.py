@@ -17,6 +17,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import any_
+from zato.common.util.auth import check_basic_auth, extract_basic_auth
 
 # werkzeug
 from werkzeug.routing import Map, Rule
