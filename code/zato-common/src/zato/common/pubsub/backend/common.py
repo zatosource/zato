@@ -102,14 +102,30 @@ class Backend:
         cid:'str' = msg['cid']
         sub_key:'str' = msg['sub_key']
         sec_name:'str' = msg['sec_name']
-        topic_name_list:'strlist' = msg['topic_name_list']
+        is_pub_active:'bool' = msg['is_pub_active']
+        is_delivery_active:'bool' = msg['is_delivery_active']
+        topic_name_list = msg['topic_name_list']
 
         # Process each topic in the list
-        for topic_name in topic_name_list:
-            _ = self.register_subscription(cid, topic_name, sec_name=sec_name, sub_key=sub_key)
+        for topic_item in topic_name_list:
+
+            topic_name = topic_item.topic_name
+            is_pub_enabled = topic_item.is_pub_enabled
+            is_delivery_enabled = topic_item.is_delivery_enabled
+
+            _ = self.register_subscription(
+                cid,
+                topic_name,
+                sec_name=sec_name,
+                sub_key=sub_key,
+                is_pub_active=is_pub_active,
+                is_delivery_active=is_delivery_active,
+                is_pub_enabled=is_pub_enabled,
+                is_delivery_enabled=is_delivery_enabled
+            )
 
         # Log all subscribed topics
-        topic_name_list_human = ', '.join(topic_name_list)
+        topic_name_list_human = ', '.join([item.topic_name for item in topic_name_list])
         log_msg = f'[{cid}] Successfully subscribed {sec_name} to topics: {topic_name_list_human} with key {sub_key}'
         logger.info(log_msg)
 
@@ -262,9 +278,30 @@ class Backend:
         msg:'PubMessage',
         username:'str',
         ext_client_id:'strnone'=None
-        ) -> 'PubResponse':
+    ) -> 'PubResponse':
         """ Publish a message to a topic using the broker client.
         """
+
+        # Get sec_name from username
+        config = self.rest_server.get_user_config(username)
+        sec_name = config['sec_name']
+
+        if _needs_details:
+            logger.info(f'[{cid}] publish_impl: username={username}, sec_name={sec_name}, topic_name={topic_name}')
+
+        # Check if user has pub_active and pub_enabled permission for this topic
+        with self._main_lock:
+            if topic_name in self.subs_by_topic:
+                subs_by_sec_name = self.subs_by_topic[topic_name]
+                if sec_name in subs_by_sec_name:
+                    sub = subs_by_sec_name[sec_name]
+                    if not sub.is_pub_active or not sub.is_pub_enabled:
+                        response = {
+                            'is_ok': False,
+                            'status': BAD_REQUEST,
+                            'details': 'Publishing disabled for this topic'
+                        }
+                        return response
 
         # Create topic if it doesn't exist
         if not self._has_topic(topic_name):
@@ -304,7 +341,7 @@ class Backend:
         if msg.get('in_reply_to'):
             message['in_reply_to'] = msg['in_reply_to']
 
-        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=True)
+        self.broker_client.publish(message, exchange=ModuleCtx.Exchange_Name, routing_key=topic_name, mandatory=False)
 
         ext_client_part = f' -> {ext_client_id})' if ext_client_id else ')'
 
@@ -335,12 +372,18 @@ class Backend:
         username: 'str'='',
         sec_name: 'str'='',
         sub_key: 'str'='',
+        is_delivery_active: 'bool'=True,
+        is_pub_active: 'bool'=True,
+        is_pub_enabled: 'bool'=True,
+        is_delivery_enabled: 'bool'=True,
         should_create_bindings: 'bool'=True,
         should_invoke_server=False,
         source_server_type: 'str'='',
-        ) -> 'StatusResponse':
+    ) -> 'StatusResponse':
         """ Subscribe to a topic.
         """
+        logger.info(f'[{cid}] register_subscription: topic_name={topic_name}, username={username}, sec_name={sec_name}, sub_key={sub_key}, is_delivery_active={is_delivery_active}, is_pub_active={is_pub_active}, is_pub_enabled={is_pub_enabled}, is_delivery_enabled={is_delivery_enabled}')
+
         # Reusable
         response: 'StatusResponse' = {}
 
@@ -388,6 +431,10 @@ class Backend:
             sub.topic_name = topic_name
             sub.sec_name = sec_name
             sub.sub_key = sub_key
+            sub.is_delivery_active = is_delivery_active
+            sub.is_pub_active = is_pub_active
+            sub.is_pub_enabled = is_pub_enabled
+            sub.is_delivery_enabled = is_delivery_enabled
             sub.creation_time = utcnow()
 
             # .. get or create a dict with subscriptions for users ..
@@ -409,7 +456,8 @@ class Backend:
                 'sub_key': sub_key,
                 'topic_name_list': [topic_name],
                 'sec_name': sec_name,
-                'is_active': True,
+                'is_delivery_active': is_delivery_active,
+                'is_pub_active': is_pub_active,
                 'delivery_type': PubSub.Delivery_Type.Pull,
             }
 

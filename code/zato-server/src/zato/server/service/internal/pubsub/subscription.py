@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from operator import itemgetter
 from traceback import format_exc
 from urllib.parse import quote
 
@@ -26,6 +27,37 @@ from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_name=None):
+    """ Build topic objects with flags for frontend response.
+    """
+    topic_objects_list = []
+
+    if topic_data_list:
+        # For create - we have topic_data_list directly
+        for item in topic_data_list:
+            topic_item = {
+                'topic_name': item['topic_name'],
+                'is_pub_enabled': item['is_pub_enabled'],
+                'is_delivery_enabled': item['is_delivery_enabled']
+            }
+            topic_objects_list.append(topic_item)
+
+    elif topics and topic_data_by_name:
+        # For edit - we have topics and need to look up data
+        for topic in topics:
+            topic_data = topic_data_by_name[topic.name]
+            topic_item = {
+                'topic_name': topic.name,
+                'is_pub_enabled': topic_data['is_pub_enabled'],
+                'is_delivery_enabled': topic_data['is_delivery_enabled']
+            }
+            topic_objects_list.append(topic_item)
+
+    topic_objects_list.sort(key=itemgetter('topic_name'))
+    return topic_objects_list
+
 # ################################################################################################################################
 
 if 0:
@@ -47,8 +79,13 @@ _push_type = PubSub.Push_Type
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_link(topic_name:'str') -> 'str':
-    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}">{}</a>'.format(quote(topic_name), topic_name)
+def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:'bool') -> 'str':
+
+    pub_class = 'is-pub-enabled-true' if is_pub_enabled else 'is-pub-enabled-false'
+    delivery_class = 'is-delivery-enabled-true' if is_delivery_enabled else 'is-delivery-enabled-false'
+
+    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}" class="{} {}">{}</a>'.format(
+        quote(topic_name), pub_class, delivery_class, topic_name)
     return topic_link
 
 # ################################################################################################################################
@@ -64,8 +101,8 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_subscription_get_list_response'
         input_required = 'cluster_id'
         input_optional = 'needs_password'
-        output_required = 'id', 'sub_key', 'is_active', 'created', AsIs('topic_link_list'), 'sec_base_id', 'sec_name', 'username', \
-            'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
+            'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
         output_optional = 'rest_push_endpoint_name', AsIs('topic_name_list'), 'password'
         output_repeated = True
 
@@ -79,12 +116,14 @@ class GetList(AdminService):
 
         # Group by subscription ID
         subscriptions_by_id = {}
-        topic_names_by_id = {}
+        topics_by_id = {}
 
         for item in result:
 
             sub_id = item.id
             topic_name = item.topic_name
+            is_pub_enabled = item.is_pub_enabled
+            is_delivery_enabled = item.is_delivery_enabled
             password = item.password
 
             if sub_id not in subscriptions_by_id:
@@ -98,30 +137,44 @@ class GetList(AdminService):
 
                 subscriptions_by_id[sub_id] = item_dict
 
-                # Initialize topic names list for this subscription
-                topic_names_by_id[sub_id] = []
+                # Initialize topics list for this subscription
+                topics_by_id[sub_id] = []
 
-            # Store plain topic name if not already present
-            if topic_name not in topic_names_by_id[sub_id]:
-                topic_names_by_id[sub_id].append(topic_name)
+            # Store topic with flags if not already present
+            topic_dict = {
+                'topic_name': topic_name,
+                'is_pub_enabled': is_pub_enabled,
+                'is_delivery_enabled': is_delivery_enabled
+            }
+
+            # Check if this topic is already in the list
+            topic_exists = False
+            for existing_topic in topics_by_id[sub_id]:
+                if existing_topic['topic_name'] == topic_name:
+                    topic_exists = True
+                    break
+
+            if not topic_exists:
+                topics_by_id[sub_id].append(topic_dict)
 
         # Process data for each subscription
         data = []
         for sub_id, sub_dict in subscriptions_by_id.items():
 
-            # Sort topic names
-            sorted_topic_names = sorted(topic_names_by_id[sub_id])
+            # Sort topics by name
+            sorted_topics = sorted(topics_by_id[sub_id], key=lambda x: x['topic_name'])
 
-            # Create topic links
-            topic_link_list = [get_topic_link(name) for name in sorted_topic_names]
+            # Create topic links from sorted topics
+            topic_link_list = [get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled']) for topic in sorted_topics]
 
             # Store both fields
             sub_dict['topic_link_list'] = ', '.join(topic_link_list)
-            sub_dict['topic_name_list'] = sorted_topic_names
+            sub_dict['topic_name_list'] = sorted_topics
 
             data.append(sub_dict)
 
-        return elems_with_opaque(data)
+        out = elems_with_opaque(data)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,8 +194,8 @@ class Create(AdminService):
         request_elem = 'zato_pubsub_subscription_create_request'
         response_elem = 'zato_pubsub_subscription_create_response'
         input_required = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
-        output_required = 'id', 'sub_key', 'is_active', 'created', 'sec_name', 'delivery_type'
+        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', 'sub_key'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -152,7 +205,14 @@ class Create(AdminService):
 
         # A part of what we're returning
         topic_link_list = []
-        topic_name_list = sorted(input.topic_name_list)
+
+        topic_data_list = input.topic_name_list
+        topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
+
+        self.logger.info('CREATE: Creating subscription for topics: %s', topic_data_list)
+
+        # Build topic objects with flags for frontend
+        topic_objects_list = _build_topic_objects_list(topic_data_list=topic_data_list)
 
         with closing(self.odb.session()) as session:
             try:
@@ -165,6 +225,11 @@ class Create(AdminService):
 
                 # Get topics
                 topics = []
+                topic_data_by_name = {}
+
+                for item in topic_data_list:
+                    topic_name = item['topic_name']
+                    topic_data_by_name[topic_name] = item
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
@@ -179,7 +244,8 @@ class Create(AdminService):
                 # Create the subscription
                 sub = PubSubSubscription()
                 sub.sub_key = sub_key # type: ignore
-                sub.is_active = input.is_active
+                sub.is_pub_active = input.is_pub_active
+                sub.is_delivery_active = input.is_delivery_active
                 sub.cluster = cluster
                 sub.sec_base = sec_base
                 sub.delivery_type = input.delivery_type
@@ -203,6 +269,10 @@ class Create(AdminService):
                     sub_topic.topic = topic
                     sub_topic.cluster = cluster
 
+                    topic_data = topic_data_by_name[topic.name]
+                    sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
+                    sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
+
                     with session.no_autoflush:
                         pattern_matched = evaluate_pattern_match(
                             session,
@@ -216,7 +286,8 @@ class Create(AdminService):
 
                     session.add(sub_topic)
 
-                    topic_link = get_topic_link(topic.name)
+                    topic_data = topic_data_by_name[topic.name]
+                    topic_link = get_topic_link(topic.name, topic_data['is_pub_enabled'], topic_data['is_delivery_enabled'])
                     topic_link_list.append(topic_link)
 
                 session.commit()
@@ -231,10 +302,11 @@ class Create(AdminService):
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = sub.sub_key
-                pubsub_msg.is_active = input.is_active
+                pubsub_msg.is_pub_active = sub.is_pub_active
+                pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name # type: ignore
                 pubsub_msg.username = sec_base.username
-                pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = input.delivery_type
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
@@ -246,15 +318,16 @@ class Create(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_active = sub.is_active
+                self.response.payload.is_pub_active = sub.is_pub_active
+                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.created = sub.created
                 self.response.payload.sec_name = sec_base.name # type: ignore
                 self.response.payload.delivery_type = sub.delivery_type
 
-                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
-                self.logger.info('Subscription(s) created for %s -> %s (%s)', sec_base.name, topic_name_list, sub.sub_key)
+                self.logger.info('CREATE: Subscription(s) created for %s -> %s (%s) with flags: %s', sec_base.name, topic_name_list, sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -266,8 +339,8 @@ class Edit(AdminService):
         request_elem = 'zato_pubsub_subscription_edit_request'
         response_elem = 'zato_pubsub_subscription_edit_response'
         input_required = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type'
-        input_optional = 'is_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
-        output_required = 'id', 'sub_key', 'is_active', 'sec_name', 'delivery_type'
+        input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+        output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'delivery_type'
         output_optional = AsIs('topic_name_list'), AsIs('topic_link_list')
 
     def handle(self):
@@ -307,9 +380,16 @@ class Edit(AdminService):
                     delete()
 
                 # Process topics if any are provided
-                topic_name_list = input.get('topic_name_list') or []
+                topic_data_list = input.get('topic_name_list') or []
+                topic_name_list = [item['topic_name'] for item in topic_data_list]
+
                 topic_link_list = []
                 topics = []
+                topic_data_by_name = {}
+
+                for item in topic_data_list:
+                    topic_name = item['topic_name']
+                    topic_data_by_name[topic_name] = item
 
                 # If we go here, it means we don't have any other topics for that subscription ..
                 if not topic_name_list:
@@ -326,7 +406,8 @@ class Edit(AdminService):
                     # .. produce the response for our caller ..
                     self.response.payload.id = sub.id
                     self.response.payload.sub_key = sub.sub_key
-                    self.response.payload.is_active = False
+                    self.response.payload.is_pub_active = sub.is_pub_active
+                    self.response.payload.is_delivery_active = sub.is_delivery_active
                     self.response.payload.sec_name = sec_base.name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
@@ -356,6 +437,10 @@ class Edit(AdminService):
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
 
+                            topic_data = topic_data_by_name[topic.name]
+                            sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
+                            sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
+
                             # Use no_autoflush to prevent premature flush during pattern evaluation
                             with session.no_autoflush:
                                 pattern_matched = evaluate_pattern_match(
@@ -369,7 +454,8 @@ class Edit(AdminService):
 
                             session.add(sub_topic)
 
-                            topic_link = get_topic_link(topic.name)
+                            topic_data = topic_data_by_name[topic.name]
+                            topic_link = get_topic_link(topic.name, topic_data['is_pub_enabled'], topic_data['is_delivery_enabled'])
                             topic_link_list.append(topic_link)
 
                 # Commit all changes
@@ -381,21 +467,24 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Plain topic names (without HTML)
+                # Build topic objects with flags for frontend
+                topic_objects_list = _build_topic_objects_list(topics=topics, topic_data_by_name=topic_data_by_name)
+
+                # Plain topic names (without HTML) for internal use
                 topic_name_list = []
                 for topic in topics:
                     topic_name_list.append(topic.name)
-
                 topic_name_list.sort()
 
                 # Notify our process and the pub/sub server about the creation of a new subscription ..
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.sub_key = input.sub_key
-                pubsub_msg.is_active = sec_base.is_active
+                pubsub_msg.is_pub_active = sub.is_pub_active
+                pubsub_msg.is_delivery_active = sub.is_delivery_active
                 pubsub_msg.sec_name = sec_base.name
                 pubsub_msg.username = sec_base.username
-                pubsub_msg.topic_name_list = topic_name_list
+                pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = sub.delivery_type
                 pubsub_msg.old_delivery_type = old_delivery_type
                 pubsub_msg.rest_push_endpoint_id = input.rest_push_endpoint_id
@@ -410,11 +499,12 @@ class Edit(AdminService):
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
-                self.response.payload.is_active = sub.is_active
+                self.response.payload.is_pub_active = sub.is_pub_active
+                self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.sec_name = sec_base.name
                 self.response.payload.delivery_type = sub.delivery_type
 
-                self.response.payload.topic_name_list = topic_name_list
+                self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
 # ################################################################################################################################
@@ -490,8 +580,8 @@ class _BaseModifyTopicList(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = AsIs('topic_name_list')
-        input_optional = 'username', 'sec_name', 'is_active', 'delivery_type', 'push_type', 'rest_push_endpoint_id', \
-            'push_service_name', 'sub_key'
+        input_optional = 'username', 'sec_name', 'is_delivery_active', 'delivery_type', 'push_type', \
+            'rest_push_endpoint_id', 'push_service_name', 'sub_key'
         output_optional = AsIs('topic_name_list')
         response_elem = None
 
@@ -550,7 +640,7 @@ class _BaseModifyTopicList(AdminService):
                         create_request.topic_name_list = input.topic_name_list
                         create_request.sec_base_id = sec_base_id
                         create_request.delivery_type = input.delivery_type
-                        create_request.is_active = input.is_active
+                        create_request.is_delivery_active = input.is_delivery_active
                         create_request.push_type = input.push_type
                         create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
                         create_request.push_service_name = input.push_service_name
@@ -619,8 +709,8 @@ class _BaseModifyTopicList(AdminService):
                 # Apply subclass-specific modification logic
                 all_topic_names = self._modify_topic_list(existing_topic_names, new_topic_names)
 
-                # Sort the final list
-                all_topic_names.sort()
+                # Sort the final list by topic name
+                all_topic_names.sort(key=itemgetter('topic_name'))
 
                 # Update existing subscription with the combined topics
                 request = Bunch()
@@ -629,7 +719,7 @@ class _BaseModifyTopicList(AdminService):
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
                 request.delivery_type = current_sub.delivery_type
-                request.is_active = current_sub.is_active
+                request.is_delivery_active = current_sub.is_delivery_active
                 request.push_service_name = current_sub.push_service_name
                 request.push_type = current_sub.push_type
                 request.rest_push_endpoint_id = current_sub.rest_push_endpoint_id

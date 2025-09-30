@@ -2,6 +2,82 @@
 
 $.namespace('zato.pubsub.subscription');
 
+// Tri-state checkbox functionality
+function setupTriStateCheckbox(checkbox) {
+    var Off = 0;
+    var On = 1;
+    var Indeterminate = 2;
+
+    var $checkbox = $(checkbox);
+
+    if (!$checkbox.data('tri-state-initialized')) {
+        var initialState;
+
+        if ($checkbox.hasClass('indeterminate')) {
+            initialState = Indeterminate;
+        } else if ($checkbox.prop('checked')) {
+            initialState = On;
+        } else {
+            initialState = Off;
+        }
+
+        $checkbox.data('tri-state', initialState);
+        $checkbox.data('tri-state-initialized', true);
+
+        $checkbox.off('click.tristate mousedown.tristate');
+
+        $checkbox.on('mousedown.tristate', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var currentState = $checkbox.data('tri-state');
+            var actualChecked = $checkbox.prop('checked');
+            var actualIndeterminate = $checkbox.hasClass('indeterminate');
+
+            var actualState = currentState;
+            if (actualIndeterminate) {
+                actualState = Indeterminate;
+            } else if (actualChecked) {
+                actualState = On;
+            } else {
+                actualState = Off;
+            }
+
+            if (actualState !== currentState) {
+                $checkbox.data('tri-state', actualState);
+                currentState = actualState;
+            }
+
+            var newState = (currentState + 1) % 3;
+
+            $checkbox.data('tri-state', newState);
+
+            $checkbox.removeClass('indeterminate');
+
+            switch(newState) {
+                case Off:
+                    $checkbox.prop('checked', false);
+                    break;
+                case On:
+                    $checkbox.prop('checked', true);
+                    break;
+                case Indeterminate:
+                    $checkbox.prop('checked', false);
+                    $checkbox.addClass('indeterminate');
+                    break;
+            }
+
+            return false;
+        });
+
+        $checkbox.on('click.tristate', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+    }
+}
+
 // Constants
 var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>';
 
@@ -49,6 +125,11 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     // Set the HTML content
     $(targetDivId).html(htmlContent);
 
+    // Convert all topic checkboxes to tri-state
+    $(targetDivId + ' input[name="topic_name"]').addClass('tri-state').each(function() {
+        setupTriStateCheckbox(this);
+    });
+
     // Verify content was set
     var afterContent = $(targetDivId).html();
     console.log('DEBUG populate_sec_def_topics_callback: content after setting=' + afterContent);
@@ -85,16 +166,30 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
                 console.log('DEBUG populate_sec_def_topics_callback: attempting to check ' + topicNames.length + ' topics');
                 // Check the checkboxes for subscribed topics
-                topicNames.forEach(function(topicName, index) {
-                    console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topicName));
-                    var checkbox = $('input[name="topic_name"][value="' + topicName + '"]');
-                    console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topicName) + ', exists=' + JSON.stringify(checkbox.length > 0));
+                topicNames.forEach(function(topic, index) {
+                    console.log('DEBUG populate_sec_def_topics_callback: processing topic ' + (index + 1) + '/' + topicNames.length + ', name=' + JSON.stringify(topic));
+                    var checkbox = $(targetDivId + ' input[name="topic_name"][value="' + topic.topic_name + '"]');
+                    console.log('DEBUG populate_sec_def_topics_callback: found checkbox for topic=' + JSON.stringify(topic) + ', exists=' + JSON.stringify(checkbox.length > 0));
 
                     if (checkbox.length) {
-                        checkbox.prop('checked', true);
-                        console.log('DEBUG populate_sec_def_topics_callback: checked topic=' + JSON.stringify(topicName));
+                        // Set tri-state based on pub/delivery flags
+                        checkbox.addClass('tri-state');
+
+                        if (topic.is_pub_enabled && topic.is_delivery_enabled) {
+                            checkbox.prop('checked', true);
+                            checkbox.removeClass('indeterminate');
+                        } else if (!topic.is_pub_enabled && !topic.is_delivery_enabled) {
+                            checkbox.prop('checked', false);
+                            checkbox.removeClass('indeterminate');
+                        } else {
+                            checkbox.prop('checked', false);
+                            checkbox.addClass('indeterminate');
+                        }
+
+                        setupTriStateCheckbox(checkbox[0]);
+                        console.log('DEBUG populate_sec_def_topics_callback: set tri-state for topic=' + topic.topic_name + ', pub=' + topic.is_pub_enabled + ', delivery=' + topic.is_delivery_enabled);
                     } else {
-                        console.log('DEBUG populate_sec_def_topics_callback: topic checkbox not found for=' + JSON.stringify(topicName));
+                        console.log('DEBUG populate_sec_def_topics_callback: topic checkbox not found for=' + JSON.stringify(topic));
                     }
                 });
 
@@ -293,6 +388,7 @@ $(document).ready(function() {
                 console.log('DEBUG requestAnimationFrame: setupDeliveryTypeVisibility completed');
 
                 // Load topics for the current security definition in edit mode
+                console.log('DEBUG sec_base_id check: type=' + typeof(instance.sec_base_id) + ', value=' + JSON.stringify(instance.sec_base_id));
                 if(instance.sec_base_id) {
                     console.log('DEBUG requestAnimationFrame: loading topics for sec_base_id=' + instance.sec_base_id);
                     var cluster_id = $('#cluster_id').val();
@@ -336,14 +432,15 @@ $(document).ready(function() {
     $.fn.zato.data_table.on_submit = function(action) {
         console.log('DEBUG on_submit: Starting form submission, action=' + JSON.stringify(action));
 
-        // Validate that at least one topic is selected
+        // Validate that at least one topic is selected or indeterminate
         var topicDivId = action === 'create' ? '#multi-select-div' : '#id_edit-multi-select-div';
         var selectedTopics = $(topicDivId + ' input[name="topic_name"]:checked');
+        var indeterminateTopics = $(topicDivId + ' input[name="topic_name"].indeterminate');
 
-        console.log('DEBUG on_submit: checking topics in ' + topicDivId + ', found ' + selectedTopics.length + ' selected');
+        console.log('DEBUG on_submit: checking topics in ' + topicDivId + ', found ' + selectedTopics.length + ' selected, ' + indeterminateTopics.length + ' indeterminate');
 
-        if (selectedTopics.length === 0) {
-            console.log('DEBUG on_submit: validation failed - no topics selected');
+        if (selectedTopics.length === 0 && indeterminateTopics.length === 0) {
+            console.log('DEBUG on_submit: validation failed - no topics selected or indeterminate');
             alert('At least one topic is required');
             return false;
         }
@@ -375,6 +472,32 @@ $(document).ready(function() {
                 $(restEndpointId).val('');
             }
         }
+
+        // Create hidden inputs for topic data structure
+        var $form = $(topicDivId).closest('form');
+
+        // Remove any existing topic_data inputs
+        $form.find('input[name="topic_data"]').remove();
+
+        // Add checked topics as enabled
+        $(topicDivId + ' input[name="topic_name"]:checked:not(.indeterminate)').each(function() {
+            var $checkbox = $(this);
+            var topicName = $checkbox.val();
+            console.log('DEBUG on_submit: adding enabled topic=' + topicName);
+            var topicDataObj = {topic_name: topicName, is_pub_enabled: true, is_delivery_enabled: true};
+            var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
+        });
+
+        // Add indeterminate topics as disabled
+        $(topicDivId + ' input[name="topic_name"].indeterminate').each(function() {
+            var $checkbox = $(this);
+            var topicName = $checkbox.val();
+            console.log('DEBUG on_submit: adding disabled topic=' + topicName);
+            var topicDataObj = {topic_name: topicName, is_pub_enabled: false, is_delivery_enabled: true};
+            var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
+        });
 
         // Call original on_submit if validation passes
         console.log('DEBUG on_submit: calling original on_submit');
@@ -586,17 +709,20 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_active = item.is_active == true
+    var is_delivery_active = item.is_delivery_active == true
+    var is_pub_active = item.is_pub_active == true
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
 
     row += String.format('<td>{0}</td>', item.sub_key);
-    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Enabled' : 'Disabled');
+    row += String.format('<td style="text-align:center">{0}</td>', is_pub_active ? 'Enabled' : 'Disabled');
 
     // For Push delivery type, display information based on push_type
     if(item.delivery_type === 'pull') {
-        row += String.format('<td>{0}</td>', 'Pull');
+        row += String.format('<td style="text-align:center">{0}</td>', 'Pull');
     } else {
         // Push delivery type - check push_type to determine what to show
         if(item.push_type === 'rest' && item.rest_push_endpoint_id) {
@@ -618,24 +744,21 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             }
 
             // Add the endpoint link to the row
-            row += String.format('<td>Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
+            row += String.format('<td style="text-align:center">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
                 encodeURIComponent(endpointName), endpointName);
         } else if(item.push_type === 'service' && item.push_service_name) {
             // For service push type, show the service name
-            row += String.format('<td>Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
+            row += String.format('<td style="text-align:center">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
                 encodeURIComponent(item.push_service_name), item.push_service_name);
-        } else {
-            // Generic push with no details
-            row += String.format('<td>Push</td>');
         }
     }
 
-    row += String.format('<td>{0}</td>', item.topic_link_list);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
+    row += String.format('<td style="text-align:center">{0}</td>', item.topic_link_list);
+    row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit({0});\">Edit</a>", item.id));
+    row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_({0});\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_delivery_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
 
     row += String.format("<td class='ignore'>{0}</td>", item.sec_base_id);
@@ -692,15 +815,14 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     var form = $('#edit-form');
 
-    let is_active = $.fn.zato.like_bool(instance.is_active)
-    form.find('#id_edit-is_active').prop('checked',  "HERE");
+    var is_delivery_active = $.fn.zato.like_bool(instance.is_delivery_active);
+    form.find('#id_edit-is_delivery_active').prop('checked', is_delivery_active);
 
-    // alert(is_active);
-    // alert(instance.is_active);
+    var is_pub_active = $.fn.zato.like_bool(instance.is_pub_active);
+    form.find('#id_edit-is_pub_active').prop('checked', is_pub_active);
 
     console.log('DEBUG edit: setting form field values');
     form.find('#id_edit-sub_key').val(instance.sub_key);
-    form.find('#id_edit-is_active').prop('checked',  is_active);
     form.find('#id_edit-delivery_type').val(instance.delivery_type);
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
@@ -779,24 +901,18 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
     var descriptor = 'Security: ' + instance.sec_name + '\nDelivery: ' + instance.delivery_type;
 
-    // Define callback to log security definitions after delete completes
+    // Define callback to repopulate security definitions after delete completes
     var afterDeleteCallback = function() {
-        console.log('DEBUG delete_: delete completed, logging security definitions');
-        var $secSelect = $('#id_sec_base_id');
-        if ($secSelect.length > 0) {
-            console.log('DEBUG delete_: security definition select found');
-            var secOptions = [];
-            $secSelect.find('option').each(function() {
-                var $option = $(this);
-                secOptions.push({
-                    value: $option.val(),
-                    text: $option.text()
-                });
-            });
-            console.log('DEBUG delete_: security definitions in select after delete=' + JSON.stringify(secOptions));
-        } else {
-            console.log('DEBUG delete_: security definition select not found after delete');
-        }
+        console.log('DEBUG delete_: delete completed, repopulating security definitions');
+
+        // Repopulate security definitions for the create form
+        $.fn.zato.common.security.populateSecurityDefinitions(
+            'create',
+            null,
+            '/zato/pubsub/subscription/get-security-definitions/',
+            '#id_sec_base_id'
+        );
+        console.log('DEBUG delete_: triggered security definitions repopulation');
     };
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',

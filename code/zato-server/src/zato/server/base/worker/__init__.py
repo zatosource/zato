@@ -884,7 +884,7 @@ class WorkerStore(_WorkerStoreBase):
             topic_name_list = config['topic_name_list']
             sec_name = config['sec_name']
             sub_key = config['sub_key']
-            is_active = config['is_active']
+            is_delivery_active = config['is_delivery_active']
             delivery_type = config['delivery_type']
 
             # Start a consumer only if we're to push the messages ourselves
@@ -896,7 +896,7 @@ class WorkerStore(_WorkerStoreBase):
                     topic_name_list,
                     sec_name,
                     sub_key,
-                    is_active,
+                    is_delivery_active,
                     self.on_pubsub_public_message_callback,
                     timeout=10
                 )
