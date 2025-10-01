@@ -404,6 +404,13 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
+    def run_enmasse_sync_import(self, file_path:'str | Path') -> 'CommandResult':
+        command = f'enmasse --import --input {file_path} {self.server.base_dir} --verbose'
+        result = self.run_zato_cli_sync(command, callback=self._on_enmasse_completed)
+        return result
+
+# ################################################################################################################################
+
     def run_enmasse_async_import(self, file_path:'str | Path') -> 'CommandResult':
         command = f'enmasse --import --input {file_path} {self.server.base_dir} --verbose'
         result = self.run_zato_cli_async(command, callback=self._on_enmasse_completed)

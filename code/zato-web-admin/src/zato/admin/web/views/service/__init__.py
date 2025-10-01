@@ -295,3 +295,19 @@ def enmasse_export(req):
     return out
 
 # ################################################################################################################################
+
+@method_allowed('GET', 'POST')
+def import_test_config(req):
+
+    response = req.zato.client.invoke('zato.server.invoker', {
+        'func_name': 'import_test_pubsub_enmasse'
+    })
+
+    response = str(response.data)
+
+    out = HttpResponse()
+    out.content = response
+
+    return out
+
+# ################################################################################################################################
