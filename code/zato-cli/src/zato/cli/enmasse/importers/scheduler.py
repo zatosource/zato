@@ -205,6 +205,10 @@ class SchedulerImporter:
         # Update all attributes provided in YAML
         for key, value in job_def.items():
 
+            # Handle missing keys
+            if key == 'is_active' and value == '':
+                value = True
+
             # Handle start_date conversion from string to datetime if present
             if key == 'start_date' and value:
 
