@@ -111,6 +111,8 @@ urlpatterns += [
         login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
     url(r'^zato/service/enmasse-export$',
         login_required(service.enmasse_export), name='service-enmasse-export'), # type: ignore
+    url(r'^zato/pubsub/import-test-config$',
+        login_required(service.import_test_config), name='pubsub-import-test-config'), # type: ignore
     ]
 
 # ################################################################################################################################
