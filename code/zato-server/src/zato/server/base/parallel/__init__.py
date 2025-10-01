@@ -988,6 +988,36 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def import_test_pubsub_enmasse(self):
+
+        # Zato
+        from zato.server.commands import CommandsFacade
+        import zato.common.pubsub.server
+
+        config_path = os.path.join(os.path.dirname(zato.common.pubsub.server.__file__), 'config.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+        return result.is_ok
+
+# ################################################################################################################################
+
+    def download_pubsub_openapi(self):
+
+        # Zato
+        import zato.server.service.internal.pubsub
+
+        openapi_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'openapi.yaml')
+
+        with open(openapi_path) as f:
+            data = f.read()
+
+        return data
+
+# ################################################################################################################################
+
     def set_scheduler_address(self, scheduler_address:'str') -> 'None':
         pass
 
