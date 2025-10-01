@@ -162,7 +162,7 @@ class SchedulerImporter:
         # Prepare job parameters
         job_id = None
         job_name = job_def['name']
-        job_is_active = job_def.get('is_active', True)
+        job_is_active = job_def.get('is_active', True) or True
         job_type = job_def['job_type']
         job_extra = job_def.get('extra', '')
 
