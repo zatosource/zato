@@ -55,7 +55,7 @@ class Enmasse(ZatoCommand):
         {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
 
         {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':10},
-        {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':1},
+        {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':180},
 
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
 
