@@ -1004,6 +1004,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def download_pubsub_openapi(self):
+
+        # Zato
+        import zato.server.service.internal.pubsub
+
+        openapi_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'openapi.yaml')
+
+        with open(openapi_path) as f:
+            data = f.read()
+
+        return data
+
+# ################################################################################################################################
+
     def set_scheduler_address(self, scheduler_address:'str') -> 'None':
         pass
 
