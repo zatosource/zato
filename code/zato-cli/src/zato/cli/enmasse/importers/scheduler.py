@@ -210,7 +210,7 @@ class SchedulerImporter:
                 value = True
 
             # Handle start_date conversion from string to datetime if present
-            if key == 'start_date' and value:
+            elif key == 'start_date' and value:
 
                 original_start_date = parse_datetime(value)
                 next_start_date = compute_next_start_date(original_start_date, job_def)
