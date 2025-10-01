@@ -1903,3 +1903,35 @@ $.fn.zato.pubsub.import_test_config = function() {
         }
     });
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.pubsub.download_openapi = function() {
+    var cluster_id = $(document).getUrlParam('cluster') || '1';
+    var download_url = '/zato/pubsub/download-openapi?cluster=' + cluster_id;
+
+    var spinner_html = '<div id="download-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Downloading ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+    $('body').append(spinner_html);
+
+    $.ajax({
+        url: download_url,
+        method: 'GET',
+        success: function(data) {
+            $('#download-spinner').remove();
+
+            var blob = new Blob([data], { type: 'application/x-yaml' });
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'openapi.yaml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        },
+        error: function() {
+            $('#download-spinner').remove();
+            alert('Download failed. Check server logs.');
+        }
+    });
+}

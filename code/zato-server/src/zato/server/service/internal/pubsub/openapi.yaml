@@ -6,21 +6,31 @@ info:
 
     This API allows clients to:
     - Publish messages to topics
-    - Subscribe to topics to receive messages
     - Retrieve messages from subscribed topics
+    - Subscribe to topics to receive messages
     - Unsubscribe from topics
 
     All operations require HTTP Basic Authentication.
-  version: 3.3.0
+  version: 4.1.0
   contact:
     name: Zato Source
     url: https://zato.io
 
 servers:
-  - url: http://localhost:44556
+  - url: http://localhost:11223
 
 security:
   - basicAuth: []
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Demo credentials:
+        - Username: user.1
+        - Password: password.1
 
 paths:
   /pubsub/topic/{topic_name}:
@@ -320,13 +330,6 @@ paths:
                 type: string
                 description: HTML error page for malformed requests
 
-components:
-  securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-      description: HTTP Basic Authentication using Zato security credentials
-
   schemas:
     SuccessResponse:
       type: object
@@ -522,5 +525,3 @@ tags:
     description: Operations for managing topic subscriptions
   - name: Messaging
     description: Operations for retrieving messages
-  - name: Health
-    description: Service health monitoring

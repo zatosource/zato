@@ -311,3 +311,19 @@ def import_test_config(req):
     return out
 
 # ################################################################################################################################
+
+@method_allowed('GET', 'POST')
+def download_openapi(req):
+
+    response = req.zato.client.invoke('zato.server.invoker', {
+        'func_name': 'download_pubsub_openapi'
+    })
+
+    response = str(response.data)
+
+    out = HttpResponse()
+    out.content = response
+
+    return out
+
+# ################################################################################################################################

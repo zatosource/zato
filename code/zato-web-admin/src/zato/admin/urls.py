@@ -113,6 +113,8 @@ urlpatterns += [
         login_required(service.enmasse_export), name='service-enmasse-export'), # type: ignore
     url(r'^zato/pubsub/import-test-config$',
         login_required(service.import_test_config), name='pubsub-import-test-config'), # type: ignore
+    url(r'^zato/pubsub/download-openapi$',
+        login_required(service.download_openapi), name='pubsub-download-openapi'), # type: ignore
     ]
 
 # ################################################################################################################################
