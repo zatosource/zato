@@ -313,6 +313,8 @@
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-permission" %}?cluster={{ cluster_id|default:"1" }}">Permissions</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="javascript:$.fn.zato.pubsub.import_test_config()">Import test config</a></li>
+                                    <li class="child"><a class="menu-link" href="javascript:$.fn.zato.pubsub.download_openapi()">Download OpenAPI</a></li>
                                 </ul>
                             </li>
 

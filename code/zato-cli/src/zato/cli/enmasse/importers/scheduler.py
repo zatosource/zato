@@ -162,7 +162,7 @@ class SchedulerImporter:
         # Prepare job parameters
         job_id = None
         job_name = job_def['name']
-        job_is_active = job_def.get('is_active', True)
+        job_is_active = job_def.get('is_active', True) or True
         job_type = job_def['job_type']
         job_extra = job_def.get('extra', '')
 
@@ -205,8 +205,12 @@ class SchedulerImporter:
         # Update all attributes provided in YAML
         for key, value in job_def.items():
 
+            # Handle missing keys
+            if key == 'is_active' and value == '':
+                value = True
+
             # Handle start_date conversion from string to datetime if present
-            if key == 'start_date' and value:
+            elif key == 'start_date' and value:
 
                 original_start_date = parse_datetime(value)
                 next_start_date = compute_next_start_date(original_start_date, job_def)
