@@ -715,6 +715,9 @@ class _BaseModifyTopicList(AdminService):
                 all_topic_names = self._modify_topic_list(existing_topic_names, new_topic_names)
 
                 # Sort the final list by topic name
+                print()
+                print(111, all_topic_names)
+                print()
                 all_topic_names.sort(key=itemgetter('topic_name'))
 
                 # Update existing subscription with the combined topics
