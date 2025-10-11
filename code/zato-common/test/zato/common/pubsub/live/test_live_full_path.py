@@ -186,7 +186,7 @@ class PubSubRESTServerTestCase(PubSubRESTServerBaseTestCase):
         logger.info(f'Looking for queue: {user_queue_name}')
 
         # Use the Zato internal vhost
-        vhost_name = 'zato.internal'
+        vhost_name = '/'
 
         # First, list all queues to find the full queue name
         try:

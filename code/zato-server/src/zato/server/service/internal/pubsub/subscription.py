@@ -21,7 +21,7 @@ from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
-from zato.common.util.api import new_sub_key, utcnow
+from zato.common.util.api import as_bool, new_sub_key, utcnow
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -518,13 +518,17 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_subscription_delete_request'
         response_elem = 'zato_pubsub_subscription_delete_response'
-        input_required = 'id',
-        input_optional = AsIs('session'),
+        input_optional = 'id', 'sub_key', 'should_call_pubsub_consumer_backend', AsIs('session'),
 
     def handle(self):
 
         has_input_session = bool(self.request.input.session)
         needs_new_session = not has_input_session
+
+        if should_call_pubsub_consumer_backend := self.request.input.should_call_pubsub_consumer_backend:
+            should_call_pubsub_consumer_backend = as_bool(should_call_pubsub_consumer_backend)
+        else:
+            should_call_pubsub_consumer_backend = True
 
         # Use provided session or create new one
         if has_input_session:
@@ -565,7 +569,8 @@ class Delete(AdminService):
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
-        self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+        if should_call_pubsub_consumer_backend:
+            self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
         # self.broker_client.publish_to_pubsub(pubsub_msg)
