@@ -42,7 +42,7 @@ def setup_logging() -> 'None':
 def get_broker_connection() -> 'Connection':
     """ Get connection to default RabbitMQ broker.
     """
-    connection_url = 'amqp://guest:guest@localhost:5672/zato.internal'
+    connection_url = 'amqp://guest:guest@localhost:5672/'
     return Connection(connection_url)
 
 # ################################################################################################################################
