@@ -32,7 +32,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid_broker_client, new_msg_id, utcnow
+from zato.common.util.api import new_cid_broker_client, new_cid_server, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
@@ -163,6 +163,51 @@ class BrokerClient:
     def publish(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         """ Publishes a message to the AMQP broker.
         """
+
+        # This will be True if we publish a message from a service's self.publish
+        should_append_details:'bool' = bool(kwargs.get('should_append_details'))
+
+        # If we need to append details, preprocess the message
+        if should_append_details:
+
+            # Get the current time
+            now = utcnow()
+            pub_time_iso = now.isoformat()
+            recv_time_iso = pub_time_iso
+
+            # Get topic name
+            topic_name = kwargs.get('routing_key', '')
+
+            # Get or generate msg_id
+            msg_id = kwargs.get('msg_id') or new_msg_id()
+
+            # Get or generate correlation_id
+            correl_id = kwargs.get('cid', '') or new_cid_server()
+
+            # Calculate expiration time
+            expiration_seconds = _default_expiration
+            expiration_time = now + timedelta(seconds=expiration_seconds)
+            expiration_time_iso = expiration_time.isoformat()
+
+            # Wrap the message in the proper structure
+            if not isinstance(msg, dict):
+                msg = {'msg': msg}
+
+            # Extract the actual data
+            msg_data = msg.get('msg') or msg.get('data') or msg
+
+            # Build the properly structured message
+            msg = {
+                'data': msg_data,
+                'topic_name': topic_name,
+                'msg_id': msg_id,
+                'priority': msg.get('priority', _default_priority),
+                'pub_time_iso': pub_time_iso,
+                'recv_time_iso': recv_time_iso,
+                'expiration': msg.get('expiration', _default_expiration),
+                'expiration_time_iso': expiration_time_iso,
+                'correl_id': correl_id,
+            }
 
         # We're given an already serialized message ..
         if isinstance(msg, str):
