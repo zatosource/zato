@@ -923,6 +923,7 @@ class Service:
             msg,
             exchange='pubsubapi',
             routing_key=topic,
+            should_append_details=True,
         )
 
 # ################################################################################################################################

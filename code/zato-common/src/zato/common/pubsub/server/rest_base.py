@@ -18,6 +18,7 @@ import threading
 import psutil
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, \
     responses as http_responses, UNAUTHORIZED
+
 # orjson
 import orjson
 from logging import getLogger
@@ -272,7 +273,7 @@ class BaseRESTServer(BaseServer):
             response = {
                 'is_ok': False,
                 'cid': cid,
-                'details': 'Authentication failed',
+                'details': 'Unathorized',
                 'status': UNAUTHORIZED
             }
             return self._json_response(start_response, response)
@@ -282,7 +283,7 @@ class BaseRESTServer(BaseServer):
             response = {
                 'is_ok': False,
                 'cid': cid,
-                'details': 'Invalid request data',
+                'details': e.message,
                 'status': _BAD_REQUEST
             }
             return self._json_response(start_response, response)
