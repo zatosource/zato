@@ -283,7 +283,7 @@ class BaseRESTServer(BaseServer):
             response = {
                 'is_ok': False,
                 'cid': cid,
-                'details': 'Invalid request data',
+                'details': e.message,
                 'status': _BAD_REQUEST
             }
             return self._json_response(start_response, response)
