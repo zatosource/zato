@@ -303,15 +303,11 @@ class PubSubRESTServerPull(BaseRESTServer):
                 msg_id = payload.get('msg_id', '')
                 priority = payload.get('priority', _default_priority)
 
-                pub_time_iso = payload.get('pub_time_iso', '')
-                pub_time_iso = pub_time_iso.replace('Z', '+00:00')
-
                 recv_time_iso = payload.get('recv_time_iso', '')
                 recv_time_iso = recv_time_iso.replace('Z', '+00:00')
 
                 expiration = payload.get('expiration', _default_expiration)
                 topic_name = payload.get('topic_name', '')
-                expiration_time_iso = payload.get('expiration_time_iso', '')
                 size = payload.get('size', len(str(actual_data).encode('utf-8')))
 
                 correl_id = payload.get('correl_id', '')
@@ -327,11 +323,18 @@ class PubSubRESTServerPull(BaseRESTServer):
 
                     'msg_id': msg_id,
                     'correl_id': correl_id,
-
-                    'pub_time_iso': pub_time_iso,
-                    'recv_time_iso': recv_time_iso,
-                    'expiration_time_iso': expiration_time_iso,
                 }
+
+                if pub_time_iso := payload.get('pub_time_iso'):
+                    pub_time_iso = pub_time_iso.replace('Z', '+00:00')
+                    meta['pub_time_iso'] = pub_time_iso
+
+                if recv_time_iso := payload.get('recv_time_iso'):
+                    recv_time_iso = recv_time_iso.replace('Z', '+00:00')
+                    meta['recv_time_iso'] = recv_time_iso
+
+                if expiration_time_iso := payload.get('expiration_time_iso'):
+                    meta['expiration_time_iso'] = expiration_time_iso
 
                 # .. this is optional ..
                 if ext_client_id := payload.get('ext_client_id'):
@@ -342,7 +345,8 @@ class PubSubRESTServerPull(BaseRESTServer):
                     meta['in_reply_to'] = in_reply_to
 
                 # .. calculate and set time deltas ..
-                set_time_since(meta, pub_time_iso, recv_time_iso, current_time)
+                if pub_time_iso or recv_time_iso:
+                    set_time_since(meta, pub_time_iso, recv_time_iso, current_time)
 
                 # .. create the message structure with meta and data ..
                 message = {
@@ -446,8 +450,8 @@ class PubSubRESTServerPull(BaseRESTServer):
             response = self._build_success_response(cid, messages, max_messages, wrap_in_list)
             return response
 
-        except Exception as e:
-            logger.error(f'[{cid}] Error retrieving messages: {e}')
+        except Exception:
+            logger.error(f'[{cid}] Error retrieving messages: {format_exc()}')
             return self._build_error_response(cid, 'Internal error retrieving messages')
 
 # ################################################################################################################################
