@@ -89,11 +89,12 @@ class PubSubRESTServerPublish(BaseRESTServer):
         if not data:
             raise BadRequestException(cid, 'Input data missing')
 
-        # .. now also make sure we did receive the business data ..
+        # .. now also check if we've received the business data ..
         msg_data = data.get('data')
 
+        # .. well, we haven't ..
         if msg_data is None:
-            raise BadRequestException(cid, 'Message data missing')
+            raise BadRequestException(cid, "Invalid input: 'data' element missing")
 
         # .. get all the details from the message now that we know we have it ..
         ext_client_id = data.get('ext_client_id', '')
