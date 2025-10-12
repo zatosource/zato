@@ -273,7 +273,7 @@ class BaseRESTServer(BaseServer):
             response = {
                 'is_ok': False,
                 'cid': cid,
-                'details': 'Authentication failed',
+                'details': 'Unathorized',
                 'status': UNAUTHORIZED
             }
             return self._json_response(start_response, response)
