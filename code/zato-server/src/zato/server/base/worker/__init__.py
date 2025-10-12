@@ -1698,7 +1698,7 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(msg.cid, msg.sub_key)
-        self.invoke('zato.pubsub.subscription.delete', {'sub_key':msg.sub_key, 'should_call_pubsub_consumer_backend':False})
+        # self.invoke('zato.pubsub.subscription.delete', {'sub_key':msg.sub_key, 'should_call_pubsub_consumer_backend':False})
 
 # ################################################################################################################################
 

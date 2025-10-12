@@ -569,8 +569,8 @@ class Delete(AdminService):
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
-        if should_call_pubsub_consumer_backend:
-            self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+        #if should_call_pubsub_consumer_backend:
+        self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
         # self.broker_client.publish_to_pubsub(pubsub_msg)
