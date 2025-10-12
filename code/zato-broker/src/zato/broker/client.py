@@ -189,22 +189,15 @@ class BrokerClient:
             expiration_time = now + timedelta(seconds=expiration_seconds)
             expiration_time_iso = expiration_time.isoformat()
 
-            # Wrap the message in the proper structure
-            if not isinstance(msg, dict):
-                msg = {'msg': msg}
-
-            # Extract the actual data
-            msg_data = msg.get('msg') or msg.get('data') or msg
-
             # Build the properly structured message
             msg = {
-                'data': msg_data,
+                'data': msg,
                 'topic_name': topic_name,
                 'msg_id': msg_id,
-                'priority': msg.get('priority', _default_priority),
+                'priority': _default_priority,
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
-                'expiration': msg.get('expiration', _default_expiration),
+                'expiration': _default_expiration,
                 'expiration_time_iso': expiration_time_iso,
                 'correl_id': correl_id,
             }
