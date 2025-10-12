@@ -3,6 +3,13 @@ info:
   title: Zato Pub/Sub REST API
   description: |
     REST API for Zato's publish/subscribe messaging system.
+
+    This API allows clients to:
+    - Publish messages to topics
+    - Retrieve messages from subscribed topics
+    - Subscribe to topics to receive messages
+    - Unsubscribe from topics
+
     All operations require HTTP Basic Authentication.
   version: 4.1.0
   contact:
@@ -154,6 +161,60 @@ paths:
       responses:
         '200':
           description: Successfully subscribed to topic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request (invalid topic name)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            text/html:
+              schema:
+                type: string
+                description: HTML error page for malformed requests
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            text/html:
+              schema:
+                type: string
+                description: HTML error page for malformed requests
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            text/html:
+              schema:
+                type: string
+                description: HTML error page for malformed requests
+
+  /pubsub/unsubscribe/topic/{topic_name}:
+    post:
+      summary: Unsubscribe from a topic
+      description: |
+        Remove subscription from the specified topic. The user must have subscribe permissions for the topic.
+        Unsubscribing from a non-subscribed topic is safe and returns success.
+      parameters:
+        - name: topic_name
+          in: path
+          required: true
+          description: Name of the topic to unsubscribe from
+          schema:
+            type: string
+            maxLength: 200
+            pattern: '^[\x20-\x22\x24-\x7E]*$'
+            example: orders.processed
+      responses:
+        '200':
+          description: Successfully unsubscribed from topic
           content:
             application/json:
               schema:
