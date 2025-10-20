@@ -1206,7 +1206,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. indicate the message has not been processed
         except Exception:
-            log_msg = f'Rejecting pub/sub message: body={body}, amqp_msg={amqp_msg}, e={format_exc}')
+            log_msg = f'Rejecting pub/sub message: body={body}, amqp_msg={amqp_msg}, e={format_exc}'
             logger.warning(log_msg)
             amqp_msg.reject(requeue=True)
 
