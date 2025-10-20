@@ -198,8 +198,6 @@ class Ping(AdminService):
         pub_cid = make_cid_public(self.cid)
         self.response.payload = f'{{"is_ok":true, "cid":"{pub_cid}"}}'
 
-        self.publish('demo.1', 'Hello!')
-
 # ################################################################################################################################
 
 class ServerInvoker(AdminService):
