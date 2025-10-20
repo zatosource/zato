@@ -58,8 +58,9 @@ class AMQP:
                 result = func(*args, **kwargs)
                 _predicate_func.result = result # type: ignore
                 return True
-            except Exception as e:
-                logger.info(f'Error calling `{func.__name__}` with `{args}` and `{kwargs}` - {log_message}, will retry: {e}')
+            except Exception:
+                _log_msg = f'Error calling `{func.__name__}` with `{args}` and `{kwargs}` - {log_message}, will retry: {format_exc()}'
+                logger.info(_log_msg)
                 return False
 
         _ = wait_for_predicate(
