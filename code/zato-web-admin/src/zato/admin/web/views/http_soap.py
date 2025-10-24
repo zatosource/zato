@@ -257,7 +257,7 @@ def index(req): # type: ignore
                     security_name=security_name, content_type=item.content_type,
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
                     content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept,
-                    validate_tls=item.validate_tls)
+                    validate_tls=item.get('validate_tls', True))
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
