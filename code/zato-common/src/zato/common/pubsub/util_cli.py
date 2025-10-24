@@ -75,7 +75,7 @@ def _get_consumers_data(vhost:'str') -> 'dict_':
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=3600) as response:
             response_data = json.loads(response.read().decode('utf-8'))
             return response_data
     except Exception:
