@@ -226,7 +226,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
 
         # File patterns to match (e.g. ['*.py', '*.txt'])
-        self.file_patterns = file_patterns or ['*.py', '*.yaml', '*.yml']
+        self.file_patterns = file_patterns or ['*.py', '*.yaml', '*.yml',  '*.ini']
 
         # For tracking file size stability
         self.file_sizes = {}
