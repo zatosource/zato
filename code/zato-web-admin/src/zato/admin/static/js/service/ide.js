@@ -1811,6 +1811,10 @@ $.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, sho
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let url_path = `${url_path_prefix}?fs_location=${current_fs_location}&should_wait_for_services=${should_wait_for_services}`;
 
+    console.log("populate_current_file_service_list_impl: url_path:", JSON.stringify(url_path));
+    console.log("populate_current_file_service_list_impl: current_fs_location:", JSON.stringify(current_fs_location));
+    console.log("populate_current_file_service_list_impl: should_wait_for_services:", JSON.stringify(should_wait_for_services));
+
     let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
     $.fn.zato.invoker.invoke(url_path, "", callback)
 }
