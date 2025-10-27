@@ -69,6 +69,7 @@ $.fn.zato.invoker.submit_form = function(
         data: form_data,
         dataType: data_format,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        async: false,
 
         success: function(data, text_status, request) {
             let _on_success = function() {

@@ -412,19 +412,24 @@ $.fn.zato.ide.on_file_op_success_func = function(
     let _on_success_func = function(options, data) {
 
         console.log(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
-        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback:`, after_on_file_op_success_func_callback);
-        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback type: `+ typeof after_on_file_op_success_func_callback);
+        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback:`, JSON.stringify(after_on_file_op_success_func_callback));
+        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback type: `+ JSON.stringify(typeof after_on_file_op_success_func_callback));
 
         if(after_on_file_op_success_func_callback) {
-            console.log(`File ${op_name} impl, after_on_file_op_success_func_callback name: `+ after_on_file_op_success_func_callback.name);
+            console.log(`File ${op_name} impl, after_on_file_op_success_func_callback name: `+ JSON.stringify(after_on_file_op_success_func_callback.name));
         }
 
+        console.log(`File ${op_name} impl, checking if data is object`);
         if($.fn.zato.is_object(data)) {
+            console.log(`File ${op_name} impl, data is object`);
             var data = data;
         }
         else {
+            console.log(`File ${op_name} impl, data is not object, parsing JSON`);
             var data = $.parseJSON(data);
         }
+
+        console.log(`File ${op_name} impl, parsed data:`, JSON.stringify(data));
 
         _get_current_file_service_list_func = function() {
             let item = {}
@@ -440,8 +445,15 @@ $.fn.zato.ide.on_file_op_success_func = function(
             return out;
         }
 
+        console.log(`File ${op_name} impl, showing bottom tooltip`);
         $.fn.zato.show_bottom_tooltip(`#file-${op_name}`, `${placeholder_verb} ..`, true);
+
+        console.log(`File ${op_name} impl, setting current fs_location to:`, JSON.stringify(data.full_path));
         $.fn.zato.ide.set_current_fs_location(data.full_path);
+
+        console.log(`File ${op_name} impl, calling on_file_selected`);
+        console.log(`File ${op_name} impl, data.full_path:`, JSON.stringify(data.full_path));
+        console.log(`File ${op_name} impl, data.full_path_url_safe:`, JSON.stringify(data.full_path_url_safe));
         $.fn.zato.ide.on_file_selected(
             data.full_path,
             data.full_path_url_safe,
@@ -449,8 +461,16 @@ $.fn.zato.ide.on_file_op_success_func = function(
             false,
             null, // _get_current_file_service_list_func,
         );
+
+        console.log(`File ${op_name} impl, called on_file_selected`);
+
         if(after_on_file_op_success_func_callback) {
+            console.log(`File ${op_name} impl, calling after_on_file_op_success_func_callback`);
             after_on_file_op_success_func_callback();
+            console.log(`File ${op_name} impl, called after_on_file_op_success_func_callback`);
+        }
+        else {
+            console.log(`File ${op_name} impl, no after_on_file_op_success_func_callback to call`);
         }
     };
     return _on_success_func;
@@ -472,15 +492,25 @@ $.fn.zato.ide.after_file_reloaded = function() {
 
 $.fn.zato.ide.after_file_created = function() {
 
+    console.log("after_file_created: entered");
+
     // Local variables
     let main_elem_id_selector = "#file-new";
     let main_text = "OK, created";
     let invoke_elem_id_selector = "#invoke-service";
     let invoke_text = "Click here to invoke";
 
+    console.log("after_file_created: main_elem_id_selector:", JSON.stringify(main_elem_id_selector));
+    console.log("after_file_created: main_text:", JSON.stringify(main_text));
+    console.log("after_file_created: invoke_elem_id_selector:", JSON.stringify(invoke_elem_id_selector));
+    console.log("after_file_created: invoke_text:", JSON.stringify(invoke_text));
+
     // Do show the tooltips now
     $.fn.zato.show_bottom_tooltip(main_elem_id_selector, main_text);
+    console.log("after_file_created: called show_bottom_tooltip");
+
     $.fn.zato.show_left_tooltip(invoke_elem_id_selector, invoke_text);
+    console.log("after_file_created: called show_left_tooltip");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -531,19 +561,43 @@ $.fn.zato.ide.on_file_simple_impl = function(
     after_on_file_op_success_func_impl
 ) {
 
+    console.log("on_file_simple_impl: entered");
+    console.log("on_file_simple_impl: current_root_directory:", JSON.stringify(current_root_directory));
+    console.log("on_file_simple_impl: file_name:", JSON.stringify(file_name));
+    console.log("on_file_simple_impl: current_file_name_field:", JSON.stringify(current_file_name_field));
+    console.log("on_file_simple_impl: new_file_name:", JSON.stringify(new_file_name));
+    console.log("on_file_simple_impl: url_path:", JSON.stringify(url_path));
+    console.log("on_file_simple_impl: form_id:", JSON.stringify(form_id));
+    console.log("on_file_simple_impl: op_name:", JSON.stringify(op_name));
+    console.log("on_file_simple_impl: placeholder_verb:", JSON.stringify(placeholder_verb));
+    console.log("on_file_simple_impl: after_on_file_op_success_func_impl:", JSON.stringify(after_on_file_op_success_func_impl));
+    console.log("on_file_simple_impl: after_on_file_op_success_func_impl.name:", JSON.stringify(after_on_file_op_success_func_impl.name));
+
     // Local variables
     let after_on_file_op_success_func_on_file_simple_impl = function() {
+        console.log("after_on_file_op_success_func_on_file_simple_impl: entered");
+        console.log("after_on_file_op_success_func_on_file_simple_impl: calling populate_current_file_service_list_impl");
+        console.log("after_on_file_op_success_func_on_file_simple_impl: after_on_file_op_success_func_impl:", JSON.stringify(after_on_file_op_success_func_impl));
+        console.log("after_on_file_op_success_func_on_file_simple_impl: after_on_file_op_success_func_impl.name:", JSON.stringify(after_on_file_op_success_func_impl.name));
         $.fn.zato.ide.populate_current_file_service_list_impl(after_on_file_op_success_func_impl, "1");
+        console.log("after_on_file_op_success_func_on_file_simple_impl: called populate_current_file_service_list_impl");
     }
+
+    console.log("on_file_simple_impl: created after_on_file_op_success_func_on_file_simple_impl");
+    console.log("on_file_simple_impl: after_on_file_op_success_func_on_file_simple_impl.name:", JSON.stringify(after_on_file_op_success_func_on_file_simple_impl.name));
 
     let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func_on_file_simple_impl);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func(op_name);
+
+    console.log("on_file_simple_impl: created _on_success_func and _on_error_func");
 
     $.fn.zato.ide.build_singleton_form(form_id, {
         [current_file_name_field]: file_name,
         "new_file_name": new_file_name,
         "root_directory": current_root_directory,
     });
+
+    console.log("on_file_simple_impl: built singleton form");
 
     $.fn.zato.invoker.submit_form(
         url_path,
@@ -554,11 +608,17 @@ $.fn.zato.ide.on_file_simple_impl = function(
         display_timeout,
         "json"
     );
+
+    console.log("on_file_simple_impl: submitted form");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
+
+    console.log("on_file_new_impl: entered");
+    console.log("on_file_new_impl: current_root_directory:", JSON.stringify(current_root_directory));
+    console.log("on_file_new_impl: file_name:", JSON.stringify(file_name));
 
     let url_path = "/zato/service/ide/create-file/";
     let form_id = "file-new-form";
@@ -567,6 +627,13 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
     let op_name = "new";
     let placeholder_verb = "Deploying"
     let after_on_file_op_success_func_impl = $.fn.zato.ide.after_file_created;
+
+    console.log("on_file_new_impl: url_path:", JSON.stringify(url_path));
+    console.log("on_file_new_impl: form_id:", JSON.stringify(form_id));
+    console.log("on_file_new_impl: op_name:", JSON.stringify(op_name));
+    console.log("on_file_new_impl: placeholder_verb:", JSON.stringify(placeholder_verb));
+    console.log("on_file_new_impl: after_on_file_op_success_func_impl:", JSON.stringify(after_on_file_op_success_func_impl));
+    console.log("on_file_new_impl: after_on_file_op_success_func_impl.name:", JSON.stringify(after_on_file_op_success_func_impl.name));
 
     $.fn.zato.ide.on_file_simple_impl(
         current_root_directory,
@@ -581,33 +648,53 @@ $.fn.zato.ide.on_file_new_impl = function(current_root_directory, file_name) {
         placeholder_verb,
         after_on_file_op_success_func_impl,
     )
+
+    console.log("on_file_new_impl: called on_file_simple_impl");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_file_new = function() {
 
+    console.log("on_file_new: entered");
+
     // Local variables
     let prompt_text = "Create a new file."
     let root_directory_count = $.fn.zato.ide.get_root_directory_count();
     let current_root_directory = $.fn.zato.ide.get_current_root_directory();
 
+    console.log("on_file_new: root_directory_count:", JSON.stringify(root_directory_count));
+    console.log("on_file_new: current_root_directory:", JSON.stringify(current_root_directory));
+
     // We need an integer here ..
     root_directory_count = Number(root_directory_count);
 
+    console.log("on_file_new: root_directory_count after Number():", JSON.stringify(root_directory_count));
+
     // .. show additional information if we have more than one root directory ..
     if(root_directory_count > 1) {
+        console.log("on_file_new: multiple root directories, adding info to prompt");
         prompt_text += "\n\n";
         prompt_text += `Root directory: ${current_root_directory}\n\n`;
     }
+    else {
+        console.log("on_file_new: single root directory");
+    }
+
+    console.log("on_file_new: prompt_text:", JSON.stringify(prompt_text));
 
     // .. do prompt the user ..
     let file_name = prompt(prompt_text, "");
+
+    console.log("on_file_new: file_name from prompt:", JSON.stringify(file_name));
 
     // .. proceed if we've received anything ..
     if(file_name) {
         console.log(`Creating file: "${current_root_directory}" -> "${file_name}"`);
         $.fn.zato.ide.on_file_new_impl(current_root_directory, file_name);
+    }
+    else {
+        console.log("on_file_new: no file_name provided, exiting");
     }
 }
 
@@ -1574,6 +1661,9 @@ $.fn.zato.ide.mark_as_undeployed = function(undeployed) {
 
 $.fn.zato.ide.on_service_list_response = function(response) {
 
+    console.log("on_service_list_response: entered");
+    console.log("on_service_list_response: response:", JSON.stringify(response));
+
     //
     // We're switching from files to services here.
     //
@@ -1582,10 +1672,16 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
 
+    console.log("on_service_list_response: undeployed:", JSON.stringify(undeployed));
     //  console.log("On service list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
+
+    console.log("on_service_list_response: data:", JSON.stringify(data));
+    console.log("on_service_list_response: data.current_file_service_list:", JSON.stringify(data.current_file_service_list));
+    console.log("on_service_list_response: data.service_list:", JSON.stringify(data.service_list));
+    console.log("on_service_list_response: data.current_fs_location:", JSON.stringify(data.current_fs_location));
 
     // .. clear out the form ..
     object_select.empty();
@@ -1792,10 +1888,24 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 
 $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func) {
 
+    console.log("post_populate_current_file_service_list_impl: entered");
+    console.log("post_populate_current_file_service_list_impl: after_func:", JSON.stringify(after_func));
+    console.log("post_populate_current_file_service_list_impl: after_func.name:", JSON.stringify(after_func ? after_func.name : null));
+
     _post_func = function(response) {
+        console.log("post_populate_current_file_service_list_impl _post_func: entered");
+        console.log("post_populate_current_file_service_list_impl _post_func: response:", JSON.stringify(response));
+
         $.fn.zato.ide.on_service_list_response(response);
+        console.log("post_populate_current_file_service_list_impl _post_func: called on_service_list_response");
+
         if(after_func) {
+            console.log("post_populate_current_file_service_list_impl _post_func: calling after_func");
             after_func();
+            console.log("post_populate_current_file_service_list_impl _post_func: called after_func");
+        }
+        else {
+            console.log("post_populate_current_file_service_list_impl _post_func: no after_func to call");
         }
     }
     return _post_func;
@@ -1805,16 +1915,29 @@ $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func
 
 $.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, should_wait_for_services) {
 
+    console.log("populate_current_file_service_list_impl: entered");
+    console.log("populate_current_file_service_list_impl: after_func:", JSON.stringify(after_func));
+    console.log("populate_current_file_service_list_impl: after_func.name:", JSON.stringify(after_func ? after_func.name : null));
+    console.log("populate_current_file_service_list_impl: should_wait_for_services:", JSON.stringify(should_wait_for_services));
+
     let url_path_prefix = "/zato/service/ide/get-service-list/";
     if(should_wait_for_services === undefined) {
         should_wait_for_services = "";
     }
 
+    console.log("populate_current_file_service_list_impl: should_wait_for_services after check:", JSON.stringify(should_wait_for_services));
+
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+    console.log("populate_current_file_service_list_impl: current_fs_location:", JSON.stringify(current_fs_location));
+
     let url_path = `${url_path_prefix}?fs_location=${current_fs_location}&should_wait_for_services=${should_wait_for_services}`;
+    console.log("populate_current_file_service_list_impl: url_path:", JSON.stringify(url_path));
 
     let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
+    console.log("populate_current_file_service_list_impl: created callback");
+
     $.fn.zato.invoker.invoke(url_path, "", callback)
+    console.log("populate_current_file_service_list_impl: called invoke");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
