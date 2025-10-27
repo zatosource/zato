@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from operator import itemgetter
 from pathlib import Path
 from time import sleep
@@ -18,7 +18,7 @@ from time import sleep
 from zato.common.api import Default_Service_File_Data
 from zato.common.exception import BadRequest
 from zato.common.typing_ import anylist, intnone, list_field, strnone
-from zato.common.util.api import get_demo_py_fs_locations, wait_for_file
+from zato.common.util.api import get_demo_py_fs_locations, wait_for_file, utcnow
 from zato.common.util.open_ import open_r, open_w
 from zato.server.service import Model, Service
 
@@ -151,6 +151,7 @@ class _IDEBase(Service):
         out = []
 
         for item in deployment_info_list:
+
             if fs_location == item['fs_location']:
 
                 # This is reusable
@@ -168,6 +169,7 @@ class _IDEBase(Service):
                     # We subtract a little bit to make sure the class name is not in the first line
                     'line_number_human': item['line_number'] - 3
                 })
+
         return sorted(out, key=itemgetter('name'))
 
 # ################################################################################################################################
@@ -311,7 +313,8 @@ class _IDEBase(Service):
 # ################################################################################################################################
 
     def _wait_for_services(self, fs_location:'str', max_wait_time:'int'=3) -> 'None':
-        now = datetime.utcnow()
+
+        now = utcnow()
         until = now + timedelta(seconds=max_wait_time)
 
         while now < until:
@@ -320,7 +323,7 @@ class _IDEBase(Service):
                 if item['fs_location'] == fs_location:
                     return
 
-            now = datetime.utcnow()
+            now = utcnow()
             sleep(0.2)
 
 # ################################################################################################################################
@@ -503,12 +506,15 @@ class _GetBase(_IDEBase):
 
         response = IDEResponse()
         response.service_list = []
-        response.current_file_service_list = self._get_service_list_by_fs_location(deployment_info_list, fs_location)
         response.current_service_file_list = []
 
         if fs_location:
 
-            wait_for_file(fs_location, 3, interval=0.2)
+            wait_for_file(fs_location, interval=0.2)
+
+            # We need to read it again to get the latest state
+            deployment_info_list = list(self.get_deployment_info_list())
+            response.current_file_service_list = self._get_service_list_by_fs_location(deployment_info_list, fs_location)
 
             response.current_fs_location = fs_location
             response.current_fs_location_url_safe = make_fs_location_url_safe(fs_location)
