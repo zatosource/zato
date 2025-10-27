@@ -1550,7 +1550,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_broker_msg_HOT_DEPLOY_UPDATE_ENMASSE(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Uploads the service
         _ = self.server.invoke('zato.pickup.update-enmasse', msg)
