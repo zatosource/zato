@@ -449,12 +449,7 @@ def watch_directory(
 
     # Find the deepest common directory to watch
     # This optimizes the observer to watch from the appropriate level
-    non_enmasse_dirs = [d for d in matching_items if 'enmasse' not in d]
-    if non_enmasse_dirs:
-        watch_directory = find_deepest_common_directory(non_enmasse_dirs)
-    else:
-        # If there are no non-enmasse directories, watch the base directory
-        watch_directory = directory_path
+    watch_directory = find_deepest_common_directory(matching_items)
 
     # Create event handler
     event_handler = ZatoFileSystemEventHandler(matching_items, event_types, file_patterns)
