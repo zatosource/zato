@@ -406,12 +406,18 @@ $.fn.zato.ide.on_file_op_error_func = function(op_name) {
 $.fn.zato.ide.on_file_op_success_func = function(
     op_name,
     placeholder_verb,
-    after_on_file_op_success_func,
+    after_on_file_op_success_func_callback,
 )
 {
     let _on_success_func = function(options, data) {
 
         console.log(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
+        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback:`, after_on_file_op_success_func_callback);
+        console.log(`File ${op_name} impl, after_on_file_op_success_func_callback type: `+ typeof after_on_file_op_success_func_callback);
+
+        if(after_on_file_op_success_func_callback) {
+            console.log(`File ${op_name} impl, after_on_file_op_success_func_callback name: `+ after_on_file_op_success_func_callback.name);
+        }
 
         if($.fn.zato.is_object(data)) {
             var data = data;
@@ -443,8 +449,8 @@ $.fn.zato.ide.on_file_op_success_func = function(
             false,
             null, // _get_current_file_service_list_func,
         );
-        if(after_on_file_op_success_func) {
-            after_on_file_op_success_func();
+        if(after_on_file_op_success_func_callback) {
+            after_on_file_op_success_func_callback();
         }
     };
     return _on_success_func;
@@ -526,11 +532,11 @@ $.fn.zato.ide.on_file_simple_impl = function(
 ) {
 
     // Local variables
-    let after_on_file_op_success_func = function() {
+    let after_on_file_op_success_func_on_file_simple_impl = function() {
         $.fn.zato.ide.populate_current_file_service_list_impl(after_on_file_op_success_func_impl, "1");
     }
 
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func);
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func_on_file_simple_impl);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func(op_name);
 
     $.fn.zato.ide.build_singleton_form(form_id, {
@@ -673,7 +679,7 @@ $.fn.zato.ide.on_file_rename = function() {
 $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
 
     // Local variables
-    let after_on_file_op_success_func = function() {
+    let after_on_file_op_success_func_on_file_delete_impl = function() {
         $.fn.zato.ide.populate_file_list($.fn.zato.ide.after_file_deleted);
         console.log(`Deleted "${fs_location}"`);
     }
@@ -682,7 +688,7 @@ $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
     let form_id = "file-delete-form";
     let options = {};
     let display_timeout = 1;
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("delete", "Deleting", after_on_file_op_success_func);
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("delete", "Deleting", after_on_file_op_success_func_on_file_delete_impl);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func("delete");
 
     $.fn.zato.ide.build_singleton_form(form_id, {
