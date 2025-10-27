@@ -1547,6 +1547,14 @@ class WorkerStore(_WorkerStoreBase):
             msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
+
+        # Uploads the service
+        _ = self.server.invoke('zato.pickup.update-enmasse', msg)
+
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg:'bunch_', *args:'any_') -> 'None':
