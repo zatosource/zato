@@ -1757,7 +1757,7 @@ def wait_for_dict_key(
 
 # ################################################################################################################################
 
-def wait_for_file(full_path:'str', timeout:'int'=9999, interval:'float'=0.01) -> 'any_':
+def wait_for_file(full_path:'str', timeout:'int'=999999, interval:'float'=0.01) -> 'any_':
 
     def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs) -> 'any_':
 
