@@ -2051,6 +2051,7 @@ def publish_enmasse(broker_client, cid:'str', file_path:'str') -> 'dict':
     msg = {
         'cid': cid,
         'full_path': file_path,
+        'action': HOT_DEPLOY.UPDATE_ENMASSE.value,
     }
 
     broker_client.publish(msg)
