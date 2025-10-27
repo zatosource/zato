@@ -406,7 +406,7 @@ $.fn.zato.ide.on_file_op_error_func = function(op_name) {
 $.fn.zato.ide.on_file_op_success_func = function(
     op_name,
     placeholder_verb,
-    after_on_file_op_success_func,
+    after_on_file_op_success_func_callback,
 )
 {
     let _on_success_func = function(options, data) {
@@ -443,8 +443,8 @@ $.fn.zato.ide.on_file_op_success_func = function(
             false,
             null, // _get_current_file_service_list_func,
         );
-        if(after_on_file_op_success_func) {
-            after_on_file_op_success_func();
+        if(after_on_file_op_success_func_callback) {
+            after_on_file_op_success_func_callback();
         }
     };
     return _on_success_func;
@@ -526,11 +526,11 @@ $.fn.zato.ide.on_file_simple_impl = function(
 ) {
 
     // Local variables
-    let after_on_file_op_success_func = function() {
+    let after_on_file_op_success_func_on_file_simple_impl = function() {
         $.fn.zato.ide.populate_current_file_service_list_impl(after_on_file_op_success_func_impl, "1");
     }
 
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func);
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func(op_name, placeholder_verb, after_on_file_op_success_func_on_file_simple_impl);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func(op_name);
 
     $.fn.zato.ide.build_singleton_form(form_id, {
@@ -673,7 +673,7 @@ $.fn.zato.ide.on_file_rename = function() {
 $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
 
     // Local variables
-    let after_on_file_op_success_func = function() {
+    let after_on_file_op_success_func_on_file_delete_impl = function() {
         $.fn.zato.ide.populate_file_list($.fn.zato.ide.after_file_deleted);
         console.log(`Deleted "${fs_location}"`);
     }
@@ -682,7 +682,7 @@ $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
     let form_id = "file-delete-form";
     let options = {};
     let display_timeout = 1;
-    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("delete", "Deleting", after_on_file_op_success_func);
+    let _on_success_func = $.fn.zato.ide.on_file_op_success_func("delete", "Deleting", after_on_file_op_success_func_on_file_delete_impl);
     let _on_error_func = $.fn.zato.ide.on_file_op_error_func("delete");
 
     $.fn.zato.ide.build_singleton_form(form_id, {
@@ -1787,6 +1787,10 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func) {
 
     _post_func = function(response) {
+        console.log("post_populate_current_file_service_list_impl: response:", JSON.stringify(response));
+        let data = JSON.parse(response.responseText);
+        console.log("post_populate_current_file_service_list_impl: data.current_file_service_list:", JSON.stringify(data.current_file_service_list));
+        console.log("post_populate_current_file_service_list_impl: data.current_fs_location:", JSON.stringify(data.current_fs_location));
         $.fn.zato.ide.on_service_list_response(response);
         if(after_func) {
             after_func();
@@ -1806,6 +1810,10 @@ $.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, sho
 
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let url_path = `${url_path_prefix}?fs_location=${current_fs_location}&should_wait_for_services=${should_wait_for_services}`;
+
+    console.log("populate_current_file_service_list_impl: url_path:", JSON.stringify(url_path));
+    console.log("populate_current_file_service_list_impl: current_fs_location:", JSON.stringify(current_fs_location));
+    console.log("populate_current_file_service_list_impl: should_wait_for_services:", JSON.stringify(should_wait_for_services));
 
     let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
     $.fn.zato.invoker.invoke(url_path, "", callback)

@@ -69,6 +69,7 @@ $.fn.zato.invoker.submit_form = function(
         data: form_data,
         dataType: data_format,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        async: false,
 
         success: function(data, text_status, request) {
             let _on_success = function() {
@@ -92,7 +93,10 @@ $.fn.zato.invoker.submit_form = function(
 $.fn.zato.invoker.get_sync_invoke_request_url = function() {
     let select = $("#object-select :selected");
     let service = select.attr("data-service-name");
+    console.log("get_sync_invoke_request_url: select:", JSON.stringify(select));
+    console.log("get_sync_invoke_request_url: service:", JSON.stringify(service));
     let out = "/zato/service/invoke/"+ service + "/cluster/1/";
+    console.log("get_sync_invoke_request_url: out:", JSON.stringify(out));
     return out
 }
 
