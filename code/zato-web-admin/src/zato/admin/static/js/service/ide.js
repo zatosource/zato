@@ -1787,6 +1787,10 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func) {
 
     _post_func = function(response) {
+        console.log("post_populate_current_file_service_list_impl: response:", JSON.stringify(response));
+        let data = JSON.parse(response.responseText);
+        console.log("post_populate_current_file_service_list_impl: data.current_file_service_list:", JSON.stringify(data.current_file_service_list));
+        console.log("post_populate_current_file_service_list_impl: data.current_fs_location:", JSON.stringify(data.current_fs_location));
         $.fn.zato.ide.on_service_list_response(response);
         if(after_func) {
             after_func();
