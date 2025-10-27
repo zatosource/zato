@@ -52,6 +52,9 @@ pickup_order_patterns = [
     'adapter*/**',
     'api*/**',
     'services*/**',
+    '**/config.yaml',
+    '**/enmasse.yaml',
+    '**/config*.y*ml',
     '**/enmasse*.y*ml',
 ]
 
