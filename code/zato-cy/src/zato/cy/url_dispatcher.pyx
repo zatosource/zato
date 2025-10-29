@@ -128,9 +128,6 @@ cdef class Matcher:
                     start_index = 0
 
                 out = dict(zip(self.group_names, groups[start_index:]))
-
-                logger('MMM-1 %s', out)
-
                 return out
 
 # ################################################################################################################################
