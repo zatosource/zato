@@ -547,7 +547,6 @@ class URLData(CyURLData):
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
-        logger.info('BBB-2 %s', msg)
         with self.url_sec_lock:
             # Only edits have 'old_name', creates don't. So for edits we delete
             # the channel and later recreate it while create actions do not have anything to delete.
