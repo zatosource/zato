@@ -235,7 +235,7 @@ class BrokerClient:
             print()
             print(111, 'Publishing')
             print(222, msg)
-            print(333, exchangex)
+            print(333, exchange)
             print(444, routing_key)
             print(555, expiration)
             print(666, publish_timeout)
