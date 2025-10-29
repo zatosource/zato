@@ -50,7 +50,9 @@ class URLData(CyURLData):
                  oauth_config=None, apikey_config=None, broker_client=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
-        logger.warn('CREATING URL DATA %s', hex(id(self)))
+        from zato.common.util.python_ import get_current_stack
+        logger.warning('CREATING URL DATA-1 %s', hex(id(self)))
+        logger.warning('CREATING URL DATA-2 %s', get_current_stack())
 
         self.worker = worker
         self.url_sec = url_sec
