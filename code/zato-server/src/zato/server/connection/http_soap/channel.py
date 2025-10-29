@@ -245,7 +245,7 @@ class RequestDispatcher:
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, http_method, http_accept) # type: ignore
 
-        # logger.info('CCC-0 %s', '*' * 80)
+        logger.info('CCC-0 %s', '*' * 80)
         # logger.info('CCC-1 %s', path_info)
         # logger.info('CCC-2 %s', http_method)
         # logger.info('CCC-3 %s', http_accept)

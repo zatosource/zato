@@ -494,6 +494,8 @@ class URLData(CyURLData):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
+        logger.info('BBB-0 %s', '-' * 80)
+
         # logger.info('BBB-3 %s %s', msg, old_data)
 
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
