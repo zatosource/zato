@@ -499,30 +499,17 @@ class URLData(CyURLData):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
-        logger.info('BBB-0 %s', '-' * 80)
-
-        # logger.info('BBB-3 %s %s', msg, old_data)
-
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
-        # logger.info('BBB-4 %s', match_target)
 
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
-        # logger.info('BBB-5 %s', channel_item)
-
         self.channel_data.append(channel_item)
 
         sec_info = self._sec_info_from_msg(msg)
-        # logger.info('BBB-6 %s', sec_info)
-
         self.url_sec[match_target] = sec_info
 
         self._remove_from_cache(match_target)
+
         self.sort_channel_data()
-
-        logger.info('BBB-7-1 %s', hex(id(self)))
-        logger.info('BBB-7-2 %s', hex(id(self.channel_data)))
-
-        # logger.info('BBB-7-3 %s', self.channel_data)
 
 # ################################################################################################################################
 
