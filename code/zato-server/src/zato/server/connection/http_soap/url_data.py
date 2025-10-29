@@ -512,7 +512,10 @@ class URLData(CyURLData):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        logger.info('BBB-7 %s', self.channel_data)
+        logger.info('BBB-7-1 %s', hex(id(self)))
+        logger.info('BBB-7-2 %s', hex(id(self.channel_data)))
+
+        logger.info('BBB-7-3 %s', self.channel_data)
 
 # ################################################################################################################################
 
