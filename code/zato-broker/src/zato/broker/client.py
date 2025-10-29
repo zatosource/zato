@@ -232,13 +232,13 @@ class BrokerClient:
             # Enable confirm mode on the channel
             client.channel.confirm_select()
 
-            logger.info('*' * 80)
-            logger.info('Publishing')
-            logger.info('111 %s', msg)
-            logger.info('222 %s', exchange)
-            logger.info('333 %s', routing_key)
-            logger.info('444 %s', expiration)
-            logger.info('555 %s', publish_timeout)
+            # logger.info('*' * 80)
+            # logger.info('Publishing')
+            # logger.info('111 %s', msg)
+            # logger.info('222 %s', exchange)
+            # logger.info('333 %s', routing_key)
+            # logger.info('444 %s', expiration)
+            # logger.info('555 %s', publish_timeout)
 
             # .. and publish the message now.
             _ = client.publish(
