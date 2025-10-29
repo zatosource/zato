@@ -179,7 +179,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
         self.has_gevent = True
-        self.request_dispatcher_dispatch = cast_('callable_', None)
         self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
@@ -849,7 +848,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Initializes worker store, including connectors
         self.worker_store.init()
-        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
@@ -962,7 +960,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. publish the message for pub/sub ..
-        self.broker_client.publish_to_pubsub(pubsub_msg)
+        # self.broker_client.publish_to_pubsub(pubsub_msg)
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')
