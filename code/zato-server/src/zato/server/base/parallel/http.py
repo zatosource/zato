@@ -117,7 +117,7 @@ class HTTPHandler:
         try:
 
             # .. this is the call that obtains a response ..
-            payload = self.request_dispatcher_dispatch(
+            payload = self.worker_store.request_dispatcher.dispatch(
                 cid,
                 request_ts_utc,
                 wsgi_environ,
