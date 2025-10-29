@@ -50,6 +50,8 @@ class URLData(CyURLData):
                  oauth_config=None, apikey_config=None, broker_client=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
+        logger.warn('CREATING URL DATA %s', hex(id(self)))
+
         self.worker = worker
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
