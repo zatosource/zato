@@ -794,7 +794,7 @@ class WorkerStore(_WorkerStoreBase):
             msg.ack()
 
             # .. and let's return explicitly.
-            logger.info('🍀 ACK ACK 111')
+            # logger.info('🍀 ACK ACK 111')
             return
 
         except Exception as e:
@@ -851,11 +851,11 @@ class WorkerStore(_WorkerStoreBase):
                 logger.info(log_msg)
 
                 # .. do sleep now ..
-                logger.info('🕐 REJ REJ 111')
+                # logger.info('🕐 REJ REJ 111')
                 sleep(sleep_time)
 
                 # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
-                logger.info('🕐 REJ REJ 222')
+                # logger.info('🕐 REJ REJ 222')
                 msg.reject(requeue=True)
 
             # .. if we go here, it means we run out of time, so we need to accept that message ..
@@ -864,7 +864,7 @@ class WorkerStore(_WorkerStoreBase):
                 log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
                           f' -> Msg ID: `{msg_id}` -> Max wait time reached (attempts={delivery_count})'
                 logger.info(log_msg)
-                logger.info('🏓 ACK ACK 222')
+                # logger.info('🏓 ACK ACK 222')
                 msg.ack()
 
 # ################################################################################################################################
@@ -1347,7 +1347,6 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an HTTP/SOAP channel.
         """
-        logger.info('BBB-1 %s', msg)
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
