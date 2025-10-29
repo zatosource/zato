@@ -232,6 +232,15 @@ class BrokerClient:
             # Enable confirm mode on the channel
             client.channel.confirm_select()
 
+            print()
+            print(111, 'Publishing')
+            print(222, msg)
+            print(333, exchangex)
+            print(444, routing_key)
+            print(555, expiration)
+            print(666, publish_timeout)
+            print()
+
             # .. and publish the message now.
             _ = client.publish(
                 msg,
