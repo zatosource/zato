@@ -251,6 +251,7 @@ class RequestDispatcher:
         logger.info('CCC-3 %s', http_accept)
         logger.info('CCC-4 %s', url_match)
         logger.info('CCC-5 %s', channel_item)
+        logger.info('CCC-6 %s', self.url_data.channel_data)
 
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
