@@ -232,7 +232,7 @@ class BrokerClient:
             # Enable confirm mode on the channel
             client.channel.confirm_select()
 
-            logger.info('***********)
+            logger.info('*' * 80)
             logger.info('Publishing')
             logger.info('111 %s', msg)
             logger.info('222 %s', exchange)
