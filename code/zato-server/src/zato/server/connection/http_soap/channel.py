@@ -195,6 +195,10 @@ class RequestDispatcher:
         http_methods_allowed:'strlist'
     ) -> 'None':
 
+        logger.info('-' * 80)
+        logger.info('NEW DISPATCHER %s', hex(id(self)))
+        logger.info('-' * 80)
+
         self.server = server
         self.url_data = url_data
 
