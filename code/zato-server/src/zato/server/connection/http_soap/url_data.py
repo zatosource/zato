@@ -27,7 +27,7 @@ from zato.common.util.api import update_apikey_username_to_channel, wait_for_dic
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Unauthorized
-from zato.server.connection.http_soap.url_dispatcher import CyURLData
+from zato.server.connection.http_soap.url_dispatcher import PyURLData
 
 # ################################################################################################################################
 
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class URLData(CyURLData):
+class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
