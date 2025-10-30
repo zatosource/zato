@@ -247,10 +247,7 @@ class RequestDispatcher:
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        logger.info('.' * 80)
-        logger.info('IN DISPATCH-01 %s %s', hex(id(self)), sorted(item['name'] for item in self.url_data.channel_data))
         url_match, channel_item = self.url_data.match(path_info, http_method, http_accept) # type: ignore
-        logger.info('IN DISPATCH-02 %s %s', url_match, channel_item)
 
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
