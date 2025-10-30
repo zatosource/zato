@@ -179,6 +179,8 @@ class CyURLData:
 
             for item in self.channel_data:
 
+                logger.info('DISP ITEM-01 %s', item)
+
                 matcher = item['match_target_compiled']
                 if needs_user and matcher.is_internal:
                     continue
