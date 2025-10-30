@@ -160,7 +160,7 @@ class PyURLData:
         has_target_in_cache = True
 
         target = ''
-        target += '' # This used to be a SOAP action, now it is always an empty string
+        target += 'not-used' # This used to be a SOAP action, now it is always an empty string
         target += sep
         target += http_method
         target += sep
