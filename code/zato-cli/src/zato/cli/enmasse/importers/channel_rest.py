@@ -179,7 +179,7 @@ class ChannelImporter:
         channel.method = channel_def.get('method', '') or ''
         channel.is_active = True
         channel.is_internal = False
-        channel.soap_action = 'not-used'
+        channel.soap_action = '' # Must be an empty string
 
         # Process standard attributes
         for key, value in channel_def.items():
