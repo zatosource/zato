@@ -118,7 +118,7 @@ class HTTPHandler:
 
             logger.info('*' * 80)
             logger.info('HTTP DISPATCHER-01 %s', hex(id(self.worker_store.request_dispatcher)))
-            logger.info('HTTP DISPATCHER-02 %s', self.worker_store.request_dispatcher.url_data.channel_data)
+            logger.info('HTTP DISPATCHER-02 %s', sorted(item['name'] for item in self.worker_store.request_dispatcher.url_data.channel_data))
 
             # .. this is the call that obtains a response ..
             payload = self.worker_store.request_dispatcher.dispatch(
