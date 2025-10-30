@@ -26,8 +26,8 @@ from zato.common.dispatch import dispatcher
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
-from zato.server.connection.http_soap import Forbidden, Unauthorized
-from zato.url_dispatcher import CyURLData, Matcher
+from zato.server.connection.http_soap import Unauthorized
+from zato.server.connection.http_soap.url_dispatcher import CyURLData
 
 # ################################################################################################################################
 
