@@ -119,7 +119,7 @@ class OutgoingRESTImporter:
         outgoing.cluster = self.importer.get_cluster(session)
         outgoing.is_active = True
         outgoing.is_internal = False
-        outgoing.soap_action = 'not-used'
+        outgoing.soap_action = '' # Must be an empty string
 
         # Set default values that may not be provided
         outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
