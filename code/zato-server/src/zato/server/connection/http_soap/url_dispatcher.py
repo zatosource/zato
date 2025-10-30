@@ -122,13 +122,16 @@ class Matcher:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CyURLData:
+class PyURLData:
 
     def __init__(self, channel_data=None):
         self.channel_data = channel_data
         self.url_path_cache = {}
         self.url_target_cache = {}
         self.has_trace1 = logger.isEnabledFor(TRACE1)
+
+        logger.info('Q' * 80)
+        logger.info('CREATING NEW PyURLData')
 
 # ################################################################################################################################
 
