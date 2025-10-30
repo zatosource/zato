@@ -130,9 +130,6 @@ class PyURLData:
         self.url_target_cache = {}
         self.has_trace1 = logger.isEnabledFor(TRACE1)
 
-        logger.info('Q' * 80)
-        logger.info('CREATING NEW PyURLData')
-
 # ################################################################################################################################
 
     def _remove_from_cache(self, match_target):
@@ -181,8 +178,6 @@ class PyURLData:
             needs_user = not url_path.startswith('/zato')
 
             for item in self.channel_data:
-
-                logger.info('DISP ITEM-01 %s', item)
 
                 matcher = item['match_target_compiled']
                 if needs_user and matcher.is_internal:
