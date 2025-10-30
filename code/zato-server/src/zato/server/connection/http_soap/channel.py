@@ -196,8 +196,8 @@ class RequestDispatcher:
     ) -> 'None':
 
         logger.info('-' * 80)
-        logger.info('NEW DISPATCHER %s', hex(id(self)))
-        logger.info('-' * 80)
+        logger.info('NEW DISPATCHER-01 %s', hex(id(self)))
+        logger.info('NEW DISPATCHER-02 %s', url_data.channel_data)
 
         self.server = server
         self.url_data = url_data
