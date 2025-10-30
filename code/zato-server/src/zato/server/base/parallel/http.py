@@ -116,6 +116,10 @@ class HTTPHandler:
         # .. try to handle the request now ..
         try:
 
+            logger.info('*' * 80)
+            logger.info('HTTP DISPATCHER %s', hex(id(self.worker_store.request_dispatcher)))
+            logger.info('*' * 80)
+
             # .. this is the call that obtains a response ..
             payload = self.worker_store.request_dispatcher.dispatch(
                 cid,
