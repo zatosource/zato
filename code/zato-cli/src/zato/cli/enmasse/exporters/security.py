@@ -27,7 +27,6 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,10 +96,6 @@ class SecurityExporter:
                 continue
 
             name = item['name']
-            logger.debug('Processing bearer_token: %s', name)
-            logger.debug('Item keys: %s', sorted(item.keys()))
-            logger.debug('Item type: %s', type(item))
-            logger.debug('Full item: %s', item)
 
             # Create base token entry
             oauth = {
@@ -118,51 +113,34 @@ class SecurityExporter:
             missing_fields = []
 
             # Try to access as opaque1 attribute (SQLAlchemy objects)
-            logger.debug('Checking hasattr opaque1 for %s', name)
-            if hasattr(item, 'opaque1'):
-                logger.debug('Has opaque1 attribute, value: %s', getattr(item, 'opaque1', None))
-                if item.opaque1:
-                    try:
-                        data = loads(item.opaque1)
-                        logger.debug('Parsed opaque1 attribute data: %s', data)
-                        if data:
-                            opaque_data.update(data)
-                            logger.debug('Updated opaque_data from attribute: %s', opaque_data)
-                    except Exception as e:
-                        logger.warning('Error parsing opaque1 attribute for %s: %s', name, e)
+            if hasattr(item, 'opaque1') and item.opaque1:
+                try:
+                    data = loads(item.opaque1)
+                    if data:
+                        opaque_data.update(data)
+                except Exception as e:
+                    logger.warning('Error parsing opaque1 attribute for %s: %s', name, e)
 
             # Try to access as opaque1 dict key (JSON objects)
-            logger.debug('Checking opaque1 in item dict for %s', name)
-            if not opaque_data and 'opaque1' in item:
-                logger.debug('Has opaque1 key, value: %s', item['opaque1'])
-                if item['opaque1']:
-                    try:
-                        data = loads(item['opaque1'])
-                        logger.debug('Parsed opaque1 key data: %s', data)
-                        if data:
-                            opaque_data.update(data)
-                            logger.debug('Updated opaque_data from key: %s', opaque_data)
-                    except Exception as e:
-                        logger.warning('Error parsing opaque1 key for %s: %s', name, e)
+            if not opaque_data and 'opaque1' in item and item['opaque1']:
+                try:
+                    data = loads(item['opaque1'])
+                    if data:
+                        opaque_data.update(data)
+                except Exception as e:
+                    logger.warning('Error parsing opaque1 key for %s: %s', name, e)
 
             # Check for direct attributes in the item that match our needed fields
-            logger.debug('Checking direct attributes for %s', name)
             for field in possible_fields:
                 if field in item and item[field]:
-                    logger.debug('Found direct field %s=%s', field, item[field])
                     opaque_data[field] = item[field]
-            logger.debug('opaque_data after direct fields: %s', opaque_data)
 
             # Update OAuth definition with the collected opaque data
             if opaque_data:
-                logger.debug('opaque_data before rename: %s', opaque_data)
                 # Rename auth_server_url back to auth_endpoint for export
                 if 'auth_server_url' in opaque_data:
-                    logger.debug('Renaming auth_server_url to auth_endpoint')
                     opaque_data['auth_endpoint'] = opaque_data.pop('auth_server_url')
-                logger.debug('opaque_data after rename: %s', opaque_data)
                 oauth.update(opaque_data)
-                logger.debug('oauth after update: %s', oauth)
 
             # Check for missing required fields
             for field in required_fields:
