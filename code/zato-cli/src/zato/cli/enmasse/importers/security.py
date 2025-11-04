@@ -98,6 +98,10 @@ class SecurityImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
+
+            if 'auth_endpoint' in item:
+                item['auth_server_url'] = item.pop('auth_endpoint')
+
             name = item['name']
             sec_type = item['type']
 
