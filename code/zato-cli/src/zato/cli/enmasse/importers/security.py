@@ -273,7 +273,7 @@ class SecurityImporter:
         db_def = db_defs[def_name]
         logger.debug('DB definition for %s: %s', def_name, db_def)
         for item in db_def:
-            if item not in sec_def and item not in ('id', 'type', 'definition'):
+            if item not in sec_def and item not in ('id', 'type', 'definition', 'opaque1'):
                 logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
                 sec_def[item] = db_def[item]
         logger.debug('sec_def after merging DB values: %s', sec_def)
