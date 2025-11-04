@@ -120,8 +120,9 @@ class SecurityImporter:
                     if key in ('type', 'name', 'password'):
                         continue
 
-                    if key in db_def and db_def[key] != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
+                    db_value = db_def.get(key)
+                    if db_value != value:
+                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
                         needs_update = True
                         break
 
