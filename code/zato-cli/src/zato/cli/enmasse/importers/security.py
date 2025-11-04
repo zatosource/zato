@@ -40,6 +40,7 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def _process_security_defs(self, query_result:'any_', sec_type:'str', out:'dict') -> 'None':
+        from zato.common.json_internal import loads
         definitions = to_json(query_result, return_as_dict=True)
         logger.info('Processing %d %s definitions', len(definitions), sec_type)
 
@@ -47,6 +48,13 @@ class SecurityImporter:
             item['type'] = sec_type
             name = item['name']
             logger.info('Processing security definition: %s (type=%s, id=%s)', name, sec_type, item.get('id'))
+
+            if 'opaque1' in item and item['opaque1']:
+                opaque_data = loads(item['opaque1'])
+                for key, value in opaque_data.items():
+                    if key not in item:
+                        item[key] = value
+
             out[name] = item
 
 # ################################################################################################################################
@@ -73,7 +81,7 @@ class SecurityImporter:
         self._process_security_defs(oauth, 'bearer_token', out)
 
         # Filter out specified keys from each security definition
-        to_remove = ['cluster_name']
+        to_remove = ['cluster_name', 'opaque1']
 
         for item in out.values():
             for key in to_remove:
@@ -189,7 +197,7 @@ class SecurityImporter:
         logger.debug('Creating bearer_token: name=%s', name)
         logger.debug('Input security_def keys: %s', list(security_def.keys()))
         logger.debug('Input security_def: %s', security_def)
-        
+
         auth = OAuth(
             None,
             security_def['name'],
