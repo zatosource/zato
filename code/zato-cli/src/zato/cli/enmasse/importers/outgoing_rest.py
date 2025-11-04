@@ -139,7 +139,9 @@ class OutgoingRESTImporter:
         assign_security(outgoing, outgoing_def, self.importer, session)
 
         outgoing_def = deepcopy(outgoing_def)
-        outgoing_def.update(connection_extra_field_defaults)
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
         set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
