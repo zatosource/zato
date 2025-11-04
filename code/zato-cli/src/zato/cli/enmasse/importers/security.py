@@ -105,16 +105,16 @@ class SecurityImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
-            
+
             logger.debug('Item before auth_endpoint rename: %s', item)
             if 'auth_endpoint' in item:
                 logger.debug('Renaming auth_endpoint to auth_server_url')
                 item['auth_server_url'] = item.pop('auth_endpoint')
             logger.debug('Item after auth_endpoint rename: %s', item)
-            
+
             name = item['name']
             sec_type = item['type']
-            
+
             if sec_type == 'bearer_token':
                 if 'client_id_field' not in item:
                     item['client_id_field'] = 'client_id'
@@ -213,7 +213,7 @@ class SecurityImporter:
         logger.debug('=== Creating bearer_token: name=%s ===', name)
         logger.debug('Input security_def keys: %s', list(security_def.keys()))
         logger.debug('Input security_def FULL: %s', security_def)
-        
+
         auth = OAuth(
             None,
             security_def['name'],
@@ -230,10 +230,10 @@ class SecurityImporter:
         logger.debug('  - name: %s', auth.name)
         logger.debug('  - username: %s', auth.username)
         logger.debug('  - opaque1 (before): %s', getattr(auth, 'opaque1', None))
-        
+
         logger.debug('Calling set_instance_opaque_attrs with security_def: %s', security_def)
         set_instance_opaque_attrs(auth, security_def)
-        
+
         logger.debug('OAuth instance attributes after set_instance_opaque_attrs:')
         logger.debug('  - opaque1 (after): %s', getattr(auth, 'opaque1', None))
         logger.debug('=== Finished creating bearer_token: %s ===', name)
