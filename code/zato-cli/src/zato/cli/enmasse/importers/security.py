@@ -27,6 +27,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,6 +184,11 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        name = security_def['name']
+        logger.debug('Creating bearer_token: name=%s', name)
+        logger.debug('Input security_def keys: %s', list(security_def.keys()))
+        logger.debug('Input security_def: %s', security_def)
+        
         auth = OAuth(
             None,
             security_def['name'],
@@ -194,8 +200,10 @@ class SecurityImporter:
             0,
             cluster
         )
-
+        logger.debug('Created OAuth instance for %s', name)
+        logger.debug('Calling set_instance_opaque_attrs with security_def: %s', security_def)
         set_instance_opaque_attrs(auth, security_def)
+        logger.debug('Finished creating bearer_token: %s', name)
         return auth
 
 # ################################################################################################################################
@@ -259,18 +267,29 @@ class SecurityImporter:
         sec_type = sec_def['type']
         def_id = sec_def['id']
         def_name = sec_def['name']
+        logger.debug('Updating security definition: name=%s type=%s id=%s', def_name, sec_type, def_id)
+        logger.debug('Input sec_def keys: %s', list(sec_def.keys()))
+        logger.debug('Input sec_def: %s', sec_def)
 
         model = self.get_class_by_type(sec_type)
+        logger.debug('Using model class: %s', model)
 
         db_def = db_defs[def_name]
+        logger.debug('DB definition for %s: %s', def_name, db_def)
         for item in db_def:
             if item not in sec_def and item not in ('id', 'type', 'definition'):
+                logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
                 sec_def[item] = db_def[item]
+        logger.debug('sec_def after merging DB values: %s', sec_def)
 
         definition = session.query(model).filter_by(id=def_id).one()
+        logger.debug('Retrieved definition instance from DB')
+        logger.debug('Calling _update_definition')
         self._update_definition(definition, sec_def)
+        logger.debug('Finished _update_definition')
 
         session.add(definition)
+        logger.debug('Finished updating security definition: %s', def_name)
         return definition
 
 # ################################################################################################################################
