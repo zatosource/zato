@@ -40,7 +40,6 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def _process_security_defs(self, query_result:'any_', sec_type:'str', out:'dict') -> 'None':
-        from zato.common.json_internal import loads
         definitions = to_json(query_result, return_as_dict=True)
         logger.info('Processing %d %s definitions', len(definitions), sec_type)
 
@@ -48,13 +47,6 @@ class SecurityImporter:
             item['type'] = sec_type
             name = item['name']
             logger.info('Processing security definition: %s (type=%s, id=%s)', name, sec_type, item.get('id'))
-
-            if 'opaque1' in item and item['opaque1']:
-                opaque_data = loads(item['opaque1'])
-                for key, value in opaque_data.items():
-                    if key not in item:
-                        item[key] = value
-
             out[name] = item
 
 # ################################################################################################################################
@@ -81,7 +73,7 @@ class SecurityImporter:
         self._process_security_defs(oauth, 'bearer_token', out)
 
         # Filter out specified keys from each security definition
-        to_remove = ['cluster_name', 'opaque1']
+        to_remove = ['cluster_name']
 
         for item in out.values():
             for key in to_remove:
@@ -280,6 +272,17 @@ class SecurityImporter:
 
         db_def = db_defs[def_name]
         logger.debug('DB definition for %s: %s', def_name, db_def)
+
+        from zato.common.json_internal import loads
+        if 'opaque1' in db_def and db_def['opaque1']:
+            logger.debug('Parsing opaque1 from DB: %s', db_def['opaque1'])
+            opaque_data = loads(db_def['opaque1'])
+            logger.debug('Parsed opaque data: %s', opaque_data)
+            for key, value in opaque_data.items():
+                if key not in sec_def:
+                    logger.debug('Adding opaque key %s=%s from DB to sec_def', key, value)
+                    sec_def[key] = value
+
         for item in db_def:
             if item not in sec_def and item not in ('id', 'type', 'definition', 'opaque1'):
                 logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
