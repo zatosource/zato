@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+connection_extra_field_defaults = {
+    'validate_tls': True,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OutgoingRESTImporter:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
@@ -82,10 +89,12 @@ class OutgoingRESTImporter:
 
                 # Compare standard attributes (excluding security)
                 for key, value in item.items():
-                    if key != 'security' and key in db_def and db_def[key] != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
-                        needs_update = True
-                        break
+                    if key != 'security':
+                        db_value = db_def.get(key)
+                        if db_value != value:
+                            logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
+                            needs_update = True
+                            break
 
                 # Check security definition
                 if security_needs_update(item, db_def, self.importer):
@@ -104,10 +113,6 @@ class OutgoingRESTImporter:
 # ################################################################################################################################
 
     def create_outgoing_rest(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
-
-        connection_extra_field_defaults = {
-            'validate_tls': True,
-        }
 
         name = outgoing_def['name']
         logger.info('Creating new outgoing REST connection: %s', name)
@@ -135,7 +140,6 @@ class OutgoingRESTImporter:
 
         outgoing_def = deepcopy(outgoing_def)
         outgoing_def.update(connection_extra_field_defaults)
-
         set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
@@ -156,6 +160,12 @@ class OutgoingRESTImporter:
                 setattr(outgoing, key, value)
 
         assign_security(outgoing, outgoing_def, self.importer, session)
+
+        outgoing_def = deepcopy(outgoing_def)
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
+        set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
