@@ -114,6 +114,16 @@ class SecurityImporter:
             
             name = item['name']
             sec_type = item['type']
+            
+            if sec_type == 'bearer_token':
+                if 'client_id_field' not in item:
+                    item['client_id_field'] = 'client_id'
+                if 'client_secret_field' not in item:
+                    item['client_secret_field'] = 'client_secret'
+                if 'grant_type' not in item:
+                    item['grant_type'] = 'client_credentials'
+                if 'data_format' not in item:
+                    item['data_format'] = 'form'
 
             logger.info('Checking YAML def: name=%s type=%s', name, sec_type)
 

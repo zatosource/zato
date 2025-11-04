@@ -37,9 +37,8 @@ class GetList(AdminService):
         request_elem = 'zato_security_oauth_get_list_request'
         response_elem = 'zato_security_oauth_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'name', 'is_active', 'username'
-        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format', 'client_id_field', 'client_secret_field', \
-            'grant_type'
+        output_required = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type'
+        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
 
     def get_data(self, session:'any_') -> 'anylist':
         return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
