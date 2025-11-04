@@ -139,6 +139,9 @@ class SecurityExporter:
 
             # Update OAuth definition with the collected opaque data
             if opaque_data:
+                # Rename auth_server_url back to auth_endpoint for export
+                if 'auth_server_url' in opaque_data:
+                    opaque_data['auth_endpoint'] = opaque_data.pop('auth_server_url')
                 oauth.update(opaque_data)
 
             # Check for missing required fields
