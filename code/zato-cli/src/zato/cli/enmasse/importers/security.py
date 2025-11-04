@@ -242,11 +242,6 @@ class SecurityImporter:
 
             if hasattr(definition, key):
                 setattr(definition, key, value)
-            else:
-                def_type = security_def['type']
-                def_name = security_def['name']
-                msg = f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}'
-                raise Exception(msg)
 
         set_instance_opaque_attrs(definition, security_def)
         return definition
