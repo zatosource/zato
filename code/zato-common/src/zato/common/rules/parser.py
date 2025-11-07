@@ -99,11 +99,21 @@ def parse_assignments(text:'str') -> 'any_':
 
 def parse_data(data:'str', container_name:'str') -> 'strdict':
 
+    from logging import getLogger
+    logger = getLogger(__name__)
+
     rules_dict = SortedDict()
+
+    data_without_triple_quotes = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', data, flags=re.DOTALL)
+    
+    logger.info(f'parse_data original data: {repr(data)}')
+    logger.info(f'parse_data data_without_triple_quotes: {repr(data_without_triple_quotes)}')
 
     # Pattern to find each rule block, starting with "rule" keyword
     rule_pattern = r'(?:^|\n)\s*rule\s+(.*?)(?=\n\s*rule\s+|\Z)'
-    rule_blocks = re.findall(rule_pattern, data, re.DOTALL)
+    rule_blocks = re.findall(rule_pattern, data_without_triple_quotes, re.DOTALL)
+    
+    logger.info(f'parse_data found {len(rule_blocks)} rule blocks')
 
     for rule_block in rule_blocks:
 
