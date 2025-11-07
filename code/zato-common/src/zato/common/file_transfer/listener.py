@@ -366,15 +366,16 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         """ Publish file-ready event to the broker.
         """
         try:
+            cid = new_cid()
             is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
             is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
-
+            
             if is_enmasse:
-                msg = publish_enmasse(self.broker_client, new_cid(), event_path)
+                msg = publish_enmasse(self.broker_client, cid, event_path)
             elif is_static:
-                msg = publish_static(self.broker_client, new_cid(), event_path)
+                msg = publish_static(self.broker_client, cid, event_path)
             else:
-                msg = publish_file(self.broker_client, new_cid(), event_path)
+                msg = publish_file(self.broker_client, cid, event_path)
             logger.info('Sent msg -> %s', msg)
         except Exception as e:
             logger.warning('Could not publish event to broker: %s -> %s', e, event_path)
