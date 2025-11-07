@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import ast
+import os
 import re
+from logging import getLogger
 
 # Bunch
 from bunch import bunchify
@@ -17,9 +19,17 @@ from bunch import bunchify
 import rule_engine
 
 # Zato
+from zato.common.util.api import as_bool
 from zato.common.util.open_ import open_r
 from zato.common.util.sorted_dict import SortedDict
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -99,21 +109,20 @@ def parse_assignments(text:'str') -> 'any_':
 
 def parse_data(data:'str', container_name:'str') -> 'strdict':
 
-    from logging import getLogger
-    logger = getLogger(__name__)
-
     rules_dict = SortedDict()
 
     data_without_triple_quotes = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', data, flags=re.DOTALL)
-    
-    logger.info(f'parse_data original data: {repr(data)}')
-    logger.info(f'parse_data data_without_triple_quotes: {repr(data_without_triple_quotes)}')
+
+    if _needs_details:
+        logger.info(f'parse_data original data: {repr(data)}')
+        logger.info(f'parse_data data_without_triple_quotes: {repr(data_without_triple_quotes)}')
 
     # Pattern to find each rule block, starting with "rule" keyword
     rule_pattern = r'(?:^|\n)\s*rule\s+(.*?)(?=\n\s*rule\s+|\Z)'
     rule_blocks = re.findall(rule_pattern, data_without_triple_quotes, re.DOTALL)
-    
-    logger.info(f'parse_data found {len(rule_blocks)} rule blocks')
+
+    if _needs_details:
+        logger.info(f'parse_data found {len(rule_blocks)} rule blocks')
 
     for rule_block in rule_blocks:
 
@@ -143,11 +152,13 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
                 section_name = 'name'
 
                 # Clean and extract rule name
-                from logging import getLogger
-                logger = getLogger(__name__)
-                logger.info(f'Rule section_content before remove_comments: {repr(section_content)}')
+                if _needs_details:
+                    logger.info(f'Rule section_content before remove_comments: {repr(section_content)}')
+
                 rule_name = remove_comments(section_content).strip()
-                logger.info(f'Rule name after remove_comments: {repr(rule_name)}')
+
+                if _needs_details:
+                    logger.info(f'Rule name after remove_comments: {repr(rule_name)}')
 
                 rule_dict[section_name] = rule_name
                 continue
@@ -185,14 +196,13 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
 
 def remove_comments(text: str) -> str:
 
-    from logging import getLogger
-    logger = getLogger(__name__)
-    
-    logger.info(f'remove_comments input: {repr(text)}')
-    
+    if _needs_details:
+        logger.info(f'remove_comments input: {repr(text)}')
+
     text = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', text, flags=re.DOTALL)
-    
-    logger.info(f'remove_comments after triple quote removal: {repr(text)}')
+
+    if _needs_details:
+        logger.info(f'remove_comments after triple quote removal: {repr(text)}')
 
     lines = []
 
@@ -201,8 +211,9 @@ def remove_comments(text: str) -> str:
         lines.append(line)
 
     cleaned_text = '\n'.join(lines).strip()
-    
-    logger.info(f'remove_comments output: {repr(cleaned_text)}')
+
+    if _needs_details:
+        logger.info(f'remove_comments output: {repr(cleaned_text)}')
 
     return cleaned_text
 
