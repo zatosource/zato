@@ -228,7 +228,7 @@ class RulesManager:
             result = self.load_parsed_rules(parsed, file_name)
 
             # .. log what was loaded ...
-            logger.info(f'Loaded rules: {result}')
+            logger.info(f'Loaded rules (api.py): {result}')
 
             # .. and tell the caller what we loaded.
             return result
