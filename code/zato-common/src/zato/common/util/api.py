@@ -2059,6 +2059,27 @@ def publish_enmasse(broker_client, cid:'str', file_path:'str') -> 'dict':
 
 # ################################################################################################################################
 
+def publish_static(broker_client, cid:'str', file_path:'str') -> 'dict':
+    """ Publish a static file's content to the broker for hot-deployment.
+    """
+
+    with open_r(file_path) as f:
+        event_data = f.read()
+
+    msg = {
+        'cid': cid,
+        'event_type': 'file_ready',
+        'action': HOT_DEPLOY.CREATE_STATIC.value,
+        'payload_name': file_path,
+        'payload': event_data,
+        'timestamp': utcnow().isoformat(),
+    }
+
+    broker_client.publish(msg)
+    return msg
+
+# ################################################################################################################################
+
 def get_absolute_path(base_dir:'str', relative_path:'str') -> 'str':
     program_dir = Path(os.path.dirname(os.path.abspath(base_dir)))
     return os.path.abspath(os.path.join(program_dir, relative_path))

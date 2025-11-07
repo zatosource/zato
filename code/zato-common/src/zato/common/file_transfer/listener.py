@@ -23,7 +23,7 @@ from watchdog.observers.inotify import InotifyObserver
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common.util.api import new_cid, publish_file, publish_enmasse
+from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish_static
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -367,8 +367,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         """
         try:
             is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
+
             if is_enmasse:
                 msg = publish_enmasse(self.broker_client, new_cid(), event_path)
+            elif is_static:
+                msg = publish_static(self.broker_client, new_cid(), event_path)
             else:
                 msg = publish_file(self.broker_client, new_cid(), event_path)
             logger.info('Sent msg -> %s', msg)
