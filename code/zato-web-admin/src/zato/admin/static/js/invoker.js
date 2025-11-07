@@ -151,13 +151,13 @@ $.fn.zato.invoker.format_error_traceback = function(response_data) {
     
     console.log("format_error_traceback: error marker found, formatting traceback");
     let formatted = response_str;
-    console.log("format_error_traceback: before newline replacement:", formatted.substring(0, 200));
-    formatted = formatted.replace(/\\n/g, "\n");
-    console.log("format_error_traceback: after newline replacement:", formatted.substring(0, 200));
+    console.log("format_error_traceback: before replacements:", formatted.substring(0, 200));
     formatted = formatted.replace(/^\["/, "");
-    console.log("format_error_traceback: after start bracket removal:", formatted.substring(0, 200));
     formatted = formatted.replace(/"\]$/, "");
-    console.log("format_error_traceback: after end bracket removal:", formatted.substring(0, 200));
+    formatted = formatted.replace(/\\n/g, "\n");
+    formatted = formatted.replace(/\\"/g, "\"");
+    formatted = formatted.replace(/\\\\/g, "\\");
+    console.log("format_error_traceback: after replacements:", formatted.substring(0, 200));
     console.log("format_error_traceback: final formatted length:", formatted.length);
     
     return formatted;
