@@ -2070,7 +2070,7 @@ def publish_static(broker_client, cid:'str', file_path:'str') -> 'dict':
         'cid': cid,
         'event_type': 'file_ready',
         'action': HOT_DEPLOY.CREATE_STATIC.value,
-        'payload_name': file_path,
+        'file_name': file_path,
         'data': event_data,
         'timestamp': utcnow().isoformat(),
     }
