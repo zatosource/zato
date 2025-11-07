@@ -2059,7 +2059,7 @@ def publish_enmasse(broker_client, cid:'str', file_path:'str') -> 'dict':
 
 # ################################################################################################################################
 
-def publish_static(broker_client, cid:'str', file_path:'str') -> 'dict':
+def publish_user_conf(broker_client, cid:'str', file_path:'str') -> 'dict':
     """ Publish a static file's content to the broker for hot-deployment.
     """
 
@@ -2071,7 +2071,7 @@ def publish_static(broker_client, cid:'str', file_path:'str') -> 'dict':
     msg = {
         'cid': cid,
         'event_type': 'file_ready',
-        'action': HOT_DEPLOY.CREATE_STATIC.value,
+        'action': HOT_DEPLOY.CREATE_USER_CONF.value,
         'full_path': file_path,
         'file_name': file_name,
         'data': event_data,
