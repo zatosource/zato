@@ -2066,11 +2066,14 @@ def publish_static(broker_client, cid:'str', file_path:'str') -> 'dict':
     with open_r(file_path) as f:
         event_data = f.read()
 
+    file_name = os.path.basename(file_path)
+
     msg = {
         'cid': cid,
         'event_type': 'file_ready',
         'action': HOT_DEPLOY.CREATE_STATIC.value,
-        'file_name': file_path,
+        'full_path': file_path,
+        'file_name': file_name,
         'data': event_data,
         'timestamp': utcnow().isoformat(),
     }
