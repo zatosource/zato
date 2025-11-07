@@ -1572,7 +1572,7 @@ class WorkerStore(_WorkerStoreBase):
             'data': msg.data,
             'file_name': msg.file_name,
             'full_path': msg.full_path,
-            'relative_dir': msg.relative_dir
+            'relative_dir': msg.get('relative_dir')
         }, 'CREATE_USER_CONF', *args)
 
 # ################################################################################################################################
