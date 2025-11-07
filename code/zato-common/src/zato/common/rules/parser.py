@@ -171,6 +171,8 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
 
 def remove_comments(text: str) -> str:
 
+    text = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', text, flags=re.DOTALL)
+
     lines = []
 
     for line in text.split('\n'):
