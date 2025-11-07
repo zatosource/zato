@@ -485,7 +485,14 @@ if __name__ == '__main__':
         help='Observer type to use for file monitoring (default: inotify)'
     )
 
-    _ = parser.add_argument('--patterns', nargs='*', default=['*.py', '*.yaml', '*.yml'], help='File patterns to monitor (default: *.py, *.yaml, *.yml)')
+    default_patterns = ['*.py', '*.yaml', '*.yml', '*.ini', '*.zrules']
+
+    _ = parser.add_argument(
+        '--patterns',
+        nargs='*',
+        default=default_patterns,
+        help=f'File patterns to monitor (default: {default_patterns})'
+    )
 
     # Parse arguments
     args = parser.parse_args()
