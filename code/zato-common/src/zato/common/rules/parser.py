@@ -133,7 +133,11 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
                 section_name = 'name'
 
                 # Clean and extract rule name
+                from logging import getLogger
+                logger = getLogger(__name__)
+                logger.info(f'Rule section_content before remove_comments: {repr(section_content)}')
                 rule_name = remove_comments(section_content).strip()
+                logger.info(f'Rule name after remove_comments: {repr(rule_name)}')
 
                 rule_dict[section_name] = rule_name
                 continue
@@ -171,7 +175,14 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
 
 def remove_comments(text: str) -> str:
 
+    from logging import getLogger
+    logger = getLogger(__name__)
+    
+    logger.info(f'remove_comments input: {repr(text)}')
+    
     text = re.sub(r'(\"\"\".*?\"\"\"|\'\'\'.*?\'\'\')', '', text, flags=re.DOTALL)
+    
+    logger.info(f'remove_comments after triple quote removal: {repr(text)}')
 
     lines = []
 
@@ -180,6 +191,8 @@ def remove_comments(text: str) -> str:
         lines.append(line)
 
     cleaned_text = '\n'.join(lines).strip()
+    
+    logger.info(f'remove_comments output: {repr(cleaned_text)}')
 
     return cleaned_text
 
