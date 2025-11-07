@@ -76,6 +76,20 @@ ignored_suffixes = [
 # ################################################################################################################################
 # ################################################################################################################################
 
+def find_base_directories(directory_path:'str', pattern:'str') -> 'strlist':
+    """ Finds all directories matching the given pattern under directory_path.
+    """
+    out = []
+    full_pattern = os.path.join(directory_path, pattern)
+    directories = glob.glob(full_pattern, recursive=True)
+    for d in directories:
+        if os.path.isdir(d):
+            out.append(d)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def find_matching_items(directory_path:'str') -> 'strlist':
     """ Finds all files and directories matching pickup_order_patterns in the given directory.
     For non-enmasse patterns, returns only the directories containing matches (under "src").
@@ -89,15 +103,14 @@ def find_matching_items(directory_path:'str') -> 'strlist':
     if not os.path.isdir(directory_path):
         raise ValueError(f'Directory does not exist: {directory_path}')
 
-    # Determine the base directories for searching by looking for 'src'
+    # Determine the base directories for searching by looking for 'src' and 'config'
     base_dirs = []
-    src_pattern = os.path.join(directory_path, '**/src')
-    src_directories = glob.glob(src_pattern, recursive=True)
 
-    # Filter to ensure we only match exact 'src' directories
-    for d in src_directories:
-        if os.path.basename(d) == 'src' and os.path.isdir(d):
-            base_dirs.append(d)
+    src_dirs = find_base_directories(directory_path, '**/src')
+    base_dirs.extend(src_dirs)
+
+    config_dirs = find_base_directories(directory_path, '**/config')
+    base_dirs.extend(config_dirs)
 
     # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
     enmasse_matches = set()
