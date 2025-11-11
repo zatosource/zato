@@ -249,8 +249,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     /* 12, 13 */
     if(is_channel) {
-        row += String.format('<td>{0}</td>', data.service);
-        row += String.format('<td>{0}</td>', data.content_encoding);
+        row += String.format("<td class='ignore'>{0}</td>", data.service);
+        row += String.format("<td class='ignore'>{0}</td>", data.content_encoding);
     }
 
     /* 14, 15, 16 */
@@ -264,7 +264,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
 
     /* 20 */
-    // row += String.format("<td class='ignore'>{0}</td>", item.has_rbac);
+    row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
     /* 22, 23a, 23b */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
@@ -285,7 +285,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += merge_url_params_req_tr;
         row += url_params_pri_tr;
         row += params_pri_tr;
-        // row += item.method ? item.method : '';
+        row += String.format("<td class='ignore'>{0}</td>", item.method || '');
     }
 
     /* 31, 32 */
