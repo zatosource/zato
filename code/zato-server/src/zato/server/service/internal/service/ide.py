@@ -247,7 +247,7 @@ class _IDEBase(Service):
             'include_internal': False,
             'skip_response_elem': True,
         })
-        for item in service_list_response:
+        for item in service_list_response or []:
             yield item
 
 # ################################################################################################################################
@@ -378,7 +378,7 @@ class ServiceIDE(_IDEBase):
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
-        for item in service_list_response:
+        for item in service_list_response or []:
             file_name = item['file_name']
             service_name = item['service_name']
             line_number = item['line_number']
