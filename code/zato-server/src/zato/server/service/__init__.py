@@ -665,7 +665,6 @@ class Service:
                 try:
 
                     # This obtains the response
-                    data_format = data_format or DATA_FORMAT.JSON
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
