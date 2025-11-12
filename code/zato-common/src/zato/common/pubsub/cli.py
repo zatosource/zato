@@ -272,12 +272,12 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
         # Pin process to specific CPU core
         available_cores = os.sched_getaffinity(0)
-        max_core = max(available_cores)
-
-        if args.publish:
-            os.sched_setaffinity(0, {max_core - 1})
-        else:
-            os.sched_setaffinity(0, {max_core})
+        if len(available_cores) > 1:
+            max_core = max(available_cores)
+            if args.publish:
+                os.sched_setaffinity(0, {max_core - 1})
+            else:
+                os.sched_setaffinity(0, {max_core})
 
         # Create server application based on mode
         if args.publish:
