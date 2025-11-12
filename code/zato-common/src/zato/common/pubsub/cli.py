@@ -192,6 +192,15 @@ class GunicornApplication(BaseApplication):
         self.original_app.init_broker_client()
         self.original_app.setup()
 
+        # Create sentinel file to signal bindings are ready
+        startup_id = os.environ.get('Zato_Startup_ID')
+        if startup_id:
+            server_type = self.original_app.server_type
+            sentinel_file = f'/tmp/zato-startup-bindings-{server_type}-{startup_id}'
+            with open(sentinel_file, 'w') as f:
+                _ = f.write(f'{os.getpid()}\n')
+            logger.info(f'Created sentinel file: {sentinel_file}')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
