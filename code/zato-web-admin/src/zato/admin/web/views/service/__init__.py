@@ -45,6 +45,10 @@ DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type
 
 # ################################################################################################################################
 
+to_ignore = {'demo.ping', 'demo.input-logger'}
+
+# ################################################################################################################################
+
 def _get_channels(client:'any_', cluster:'any_', id:'str', channel_type:'str') -> 'anylist':
     """ Returns a list of channels of a given type for the given service.
     """
@@ -94,6 +98,14 @@ class Index(_Index):
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit')
         }
+
+    def handle_return_data(self, return_data:'any_') -> 'any_':
+        filtered_items = []
+        for item in self.items:
+            if item.name not in to_ignore:
+                filtered_items.append(item)
+        return_data['items'] = filtered_items
+        return return_data
 
 # ################################################################################################################################
 
