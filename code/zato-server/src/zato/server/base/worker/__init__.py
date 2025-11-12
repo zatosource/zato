@@ -16,7 +16,7 @@ import sys
 from errno import ENOENT
 from inspect import isclass
 from threading import RLock
-from traceback import format_exc
+from traceback import format_exc, format_stack
 from uuid import uuid4
 
 # Bunch
@@ -1523,6 +1523,9 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'strdict | None':
 
+        # Log the full call stack
+        logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Full call stack:\n%s', ''.join(format_stack()))
+
         # Log the incoming message and args
         logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> msg type: %s', type(msg))
         logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> msg value: %s', msg)
@@ -1538,6 +1541,7 @@ class WorkerStore(_WorkerStoreBase):
             exc = format_exc()
             logger.warning(exc)
             logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Exception occurred: %s', str(e))
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Full exception traceback:\n%s', exc)
             return {'error': str(e)}
         else:
             logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Returning response')
