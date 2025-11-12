@@ -66,20 +66,16 @@ class Microsoft365Exporter:
         exported_microsoft_365 = []
 
         for row in microsoft_365_connections:
-            logger.info('DEBUG Processing Microsoft 365 row: %s', row)
 
             if GENERIC.ATTR_NAME in row:
                 opaque = parse_instance_opaque_attr(row)
-                logger.info('DEBUG Parsed opaque attributes: %s', opaque)
                 row.update(opaque)
                 del row[GENERIC.ATTR_NAME]
-                logger.info('DEBUG Row after opaque processing: %s', row)
 
             item = {
                 'name': row['name'],
                 'is_active': row['is_active']
             }
-            logger.info('DEBUG Base item created: %s', item)
 
             if client_id := row.get('client_id'):
                 item['client_id'] = client_id
@@ -106,7 +102,6 @@ class Microsoft365Exporter:
             if recv_timeout := row.get('recv_timeout'):
                 item['recv_timeout'] = recv_timeout
 
-            logger.info('DEBUG Final item before append: %s', item)
             exported_microsoft_365.append(item)
 
         logger.info('Successfully prepared %d Microsoft 365 connection definitions for export', len(exported_microsoft_365))
