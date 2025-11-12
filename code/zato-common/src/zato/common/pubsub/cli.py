@@ -188,12 +188,7 @@ class GunicornApplication(BaseApplication):
         address_str = f'{host}:{port}'
         logger.info(f'Setting up PubSub REST server at {address_str}')
 
-        try:
-            self.original_app.init_broker_client()
-            self.original_app.setup()
-        except Exception as e:
-            logger.error(f'Error during setup: {e}')
-            raise
+        self.original_app.init_broker_client()
 
         # Create sentinel file to signal bindings are ready
         startup_id = os.environ.get('Zato_Startup_ID')
@@ -210,6 +205,8 @@ class GunicornApplication(BaseApplication):
                 logger.error(f'Failed to create sentinel file {sentinel_file}: {e}')
         else:
             logger.warning('No Zato_Startup_ID found in environment')
+
+        self.original_app.setup()
 
 # ################################################################################################################################
 # ################################################################################################################################
