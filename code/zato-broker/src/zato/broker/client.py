@@ -154,18 +154,8 @@ class BrokerClient:
 # ################################################################################################################################
 
     def publish_to_pubsub(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
-
-        logger.info('DEBUG publish_to_pubsub -> msg type: %s', type(msg))
-        logger.info('DEBUG publish_to_pubsub -> msg value: %s', msg)
-        logger.info('DEBUG publish_to_pubsub -> kwargs: %s', kwargs)
-
-        logger.info('DEBUG publish_to_pubsub -> Publishing to pubsub.publish.1')
         self.publish(msg, routing_key='pubsub.publish.1')
-
-        logger.info('DEBUG publish_to_pubsub -> Publishing to pubsub.pull.1')
         self.publish(msg, routing_key='pubsub.pull.1')
-
-        logger.info('DEBUG publish_to_pubsub -> Completed')
 
 # ################################################################################################################################
 
