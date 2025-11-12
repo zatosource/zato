@@ -2162,7 +2162,7 @@ class CySimpleIO:
 
         elif data_format in (DATA_FORMAT_DICT, DATA_FORMAT_FORM):
             out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
-            return
+            return out
 
         #elif data_format == '':
         #    return self._get_output_json(data, serialise)
