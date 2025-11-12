@@ -141,8 +141,31 @@ class IsDeployed(Service):
     output = 'is_deployed'
 
     def handle(self):
+
+        # Log the input
+        self.logger.info('DEBUG IsDeployed.handle -> self.request.input type: %s', type(self.request.input))
+        self.logger.info('DEBUG IsDeployed.handle -> self.request.input value: %s', self.request.input)
+        self.logger.info('DEBUG IsDeployed.handle -> self.request.input.name: %s', self.request.input.name)
+
+        # Check if the service is deployed
+        self.logger.info('DEBUG IsDeployed.handle -> Calling is_deployed')
         is_deployed = self.server.service_store.is_deployed(self.request.input.name)
+
+        # Log the result
+        self.logger.info('DEBUG IsDeployed.handle -> is_deployed type: %s', type(is_deployed))
+        self.logger.info('DEBUG IsDeployed.handle -> is_deployed value: %s', is_deployed)
+
+        # Set the response
+        self.logger.info('DEBUG IsDeployed.handle -> Setting response.payload.is_deployed')
         self.response.payload.is_deployed = is_deployed
+
+        # Log the response
+        self.logger.info('DEBUG IsDeployed.handle -> self.response.payload type: %s', type(self.response.payload))
+        self.logger.info('DEBUG IsDeployed.handle -> self.response.payload value: %s', self.response.payload)
+        self.logger.info('DEBUG IsDeployed.handle -> self.response.payload.is_deployed: %s', self.response.payload.is_deployed)
+
+        # Log completion
+        self.logger.info('DEBUG IsDeployed.handle -> Completed')
 
 # ################################################################################################################################
 # ################################################################################################################################
