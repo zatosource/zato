@@ -553,6 +553,7 @@ class BaseServer:
         logger.info(f'[{cid}] 🠊 {topic_count} {"topic" if topic_count == 1 else "topics"}')
         logger.info(f'[{cid}] 🠊 {subscription_count} {"subscription" if subscription_count == 1 else "subscriptions"}')
         logger.info(f'[{cid}] 🠊 {client_count} {"user" if client_count == 1 else "users"} with {permission_count} {"permission" if permission_count == 1 else "permissions"}')
+        logger.info(f'[{cid}] Setup method returning now')
 
 # ################################################################################################################################
 

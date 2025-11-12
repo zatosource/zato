@@ -188,18 +188,28 @@ class GunicornApplication(BaseApplication):
         address_str = f'{host}:{port}'
         logger.info(f'Setting up PubSub REST server at {address_str}')
 
-
-        self.original_app.init_broker_client()
-        self.original_app.setup()
+        try:
+            self.original_app.init_broker_client()
+            self.original_app.setup()
+        except Exception as e:
+            logger.error(f'Error during setup: {e}')
+            raise
 
         # Create sentinel file to signal bindings are ready
         startup_id = os.environ.get('Zato_Startup_ID')
+        logger.info(f'Checking for startup_id: {startup_id}')
         if startup_id:
             server_type = self.original_app.server_type
             sentinel_file = f'/tmp/zato-startup-bindings-{server_type}-{startup_id}'
-            with open(sentinel_file, 'w') as f:
-                _ = f.write(f'{os.getpid()}\n')
-            logger.info(f'Created sentinel file: {sentinel_file}')
+            logger.info(f'Creating sentinel file: {sentinel_file}')
+            try:
+                with open(sentinel_file, 'w') as f:
+                    _ = f.write(f'{os.getpid()}\n')
+                logger.info(f'Created sentinel file: {sentinel_file}')
+            except Exception as e:
+                logger.error(f'Failed to create sentinel file {sentinel_file}: {e}')
+        else:
+            logger.warning('No Zato_Startup_ID found in environment')
 
 # ################################################################################################################################
 # ################################################################################################################################
