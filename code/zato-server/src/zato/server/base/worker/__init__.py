@@ -1243,12 +1243,35 @@ class WorkerStore(_WorkerStoreBase):
 
         if kwargs.get('needs_response'):
 
+            # Log the needs_response branch
+            logger.info('DEBUG on_message_invoke_service -> needs_response is True')
+            logger.info('DEBUG on_message_invoke_service -> skip_response_elem: %s', skip_response_elem)
+
             if skip_response_elem:
+                logger.info('DEBUG on_message_invoke_service -> Returning response directly (skip_response_elem=True)')
+                logger.info('DEBUG on_message_invoke_service -> Response type: %s', type(response))
+                logger.info('DEBUG on_message_invoke_service -> Response value: %s', response)
                 return response
             else:
+                logger.info('DEBUG on_message_invoke_service -> Extracting service.response.payload')
+                logger.info('DEBUG on_message_invoke_service -> service type: %s', type(service))
+                logger.info('DEBUG on_message_invoke_service -> service.response type: %s', type(service.response))
+                logger.info('DEBUG on_message_invoke_service -> service.response.payload type: %s', type(service.response.payload))
+                logger.info('DEBUG on_message_invoke_service -> service.response.payload value: %s', service.response.payload)
+
                 response = service.response.payload
+
+                logger.info('DEBUG on_message_invoke_service -> Checking if response has getvalue')
+                logger.info('DEBUG on_message_invoke_service -> hasattr(response, getvalue): %s', hasattr(response, 'getvalue'))
+
                 if hasattr(response, 'getvalue'):
+                    logger.info('DEBUG on_message_invoke_service -> Calling response.getvalue')
+                    logger.info('DEBUG on_message_invoke_service -> serialize param: %s', kwargs.get('serialize'))
                     response = response.getvalue(serialize=kwargs.get('serialize'))
+                    logger.info('DEBUG on_message_invoke_service -> After getvalue, response type: %s', type(response))
+                    logger.info('DEBUG on_message_invoke_service -> After getvalue, response value: %s', response)
+
+                logger.info('DEBUG on_message_invoke_service -> Returning final response')
                 return response
 
 # ################################################################################################################################
@@ -1499,13 +1522,25 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'strdict | None':
+
+        # Log the incoming message and args
+        logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> msg type: %s', type(msg))
+        logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> msg value: %s', msg)
+        logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> args type: %s', type(args))
+        logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> args value: %s', args)
+
         try:
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> About to call on_message_invoke_service')
             response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> on_message_invoke_service returned type: %s', type(response))
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> on_message_invoke_service returned value: %s', response)
         except Exception as e:
             exc = format_exc()
             logger.warning(exc)
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Exception occurred: %s', str(e))
             return {'error': str(e)}
         else:
+            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Returning response')
             return response
 
 # ################################################################################################################################
