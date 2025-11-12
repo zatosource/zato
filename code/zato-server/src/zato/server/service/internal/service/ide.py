@@ -250,32 +250,16 @@ class _IDEBase(Service):
             'skip_response_elem': True,
         }
 
-        # Log what we are about to invoke
-        self.logger.info('DEBUG get_deployment_info_list -> Invoking zato.service.get-deployment-info-list with params: %s', invoke_params)
-
         # Invoke the service
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **invoke_params)
 
-        # Log the type and value of the response
-        self.logger.info('DEBUG get_deployment_info_list -> Response type: %s', type(service_list_response))
-        self.logger.info('DEBUG get_deployment_info_list -> Response value: %s', service_list_response)
-        self.logger.info('DEBUG get_deployment_info_list -> Response is None: %s', service_list_response is None)
-
         # Check if the response is None
         if service_list_response is None:
-            self.logger.info('DEBUG get_deployment_info_list -> Response is None, returning empty list')
             return
-
-        # Log that we are about to iterate
-        self.logger.info('DEBUG get_deployment_info_list -> About to iterate over response')
 
         # Iterate and yield items
         for item in service_list_response:
-            self.logger.info('DEBUG get_deployment_info_list -> Yielding item: %s', item)
             yield item
-
-        # Log completion
-        self.logger.info('DEBUG get_deployment_info_list -> Iteration completed')
 
 # ################################################################################################################################
 
@@ -363,12 +347,6 @@ class ServiceIDE(_IDEBase):
         # Add type hints
         input:'IDERequest' = self.request.input
 
-        # Log the input
-        self.logger.info('DEBUG ServiceIDE.handle -> Input service_name: %s', input.service_name)
-        self.logger.info('DEBUG ServiceIDE.handle -> Input fs_location: %s', input.fs_location)
-        self.logger.info('DEBUG ServiceIDE.handle -> Input should_wait_for_services: %s', input.should_wait_for_services)
-        self.logger.info('DEBUG ServiceIDE.handle -> Input should_convert_pickup_to_work_dir: %s', input.should_convert_pickup_to_work_dir)
-
         # Local variables
         all_root_dirs = self._get_all_root_directories()
 
@@ -406,23 +384,8 @@ class ServiceIDE(_IDEBase):
         # and we need to recognize such a case.
         current_service_file_list = []
 
-        # Log before calling get_deployment_info_list
-        self.logger.info('DEBUG ServiceIDE.handle -> About to call get_deployment_info_list')
-
         service_list_response = self.get_deployment_info_list()
-
-        # Log the response from get_deployment_info_list
-        self.logger.info('DEBUG ServiceIDE.handle -> get_deployment_info_list returned type: %s', type(service_list_response))
-        self.logger.info('DEBUG ServiceIDE.handle -> get_deployment_info_list returned value: %s', service_list_response)
-
-        # Log before converting to list
-        self.logger.info('DEBUG ServiceIDE.handle -> About to convert response to list')
-
         service_list_response = list(service_list_response)
-
-        # Log after converting to list
-        self.logger.info('DEBUG ServiceIDE.handle -> Converted to list, length: %s', len(service_list_response))
-        self.logger.info('DEBUG ServiceIDE.handle -> List contents: %s', service_list_response)
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
