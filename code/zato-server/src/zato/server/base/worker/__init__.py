@@ -1539,10 +1539,10 @@ class WorkerStore(_WorkerStoreBase):
             logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> on_message_invoke_service returned value: %s', response)
         except Exception as e:
             exc = format_exc()
-            logger.warning(exc)
+            stack = ''.join(format_stack())
+            combined = f'Full call stack:\n{stack}\nException traceback:\n{exc}'
+            logger.warning(combined)
             logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Exception occurred: %s', str(e))
-            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Full exception traceback:\n%s', exc)
-            logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Full call stack at exception:\n%s', ''.join(format_stack()))
             return {'error': str(e)}
         else:
             logger.info('DEBUG on_broker_msg_SERVICE_INVOKE -> Returning response')
