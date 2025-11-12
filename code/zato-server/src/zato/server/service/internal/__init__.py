@@ -293,7 +293,17 @@ class ChangePasswordBase(AdminService):
                     if action == SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value:
                         self.request.input.cid = self.cid
                         self.request.input.username = instance.username
+
+                        self.logger.info('DEBUG _handle -> About to call publish_to_pubsub')
+                        self.logger.info('DEBUG _handle -> action: %s', action)
+                        self.logger.info('DEBUG _handle -> self.request.input type: %s', type(self.request.input))
+                        self.logger.info('DEBUG _handle -> self.request.input value: %s', self.request.input)
+                        self.logger.info('DEBUG _handle -> self.cid: %s', self.cid)
+                        self.logger.info('DEBUG _handle -> instance.username: %s', instance.username)
+
                         self.broker_client.publish_to_pubsub(self.request.input)
+
+                        self.logger.info('DEBUG _handle -> publish_to_pubsub completed')
 
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())
