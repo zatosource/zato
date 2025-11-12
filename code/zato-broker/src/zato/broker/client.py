@@ -233,30 +233,13 @@ class BrokerClient:
         mandatory       = kwargs.get('mandatory', True)
         publish_timeout = kwargs.get('publish_timeout', 30)
 
-        logger.info('DEBUG publish -> About to acquire producer')
-        logger.info('DEBUG publish -> routing_key: %s', routing_key)
-        logger.info('DEBUG publish -> exchange: %s', exchange)
-        logger.info('DEBUG publish -> expiration: %s', expiration)
-        logger.info('DEBUG publish -> publish_timeout: %s', publish_timeout)
-        logger.info('DEBUG publish -> msg type: %s', type(msg))
-        logger.info('DEBUG publish -> msg value: %s', msg)
-
         with self.producer.acquire() as client:
 
-            logger.info('DEBUG publish -> Producer acquired')
-            logger.info('DEBUG publish -> client type: %s', type(client))
-            logger.info('DEBUG publish -> client.connection type: %s', type(client.connection))
-            logger.info('DEBUG publish -> client.channel type: %s', type(client.channel))
-
             # Make sure we are connected ..
-            logger.info('DEBUG publish -> Ensuring connection')
             _ = client.connection.ensure_connection() # type: ignore
-            logger.info('DEBUG publish -> Connection ensured')
 
             # Enable confirm mode on the channel
-            logger.info('DEBUG publish -> Calling confirm_select')
             client.channel.confirm_select()
-            logger.info('DEBUG publish -> confirm_select completed')
 
             # logger.info('*' * 80)
             # logger.info('Publishing')
@@ -265,11 +248,6 @@ class BrokerClient:
             # logger.info('333 %s', routing_key)
             # logger.info('444 %s', expiration)
             # logger.info('555 %s', publish_timeout)
-
-            # .. and publish the message now.
-            logger.info('DEBUG publish -> About to call client.publish')
-            logger.info('DEBUG publish -> mandatory: %s', mandatory)
-            logger.info('DEBUG publish -> priority: %s', priority)
 
             try:
                 _ = client.publish(
@@ -289,11 +267,7 @@ class BrokerClient:
                         'zato_pub_time': utcnow().isoformat()
                     }
                 ) # type: ignore
-                logger.info('DEBUG publish -> client.publish completed successfully')
             except Exception as e:
-                logger.info('DEBUG publish -> Exception during client.publish: %s', str(e))
-                logger.info('DEBUG publish -> Exception type: %s', type(e))
-                logger.info('DEBUG publish -> Full traceback:\n%s', format_exc())
                 raise
 
     invoke_async = publish
