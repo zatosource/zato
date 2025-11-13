@@ -220,7 +220,7 @@ body, html {
     border-radius: 8px;
     transition: all 0.15s ease;
     font-family: 'Zato_IDE_Font', monospace;
-    font-size: 13px;
+    font-size: 16px;
     color: #e0e0e0;
     text-align: center;
     display: flex;
@@ -235,7 +235,7 @@ body, html {
     border-radius: 8px;
     transition: all 0.15s ease;
     font-family: 'Zato_IDE_Font', monospace;
-    font-size: 13px;
+    font-size: 16px;
     color: #e0e0e0;
     white-space: pre-wrap;
     word-break: break-all;
@@ -250,7 +250,7 @@ body, html {
     border-radius: 8px;
     transition: all 0.15s ease;
     font-family: 'Zato_IDE_Font', monospace;
-    font-size: 13px;
+    font-size: 16px;
     color: #999;
     text-align: center;
     display: flex;
