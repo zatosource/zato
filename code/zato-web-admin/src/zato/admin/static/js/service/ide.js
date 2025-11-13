@@ -2191,20 +2191,31 @@ $.fn.zato.ide.save_request_to_history = function(request_text) {
     console.log("save_request_to_history: history before save:", JSON.stringify(history));
     console.log("save_request_to_history: history.length before save:", history.length);
 
-    if (history.length > 0 && history[0] === request_text) {
-        console.log("save_request_to_history: request_text is same as history[0], returning");
-        console.log("save_request_to_history: history[0]:", JSON.stringify(history[0]));
-        return;
+    if (history.length > 0) {
+        let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
+        if (first_text === request_text) {
+            console.log("save_request_to_history: request_text is same as history[0], updating timestamp");
+            if (typeof history[0] === 'object') {
+                history[0].timestamp = Date.now();
+                localStorage.setItem(key, JSON.stringify(history));
+            }
+            return;
+        }
     }
 
     console.log("save_request_to_history: removing duplicates of request_text from history");
     history = history.filter(function(item) {
-        return item !== request_text;
+        let text = typeof item === 'string' ? item : item.text;
+        return text !== request_text;
     });
     console.log("save_request_to_history: history after removing duplicates:", JSON.stringify(history));
 
     console.log("save_request_to_history: adding request_text to history");
-    history.unshift(request_text);
+    let entry = {
+        text: request_text,
+        timestamp: Date.now()
+    };
+    history.unshift(entry);
     console.log("save_request_to_history: history after unshift:", JSON.stringify(history));
     console.log("save_request_to_history: history.length after unshift:", history.length);
 
@@ -2248,9 +2259,12 @@ $.fn.zato.ide.on_request_history_up = function() {
     let new_index = current_index + 1;
     console.log("on_request_history_up: new_index (before adjustment):", new_index);
 
-    if (current_index === -1 && history.length > 0 && current_textarea_value === history[0]) {
-        console.log("on_request_history_up: at index -1 and textarea matches history[0], skipping to index 1");
-        new_index = 1;
+    if (current_index === -1 && history.length > 0) {
+        let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
+        if (current_textarea_value === first_text) {
+            console.log("on_request_history_up: at index -1 and textarea matches history[0], skipping to index 1");
+            new_index = 1;
+        }
     }
 
     console.log("on_request_history_up: new_index (after adjustment):", new_index);
@@ -2263,7 +2277,8 @@ $.fn.zato.ide.on_request_history_up = function() {
     console.log("on_request_history_up: setting window.zato_request_history_index to:", new_index);
     window.zato_request_history_index = new_index;
 
-    let request_text = history[new_index];
+    let item = history[new_index];
+    let request_text = typeof item === 'string' ? item : item.text;
     console.log("on_request_history_up: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
 
     console.log("on_request_history_up: setting textarea value");
@@ -2307,7 +2322,8 @@ $.fn.zato.ide.on_request_history_down = function() {
         console.log("on_request_history_down: new_index is -1, clearing textarea");
         $("#data-request").val("");
     } else {
-        let request_text = history[new_index];
+        let item = history[new_index];
+        let request_text = typeof item === 'string' ? item : item.text;
         console.log("on_request_history_down: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
         console.log("on_request_history_down: setting textarea value");
         $("#data-request").val(request_text);
@@ -2401,6 +2417,47 @@ $.fn.zato.ide.close_history_overlay = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.format_timestamp = function(timestamp) {
+    let now = new Date();
+    let then = new Date(timestamp);
+    let diffMs = now - then;
+    let diffSec = Math.floor(diffMs / 1000);
+    let diffMin = Math.floor(diffSec / 60);
+    let diffHour = Math.floor(diffMin / 60);
+    let diffDay = Math.floor(diffHour / 24);
+
+    let timeStr = then.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    if (diffSec < 60) {
+        if (diffSec === 0) diffSec = 1;
+        return diffSec === 1 ? '1 second ago' : diffSec + ' seconds ago';
+    } else if (diffMin < 60) {
+        return diffMin === 1 ? '1 minute ago' : diffMin + ' minutes ago';
+    } else if (diffHour < 24) {
+        return diffHour === 1 ? '1 hour ago' : diffHour + ' hours ago';
+    } else if (diffDay === 1) {
+        return 'yesterday at ' + timeStr;
+    } else if (diffDay < 7) {
+        return diffDay + ' days ago at ' + timeStr;
+    } else if (diffDay < 14) {
+        let dayName = then.toLocaleDateString('en-US', { weekday: 'long' });
+        return dayName + ', last week at ' + timeStr;
+    } else if (diffDay < 21) {
+        let dayName = then.toLocaleDateString('en-US', { weekday: 'long' });
+        return dayName + ', two weeks ago at ' + timeStr;
+    } else if (diffDay < 60) {
+        return 'a month ago at ' + timeStr;
+    } else if (diffDay < 365) {
+        let months = Math.floor(diffDay / 30);
+        return months === 1 ? 'a month ago at ' + timeStr : months + ' months ago at ' + timeStr;
+    } else {
+        let years = Math.floor(diffDay / 365);
+        return years === 1 ? 'a year ago at ' + timeStr : years + ' years ago at ' + timeStr;
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.populate_history_overlay = function(history) {
     console.log("populate_history_overlay: START");
     console.log("populate_history_overlay: history.length:", history.length);
@@ -2414,16 +2471,38 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
     }
 
     for (let i = 0; i < history.length; i++) {
-        let request_text = history[i];
+        let item = history[i];
+        let request_text = typeof item === 'string' ? item : item.text;
+        let timestamp = typeof item === 'string' ? null : item.timestamp;
+
         let wrapper = $('<div class="history-item-wrapper"></div>');
         let number_box = $('<div class="history-item-number"></div>');
         number_box.text((i + 1));
         let text_box = $('<div class="history-item-text"></div>');
         text_box.text(request_text);
+
+        let show_response_box = $('<div class="history-item-show-response"></div>');
+        show_response_box.text("Show response");
+
+        let timestamp_box = $('<div class="history-item-timestamp"></div>');
+        if (timestamp) {
+            timestamp_box.text($.fn.zato.ide.format_timestamp(timestamp));
+        } else {
+            timestamp_box.text('');
+        }
+
         let delete_box = $('<div class="history-item-delete"></div>');
         delete_box.text("✕");
 
         text_box.on("click", function() {
+            $.fn.zato.ide.on_history_item_selected($(this).parent().attr("data-index"));
+        });
+
+        number_box.on("click", function() {
+            $.fn.zato.ide.on_history_item_selected($(this).parent().attr("data-index"));
+        });
+
+        timestamp_box.on("click", function() {
             $.fn.zato.ide.on_history_item_selected($(this).parent().attr("data-index"));
         });
 
@@ -2434,6 +2513,8 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
 
         wrapper.append(number_box);
         wrapper.append(text_box);
+        wrapper.append(show_response_box);
+        wrapper.append(timestamp_box);
         wrapper.append(delete_box);
         wrapper.attr("data-index", i);
         list_container.append(wrapper);
@@ -2448,7 +2529,8 @@ $.fn.zato.ide.on_history_item_selected = function(index) {
     console.log("on_history_item_selected: index:", index);
 
     let history = $.fn.zato.ide.get_request_history();
-    let request_text = history[index];
+    let item = history[index];
+    let request_text = typeof item === 'string' ? item : item.text;
 
     console.log("on_history_item_selected: request_text:", JSON.stringify(request_text));
 
@@ -2474,13 +2556,12 @@ $.fn.zato.ide.filter_history_overlay = function(search_text) {
     let filtered = history;
 
     if (search_text && search_text.trim() !== "") {
-        let search_lower = search_text.toLowerCase();
         filtered = history.filter(function(item) {
-            return item.toLowerCase().indexOf(search_lower) !== -1;
+            let text = typeof item === 'string' ? item : item.text;
+            return text.toLowerCase().indexOf(search_text.toLowerCase()) !== -1;
         });
     }
 
-    console.log("filter_history_overlay: filtered.length:", filtered.length);
     $.fn.zato.ide.populate_history_overlay(filtered);
 }
 
@@ -2490,40 +2571,13 @@ $.fn.zato.ide.on_history_item_delete = function(index) {
     console.log("on_history_item_delete: index:", index);
 
     let history = $.fn.zato.ide.get_request_history();
-    let deleted_text = history[index];
-    console.log("on_history_item_delete: deleted_text:", JSON.stringify(deleted_text));
-
-    let current_textarea_value = $("#data-request").val();
-    console.log("on_history_item_delete: current_textarea_value:", JSON.stringify(current_textarea_value));
-
     history.splice(index, 1);
-    console.log("on_history_item_delete: history after delete:", JSON.stringify(history));
 
     let key = $.fn.zato.ide.get_request_history_key();
     localStorage.setItem(key, JSON.stringify(history));
 
-    let wrapper = $('[data-index="' + index + '"]');
-    wrapper.css({
-        opacity: 0,
-        transform: 'translateX(-10px)'
-    });
-
-    setTimeout(function() {
-        $.fn.zato.ide.populate_history_overlay(history);
-
-        if (current_textarea_value === deleted_text) {
-            console.log("on_history_item_delete: deleted item was in textarea, clearing it");
-            $("#data-request").val("");
-            window.zato_request_history_index = -1;
-        } else if (window.zato_request_history_index >= 0) {
-            if (window.zato_request_history_index >= index) {
-                window.zato_request_history_index = Math.max(-1, window.zato_request_history_index - 1);
-                console.log("on_history_item_delete: adjusted index to:", window.zato_request_history_index);
-            }
-        }
-
-        $.fn.zato.ide.update_request_history_buttons();
-    }, 140);
+    $.fn.zato.ide.populate_history_overlay(history);
+    $.fn.zato.ide.update_request_history_buttons();
 
     console.log("on_history_item_delete: END");
 }
