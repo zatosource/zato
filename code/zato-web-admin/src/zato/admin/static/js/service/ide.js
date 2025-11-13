@@ -99,8 +99,19 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         } else if ((e.ctrlKey || e.metaKey) && e.key === "ArrowDown") {
             e.preventDefault();
             $.fn.zato.ide.on_request_history_down();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+            e.preventDefault();
+            $.fn.zato.ide.open_history_overlay();
         }
     });
+
+    // Ctrl-K globally to open history overlay
+    document.addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+          e.preventDefault();
+          $.fn.zato.ide.open_history_overlay();
+        }
+      });
 
     // Make sure the menu can be visible
     $(".pure-css-nav").hover(function() {
@@ -126,6 +137,21 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
 
     $.fn.zato.ide.update_request_history_buttons();
+
+    $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
+    $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
+    $("#history-search-input").on("input", function() {
+        $.fn.zato.ide.filter_history_overlay($(this).val());
+    });
+    
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") {
+            if (!$("#request-history-overlay").hasClass("hidden")) {
+                e.preventDefault();
+                $.fn.zato.ide.close_history_overlay();
+            }
+        }
+    });
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -2067,6 +2093,103 @@ $.fn.zato.ide.on_request_history_down = function() {
 
     $.fn.zato.ide.update_request_history_buttons();
     console.log("on_request_history_down: END");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.open_history_overlay = function() {
+    console.log("open_history_overlay: START");
+    
+    let overlay = $("#request-history-overlay");
+    let history = $.fn.zato.ide.get_request_history();
+    
+    console.log("open_history_overlay: history:", JSON.stringify(history));
+    
+    $.fn.zato.ide.populate_history_overlay(history);
+    
+    overlay.removeClass("hidden");
+    
+    $("#history-search-input").val("");
+    $("#history-search-input").focus();
+    
+    console.log("open_history_overlay: END");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.close_history_overlay = function() {
+    console.log("close_history_overlay: called");
+    $("#request-history-overlay").addClass("hidden");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.populate_history_overlay = function(history) {
+    console.log("populate_history_overlay: START");
+    console.log("populate_history_overlay: history.length:", history.length);
+    
+    let list_container = $("#history-overlay-list");
+    list_container.empty();
+    
+    if (history.length === 0) {
+        list_container.append('<div class="history-empty">No request history yet</div>');
+        return;
+    }
+    
+    for (let i = 0; i < history.length; i++) {
+        let request_text = history[i];
+        let item = $('<div class="history-item"></div>');
+        item.text(request_text);
+        item.attr("data-index", i);
+        item.on("click", function() {
+            $.fn.zato.ide.on_history_item_selected($(this).attr("data-index"));
+        });
+        list_container.append(item);
+    }
+    
+    console.log("populate_history_overlay: END");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_history_item_selected = function(index) {
+    console.log("on_history_item_selected: index:", index);
+    
+    let history = $.fn.zato.ide.get_request_history();
+    let request_text = history[index];
+    
+    console.log("on_history_item_selected: request_text:", JSON.stringify(request_text));
+    
+    $("#data-request").val(request_text);
+    
+    window.zato_request_history_index = parseInt(index);
+    console.log("on_history_item_selected: set window.zato_request_history_index to:", window.zato_request_history_index);
+    
+    $.fn.zato.ide.close_history_overlay();
+    $.fn.zato.ide.update_request_history_buttons();
+    
+    $("#data-request").focus();
+    
+    console.log("on_history_item_selected: END");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.filter_history_overlay = function(search_text) {
+    console.log("filter_history_overlay: search_text:", JSON.stringify(search_text));
+    
+    let history = $.fn.zato.ide.get_request_history();
+    let filtered = history;
+    
+    if (search_text && search_text.trim() !== "") {
+        let search_lower = search_text.toLowerCase();
+        filtered = history.filter(function(item) {
+            return item.toLowerCase().indexOf(search_lower) !== -1;
+        });
+    }
+    
+    console.log("filter_history_overlay: filtered.length:", filtered.length);
+    $.fn.zato.ide.populate_history_overlay(filtered);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

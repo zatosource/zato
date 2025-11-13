@@ -118,7 +118,7 @@
 key1=value1
 key2=value2
 
-Ctrl+↑/↓ to browse history"></textarea></form>
+Ctrl+↑/↓ to browse history | Ctrl+K for full history"></textarea></form>
                         </td>
                     </tr>
 
@@ -177,6 +177,21 @@ Ctrl+↑/↓ to browse history"></textarea></form>
     </div>
     {% endif %}
   </div>
+
+<div id="request-history-overlay" class="history-overlay hidden">
+    <div class="history-overlay-backdrop"></div>
+    <div class="history-overlay-content">
+        <div class="history-overlay-header">
+            <h2>Request history</h2>
+            <button id="history-overlay-close" class="history-close-btn">✕</button>
+        </div>
+        <div class="history-overlay-search">
+            <input type="text" id="history-search-input" placeholder="Search history..." />
+        </div>
+        <div class="history-overlay-list" id="history-overlay-list">
+        </div>
+    </div>
+</div>
 
 <script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
