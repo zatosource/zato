@@ -147,6 +147,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
                           modifier_key + "+K for full history";
     $("#data-request").attr("placeholder", placeholder_text);
 
+    $.fn.zato.ide.init_resizer();
+
     $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
     $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
     $("#history-search-input").on("input", function() {
@@ -159,6 +161,47 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
                 e.preventDefault();
                 $.fn.zato.ide.close_history_overlay();
             }
+        }
+    });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.init_resizer = function() {
+    let resizer = document.getElementById('resizer');
+    let actionArea = document.getElementById('action-area-container');
+    let container = document.getElementById('main-area-container');
+
+    let savedWidth = localStorage.getItem('zato.action-area-width');
+    if (savedWidth) {
+        actionArea.style.width = savedWidth;
+    }
+
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+
+        let containerRect = container.getBoundingClientRect();
+        let newWidth = containerRect.right - e.clientX;
+
+        if (newWidth >= 200 && newWidth <= containerRect.width - 200) {
+            actionArea.style.width = newWidth + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('zato.action-area-width', actionArea.style.width);
         }
     });
 }
@@ -1082,10 +1125,9 @@ $.fn.zato.ide.post_load_source_object = function(
     }
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
 
-    // Since we just set the baseline to the current editor content, the file is by definition not modified.
-    console.log("post_load_source_object: setting deployment status to NOT different");
-    $.fn.zato.ide.set_deployment_button_status_not_different();
-    $.fn.zato.ide.update_deployment_option_state(false);
+    // Check the actual deployment status by comparing editor content against baseline
+    console.log("post_load_source_object: checking deployment status");
+    $.fn.zato.ide.set_deployment_status();
     console.log("post_load_source_object: END");
 
     $.fn.zato.ide.set_is_current_file(fs_location);

@@ -21,7 +21,7 @@
 <link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
 
 <div id="main-area-container">
-    <div class="item">
+    <div class="item" id="editor-container">
         <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
         <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
         <input type="hidden" id="current_root_directory" value="{{ data.current_root_directory }}"/>
@@ -29,6 +29,7 @@
         <div id="editor">{{ data.current_file_source_code }}</div>
         <form id="editor-form" class="hidden"><textarea id="data-editor" name="data-editor"></textarea></form>
     </div>
+    <div id="resizer"></div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
             <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
