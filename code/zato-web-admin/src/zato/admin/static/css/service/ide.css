@@ -10,14 +10,29 @@
 }
 
 #main-area-container {
-    display: grid;
-    grid-template-rows: 87vh;
-    grid-template-columns: 1.0fr 1fr 0.06fr;
-    align-items: stretch;
+    display: flex;
     height: 87vh;
 }
 
+#editor-container {
+    flex: 1;
+    min-width: 200px;
+}
+
+#resizer {
+    width: 6px;
+    background: #d3d3d3;
+    cursor: col-resize;
+    flex-shrink: 0;
+}
+
+#resizer:hover {
+    background: #999;
+}
+
 #action-area-container {
+    width: 50%;
+    min-width: 200px;
     display: grid;
     grid-template-rows: 5vh 84vh;
     align-items: stretch;
