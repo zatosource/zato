@@ -53,6 +53,9 @@ textarea {
 
 #data-request {
     resize: vertical;
+    border-bottom: 3px solid #ccc;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 #data-request::-webkit-resizer {
