@@ -210,6 +210,43 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             console.log("Restoring data-request height:", savedHeight);
             dataRequest.style.height = savedHeight;
         }
+
+        let isResizingTextarea = false;
+        let startY = 0;
+        let startHeight = 0;
+
+        dataRequest.addEventListener('mousedown', function(e) {
+            let rect = dataRequest.getBoundingClientRect();
+            let bottomEdge = rect.bottom;
+            let mouseY = e.clientY;
+
+            if (Math.abs(mouseY - bottomEdge) < 10) {
+                isResizingTextarea = true;
+                startY = e.clientY;
+                startHeight = dataRequest.offsetHeight;
+                e.preventDefault();
+                console.log("Started resizing data-request from bottom edge");
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizingTextarea) return;
+
+            let deltaY = e.clientY - startY;
+            let newHeight = startHeight + deltaY;
+            let maxHeight = parseInt(dataRequest.style.maxHeight);
+
+            if (newHeight >= 40 && newHeight <= maxHeight) {
+                dataRequest.style.height = newHeight + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isResizingTextarea) {
+                isResizingTextarea = false;
+                console.log("Finished resizing data-request");
+            }
+        });
     }
 
     resizeDataResponse();
