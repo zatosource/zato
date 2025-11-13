@@ -21,13 +21,25 @@
 
 #resizer {
     width: 6px;
-    background: #d3d3d3;
+    background: #e8e8e8;
     cursor: col-resize;
     flex-shrink: 0;
+    position: relative;
+}
+
+#resizer::before {
+    content: '⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    color: #999;
+    line-height: 0.5;
 }
 
 #resizer:hover {
-    background: #999;
+    background: #d8d8d8;
 }
 
 #action-area-container {
