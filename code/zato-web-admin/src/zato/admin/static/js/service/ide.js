@@ -210,31 +210,55 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             console.log("Restoring data-request height:", savedHeight);
             dataRequest.style.height = savedHeight;
         }
+        
+        let resizeIndicator = document.createElement('div');
+        resizeIndicator.textContent = '⋯';
+        resizeIndicator.style.cssText = 'position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 20px; color: red; pointer-events: none; padding: 0 5px; z-index: 10;';
+        dataRequest.parentElement.style.position = 'relative';
+        dataRequest.parentElement.appendChild(resizeIndicator);
+        
+        console.log("resizeIndicator created:", resizeIndicator);
+        console.log("resizeIndicator parent:", dataRequest.parentElement);
+        console.log("resizeIndicator computed style:", window.getComputedStyle(resizeIndicator).cssText);
+        
+        function updateIndicatorPosition() {
+            let rect = dataRequest.getBoundingClientRect();
+            let parentRect = dataRequest.parentElement.getBoundingClientRect();
+            let top = rect.bottom - parentRect.top - 3;
+            resizeIndicator.style.top = top + 'px';
+            console.log("updateIndicatorPosition: top:", top);
+            console.log("updateIndicatorPosition: rect.bottom:", rect.bottom);
+            console.log("updateIndicatorPosition: parentRect.top:", parentRect.top);
+        }
+        updateIndicatorPosition();
 
         let isResizingTextarea = false;
         let startY = 0;
         let startHeight = 0;
-
+        
         dataRequest.addEventListener('mousemove', function(e) {
             if (isResizingTextarea) return;
-
+            
             let rect = dataRequest.getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
-
+            
             if (Math.abs(mouseY - bottomEdge) < 10) {
                 dataRequest.style.cursor = 'ns-resize';
                 dataRequest.style.borderBottomColor = '#999';
+                resizeIndicator.style.color = 'green';
             } else {
                 dataRequest.style.cursor = '';
                 dataRequest.style.borderBottomColor = '#ccc';
+                resizeIndicator.style.color = 'red';
             }
         });
-
+        
         dataRequest.addEventListener('mouseleave', function() {
             if (!isResizingTextarea) {
                 dataRequest.style.cursor = '';
                 dataRequest.style.borderBottomColor = '#ccc';
+                resizeIndicator.style.color = 'red';
             }
         });
 
@@ -261,6 +285,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
             if (newHeight >= 40 && newHeight <= maxHeight) {
                 dataRequest.style.height = newHeight + 'px';
+                updateIndicatorPosition();
             }
         });
 
