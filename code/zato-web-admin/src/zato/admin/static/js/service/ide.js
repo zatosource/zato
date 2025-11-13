@@ -150,28 +150,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     let actionAreaContainer = document.getElementById('action-area-container');
     let actionArea = document.getElementById('action-area');
 
-    function logScrollbarState(context) {
-        let computedStyleArea = window.getComputedStyle(actionArea);
-        let hasScrollbar = actionArea.scrollHeight > actionArea.clientHeight;
-        console.log(`[${context}] action-area scrollbar:`, hasScrollbar);
-        console.log(`[${context}] action-area scrollHeight:`, actionArea.scrollHeight);
-        console.log(`[${context}] action-area clientHeight:`, actionArea.clientHeight);
-        console.log(`[${context}] action-area clientWidth:`, actionArea.clientWidth);
-        console.log(`[${context}] action-area scrollWidth:`, actionArea.scrollWidth);
-        console.log(`[${context}] action-area overflow-y:`, computedStyleArea.overflowY);
-        console.log(`[${context}] action-area overflow-x:`, computedStyleArea.overflowX);
-
-        let textareas = actionArea.querySelectorAll('textarea');
-        textareas.forEach((ta, idx) => {
-            console.log(`[${context}] textarea[${idx}] id:`, ta.id);
-            console.log(`[${context}] textarea[${idx}] clientWidth:`, ta.clientWidth);
-            console.log(`[${context}] textarea[${idx}] scrollWidth:`, ta.scrollWidth);
-            console.log(`[${context}] textarea[${idx}] offsetWidth:`, ta.offsetWidth);
-        });
-    }
-
-    logScrollbarState("INIT");
-
     function resizeDataResponse() {
         let dataResponse = document.getElementById('data-response');
         if (!dataResponse) return;
@@ -182,19 +160,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let offsetFromTop = dataResponseTop - actionAreaTop;
         let availableHeight = actionAreaHeight - offsetFromTop - 10;
 
-        console.log("resizeDataResponse: actionAreaHeight:", actionAreaHeight);
-        console.log("resizeDataResponse: offsetFromTop:", offsetFromTop);
-        console.log("resizeDataResponse: availableHeight:", availableHeight);
-
         if (availableHeight > 100) {
             dataResponse.style.height = availableHeight + 'px';
-            console.log("resizeDataResponse: set height to:", availableHeight);
-
-            let computed = window.getComputedStyle(dataResponse);
-            console.log("resizeDataResponse: computed overflow-y:", computed.overflowY);
-            console.log("resizeDataResponse: scrollHeight:", dataResponse.scrollHeight);
-            console.log("resizeDataResponse: clientHeight:", dataResponse.clientHeight);
-            console.log("resizeDataResponse: has scrollbar:", dataResponse.scrollHeight > dataResponse.clientHeight);
         }
     }
 
@@ -203,46 +170,37 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let actionAreaHeight = actionArea.offsetHeight;
         let maxHeight = actionAreaHeight - 200;
         dataRequest.style.maxHeight = maxHeight + 'px';
-        console.log("Set data-request max-height to:", maxHeight);
 
         let savedHeight = store.get('zato.data-request-height');
         if (savedHeight) {
-            console.log("Restoring data-request height:", savedHeight);
             dataRequest.style.height = savedHeight;
         }
-        
+
         let resizeIndicator = document.createElement('div');
         resizeIndicator.textContent = '⋯';
         resizeIndicator.style.cssText = 'position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 20px; color: red; pointer-events: none; padding: 0 5px; z-index: 10;';
         dataRequest.parentElement.style.position = 'relative';
         dataRequest.parentElement.appendChild(resizeIndicator);
-        
-        console.log("resizeIndicator created:", resizeIndicator);
-        console.log("resizeIndicator parent:", dataRequest.parentElement);
-        console.log("resizeIndicator computed style:", window.getComputedStyle(resizeIndicator).cssText);
-        
+
         function updateIndicatorPosition() {
             let rect = dataRequest.getBoundingClientRect();
             let parentRect = dataRequest.parentElement.getBoundingClientRect();
             let top = rect.bottom - parentRect.top - 3;
             resizeIndicator.style.top = top + 'px';
-            console.log("updateIndicatorPosition: top:", top);
-            console.log("updateIndicatorPosition: rect.bottom:", rect.bottom);
-            console.log("updateIndicatorPosition: parentRect.top:", parentRect.top);
         }
         updateIndicatorPosition();
 
         let isResizingTextarea = false;
         let startY = 0;
         let startHeight = 0;
-        
+
         dataRequest.addEventListener('mousemove', function(e) {
             if (isResizingTextarea) return;
-            
+
             let rect = dataRequest.getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
-            
+
             if (Math.abs(mouseY - bottomEdge) < 10) {
                 dataRequest.style.cursor = 'ns-resize';
                 dataRequest.style.borderBottomColor = '#999';
@@ -253,7 +211,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
                 resizeIndicator.style.color = 'red';
             }
         });
-        
+
         dataRequest.addEventListener('mouseleave', function() {
             if (!isResizingTextarea) {
                 dataRequest.style.cursor = '';
@@ -272,7 +230,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
                 startY = e.clientY;
                 startHeight = dataRequest.offsetHeight;
                 e.preventDefault();
-                console.log("Started resizing data-request from bottom edge");
             }
         });
 
@@ -292,7 +249,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         document.addEventListener('mouseup', function() {
             if (isResizingTextarea) {
                 isResizingTextarea = false;
-                console.log("Finished resizing data-request");
             }
         });
     }
@@ -310,14 +266,11 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     let resizeObserver = new ResizeObserver((entries) => {
         for (let entry of entries) {
             if (entry.target.tagName === 'TEXTAREA') {
-                console.log("TEXTAREA RESIZED:", entry.target.id);
                 if (entry.target.id === 'data-request') {
                     let height = entry.target.style.height;
-                    console.log("Saving data-request height:", height);
                     store.set('zato.data-request-height', height);
                     resizeDataResponse();
                 }
-                logScrollbarState("TEXTAREA_RESIZE");
             }
         }
     });
@@ -325,13 +278,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     let textareas = actionArea.querySelectorAll('textarea');
     textareas.forEach(ta => {
         resizeObserver.observe(ta);
-        console.log("Observing textarea:", ta.id);
     });
-
-    let actionAreaObserver = new ResizeObserver(() => {
-        logScrollbarState("ACTION_AREA_RESIZE");
-    });
-    actionAreaObserver.observe(actionArea);
 
     $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
     $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
