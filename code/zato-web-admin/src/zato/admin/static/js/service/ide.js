@@ -1279,10 +1279,9 @@ $.fn.zato.ide.load_editor_session = function(fs_location, source_code, _ignored_
     // Do we have a session for this file already?
     let existing_session = window.zato_editor_session_map[fs_location];
 
-    // If so, let's just switch to it and update its content
+    // If so, let's just switch to it without updating its content to preserve unsaved changes
     if(existing_session) {
-        console.log(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, updating its content.`);
-        existing_session.setValue(source_code);
+        console.log(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, keeping existing content.`);
         window.zato_editor.setSession(existing_session);
     }
     // .. otherwise, create a new one.
