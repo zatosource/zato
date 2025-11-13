@@ -7,7 +7,10 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
     console.log("on_invoke_submitted: is_modified:", is_modified);
 
     let request_text = $("#data-request").val();
+    console.log("on_invoke_submitted: request_text from textarea:", JSON.stringify(request_text));
+    console.log("on_invoke_submitted: calling save_request_to_history");
     $.fn.zato.ide.save_request_to_history(request_text);
+    console.log("on_invoke_submitted: after save_request_to_history");
 
     let invoke_func = function() {
         console.log("on_invoke_submitted: invoke_func called");
@@ -27,6 +30,7 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
         console.log("on_invoke_submitted: invoking directly");
         invoke_func();
     }
+    console.log("on_invoke_submitted: END");
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
