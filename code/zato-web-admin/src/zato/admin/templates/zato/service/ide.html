@@ -32,7 +32,6 @@
     <div id="resizer"></div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
-            <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
             <select id="object-select" class="default" onchange="$.fn.zato.ide.on_object_select_changed(this);">
                 <optgroup label="Current file" id="optgroup-current-file">
                     {% for service_item in data.current_file_service_list %}
