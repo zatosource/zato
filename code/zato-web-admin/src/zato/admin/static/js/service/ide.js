@@ -215,6 +215,29 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let startY = 0;
         let startHeight = 0;
 
+        dataRequest.addEventListener('mousemove', function(e) {
+            if (isResizingTextarea) return;
+
+            let rect = dataRequest.getBoundingClientRect();
+            let bottomEdge = rect.bottom;
+            let mouseY = e.clientY;
+
+            if (Math.abs(mouseY - bottomEdge) < 10) {
+                dataRequest.style.cursor = 'ns-resize';
+                dataRequest.style.borderBottomColor = '#999';
+            } else {
+                dataRequest.style.cursor = '';
+                dataRequest.style.borderBottomColor = '#ccc';
+            }
+        });
+
+        dataRequest.addEventListener('mouseleave', function() {
+            if (!isResizingTextarea) {
+                dataRequest.style.cursor = '';
+                dataRequest.style.borderBottomColor = '#ccc';
+            }
+        });
+
         dataRequest.addEventListener('mousedown', function(e) {
             let rect = dataRequest.getBoundingClientRect();
             let bottomEdge = rect.bottom;
