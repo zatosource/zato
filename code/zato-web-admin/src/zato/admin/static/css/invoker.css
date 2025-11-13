@@ -51,6 +51,14 @@ textarea {
     overflow-x: hidden;
 }
 
+#data-request {
+    resize: vertical;
+}
+
+#data-request::-webkit-resizer {
+    background: linear-gradient(135deg, transparent 50%, #999 50%);
+}
+
 #data-response {
     overflow-y: hidden;
     resize: none;
