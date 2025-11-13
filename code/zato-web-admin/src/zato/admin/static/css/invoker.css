@@ -47,6 +47,11 @@ input {
     xcolor: #999 !important;
 }
 
+textarea {
+    overflow-x: hidden;
+}
+
+
 .tippy-box[role="tooltip-draw-attention"]
 {
     background: linear-gradient(to right, #33f, #036 , #090, #c06, #660);
