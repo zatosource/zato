@@ -72,6 +72,10 @@ body, html {
     overflow: hidden !important;
 }
 
+#invoke-service-request-form {
+    overflow: visible !important;
+}
+
 
 .history-overlay {
     position: fixed;
