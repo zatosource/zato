@@ -51,6 +51,11 @@ textarea {
     overflow-x: hidden;
 }
 
+#data-response {
+    overflow-y: hidden;
+    resize: none;
+}
+
 
 .tippy-box[role="tooltip-draw-attention"]
 {
