@@ -138,6 +138,13 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     $.fn.zato.ide.update_request_history_buttons();
 
+    let is_mac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    let modifier_key = is_mac ? '⌘' : 'Ctrl';
+    let placeholder_text = "Enter parameters as key=value pairs, e.g.:\nkey1=value1\nkey2=value2\n\n" + 
+                          modifier_key + "+↑/↓ to browse history\n" + 
+                          modifier_key + "+K for full history";
+    $("#data-request").attr("placeholder", placeholder_text);
+
     $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
     $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
     $("#history-search-input").on("input", function() {
