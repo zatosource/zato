@@ -68,6 +68,10 @@ body, html {
     min-height: 0;
 }
 
+#action-area * {
+    overflow: hidden !important;
+}
+
 
 .history-overlay {
     position: fixed;

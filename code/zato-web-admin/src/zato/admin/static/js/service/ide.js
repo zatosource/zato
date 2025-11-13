@@ -189,6 +189,21 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         if (availableHeight > 100) {
             dataResponse.style.height = availableHeight + 'px';
             console.log("resizeDataResponse: set height to:", availableHeight);
+
+            let computed = window.getComputedStyle(dataResponse);
+            console.log("resizeDataResponse: computed overflow-y:", computed.overflowY);
+            console.log("resizeDataResponse: scrollHeight:", dataResponse.scrollHeight);
+            console.log("resizeDataResponse: clientHeight:", dataResponse.clientHeight);
+            console.log("resizeDataResponse: has scrollbar:", dataResponse.scrollHeight > dataResponse.clientHeight);
+        }
+    }
+
+    let dataRequest = document.getElementById('data-request');
+    if (dataRequest) {
+        let savedHeight = store.get('zato.data-request-height');
+        if (savedHeight) {
+            console.log("Restoring data-request height:", savedHeight);
+            dataRequest.style.height = savedHeight;
         }
     }
 
@@ -199,6 +214,12 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         for (let entry of entries) {
             if (entry.target.tagName === 'TEXTAREA') {
                 console.log("TEXTAREA RESIZED:", entry.target.id);
+                if (entry.target.id === 'data-request') {
+                    let height = entry.target.style.height;
+                    console.log("Saving data-request height:", height);
+                    store.set('zato.data-request-height', height);
+                    resizeDataResponse();
+                }
                 logScrollbarState("TEXTAREA_RESIZE");
             }
         }
