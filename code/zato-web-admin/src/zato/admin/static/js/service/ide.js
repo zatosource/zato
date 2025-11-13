@@ -149,17 +149,71 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     let actionAreaContainer = document.getElementById('action-area-container');
     let actionArea = document.getElementById('action-area');
-    let computedStyleContainer = window.getComputedStyle(actionAreaContainer);
-    let computedStyleArea = window.getComputedStyle(actionArea);
-    console.log("init_editor: action-area-container computed overflow-y:", computedStyleContainer.overflowY);
-    console.log("init_editor: action-area-container computed overflow-x:", computedStyleContainer.overflowX);
-    console.log("init_editor: action-area-container scrollHeight:", actionAreaContainer.scrollHeight);
-    console.log("init_editor: action-area-container clientHeight:", actionAreaContainer.clientHeight);
-    console.log("init_editor: action-area-container offsetHeight:", actionAreaContainer.offsetHeight);
-    console.log("init_editor: action-area computed overflow-y:", computedStyleArea.overflowY);
-    console.log("init_editor: action-area scrollHeight:", actionArea.scrollHeight);
-    console.log("init_editor: action-area clientHeight:", actionArea.clientHeight);
-    console.log("init_editor: action-area offsetHeight:", actionArea.offsetHeight);
+
+    function logScrollbarState(context) {
+        let computedStyleArea = window.getComputedStyle(actionArea);
+        let hasScrollbar = actionArea.scrollHeight > actionArea.clientHeight;
+        console.log(`[${context}] action-area scrollbar:`, hasScrollbar);
+        console.log(`[${context}] action-area scrollHeight:`, actionArea.scrollHeight);
+        console.log(`[${context}] action-area clientHeight:`, actionArea.clientHeight);
+        console.log(`[${context}] action-area clientWidth:`, actionArea.clientWidth);
+        console.log(`[${context}] action-area scrollWidth:`, actionArea.scrollWidth);
+        console.log(`[${context}] action-area overflow-y:`, computedStyleArea.overflowY);
+        console.log(`[${context}] action-area overflow-x:`, computedStyleArea.overflowX);
+
+        let textareas = actionArea.querySelectorAll('textarea');
+        textareas.forEach((ta, idx) => {
+            console.log(`[${context}] textarea[${idx}] id:`, ta.id);
+            console.log(`[${context}] textarea[${idx}] clientWidth:`, ta.clientWidth);
+            console.log(`[${context}] textarea[${idx}] scrollWidth:`, ta.scrollWidth);
+            console.log(`[${context}] textarea[${idx}] offsetWidth:`, ta.offsetWidth);
+        });
+    }
+
+    logScrollbarState("INIT");
+
+    function resizeDataResponse() {
+        let dataResponse = document.getElementById('data-response');
+        if (!dataResponse) return;
+
+        let actionAreaHeight = actionArea.offsetHeight;
+        let dataResponseTop = dataResponse.getBoundingClientRect().top;
+        let actionAreaTop = actionArea.getBoundingClientRect().top;
+        let offsetFromTop = dataResponseTop - actionAreaTop;
+        let availableHeight = actionAreaHeight - offsetFromTop - 10;
+
+        console.log("resizeDataResponse: actionAreaHeight:", actionAreaHeight);
+        console.log("resizeDataResponse: offsetFromTop:", offsetFromTop);
+        console.log("resizeDataResponse: availableHeight:", availableHeight);
+
+        if (availableHeight > 100) {
+            dataResponse.style.height = availableHeight + 'px';
+            console.log("resizeDataResponse: set height to:", availableHeight);
+        }
+    }
+
+    resizeDataResponse();
+    window.addEventListener('resize', resizeDataResponse);
+
+    let resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+            if (entry.target.tagName === 'TEXTAREA') {
+                console.log("TEXTAREA RESIZED:", entry.target.id);
+                logScrollbarState("TEXTAREA_RESIZE");
+            }
+        }
+    });
+
+    let textareas = actionArea.querySelectorAll('textarea');
+    textareas.forEach(ta => {
+        resizeObserver.observe(ta);
+        console.log("Observing textarea:", ta.id);
+    });
+
+    let actionAreaObserver = new ResizeObserver(() => {
+        logScrollbarState("ACTION_AREA_RESIZE");
+    });
+    actionAreaObserver.observe(actionArea);
 
     $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
     $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
