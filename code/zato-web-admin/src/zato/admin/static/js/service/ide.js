@@ -147,6 +147,20 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     $.fn.zato.ide.init_resizer();
 
+    let actionAreaContainer = document.getElementById('action-area-container');
+    let actionArea = document.getElementById('action-area');
+    let computedStyleContainer = window.getComputedStyle(actionAreaContainer);
+    let computedStyleArea = window.getComputedStyle(actionArea);
+    console.log("init_editor: action-area-container computed overflow-y:", computedStyleContainer.overflowY);
+    console.log("init_editor: action-area-container computed overflow-x:", computedStyleContainer.overflowX);
+    console.log("init_editor: action-area-container scrollHeight:", actionAreaContainer.scrollHeight);
+    console.log("init_editor: action-area-container clientHeight:", actionAreaContainer.clientHeight);
+    console.log("init_editor: action-area-container offsetHeight:", actionAreaContainer.offsetHeight);
+    console.log("init_editor: action-area computed overflow-y:", computedStyleArea.overflowY);
+    console.log("init_editor: action-area scrollHeight:", actionArea.scrollHeight);
+    console.log("init_editor: action-area clientHeight:", actionArea.clientHeight);
+    console.log("init_editor: action-area offsetHeight:", actionArea.offsetHeight);
+
     $("#history-overlay-close").click($.fn.zato.ide.close_history_overlay);
     $(".history-overlay-backdrop").click($.fn.zato.ide.close_history_overlay);
     $("#history-search-input").on("input", function() {
