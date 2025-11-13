@@ -63,7 +63,8 @@ textarea {
 }
 
 #data-response {
-    overflow-y: hidden;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
     resize: none;
 }
 
