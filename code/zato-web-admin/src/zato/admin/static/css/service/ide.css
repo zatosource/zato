@@ -45,23 +45,6 @@
     border-bottom: 1px solid #ccc;
 }
 
-#action-area-header img {
-    width: 14px;
-    vertical-align: middle;
-    padding-right: 7px;
-}
-
-#action-area-header a.img-button {
-    border-right: 1px solid #d3d3d3;
-}
-
-#action-area-header a.img-button:hover {
-    background-color: #e9e9e9;
-}
-
-img.button {
-    opacity: 30%;
-}
 
 .history-overlay {
     position: fixed;

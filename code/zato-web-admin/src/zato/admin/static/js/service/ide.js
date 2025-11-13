@@ -121,8 +121,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         $(".pure-css-nav").removeClass("position-relative");
     });
 
-    // This will try to load all the remember layout options from LocalStorage
-    $.fn.zato.ide.restore_layout();
 
     // Set the initial baseline for deployment status from the current editor content BEFORE loading from localStorage
     let key = $.fn.zato.ide.get_last_deployed_key();
@@ -168,18 +166,42 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.init_resizer = function() {
+    console.log("init_resizer: START");
+
     let resizer = document.getElementById('resizer');
     let actionArea = document.getElementById('action-area-container');
     let container = document.getElementById('main-area-container');
 
-    let savedWidth = localStorage.getItem('zato.action-area-width');
+    console.log("init_resizer: resizer element:", resizer);
+    console.log("init_resizer: actionArea element:", actionArea);
+    console.log("init_resizer: container element:", container);
+
+    console.log("init_resizer: testing store write/read");
+    store.set('zato.test-key', 'test-value');
+    let testValue = store.get('zato.test-key');
+    console.log("init_resizer: test value retrieved:", JSON.stringify(testValue));
+
+    let savedWidth = store.get('zato.action-area-width');
+    console.log("init_resizer: savedWidth from store:", JSON.stringify(savedWidth));
+    console.log("init_resizer: localStorage.length:", localStorage.length);
+
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        console.log("init_resizer: localStorage key " + i + ":", key);
+    }
+
     if (savedWidth) {
-        actionArea.style.width = savedWidth;
+        console.log("init_resizer: setting actionArea width to:", savedWidth);
+        actionArea.style.setProperty('width', savedWidth, 'important');
+        console.log("init_resizer: actionArea.style.width after setting:", actionArea.style.width);
+    } else {
+        console.log("init_resizer: no saved width found, using default");
     }
 
     let isResizing = false;
 
     resizer.addEventListener('mousedown', function(e) {
+        console.log("init_resizer: mousedown on resizer");
         isResizing = true;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
@@ -191,19 +213,35 @@ $.fn.zato.ide.init_resizer = function() {
         let containerRect = container.getBoundingClientRect();
         let newWidth = containerRect.right - e.clientX;
 
+        console.log("init_resizer: mousemove - containerRect.right:", containerRect.right);
+        console.log("init_resizer: mousemove - e.clientX:", e.clientX);
+        console.log("init_resizer: mousemove - calculated newWidth:", newWidth);
+        console.log("init_resizer: mousemove - containerRect.width:", containerRect.width);
+
         if (newWidth >= 200 && newWidth <= containerRect.width - 200) {
             actionArea.style.width = newWidth + 'px';
+            console.log("init_resizer: mousemove - set width to:", newWidth + 'px');
+        } else {
+            console.log("init_resizer: mousemove - width out of bounds, not setting");
         }
     });
 
     document.addEventListener('mouseup', function() {
         if (isResizing) {
+            console.log("init_resizer: mouseup - resizing ended");
             isResizing = false;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            localStorage.setItem('zato.action-area-width', actionArea.style.width);
+            let widthToSave = actionArea.style.width;
+            console.log("init_resizer: mouseup - actionArea.style.width:", widthToSave);
+            console.log("init_resizer: mouseup - saving to store with key 'zato.action-area-width'");
+            store.set('zato.action-area-width', widthToSave);
+            let verifyRead = store.get('zato.action-area-width');
+            console.log("init_resizer: mouseup - immediately reading back from store:", JSON.stringify(verifyRead));
         }
     });
+
+    console.log("init_resizer: END");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -247,20 +285,6 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.restore_layout = function() {
-    let size = localStorage.getItem(window.zato_local_storage_key.zato_action_area_size);
-    if(size) {
-        $.fn.zato.ide.set_main_area_container_size(size);
-    }
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-// Resizes the action area
-$.fn.zato.ide.on_key_toggle_action_area = function(_ignored_event, _ignored_handler) {
-    $.fn.zato.ide.toggle_action_area();
-}
-
 // Deploys the current file
 $.fn.zato.ide.on_key_deploy_file = function(_ignored_event, _ignored_handler) {
     $.fn.zato.invoker.on_deploy_submitted();
@@ -269,47 +293,6 @@ $.fn.zato.ide.on_key_deploy_file = function(_ignored_event, _ignored_handler) {
 // Invokes the current service
 $.fn.zato.ide.on_key_invoke = function(_ignored_event, _ignored_handler) {
     $.fn.zato.invoker.on_invoke_submitted();
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.toggle_action_area = function() {
-
-    // let default_size = "3.9fr 1fr 0.06fr";
-    // let expanded_size = "1.0fr 1fr 0.06fr";
-
-    let object_select = $("#object-select");
-
-    let default_size = "1.0fr 1fr 0.06fr";
-    let expanded_size = "3.9fr 1fr 0.06fr";
-
-    let elem_to_expand = $("#action-area-header");
-    let is_expanded = elem_to_expand.attr("data-is-expanded");
-
-    if(is_expanded == "false") {
-        new_size = expanded_size;
-        elem_to_expand.attr("data-is-expanded", "true");
-        $.fn.zato.toggle_css_class(object_select, "expanded", "default");
-    }
-    else {
-        new_size = default_size
-        elem_to_expand.attr("data-is-expanded", "false");
-        $.fn.zato.toggle_css_class(object_select, "default", "expanded");
-    }
-
-    // Set the current layout ..
-    $.fn.zato.ide.set_main_area_container_size(new_size);
-
-    // .. and persist it for later use.
-    localStorage.setItem(window.zato_local_storage_key.zato_action_area_size, new_size);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.set_main_area_container_size = function(size) {
-    let main_area_container = $("#main-area-container");
-    let css_property = "grid-template-columns";
-    main_area_container.css(css_property, size);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
