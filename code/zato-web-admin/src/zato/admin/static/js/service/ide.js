@@ -1429,22 +1429,23 @@ $.fn.zato.ide.set_up_editor_session = function(editor_session) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_editor_session = function(fs_location, source_code, _ignored_reuse_source_code) {
+$.fn.zato.ide.load_editor_session = function(fs_location, source_code, reuse_source_code) {
 
     console.log(`ZATO_IDE_DEBUG: load_editor_session called for fs_location: ${fs_location}`);
     console.log(`ZATO_IDE_DEBUG: load_editor_session received source_code:`, JSON.stringify(source_code));
+    console.log(`ZATO_IDE_DEBUG: load_editor_session reuse_source_code:`, reuse_source_code);
 
     // Do we have a session for this file already?
     let existing_session = window.zato_editor_session_map[fs_location];
 
-    // If so, let's just switch to it without updating its content to preserve unsaved changes
-    if(existing_session) {
+    // If we have an existing session and should reuse it, switch to it
+    if(existing_session && reuse_source_code) {
         console.log(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, keeping existing content.`);
         window.zato_editor.setSession(existing_session);
     }
-    // .. otherwise, create a new one.
+    // If we should not reuse or don't have a session, create/replace with server content
     else {
-        console.log(`ZATO_IDE_DEBUG: Creating new session for ${fs_location}.`);
+        console.log(`ZATO_IDE_DEBUG: Creating new session for ${fs_location} with server source code.`);
         let new_session = ace.createEditSession(source_code);
         $.fn.zato.ide.set_up_editor_session(new_session);
         window.zato_editor.setSession(new_session);
@@ -1467,7 +1468,11 @@ $.fn.zato.ide.load_editor_session = function(fs_location, source_code, _ignored_
 
 $.fn.zato.ide.save_current_editor_session = function() {
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
-    window.zato_editor_session_map[current_fs_location] = window.zato_editor.getSession();
+    let session = window.zato_editor.getSession();
+    console.log(`ZATO_IDE_DEBUG: save_current_editor_session for ${current_fs_location}`);
+    console.log(`ZATO_IDE_DEBUG: session content length:`, session.getValue().length);
+    window.zato_editor_session_map[current_fs_location] = session;
+    console.log(`ZATO_IDE_DEBUG: session map keys:`, Object.keys(window.zato_editor_session_map));
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
