@@ -215,7 +215,20 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             if (entry.target.tagName === 'TEXTAREA') {
                 console.log("TEXTAREA RESIZED:", entry.target.id);
                 if (entry.target.id === 'data-request') {
-                    let height = entry.target.style.height;
+                    let dataRequestElem = entry.target;
+                    let currentHeight = dataRequestElem.offsetHeight;
+                    let actionAreaHeight = actionArea.offsetHeight;
+                    let maxAllowedHeight = actionAreaHeight - 200;
+                    
+                    console.log("data-request currentHeight:", currentHeight);
+                    console.log("data-request maxAllowedHeight:", maxAllowedHeight);
+                    
+                    if (currentHeight > maxAllowedHeight) {
+                        console.log("Limiting data-request height to:", maxAllowedHeight);
+                        dataRequestElem.style.height = maxAllowedHeight + 'px';
+                    }
+                    
+                    let height = dataRequestElem.style.height;
                     console.log("Saving data-request height:", height);
                     store.set('zato.data-request-height', height);
                     resizeDataResponse();
