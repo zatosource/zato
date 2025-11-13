@@ -104,7 +104,7 @@ body, html {
 
 .history-overlay-content {
     position: relative;
-    width: 840px;
+    width: 1063px;
     max-height: 80vh;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
     border-radius: 12px;
@@ -207,7 +207,8 @@ body, html {
 }
 
 .history-item-wrapper {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 60% auto 1fr auto;
     gap: 8px;
     margin: 4px 0;
     cursor: pointer;
@@ -243,6 +244,41 @@ body, html {
     cursor: pointer;
 }
 
+.history-item-timestamp {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-style: italic;
+}
+
+.history-item-show-response {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    cursor: pointer;
+    width: 130px;
+}
+
 .history-item-delete {
     padding: 14px 12px;
     background: #252525;
@@ -266,7 +302,9 @@ body, html {
 }
 
 .history-item-wrapper:hover .history-item-number,
-.history-item-wrapper:hover .history-item-text {
+.history-item-wrapper:hover .history-item-text,
+.history-item-wrapper:hover .history-item-timestamp,
+.history-item-wrapper:hover .history-item-show-response {
     background: #2d2d2d;
     border-color: rgba(74, 158, 255, 0.3);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
