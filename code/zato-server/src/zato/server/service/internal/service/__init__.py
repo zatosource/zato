@@ -764,12 +764,6 @@ class UploadPackage(AdminService):
                 file_name_full = file_name_full.replace('/opt/hot-deploy', projects_path, 1)
                 self.logger.info('DEBUG file_name_full after replace: %s', file_name_full)
 
-                dir_path = os.path.dirname(file_name_full)
-                self.logger.info('DEBUG dir_path after replace: %s', dir_path)
-
-            os.makedirs(dir_path, exist_ok=True)
-            self.logger.info('DEBUG makedirs called for: %s', dir_path)
-
         self.logger.info('DEBUG opening file: %s', file_name_full)
         with open(file_name_full, 'wb') as tf:
             _ = tf.write(input_payload)
