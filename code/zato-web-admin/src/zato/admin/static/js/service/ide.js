@@ -1670,6 +1670,24 @@ $.fn.zato.ide.set_deployment_status = function() {
     // .. and for all the select options that point to the current file ..
     $.fn.zato.ide.update_deployment_option_state(is_different);
 
+    // .. update the document title to add or remove the star ..
+    let title = document.title;
+    console.log("set_deployment_status: current title:", JSON.stringify(title));
+    console.log("set_deployment_status: title starts with '* ':", title.startsWith('* '));
+    if(is_different) {
+        if(!title.startsWith('* ')) {
+            document.title = '* ' + title;
+            console.log("set_deployment_status: added star to title");
+        }
+    } else {
+        if(title.startsWith('* ')) {
+            document.title = title.substring(2);
+            console.log("set_deployment_status: removed star from title");
+        } else {
+            console.log("set_deployment_status: title does not start with '* ', not removing");
+        }
+    }
+
     console.log("set_deployment_status: END");
 }
 
@@ -1728,6 +1746,7 @@ $.fn.zato.ide.set_deployment_button_status_not_different = function() {
 $.fn.zato.ide.on_post_success_func = function() {
     $.fn.zato.ide.set_deployment_button_status_not_different();
     $.fn.zato.ide.update_deployment_option_state(false);
+    $.fn.zato.ide.set_deployment_status();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1766,7 +1785,7 @@ $.fn.zato.invoker.run_sync_deployer = function(options) {
 
     // Save the current contents of the file for later use
     let key = $.fn.zato.ide.get_last_deployed_key();
-    store.set(key, editor_value);
+    localStorage.setItem(key, editor_value);
 
 }
 
