@@ -6,6 +6,9 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
     let is_modified = current_object_select.attr('data-is-modified') == '1';
     console.log("on_invoke_submitted: is_modified:", is_modified);
 
+    let request_text = $("#data-request").val();
+    $.fn.zato.ide.save_request_to_history(request_text);
+
     let invoke_func = function() {
         console.log("on_invoke_submitted: invoke_func called");
         const options = {
