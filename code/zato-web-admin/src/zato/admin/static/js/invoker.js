@@ -230,6 +230,12 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
         $("#data-response").text(JSON.stringify(formatted_response));
         console.log("on_form_ended_common_impl: DONE setting text as JSON.stringify");
     }
+
+    let request_text = $("#data-request").val();
+    let response_text = $("#data-response").val();
+    if ($.fn.zato.ide && $.fn.zato.ide.save_request_to_history) {
+        $.fn.zato.ide.save_request_to_history(request_text, response_text);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
