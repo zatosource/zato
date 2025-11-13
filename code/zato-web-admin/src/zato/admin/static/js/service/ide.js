@@ -2174,10 +2174,11 @@ $.fn.zato.ide.update_request_history_buttons = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.save_request_to_history = function(request_text) {
+$.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
     console.log("save_request_to_history: START");
     console.log("save_request_to_history: request_text:", JSON.stringify(request_text));
     console.log("save_request_to_history: request_text.length:", request_text ? request_text.length : 0);
+    console.log("save_request_to_history: response_text:", JSON.stringify(response_text));
 
     if (!request_text || request_text.trim() === "") {
         console.log("save_request_to_history: request_text is empty, returning");
@@ -2194,9 +2195,10 @@ $.fn.zato.ide.save_request_to_history = function(request_text) {
     if (history.length > 0) {
         let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
         if (first_text === request_text) {
-            console.log("save_request_to_history: request_text is same as history[0], updating timestamp");
+            console.log("save_request_to_history: request_text is same as history[0], updating timestamp and response");
             if (typeof history[0] === 'object') {
                 history[0].timestamp = Date.now();
+                history[0].response = response_text || '';
                 localStorage.setItem(key, JSON.stringify(history));
             }
             return;
@@ -2213,6 +2215,7 @@ $.fn.zato.ide.save_request_to_history = function(request_text) {
     console.log("save_request_to_history: adding request_text to history");
     let entry = {
         text: request_text,
+        response: response_text || '',
         timestamp: Date.now()
     };
     history.unshift(entry);
@@ -2504,6 +2507,12 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
 
         timestamp_box.on("click", function() {
             $.fn.zato.ide.on_history_item_selected($(this).parent().attr("data-index"));
+        });
+
+        show_response_box.on("click", function(e) {
+            e.stopPropagation();
+            let response = typeof item === 'string' ? '' : (item.response || '');
+            alert(response);
         });
 
         delete_box.on("click", function(e) {
