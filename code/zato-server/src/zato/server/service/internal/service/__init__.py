@@ -739,6 +739,11 @@ class UploadPackage(AdminService):
             file_name_full = get_tmp_path(prefix, suffix, body)
             needs_default_hot_deploy = True
 
+        if file_name_full.startswith('/opt/hot-deploy'):
+            if not os.path.exists(file_name_full):
+                projects_path = os.path.expanduser('~/projects')
+                file_name_full = file_name_full.replace('/opt/hot-deploy', projects_path, 1)
+
         with open(file_name_full, 'wb') as tf:
             _ = tf.write(input_payload)
             tf.flush()
