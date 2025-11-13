@@ -124,14 +124,16 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // This will try to load all the remember layout options from LocalStorage
     $.fn.zato.ide.restore_layout();
 
+    // Set the initial baseline for deployment status from the current editor content BEFORE loading from localStorage
+    let key = $.fn.zato.ide.get_last_deployed_key();
+    let editor_value = window.zato_editor.getValue();
+    console.log("init_editor: setting initial baseline with key:", JSON.stringify(key));
+    console.log("init_editor: editor_value length:", editor_value ? editor_value.length : null);
+    localStorage.setItem(key, editor_value);
+    console.log("init_editor: initial baseline set");
+
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
-
-    // Optionally, populate the initial deployment state
-    $.fn.zato.ide.maybe_populate_initial_last_deployed()
-
-    // Optionally, indicate that there are some unsaved changes that can be deployed
-    $.fn.zato.ide.maybe_set_deploy_needed();
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
@@ -1060,10 +1062,16 @@ $.fn.zato.ide.post_load_source_object = function(
     after_post_load_source_func,
     get_current_file_service_list_func,
 ) {
+    console.log("post_load_source_object: START");
+    console.log("post_load_source_object: fs_location:", JSON.stringify(fs_location));
+    console.log("post_load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
+
     // First, establish the new baseline for deployment status. The content we just received from the server
     // is now considered the "last deployed" version for the purpose of detecting unsaved changes.
     let key = $.fn.zato.ide.get_last_deployed_key();
-    store.set(key, current_file_source_code);
+    console.log("post_load_source_object: setting baseline with key:", JSON.stringify(key));
+    localStorage.setItem(key, current_file_source_code);
+    console.log("post_load_source_object: baseline set in localStorage");
 
     // Now, load the content into the editor. Any subsequent 'change' event will compare against the correct baseline.
     $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
@@ -1075,8 +1083,10 @@ $.fn.zato.ide.post_load_source_object = function(
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
 
     // Since we just set the baseline to the current editor content, the file is by definition not modified.
+    console.log("post_load_source_object: setting deployment status to NOT different");
     $.fn.zato.ide.set_deployment_button_status_not_different();
     $.fn.zato.ide.update_deployment_option_state(false);
+    console.log("post_load_source_object: END");
 
     $.fn.zato.ide.set_is_current_file(fs_location);
     if(after_post_load_source_func) {
@@ -1099,12 +1109,23 @@ $.fn.zato.ide.load_source_object = function(
     extra_qs,
 ) {
 
+    console.log("load_source_object: START");
+    console.log("load_source_object: object_type:", JSON.stringify(object_type));
+    console.log("load_source_object: object_name:", JSON.stringify(object_name));
+    console.log("load_source_object: fs_location:", JSON.stringify(fs_location));
+
     extra_qs = extra_qs || "";
 
     var callback = function(data, _unused_status) {
+        console.log("load_source_object: callback START");
         let msg = data.responseText;
+        console.log("load_source_object: msg length:", msg ? msg.length : null);
         let json = JSON.parse(msg)
+        console.log("load_source_object: json parsed");
         let current_file_source_code = json.current_file_source_code;
+        console.log("load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
+        console.log("load_source_object: current_file_source_code type:", typeof current_file_source_code);
+        console.log("load_source_object: current_file_source_code:", JSON.stringify(current_file_source_code));
         let current_file_service_list = json.current_file_service_list;
         $.fn.zato.ide.post_load_source_object(
             data,
@@ -1444,34 +1465,41 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_editor_changed = function() {
+    console.log("on_editor_changed: START");
     $.fn.zato.ide.set_deployment_status();
+    console.log("on_editor_changed: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.set_deployment_status = function() {
+    console.log("set_deployment_status: START");
 
     // Get the current value of the editor ..
     let editor_value = window.zato_editor.getValue()
+    console.log("set_deployment_status: editor_value length:", editor_value ? editor_value.length : null);
+    console.log("set_deployment_status: editor_value:", JSON.stringify(editor_value));
 
     // .. get the value of what was last deployed ..
     let key = $.fn.zato.ide.get_last_deployed_key();
+    console.log("set_deployment_status: key:", JSON.stringify(key));
+
     let last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
+    console.log("set_deployment_status: last_deployed length:", last_deployed ? last_deployed.length : null);
+    console.log("set_deployment_status: last_deployed:", JSON.stringify(last_deployed));
 
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
-
-    // console.log("Key: "+ key);
-    // console.log("Editor: ["+ editor_value + "]");
-    // console.log("Last deployed: ["+ last_deployed + "]");
-    // console.log("Is different: " + is_different);
+    console.log("set_deployment_status: is_different:", is_different);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
         var button_class_name = "different";
+        console.log("set_deployment_status: setting button_class_name to 'different'");
     }
     else {
         var button_class_name = "not-different";
+        console.log("set_deployment_status: setting button_class_name to 'not-different'");
     }
 
     // .. set it for the button accordingly ..
@@ -1479,6 +1507,8 @@ $.fn.zato.ide.set_deployment_status = function() {
 
     // .. and for all the select options that point to the current file ..
     $.fn.zato.ide.update_deployment_option_state(is_different);
+
+    console.log("set_deployment_status: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
