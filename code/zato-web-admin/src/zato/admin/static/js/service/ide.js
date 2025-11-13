@@ -16,7 +16,11 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // All the keys that we use with LocalStorage
     window.zato_local_storage_key = {
         "zato_action_area_size": "zato.action-area-size",
+        "zato_request_history": "zato.request-history",
     }
+
+    // Request history tracking
+    window.zato_request_history_index = -1;
 
     // Our initial file that we process
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
@@ -87,6 +91,17 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         }
       });
 
+    // Ctrl-Up/Down to navigate request history in the textarea
+    $("#data-request").on("keydown", function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "ArrowUp") {
+            e.preventDefault();
+            $.fn.zato.ide.on_request_history_up();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === "ArrowDown") {
+            e.preventDefault();
+            $.fn.zato.ide.on_request_history_down();
+        }
+    });
+
     // Make sure the menu can be visible
     $(".pure-css-nav").hover(function() {
         $(".pure-css-nav").addClass("position-relative");
@@ -109,6 +124,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+
+    $.fn.zato.ide.update_request_history_buttons();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1846,6 +1863,55 @@ $.fn.zato.ide.on_toggle_object_select = function() {
     // .. or from files to services.
     else {
         $.fn.zato.ide.populate_current_file_service_list_impl()
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.get_request_history_key = function() {
+    let cluster_name = $.fn.zato.ide.get_cluster_name();
+    let key = window.zato_local_storage_key.zato_request_history + "." + cluster_name;
+    return key;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.get_request_history = function() {
+    let key = $.fn.zato.ide.get_request_history_key();
+    let history_json = localStorage.getItem(key);
+    if (history_json) {
+        return JSON.parse(history_json);
+    }
+    return [];
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.update_request_history_buttons = function() {
+    let history = $.fn.zato.ide.get_request_history();
+    let history_length = history.length;
+    let current_index = window.zato_request_history_index;
+
+    let up_button = $("#request-history-up");
+    let down_button = $("#request-history-down");
+
+    if (history_length === 0) {
+        $.fn.zato.ide.disable_button("#request-history-up");
+        $.fn.zato.ide.disable_button("#request-history-down");
+    } else {
+        if (current_index < history_length - 1) {
+            $.fn.zato.ide.enable_button("#request-history-up");
+        } else {
+            $.fn.zato.ide.disable_button("#request-history-up");
+        }
+
+        if (current_index > 0) {
+            $.fn.zato.ide.enable_button("#request-history-down");
+        } else if (current_index === 0) {
+            $.fn.zato.ide.enable_button("#request-history-down");
+        } else {
+            $.fn.zato.ide.disable_button("#request-history-down");
+        }
     }
 }
 

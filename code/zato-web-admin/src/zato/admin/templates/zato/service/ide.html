@@ -116,13 +116,18 @@
                             <form id="invoke-service-request-form"><textarea id="data-request" name="data-request"
                                 placeholder="Enter parameters as key=value pairs, e.g.:
 key1=value1
-key2=value2"></textarea></form>
+key2=value2
+
+Ctrl+↑/↓ to browse history"></textarea></form>
                         </td>
                     </tr>
 
                     <tr colspan="2" class="invoker-tr">
                         <td class="align-right">
                             <div>
+                                <input type="button" id="request-history-up" value="Request ▲" title="Previous request (Ctrl+↑)" onclick="$.fn.zato.ide.on_request_history_up();"/>
+                                <input type="button" id="request-history-down" value="Request ▼" title="Next request (Ctrl+↓)" onclick="$.fn.zato.ide.on_request_history_down();"/>
+                                <span> | </span>
                                 <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
 
                                 <input
