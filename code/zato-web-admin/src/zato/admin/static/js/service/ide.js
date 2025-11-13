@@ -1888,107 +1888,185 @@ $.fn.zato.ide.get_request_history = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.update_request_history_buttons = function() {
+    console.log("update_request_history_buttons: START");
+
     let history = $.fn.zato.ide.get_request_history();
     let history_length = history.length;
     let current_index = window.zato_request_history_index;
+
+    console.log("update_request_history_buttons: history_length:", history_length);
+    console.log("update_request_history_buttons: current_index:", current_index);
 
     let up_button = $("#request-history-up");
     let down_button = $("#request-history-down");
 
     if (history_length === 0) {
+        console.log("update_request_history_buttons: history is empty, disabling both buttons");
         $.fn.zato.ide.disable_button("#request-history-up");
         $.fn.zato.ide.disable_button("#request-history-down");
     } else {
         if (current_index < history_length - 1) {
+            console.log("update_request_history_buttons: enabling up button");
             $.fn.zato.ide.enable_button("#request-history-up");
         } else {
+            console.log("update_request_history_buttons: disabling up button");
             $.fn.zato.ide.disable_button("#request-history-up");
         }
 
         if (current_index > 0) {
+            console.log("update_request_history_buttons: enabling down button (current_index > 0)");
             $.fn.zato.ide.enable_button("#request-history-down");
         } else if (current_index === 0) {
+            console.log("update_request_history_buttons: enabling down button (current_index === 0)");
             $.fn.zato.ide.enable_button("#request-history-down");
         } else {
+            console.log("update_request_history_buttons: disabling down button");
             $.fn.zato.ide.disable_button("#request-history-down");
         }
     }
+
+    console.log("update_request_history_buttons: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.save_request_to_history = function(request_text) {
+    console.log("save_request_to_history: START");
+    console.log("save_request_to_history: request_text:", JSON.stringify(request_text));
+    console.log("save_request_to_history: request_text.length:", request_text ? request_text.length : 0);
+
     if (!request_text || request_text.trim() === "") {
+        console.log("save_request_to_history: request_text is empty, returning");
         return;
     }
 
     let key = $.fn.zato.ide.get_request_history_key();
+    console.log("save_request_to_history: key:", JSON.stringify(key));
+
     let history = $.fn.zato.ide.get_request_history();
+    console.log("save_request_to_history: history before save:", JSON.stringify(history));
+    console.log("save_request_to_history: history.length before save:", history.length);
 
     if (history.length > 0 && history[0] === request_text) {
+        console.log("save_request_to_history: request_text is same as history[0], returning");
+        console.log("save_request_to_history: history[0]:", JSON.stringify(history[0]));
         return;
     }
 
+    console.log("save_request_to_history: adding request_text to history");
     history.unshift(request_text);
+    console.log("save_request_to_history: history after unshift:", JSON.stringify(history));
+    console.log("save_request_to_history: history.length after unshift:", history.length);
 
     const max_history_size = 100;
     if (history.length > max_history_size) {
+        console.log("save_request_to_history: trimming history to max_history_size:", max_history_size);
         history = history.slice(0, max_history_size);
     }
 
+    console.log("save_request_to_history: saving to localStorage");
     localStorage.setItem(key, JSON.stringify(history));
 
+    console.log("save_request_to_history: resetting index to -1");
     window.zato_request_history_index = -1;
+    console.log("save_request_to_history: window.zato_request_history_index:", window.zato_request_history_index);
+
     $.fn.zato.ide.update_request_history_buttons();
+    console.log("save_request_to_history: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_up = function() {
+    console.log("on_request_history_up: START");
+    
+    let current_textarea_value = $("#data-request").val();
+    console.log("on_request_history_up: current textarea value:", JSON.stringify(current_textarea_value));
+
     let history = $.fn.zato.ide.get_request_history();
+    console.log("on_request_history_up: history:", JSON.stringify(history));
+    console.log("on_request_history_up: history.length:", history.length);
+
     if (history.length === 0) {
+        console.log("on_request_history_up: history is empty, returning");
         return;
     }
 
     let current_index = window.zato_request_history_index;
+    console.log("on_request_history_up: current_index:", current_index);
+
     let new_index = current_index + 1;
+    console.log("on_request_history_up: new_index (before adjustment):", new_index);
+
+    if (current_index === -1 && history.length > 0 && current_textarea_value === history[0]) {
+        console.log("on_request_history_up: at index -1 and textarea matches history[0], skipping to index 1");
+        new_index = 1;
+    }
+
+    console.log("on_request_history_up: new_index (after adjustment):", new_index);
 
     if (new_index >= history.length) {
+        console.log("on_request_history_up: new_index >= history.length, returning");
         return;
     }
 
+    console.log("on_request_history_up: setting window.zato_request_history_index to:", new_index);
     window.zato_request_history_index = new_index;
+
     let request_text = history[new_index];
+    console.log("on_request_history_up: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
+
+    console.log("on_request_history_up: setting textarea value");
     $("#data-request").val(request_text);
+    console.log("on_request_history_up: textarea value after set:", JSON.stringify($("#data-request").val()));
 
     $.fn.zato.ide.update_request_history_buttons();
+    console.log("on_request_history_up: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_down = function() {
+    console.log("on_request_history_down: START");
+    console.log("on_request_history_down: current textarea value:", JSON.stringify($("#data-request").val()));
+
     let history = $.fn.zato.ide.get_request_history();
+    console.log("on_request_history_down: history:", JSON.stringify(history));
+    console.log("on_request_history_down: history.length:", history.length);
+
     if (history.length === 0) {
+        console.log("on_request_history_down: history is empty, returning");
         return;
     }
 
     let current_index = window.zato_request_history_index;
+    console.log("on_request_history_down: current_index:", current_index);
+
     let new_index = current_index - 1;
+    console.log("on_request_history_down: new_index:", new_index);
 
     if (new_index < -1) {
+        console.log("on_request_history_down: new_index < -1, returning");
         return;
     }
 
+    console.log("on_request_history_down: setting window.zato_request_history_index to:", new_index);
     window.zato_request_history_index = new_index;
 
     if (new_index === -1) {
+        console.log("on_request_history_down: new_index is -1, clearing textarea");
         $("#data-request").val("");
     } else {
         let request_text = history[new_index];
+        console.log("on_request_history_down: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
+        console.log("on_request_history_down: setting textarea value");
         $("#data-request").val(request_text);
     }
 
+    console.log("on_request_history_down: textarea value after set:", JSON.stringify($("#data-request").val()));
+
     $.fn.zato.ide.update_request_history_buttons();
+    console.log("on_request_history_down: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
