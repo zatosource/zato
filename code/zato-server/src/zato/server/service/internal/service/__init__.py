@@ -764,6 +764,12 @@ class UploadPackage(AdminService):
                 file_name_full = file_name_full.replace('/opt/hot-deploy', projects_path, 1)
                 self.logger.info('DEBUG file_name_full after replace: %s', file_name_full)
 
+        try:
+            os.chmod(file_name_full, 0o644)
+            self.logger.info('DEBUG chmod 644 successful for: %s', file_name_full)
+        except Exception as e:
+            self.logger.info('DEBUG chmod 644 failed for: %s, error: %s', file_name_full, e)
+
         self.logger.info('DEBUG opening file: %s', file_name_full)
         with open(file_name_full, 'wb') as tf:
             _ = tf.write(input_payload)
