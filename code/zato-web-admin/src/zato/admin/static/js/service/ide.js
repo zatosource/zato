@@ -2336,7 +2336,60 @@ $.fn.zato.ide.open_history_overlay = function() {
     $("#history-search-input").val("");
     $("#history-search-input").focus();
 
+    $.fn.zato.ide.init_history_overlay_drag();
+
     console.log("open_history_overlay: END");
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.init_history_overlay_drag = function() {
+    let content = document.querySelector(".history-overlay-content");
+    let header = document.querySelector(".history-overlay-header");
+
+    if (!content || !header || header.dataset.dragInitialized) {
+        return;
+    }
+
+    header.dataset.dragInitialized = "true";
+    header.style.cursor = "move";
+
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+
+    header.addEventListener("mousedown", function(e) {
+        if (e.target.closest(".history-close-btn")) {
+            return;
+        }
+
+        isDragging = true;
+
+        let rect = content.getBoundingClientRect();
+        initialX = e.clientX - rect.left;
+        initialY = e.clientY - rect.top;
+
+        content.style.position = "fixed";
+        content.style.margin = "0";
+    });
+
+    document.addEventListener("mousemove", function(e) {
+        if (!isDragging) return;
+
+        e.preventDefault();
+
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+
+        content.style.left = currentX + "px";
+        content.style.top = currentY + "px";
+    });
+
+    document.addEventListener("mouseup", function() {
+        isDragging = false;
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
