@@ -140,8 +140,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     let is_mac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     let modifier_key = is_mac ? '⌘' : 'Ctrl';
-    let placeholder_text = "Enter parameters as key=value pairs, e.g.:\nkey1=value1\nkey2=value2\n\n" + 
-                          modifier_key + "+↑/↓ to browse history\n" + 
+    let placeholder_text = "Enter parameters as key=value pairs, e.g.:\nkey1=value1\nkey2=value2\n\n" +
+                          modifier_key + "+↑/↓ to browse history\n" +
                           modifier_key + "+K for full history";
     $("#data-request").attr("placeholder", placeholder_text);
 
@@ -1986,6 +1986,12 @@ $.fn.zato.ide.save_request_to_history = function(request_text) {
         return;
     }
 
+    console.log("save_request_to_history: removing duplicates of request_text from history");
+    history = history.filter(function(item) {
+        return item !== request_text;
+    });
+    console.log("save_request_to_history: history after removing duplicates:", JSON.stringify(history));
+
     console.log("save_request_to_history: adding request_text to history");
     history.unshift(request_text);
     console.log("save_request_to_history: history after unshift:", JSON.stringify(history));
@@ -2139,19 +2145,34 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
     list_container.empty();
 
     if (history.length === 0) {
-        list_container.append('<div class="history-empty">No request history yet</div>');
+        list_container.append('<div class="history-empty">Search history empty</div>');
         return;
     }
 
     for (let i = 0; i < history.length; i++) {
         let request_text = history[i];
-        let item = $('<div class="history-item"></div>');
-        item.text(request_text);
-        item.attr("data-index", i);
-        item.on("click", function() {
-            $.fn.zato.ide.on_history_item_selected($(this).attr("data-index"));
+        let wrapper = $('<div class="history-item-wrapper"></div>');
+        let number_box = $('<div class="history-item-number"></div>');
+        number_box.text((i + 1));
+        let text_box = $('<div class="history-item-text"></div>');
+        text_box.text(request_text);
+        let delete_box = $('<div class="history-item-delete"></div>');
+        delete_box.text("✕");
+
+        text_box.on("click", function() {
+            $.fn.zato.ide.on_history_item_selected($(this).parent().attr("data-index"));
         });
-        list_container.append(item);
+
+        delete_box.on("click", function(e) {
+            e.stopPropagation();
+            $.fn.zato.ide.on_history_item_delete($(this).parent().attr("data-index"));
+        });
+
+        wrapper.append(number_box);
+        wrapper.append(text_box);
+        wrapper.append(delete_box);
+        wrapper.attr("data-index", i);
+        list_container.append(wrapper);
     }
 
     console.log("populate_history_overlay: END");
@@ -2197,6 +2218,50 @@ $.fn.zato.ide.filter_history_overlay = function(search_text) {
 
     console.log("filter_history_overlay: filtered.length:", filtered.length);
     $.fn.zato.ide.populate_history_overlay(filtered);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_history_item_delete = function(index) {
+    console.log("on_history_item_delete: index:", index);
+
+    let history = $.fn.zato.ide.get_request_history();
+    let deleted_text = history[index];
+    console.log("on_history_item_delete: deleted_text:", JSON.stringify(deleted_text));
+
+    let current_textarea_value = $("#data-request").val();
+    console.log("on_history_item_delete: current_textarea_value:", JSON.stringify(current_textarea_value));
+
+    history.splice(index, 1);
+    console.log("on_history_item_delete: history after delete:", JSON.stringify(history));
+
+    let key = $.fn.zato.ide.get_request_history_key();
+    localStorage.setItem(key, JSON.stringify(history));
+
+    let wrapper = $('[data-index="' + index + '"]');
+    wrapper.css({
+        opacity: 0,
+        transform: 'translateX(-10px)'
+    });
+
+    setTimeout(function() {
+        $.fn.zato.ide.populate_history_overlay(history);
+
+        if (current_textarea_value === deleted_text) {
+            console.log("on_history_item_delete: deleted item was in textarea, clearing it");
+            $("#data-request").val("");
+            window.zato_request_history_index = -1;
+        } else if (window.zato_request_history_index >= 0) {
+            if (window.zato_request_history_index >= index) {
+                window.zato_request_history_index = Math.max(-1, window.zato_request_history_index - 1);
+                console.log("on_history_item_delete: adjusted index to:", window.zato_request_history_index);
+            }
+        }
+
+        $.fn.zato.ide.update_request_history_buttons();
+    }, 140);
+
+    console.log("on_history_item_delete: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

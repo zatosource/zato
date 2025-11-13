@@ -75,7 +75,7 @@ img.button {
 
 .history-overlay-content {
     position: relative;
-    width: 700px;
+    width: 840px;
     max-height: 80vh;
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
     border-radius: 12px;
@@ -177,33 +177,82 @@ img.button {
     background: #555;
 }
 
-.history-item {
-    padding: 14px 16px;
+.history-item-wrapper {
+    display: flex;
+    gap: 8px;
     margin: 4px 0;
+    cursor: pointer;
+}
+
+.history-item-number {
+    padding: 14px 12px;
     background: #252525;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.history-item-text {
+    padding: 14px 16px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
     transition: all 0.15s ease;
     font-family: 'Zato_IDE_Font', monospace;
     font-size: 13px;
     color: #e0e0e0;
     white-space: pre-wrap;
     word-break: break-all;
+    flex: 1;
+    cursor: pointer;
 }
 
-.history-item:hover {
+.history-item-delete {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #999;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.history-item-delete:hover {
+    background: #3a1a1a;
+    border-color: rgba(255, 100, 100, 0.3);
+    color: #ff6666;
+}
+
+.history-item-wrapper:hover .history-item-number,
+.history-item-wrapper:hover .history-item-text {
     background: #2d2d2d;
     border-color: rgba(74, 158, 255, 0.3);
-    transform: translateX(2px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.history-item:active {
+.history-item-wrapper:hover {
+    transform: translateX(2px);
+}
+
+.history-item-wrapper:active {
     transform: translateX(1px);
 }
 
-.history-overlay-list .history-item:first-child {
+.history-overlay-list .history-item-wrapper:first-child .history-item-number,
+.history-overlay-list .history-item-wrapper:first-child .history-item-text {
     border-color: rgba(74, 158, 255, 0.2);
     background: linear-gradient(135deg, #252525 0%, #2a2a35 100%);
 }
