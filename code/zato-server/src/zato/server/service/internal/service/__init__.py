@@ -718,6 +718,8 @@ class UploadPackage(AdminService):
         # Local variables
         payload = self.request.input.payload
         payload_name = self.request.input.payload_name
+        self.logger.info('DEBUG payload_name: %s', payload_name)
+
         input_payload = b64decode(payload)
 
         prefix = 'zato-hd-'
@@ -725,25 +727,50 @@ class UploadPackage(AdminService):
         body = uuid4().hex
 
         service_deploy_location = os.environ.get('Zato_Service_Deploy_Location')
+        self.logger.info('DEBUG service_deploy_location: %s', service_deploy_location)
+
         has_abs_path = os.path.isabs(payload_name)
+        self.logger.info('DEBUG has_abs_path: %s', has_abs_path)
 
         if service_deploy_location:
             file_name_full = os.path.join(service_deploy_location, suffix)
             needs_default_hot_deploy = False
+            self.logger.info('DEBUG branch: service_deploy_location, file_name_full: %s', file_name_full)
         elif has_abs_path:
             file_name_full = payload_name
             needs_default_hot_deploy = False
+            self.logger.info('DEBUG branch: has_abs_path, file_name_full: %s', file_name_full)
         else:
             prefix = 'zato-hd-'
             body = uuid4().hex
             file_name_full = get_tmp_path(prefix, suffix, body)
             needs_default_hot_deploy = True
+            self.logger.info('DEBUG branch: tmp_path, file_name_full: %s', file_name_full)
 
-        if file_name_full.startswith('/opt/hot-deploy'):
-            if not os.path.exists(file_name_full):
+        starts_with_opt_hot_deploy = file_name_full.startswith('/opt/hot-deploy')
+        self.logger.info('DEBUG starts_with_opt_hot_deploy: %s', starts_with_opt_hot_deploy)
+
+        if starts_with_opt_hot_deploy:
+            dir_path = os.path.dirname(file_name_full)
+            self.logger.info('DEBUG dir_path: %s', dir_path)
+
+            dir_exists = os.path.exists(dir_path)
+            self.logger.info('DEBUG dir_exists: %s', dir_exists)
+
+            if not dir_exists:
                 projects_path = os.path.expanduser('~/projects')
-                file_name_full = file_name_full.replace('/opt/hot-deploy', projects_path, 1)
+                self.logger.info('DEBUG projects_path: %s', projects_path)
 
+                file_name_full = file_name_full.replace('/opt/hot-deploy', projects_path, 1)
+                self.logger.info('DEBUG file_name_full after replace: %s', file_name_full)
+
+                dir_path = os.path.dirname(file_name_full)
+                self.logger.info('DEBUG dir_path after replace: %s', dir_path)
+
+            os.makedirs(dir_path, exist_ok=True)
+            self.logger.info('DEBUG makedirs called for: %s', dir_path)
+
+        self.logger.info('DEBUG opening file: %s', file_name_full)
         with open(file_name_full, 'wb') as tf:
             _ = tf.write(input_payload)
             tf.flush()
