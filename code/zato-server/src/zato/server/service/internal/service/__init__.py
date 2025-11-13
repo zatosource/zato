@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import subprocess
 from base64 import b64decode, b64encode
 from contextlib import closing
 from operator import attrgetter
@@ -765,10 +766,10 @@ class UploadPackage(AdminService):
                 self.logger.info('DEBUG file_name_full after replace: %s', file_name_full)
 
         try:
-            os.chmod(file_name_full, 0o664)
-            self.logger.info('DEBUG chmod 664 successful for: %s', file_name_full)
+            _ = subprocess.run(['sudo', 'chmod', '664', file_name_full], check=False, capture_output=True)
+            self.logger.info('DEBUG sudo chmod 664 successful for: %s', file_name_full)
         except Exception as e:
-            self.logger.info('DEBUG chmod 664 failed for: %s, error: %s', file_name_full, e)
+            self.logger.info('DEBUG sudo chmod 664 failed for: %s, error: %s', file_name_full, e)
 
         self.logger.info('DEBUG opening file: %s', file_name_full)
         with open(file_name_full, 'wb') as tf:
