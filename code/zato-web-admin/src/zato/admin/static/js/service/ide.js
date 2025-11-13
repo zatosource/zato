@@ -1916,3 +1916,79 @@ $.fn.zato.ide.update_request_history_buttons = function() {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.save_request_to_history = function(request_text) {
+    if (!request_text || request_text.trim() === "") {
+        return;
+    }
+
+    let key = $.fn.zato.ide.get_request_history_key();
+    let history = $.fn.zato.ide.get_request_history();
+
+    if (history.length > 0 && history[0] === request_text) {
+        return;
+    }
+
+    history.unshift(request_text);
+
+    const max_history_size = 100;
+    if (history.length > max_history_size) {
+        history = history.slice(0, max_history_size);
+    }
+
+    localStorage.setItem(key, JSON.stringify(history));
+
+    window.zato_request_history_index = -1;
+    $.fn.zato.ide.update_request_history_buttons();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_request_history_up = function() {
+    let history = $.fn.zato.ide.get_request_history();
+    if (history.length === 0) {
+        return;
+    }
+
+    let current_index = window.zato_request_history_index;
+    let new_index = current_index + 1;
+
+    if (new_index >= history.length) {
+        return;
+    }
+
+    window.zato_request_history_index = new_index;
+    let request_text = history[new_index];
+    $("#data-request").val(request_text);
+
+    $.fn.zato.ide.update_request_history_buttons();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.on_request_history_down = function() {
+    let history = $.fn.zato.ide.get_request_history();
+    if (history.length === 0) {
+        return;
+    }
+
+    let current_index = window.zato_request_history_index;
+    let new_index = current_index - 1;
+
+    if (new_index < -1) {
+        return;
+    }
+
+    window.zato_request_history_index = new_index;
+
+    if (new_index === -1) {
+        $("#data-request").val("");
+    } else {
+        let request_text = history[new_index];
+        $("#data-request").val(request_text);
+    }
+
+    $.fn.zato.ide.update_request_history_buttons();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
