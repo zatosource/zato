@@ -2474,7 +2474,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
     list_container.empty();
 
     if (history.length === 0) {
-        let message = is_search_result ? 'No results' : 'Search history empty';
+        let message = is_search_result ? 'No results' : 'Nothing in history';
         list_container.append('<div class="history-empty">' + message + '</div>');
         return;
     }
@@ -2546,7 +2546,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                         });
 
                         let copy_btn_elem = $("#" + copy_btn_id);
-                        
+
                         let error_tooltip = tippy("#" + copy_btn_id, {
                             content: '<span style="color: #ff6666;">Nothing to copy</span>',
                             allowHTML: true,
@@ -2558,7 +2558,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                             inertia: true,
                             role: "tooltip",
                         });
-                        
+
                         if (error_tooltip) {
                             error_tooltip[0].show();
                         }
@@ -2699,6 +2699,11 @@ $.fn.zato.ide.filter_history_overlay = function(search_text) {
     let history = $.fn.zato.ide.get_request_history();
     let filtered = history;
     let is_search_result = false;
+
+    if (history.length === 0) {
+        $.fn.zato.ide.populate_history_overlay(filtered, false);
+        return;
+    }
 
     if (search_text && search_text.trim() !== "") {
         filtered = history.filter(function(item) {
