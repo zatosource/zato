@@ -2511,8 +2511,83 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
 
         show_response_box.on("click", function(e) {
             e.stopPropagation();
-            let response = typeof item === 'string' ? '' : (item.response || '');
-            alert(response);
+            let wrapper = $(this).parent();
+            let detail_id = "history-response-detail-" + i;
+            let existing_detail = $("#" + detail_id);
+
+            if (existing_detail.length > 0) {
+                existing_detail.toggleClass("visible");
+            } else {
+                let response = typeof item === 'string' ? '' : (item.response || '');
+                let detail = $('<div class="history-response-detail visible" id="' + detail_id + '"></div>');
+
+                let header = $('<div class="history-response-detail-header"></div>');
+                let title = $('<div class="history-response-detail-title">Response</div>');
+                let copy_btn = $('<button class="history-response-detail-copy">Copy</button>');
+
+                copy_btn.on("click", function(e) {
+                    console.log("copy_btn clicked: START");
+                    e.stopPropagation();
+                    console.log("copy_btn: event.stopPropagation called");
+                    console.log("copy_btn: response length:", response.length);
+                    console.log("copy_btn: about to call navigator.clipboard.writeText");
+
+                    navigator.clipboard.writeText(response).then(function() {
+                        console.log("copy_btn: clipboard.writeText SUCCESS");
+                        console.log("copy_btn: about to call $.fn.zato.show_bottom_tooltip");
+                        console.log("copy_btn: selector:", ".history-response-detail-copy");
+                        console.log("copy_btn: message:", "Response copied to clipboard");
+
+                        let tooltip_elem = $(".history-response-detail-copy");
+                        console.log("copy_btn: tooltip_elem found:", tooltip_elem.length);
+                        console.log("copy_btn: tooltip_elem offset:", tooltip_elem.offset());
+                        console.log("copy_btn: tooltip_elem css position:", tooltip_elem.css("position"));
+                        console.log("copy_btn: tooltip_elem css z-index:", tooltip_elem.css("z-index"));
+
+                        let tippy_root_before = $("[data-tippy-root]");
+                        console.log("copy_btn: BEFORE show_bottom_tooltip - tippy_root elements found:", tippy_root_before.length);
+                        tippy_root_before.each(function(idx, elem) {
+                            let $elem = $(elem);
+                            console.log("copy_btn: BEFORE - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
+                            $elem.css("z-index", "10001");
+                            console.log("copy_btn: BEFORE - tippy_root[" + idx + "] z-index set to 10001");
+                        });
+
+                        $.fn.zato.show_bottom_tooltip(".history-response-detail-copy", "Response copied to clipboard");
+                        console.log("copy_btn: $.fn.zato.show_bottom_tooltip CALLED");
+
+                        setTimeout(function() {
+                            let tippy_root = $("[data-tippy-root]");
+                            console.log("copy_btn: AFTER timeout - tippy_root elements found:", tippy_root.length);
+                            tippy_root.each(function(idx, elem) {
+                                let $elem = $(elem);
+                                console.log("copy_btn: AFTER - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
+                                $elem.css("z-index", "10001");
+                                console.log("copy_btn: AFTER - tippy_root[" + idx + "] z-index set to 10001");
+                            });
+
+                            let overlay = $(".history-overlay");
+                            console.log("copy_btn: overlay z-index:", overlay.css("z-index"));
+                            console.log("copy_btn: overlay display:", overlay.css("display"));
+                        }, 10);
+
+                        console.log("copy_btn: END");
+                    }).catch(function(err) {
+                        console.log("copy_btn: clipboard.writeText FAILED:", err);
+                    });
+                });
+
+                header.append(title);
+                header.append(copy_btn);
+
+                let content = $('<div class="history-response-detail-content"></div>');
+                content.text(response);
+
+                detail.append(header);
+                detail.append(content);
+
+                wrapper.after(detail);
+            }
         });
 
         delete_box.on("click", function(e) {

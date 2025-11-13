@@ -318,6 +318,81 @@ body, html {
     transform: translateX(1px);
 }
 
+.history-response-detail {
+    display: none;
+    background: linear-gradient(135deg, #3a3a2a 0%, #2d2d22 100%);
+    border: 1px solid rgba(255, 255, 150, 0.2);
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-response-detail.visible {
+    display: block;
+}
+
+.history-response-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.history-response-detail-title {
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 14px;
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.history-response-detail-copy {
+    padding: 8px 16px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.history-response-detail-copy:hover {
+    background: #333;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.history-response-detail-content {
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #1a1a1a;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-response-detail::-webkit-scrollbar {
+    width: 8px;
+}
+
+.history-response-detail::-webkit-scrollbar-track {
+    background: #2d2d22;
+}
+
+.history-response-detail::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.history-response-detail::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
 .history-overlay-list .history-item-wrapper:first-child .history-item-number,
 .history-overlay-list .history-item-wrapper:first-child .history-item-text {
     border-color: rgba(74, 158, 255, 0.2);
