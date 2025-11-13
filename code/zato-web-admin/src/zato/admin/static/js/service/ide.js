@@ -1,6 +1,10 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+let Copy_Tooltip_Timeout = 1000;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $(document).ready(function() {
     $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
     $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
@@ -2461,15 +2465,17 @@ $.fn.zato.ide.format_timestamp = function(timestamp) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.ide.populate_history_overlay = function(history) {
+$.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
     console.log("populate_history_overlay: START");
     console.log("populate_history_overlay: history.length:", history.length);
+    console.log("populate_history_overlay: is_search_result:", is_search_result);
 
     let list_container = $("#history-overlay-list");
     list_container.empty();
 
     if (history.length === 0) {
-        list_container.append('<div class="history-empty">Search history empty</div>');
+        let message = is_search_result ? 'No results' : 'Search history empty';
+        list_container.append('<div class="history-empty">' + message + '</div>');
         return;
     }
 
@@ -2523,22 +2529,64 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
 
                 let header = $('<div class="history-response-detail-header"></div>');
                 let title = $('<div class="history-response-detail-title">Response</div>');
-                let copy_btn = $('<button class="history-response-detail-copy">Copy</button>');
+                let copy_btn_id = "history-response-copy-" + i;
+                let copy_btn = $('<button class="history-response-detail-copy" id="' + copy_btn_id + '">Copy</button>');
 
                 copy_btn.on("click", function(e) {
-                    console.log("copy_btn clicked: START");
+                    console.log("copy_btn clicked: START, id:", copy_btn_id);
                     e.stopPropagation();
                     console.log("copy_btn: event.stopPropagation called");
                     console.log("copy_btn: response length:", response.length);
+
+                    if (!response || response.trim() === '') {
+                        console.log("copy_btn: response is empty, showing nothing to copy message");
+                        let tippy_root_before = $("[data-tippy-root]");
+                        tippy_root_before.each(function(idx, elem) {
+                            $(elem).css("z-index", "10001");
+                        });
+
+                        let copy_btn_elem = $("#" + copy_btn_id);
+                        
+                        let error_tooltip = tippy("#" + copy_btn_id, {
+                            content: '<span style="color: #ff6666;">Nothing to copy</span>',
+                            allowHTML: true,
+                            theme: "dark",
+                            trigger: "manual",
+                            placement: "bottom",
+                            arrow: true,
+                            interactive: false,
+                            inertia: true,
+                            role: "tooltip",
+                        });
+                        
+                        if (error_tooltip) {
+                            error_tooltip[0].show();
+                        }
+
+                        setTimeout(function() {
+                            let tippy_root = $("[data-tippy-root]");
+                            tippy_root.each(function(idx, elem) {
+                                $(elem).css("z-index", "10001");
+                            });
+                        }, 10);
+
+                        setTimeout(function() {
+                            if (error_tooltip) {
+                                error_tooltip[0].hide();
+                            }
+                        }, Copy_Tooltip_Timeout);
+                        return;
+                    }
+
                     console.log("copy_btn: about to call navigator.clipboard.writeText");
 
                     navigator.clipboard.writeText(response).then(function() {
                         console.log("copy_btn: clipboard.writeText SUCCESS");
                         console.log("copy_btn: about to call $.fn.zato.show_bottom_tooltip");
-                        console.log("copy_btn: selector:", ".history-response-detail-copy");
+                        console.log("copy_btn: selector:", "#" + copy_btn_id);
                         console.log("copy_btn: message:", "Response copied to clipboard");
 
-                        let tooltip_elem = $(".history-response-detail-copy");
+                        let tooltip_elem = $("#" + copy_btn_id);
                         console.log("copy_btn: tooltip_elem found:", tooltip_elem.length);
                         console.log("copy_btn: tooltip_elem offset:", tooltip_elem.offset());
                         console.log("copy_btn: tooltip_elem css position:", tooltip_elem.css("position"));
@@ -2553,7 +2601,7 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
                             console.log("copy_btn: BEFORE - tippy_root[" + idx + "] z-index set to 10001");
                         });
 
-                        $.fn.zato.show_bottom_tooltip(".history-response-detail-copy", "Response copied to clipboard");
+                        $.fn.zato.show_bottom_tooltip("#" + copy_btn_id, "Response copied to clipboard");
                         console.log("copy_btn: $.fn.zato.show_bottom_tooltip CALLED");
 
                         setTimeout(function() {
@@ -2571,6 +2619,14 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
                             console.log("copy_btn: overlay display:", overlay.css("display"));
                         }, 10);
 
+                        setTimeout(function() {
+                            let copy_btn_elem = $("#" + copy_btn_id);
+                            let tooltip_instance = copy_btn_elem[0]._tippy;
+                            if (tooltip_instance) {
+                                tooltip_instance.hide();
+                            }
+                        }, Copy_Tooltip_Timeout);
+
                         console.log("copy_btn: END");
                     }).catch(function(err) {
                         console.log("copy_btn: clipboard.writeText FAILED:", err);
@@ -2581,7 +2637,11 @@ $.fn.zato.ide.populate_history_overlay = function(history) {
                 header.append(copy_btn);
 
                 let content = $('<div class="history-response-detail-content"></div>');
-                content.text(response);
+                if (!response || response.trim() === '') {
+                    content.text('(No response)');
+                } else {
+                    content.text(response);
+                }
 
                 detail.append(header);
                 detail.append(content);
@@ -2638,15 +2698,17 @@ $.fn.zato.ide.filter_history_overlay = function(search_text) {
 
     let history = $.fn.zato.ide.get_request_history();
     let filtered = history;
+    let is_search_result = false;
 
     if (search_text && search_text.trim() !== "") {
         filtered = history.filter(function(item) {
             let text = typeof item === 'string' ? item : item.text;
             return text.toLowerCase().indexOf(search_text.toLowerCase()) !== -1;
         });
+        is_search_result = true;
     }
 
-    $.fn.zato.ide.populate_history_overlay(filtered);
+    $.fn.zato.ide.populate_history_overlay(filtered, is_search_result);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
