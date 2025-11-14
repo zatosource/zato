@@ -23,7 +23,7 @@ if 0:
 
 class RedisHandler(logging.Handler):
 
-    def __init__(self, channel='logs', redis_host='localhost', redis_port=6379, redis_db=0):
+    def __init__(self, channel='zato.logs', redis_host='localhost', redis_port=6379, redis_db=0):
         super().__init__()
         self.channel = channel
         self.redis_client = None
@@ -75,7 +75,7 @@ class LogStreamingManager:
 
     def get_redis_handler(self):
         if self.redis_handler is None:
-            self.redis_handler = RedisHandler(channel='logs')
+            self.redis_handler = RedisHandler(channel='zato.logs')
             self.redis_handler.setLevel(logging.DEBUG)
             redis_formatter = logging.Formatter('%(message)s')
             self.redis_handler.setFormatter(redis_formatter)
