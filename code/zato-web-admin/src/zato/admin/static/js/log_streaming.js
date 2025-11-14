@@ -90,19 +90,20 @@
                     try {
                         var log_entry = JSON.parse(event.data);
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
-                        var formatted_message = level + ' - ' + log_entry.logger + ':' + log_entry.lineno + ' - ' + log_entry.message;
+                        var rest_of_message = log_entry.logger + ':' + log_entry.lineno + ' - ' + log_entry.message;
 
-                        if (level === 'INFO') {
-                            console.info(formatted_message);
+                        var levelStyle = '';
+                        if (level === 'DEBUG') {
+                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;';
+                        } else if (level === 'INFO') {
+                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;';
                         } else if (level === 'WARNING') {
-                            console.warn(formatted_message);
+                            levelStyle = 'background: #fff3cd; color: #856404; padding: 1px 4px; border-radius: 2px;';
                         } else if (level === 'ERROR' || level === 'CRITICAL') {
-                            console.error(formatted_message);
-                        } else if (level === 'DEBUG') {
-                            console.debug(formatted_message);
-                        } else {
-                            console.debug(formatted_message);
+                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
                         }
+
+                        console.info('%c' + level + '%c - ' + rest_of_message, levelStyle, '');
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
                         console.debug('[ZATO LOG] Raw:', event.data);

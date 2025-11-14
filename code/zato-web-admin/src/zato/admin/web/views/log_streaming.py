@@ -67,7 +67,7 @@ def log_stream(req):
             redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
             stream_logger.info('log_stream: Redis client created, testing connection')
 
-            redis_client.ping()
+            _ = redis_client.ping()
             stream_logger.info('log_stream: Redis ping successful')
 
             pubsub = redis_client.pubsub()
