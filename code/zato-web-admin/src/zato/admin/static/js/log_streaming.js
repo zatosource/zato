@@ -108,7 +108,7 @@
                             var lines = message.split('\n');
                             var firstLine = lines[0];
 
-                            console.info('%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
+                            console.log('%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
                             console.groupCollapsed('More');
                             console.log(message);
                             console.groupEnd();
