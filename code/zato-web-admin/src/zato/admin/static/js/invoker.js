@@ -19,6 +19,7 @@ $.fn.zato.invoker.on_invoke_submitted = function() {
             "on_started_activate_blinking": ["#invoking-please-wait"],
             "on_ended_draw_attention": ["#result-header"],
             "get_request_url_func": $.fn.zato.invoker.get_sync_invoke_request_url,
+            "is_invoke": true,
         };
         $.fn.zato.invoker.run_sync_invoker(options);
     };
@@ -233,7 +234,7 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     let request_text = $("#data-request").val();
     let response_text = $("#data-response").val();
-    if ($.fn.zato.ide && $.fn.zato.ide.save_request_to_history) {
+    if ($.fn.zato.ide && $.fn.zato.ide.save_request_to_history && options.is_invoke) {
         $.fn.zato.ide.save_request_to_history(request_text, response_text);
     }
 }
