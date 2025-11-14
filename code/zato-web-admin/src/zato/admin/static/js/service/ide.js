@@ -2522,7 +2522,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         let timestamp = typeof item === 'string' ? null : item.timestamp;
         let response = typeof item === 'string' ? '' : (item.response || '');
 
-        let has_response = response && response.trim() !== '' && response.trim() !== 'None' && response.trim() !== '(None)';
+        let has_response = response && response.trim() !== '' && response.trim() !== '(None)';
 
         let wrapper = $('<div class="history-item-wrapper"></div>');
         let number_box = $('<div class="history-item-number"></div>');
@@ -2578,7 +2578,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                     console.log("copy_btn: event.stopPropagation called");
                     console.log("copy_btn: response length:", response.length);
 
-                    if (!response || response.trim() === '' || response.trim() === 'None' || response.trim() === '(None)') {
+                    if (!response || response.trim() === '' || response.trim() === '(None)') {
                         console.log("copy_btn: response is empty, showing nothing to copy message");
                         let tippy_root_before = $("[data-tippy-root]");
                         tippy_root_before.each(function(idx, elem) {
@@ -2677,7 +2677,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                 header.append(copy_btn);
 
                 let content = $('<div class="history-response-detail-content"></div>');
-                if (!response || response.trim() === '' || response.trim() === 'None' || response.trim() === '(None)') {
+                if (!response || response.trim() === '' || response.trim() === '(None)') {
                     content.text('(No response)');
                 } else {
                     content.text(response);
