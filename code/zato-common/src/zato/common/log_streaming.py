@@ -55,11 +55,17 @@ class RedisHandler(logging.Handler):
         try:
             self.emit_count += 1
 
+            message = self.format(record)
+            level = record.levelname
+
+            if 'Caught an exception' in message:
+                level = 'ERROR'
+
             log_entry = {
                 'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-                'level': record.levelname,
+                'level': level,
                 'logger': record.name,
-                'message': self.format(record),
+                'message': message,
                 'module': record.module,
                 'funcName': record.funcName,
                 'lineno': record.lineno
