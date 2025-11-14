@@ -14,6 +14,7 @@
 
 <script type="text/javascript" src="/static/js/common.js"></script>
 <script type="text/javascript" src="/static/js/invoker.js"></script>
+<script type="text/javascript" src="/static/js/log_streaming.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
 <link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
@@ -199,6 +200,34 @@ Ctrl+K for full history"></textarea></form>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
+    $.fn.zato.log_streaming.init();
+
+    window.addEventListener('beforeunload', function() {
+        if ($.fn.zato.log_streaming.eventSource) {
+            $.fn.zato.log_streaming.eventSource.close();
+        }
+    });
+
+    setTimeout(function() {
+        var metaTag = document.querySelector('meta[name="generator"]');
+        var version = 'unknown';
+        if (metaTag) {
+            version = metaTag.getAttribute('content');
+        }
+        console.clear();
+        setTimeout(function() {
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            var milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+            var timestamp = hours + ':' + minutes + ':' + seconds + '.' + milliseconds;
+            var isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
+            var timestampPrefix = isFirefox ? '' : timestamp + ' ';
+            var firefoxExtra = isFirefox ? ' font-family: monospace; display: inline-block; width: 70px; text-align: center;' : '';
+            console.info(timestampPrefix + '%cINFO%c - ✅ IDE ready - ' + version, 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;' + firefoxExtra, '');
+        }, 10);
+    }, 1000);
 </script>
 
 {% endblock %}
