@@ -104,16 +104,18 @@
                         var message = log_entry.message;
 
                         var timestamp = isFirefox ? '' : getTimestamp() + ' ';
+                        
+                        var firefoxExtra = isFirefox ? ' font-family: monospace; display: inline-block; width: 70px; text-align: center;' : '';
 
                         var levelStyle = '';
                         if (level === 'DEBUG') {
-                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
                         } else if (level === 'INFO') {
-                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
                         } else if (level === 'WARNING') {
-                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; font-weight: bold;';
+                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; font-weight: bold;' + firefoxExtra;
                         } else if (level === 'ERROR' || level === 'CRITICAL') {
-                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
                         }
 
                         if (message.indexOf('\n') !== -1 && !isFirefox) {
