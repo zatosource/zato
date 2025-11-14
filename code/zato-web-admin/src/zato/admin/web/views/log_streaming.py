@@ -70,10 +70,14 @@ def log_stream(req):
             last_keepalive = time.time()
             message_count = 0
 
+            keepalive_count = 0
             while True:
                 current_time = time.time()
 
                 if current_time - last_keepalive >= 5:
+                    keepalive_count += 1
+                    stream_logger.info('log_stream: yielding keepalive #{}, time since last: {}'.format(
+                        keepalive_count, current_time - last_keepalive))
                     yield ': keepalive\n\n'
                     last_keepalive = current_time
 
@@ -81,6 +85,7 @@ def log_stream(req):
                 if message and message['type'] == 'message':
                     message_count += 1
                     log_data = message['data']
+                    stream_logger.info('log_stream: yielding log message #{}'.format(message_count))
                     yield 'data: {}\n\n'.format(log_data)
                     last_keepalive = current_time
 
@@ -103,6 +108,7 @@ def log_stream(req):
     )
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
+    response['Content-Encoding'] = 'identity'
     return response
 
 # ################################################################################################################################
