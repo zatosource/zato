@@ -104,7 +104,17 @@
                             levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
                         }
 
-                        console.info('%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
+                        if (message.indexOf('\n') !== -1) {
+                            var lines = message.split('\n');
+                            var firstLine = lines[0];
+
+                            console.info('%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
+                            console.groupCollapsed('More');
+                            console.log(message);
+                            console.groupEnd();
+                        } else {
+                            console.info('%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
+                        }
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
                         console.debug('[ZATO LOG] Raw:', event.data);
