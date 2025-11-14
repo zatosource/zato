@@ -2586,7 +2586,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                         let copy_btn_elem = $("#" + copy_btn_id);
 
                         let error_tooltip = tippy("#" + copy_btn_id, {
-                            content: '<span style="color: #ff6666;">Nothing to copy</span>',
+                            content: '<span style="color: #ff6666;">No response to copy</span>',
                             allowHTML: true,
                             theme: "dark",
                             trigger: "manual",
