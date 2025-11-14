@@ -97,6 +97,35 @@ class GetUserResponse(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ToggleLogStreaming(Service):
+    """ Toggles log streaming on or off.
+    """
+    name = 'zato.log.streaming.toggle'
+
+    def handle(self) -> 'None':
+        enabled = self.server.log_streaming_manager.toggle_streaming()
+        self.response.payload = {
+            'status': 'success',
+            'streaming_enabled': enabled
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetLogStreamingStatus(Service):
+    """ Returns current log streaming status.
+    """
+    name = 'zato.log.streaming.status'
+
+    def handle(self) -> 'None':
+        enabled = self.server.log_streaming_manager.is_streaming_enabled()
+        self.response.payload = {
+            'streaming_enabled': enabled
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Echo(Service):
     """ Copies request over to response.
     """

@@ -38,6 +38,7 @@ from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
+from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
@@ -247,6 +248,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # The main config store
         self.config = ConfigStore()
+
+        # Log streaming manager
+        self.log_streaming_manager = LogStreamingManager()
 
 # ################################################################################################################################
 
