@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, http_soap, main, scheduler, service
+from zato.admin.web.views import account, http_soap, log_streaming, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -772,6 +772,21 @@ urlpatterns += [
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<int:sec_base_id>/cluster/<int:cluster_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Log streaming
+
+    url(r'^zato/log-streaming/toggle$',
+        login_required(log_streaming.toggle_streaming), name='log-streaming-toggle'),
+    url(r'^zato/log-streaming/status$',
+        login_required(log_streaming.get_status), name='log-streaming-status'),
+    url(r'^zato/log-streaming/stream$',
+        login_required(log_streaming.log_stream), name='log-streaming-stream'),
 ]
 
 # ################################################################################################################################
