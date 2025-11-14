@@ -64,7 +64,6 @@ class RedisHandler(logging.Handler):
             log_entry = {
                 'timestamp': datetime.fromtimestamp(record.created).isoformat(),
                 'level': level,
-                'logger': record.name,
                 'message': message,
                 'module': record.module,
                 'funcName': record.funcName,
