@@ -88,8 +88,12 @@ class Create(ZatoCommand):
             ide_publisher_sec = HTTPBasicAuth(
                 None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password(), cluster)
 
+            streaming_password = os.environ.get('Zato_Log_Streaming_Password')
+            if not streaming_password:
+                streaming_password = self.generate_password()
+
             streaming_sec = HTTPBasicAuth(
-                None, 'zato.log.streaming', True, 'zato.log.streaming', 'Log streaming API', self.generate_password(), cluster)
+                None, 'zato.log.streaming', True, 'zato.log.streaming', 'Log streaming API', streaming_password, cluster)
 
             session.add(admin_invoke_sec)
             session.add(ide_publisher_sec)
