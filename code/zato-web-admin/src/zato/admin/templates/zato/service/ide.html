@@ -201,6 +201,24 @@ Ctrl+K for full history"></textarea></form>
 <script type="text/javascript">
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
     $.fn.zato.log_streaming.init();
+
+    window.addEventListener('beforeunload', function() {
+        if ($.fn.zato.log_streaming.eventSource) {
+            $.fn.zato.log_streaming.eventSource.close();
+        }
+    });
+
+    setTimeout(function() {
+        var metaTag = document.querySelector('meta[name="generator"]');
+        var version = 'unknown';
+        if (metaTag) {
+            version = metaTag.getAttribute('content');
+        }
+        console.clear();
+        setTimeout(function() {
+            console.info('✅ IDE ready - ' + version);
+        }, 10);
+    }, 1000);
 </script>
 
 {% endblock %}
