@@ -90,7 +90,8 @@
                     try {
                         var log_entry = JSON.parse(event.data);
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
-                        var rest_of_message = log_entry.logger + ':' + log_entry.lineno + ' - ' + log_entry.message;
+                        var message = log_entry.message;
+                        var rest_of_message = log_entry.logger + ':' + log_entry.lineno + ' - ';
 
                         var levelStyle = '';
                         if (level === 'DEBUG') {
@@ -103,7 +104,7 @@
                             levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
                         }
 
-                        console.info('%c' + level + '%c - ' + rest_of_message, levelStyle, '');
+                        console.info('%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
                         console.debug('[ZATO LOG] Raw:', event.data);
