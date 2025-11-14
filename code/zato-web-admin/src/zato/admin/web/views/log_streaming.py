@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, StreamingHttpResponse
@@ -27,9 +28,7 @@ logger = getLogger(__name__)
 @method_allowed('POST')
 def toggle_streaming(req):
 
-    logger.info('Toggle streaming called')
     response = req.zato.client.invoke('zato.log.streaming.toggle', {})
-    logger.info('Toggle streaming response: {}'.format(response.data))
 
     return HttpResponse(dumps(response.data), content_type='application/json')
 
@@ -39,9 +38,7 @@ def toggle_streaming(req):
 @method_allowed('GET')
 def get_status(req):
 
-    logger.info('Get status called')
     response = req.zato.client.invoke('zato.log.streaming.status', {})
-    logger.info('Get status response: {}'.format(response.data))
 
     return HttpResponse(dumps(response.data), content_type='application/json')
 
@@ -50,8 +47,6 @@ def get_status(req):
 
 @method_allowed('GET')
 def log_stream(req):
-
-    logger.info('Log stream endpoint called')
 
     def event_stream():
 
@@ -63,33 +58,40 @@ def log_stream(req):
         pubsub = None
 
         try:
-            logger.info('Connecting to Redis')
+            stream_logger = getLogger('zato.sse_stream')
+            stream_logger.info('log_stream: connecting to Redis')
+
             redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
             pubsub = redis_client.pubsub()
             pubsub.subscribe('zato.logs')
-            logger.info('Subscribed to zato.logs channel')
+
+            stream_logger.info('log_stream: subscribed to zato.logs channel')
 
             last_keepalive = time.time()
+            message_count = 0
 
+            iteration = 0
             while True:
+                iteration += 1
                 message = pubsub.get_message()
                 if message:
                     if message['type'] == 'message':
+                        message_count += 1
                         log_data = message['data']
                         yield 'data: {}\n\n'.format(log_data)
                         last_keepalive = time.time()
 
                 current_time = time.time()
-                if current_time - last_keepalive > 15:
+                if current_time - last_keepalive > 10:
                     yield ': keepalive\n\n'
                     last_keepalive = current_time
 
                 time.sleep(0.1)
 
         except GeneratorExit:
-            logger.info('Client disconnected, cleaning up')
-        except Exception as e:
-            logger.warning('Log streaming error: {}'.format(e))
+            pass
+        except Exception:
+            logger.warning('Log streaming error: {}'.format(format_exc()))
         finally:
             if pubsub:
                 pubsub.unsubscribe('zato.logs')
