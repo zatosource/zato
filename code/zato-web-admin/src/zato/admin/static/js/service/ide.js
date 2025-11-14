@@ -2522,6 +2522,8 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         let timestamp = typeof item === 'string' ? null : item.timestamp;
         let response = typeof item === 'string' ? '' : (item.response || '');
 
+        let has_response = response && response.trim() !== '' && response.trim() !== 'None' && response.trim() !== '(None)';
+
         let wrapper = $('<div class="history-item-wrapper"></div>');
         let number_box = $('<div class="history-item-number"></div>');
         number_box.text((i + 1));
@@ -2529,7 +2531,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         text_box.text(request_text && request_text.trim() !== '' ? request_text : '(No request)');
 
         let show_response_box = $('<div class="history-item-show-response"></div>');
-        show_response_box.text(response && response.trim() !== '' ? "Show response" : "(No response)");
+        show_response_box.text(has_response ? "Show response" : "(No response)");
 
         let timestamp_box = $('<div class="history-item-timestamp"></div>');
         if (timestamp) {
@@ -2576,7 +2578,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                     console.log("copy_btn: event.stopPropagation called");
                     console.log("copy_btn: response length:", response.length);
 
-                    if (!response || response.trim() === '') {
+                    if (!response || response.trim() === '' || response.trim() === 'None' || response.trim() === '(None)') {
                         console.log("copy_btn: response is empty, showing nothing to copy message");
                         let tippy_root_before = $("[data-tippy-root]");
                         tippy_root_before.each(function(idx, elem) {
@@ -2586,7 +2588,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                         let copy_btn_elem = $("#" + copy_btn_id);
 
                         let error_tooltip = tippy("#" + copy_btn_id, {
-                            content: '<span style="color: #ff6666;">No response to copy</span>',
+                            content: '<span style="color: #ff6666;">Nothing to copy</span>',
                             allowHTML: true,
                             theme: "dark",
                             trigger: "manual",
@@ -2675,7 +2677,7 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                 header.append(copy_btn);
 
                 let content = $('<div class="history-response-detail-content"></div>');
-                if (!response || response.trim() === '') {
+                if (!response || response.trim() === '' || response.trim() === 'None' || response.trim() === '(None)') {
                     content.text('(No response)');
                 } else {
                     content.text(response);
