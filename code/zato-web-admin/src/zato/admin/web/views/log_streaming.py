@@ -70,20 +70,18 @@ def log_stream(req):
             last_keepalive = time.time()
             message_count = 0
 
-            iteration = 0
             while True:
-                iteration += 1
-                message = pubsub.get_message()
-                if message:
-                    if message['type'] == 'message':
-                        message_count += 1
-                        log_data = message['data']
-                        yield 'data: {}\n\n'.format(log_data)
-                        last_keepalive = time.time()
-
                 current_time = time.time()
-                if current_time - last_keepalive > 10:
+
+                if current_time - last_keepalive >= 5:
                     yield ': keepalive\n\n'
+                    last_keepalive = current_time
+
+                message = pubsub.get_message()
+                if message and message['type'] == 'message':
+                    message_count += 1
+                    log_data = message['data']
+                    yield 'data: {}\n\n'.format(log_data)
                     last_keepalive = current_time
 
                 time.sleep(0.1)
