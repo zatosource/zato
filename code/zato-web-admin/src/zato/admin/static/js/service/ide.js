@@ -2184,9 +2184,8 @@ $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
     console.log("save_request_to_history: request_text.length:", request_text ? request_text.length : 0);
     console.log("save_request_to_history: response_text:", JSON.stringify(response_text));
 
-    if (!request_text || request_text.trim() === "") {
-        console.log("save_request_to_history: request_text is empty, returning");
-        return;
+    if (!request_text) {
+        request_text = '';
     }
 
     let key = $.fn.zato.ide.get_request_history_key();
@@ -2205,6 +2204,20 @@ $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
                 history[0].response = response_text || '';
                 localStorage.setItem(key, JSON.stringify(history));
             }
+
+            let full_history_key = $.fn.zato.ide.get_full_history_key();
+            let full_history = $.fn.zato.ide.get_full_history();
+            if (full_history.length > 0 && typeof full_history[0] === 'object') {
+                let full_first_text = full_history[0].text;
+                if (full_first_text === request_text) {
+                    full_history[0].timestamp = Date.now();
+                    full_history[0].response = response_text || '';
+                    localStorage.setItem(full_history_key, JSON.stringify(full_history));
+                }
+            }
+
+            $.fn.zato.ide.update_request_history_buttons();
+            $.fn.zato.ide.populate_history_overlay();
             return;
         }
     }
