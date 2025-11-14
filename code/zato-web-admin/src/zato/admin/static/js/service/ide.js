@@ -5,6 +5,54 @@ let Copy_Tooltip_Timeout = 1000;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+(function() {
+    var suppressedWarnings = [
+        'Synchronous XMLHttpRequest',
+        'setCapture',
+        'releaseCapture',
+        'Content-Security-Policy',
+        'ace.js',
+        'Element.setCapture',
+        'Element.releaseCapture',
+        'setPointerCapture'
+    ];
+
+    var suppressedErrors = [
+        'log-streaming',
+        'EventSource'
+    ];
+
+    var originalWarn = console.warn;
+    console.warn = function() {
+        var args = Array.prototype.slice.call(arguments);
+        var fullMessage = args.join(' ');
+        for (var i = 0; i < suppressedWarnings.length; i++) {
+            if (fullMessage.includes(suppressedWarnings[i])) {
+                return;
+            }
+        }
+        var stack = new Error().stack;
+        if (stack && stack.includes('ace.js')) {
+            return;
+        }
+        originalWarn.apply(console, arguments);
+    };
+
+    var originalError = console.error;
+    console.error = function(message) {
+        if (typeof message === 'string') {
+            for (var i = 0; i < suppressedErrors.length; i++) {
+                if (message.includes(suppressedErrors[i])) {
+                    return;
+                }
+            }
+        }
+        originalError.apply(console, arguments);
+    };
+})();
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $(document).ready(function() {
     $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
     $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
@@ -129,10 +177,10 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     // Set the initial baseline for deployment status from the current editor content BEFORE loading from localStorage
     let key = $.fn.zato.ide.get_last_deployed_key();
     let editor_value = window.zato_editor.getValue();
-    console.log("init_editor: setting initial baseline with key:", JSON.stringify(key));
-    console.log("init_editor: editor_value length:", editor_value ? editor_value.length : null);
+    console.debug("init_editor: setting initial baseline with key:", JSON.stringify(key));
+    console.debug("init_editor: editor_value length:", editor_value ? editor_value.length : null);
     localStorage.setItem(key, editor_value);
-    console.log("init_editor: initial baseline set");
+    console.debug("init_editor: initial baseline set");
 
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
@@ -303,42 +351,42 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.init_resizer = function() {
-    console.log("init_resizer: START");
+    console.debug("init_resizer: START");
 
     let resizer = document.getElementById('resizer');
     let actionArea = document.getElementById('action-area-container');
     let container = document.getElementById('main-area-container');
 
-    console.log("init_resizer: resizer element:", resizer);
-    console.log("init_resizer: actionArea element:", actionArea);
-    console.log("init_resizer: container element:", container);
+    console.debug("init_resizer: resizer element:", resizer);
+    console.debug("init_resizer: actionArea element:", actionArea);
+    console.debug("init_resizer: container element:", container);
 
-    console.log("init_resizer: testing store write/read");
+    console.debug("init_resizer: testing store write/read");
     store.set('zato.test-key', 'test-value');
     let testValue = store.get('zato.test-key');
-    console.log("init_resizer: test value retrieved:", JSON.stringify(testValue));
+    console.debug("init_resizer: test value retrieved:", JSON.stringify(testValue));
 
     let savedWidth = store.get('zato.action-area-width');
-    console.log("init_resizer: savedWidth from store:", JSON.stringify(savedWidth));
-    console.log("init_resizer: localStorage.length:", localStorage.length);
+    console.debug("init_resizer: savedWidth from store:", JSON.stringify(savedWidth));
+    console.debug("init_resizer: localStorage.length:", localStorage.length);
 
     for (let i = 0; i < localStorage.length; i++) {
         let key = localStorage.key(i);
-        console.log("init_resizer: localStorage key " + i + ":", key);
+        console.debug("init_resizer: localStorage key " + i + ":", key);
     }
 
     if (savedWidth) {
-        console.log("init_resizer: setting actionArea width to:", savedWidth);
+        console.debug("init_resizer: setting actionArea width to:", savedWidth);
         actionArea.style.setProperty('width', savedWidth, 'important');
-        console.log("init_resizer: actionArea.style.width after setting:", actionArea.style.width);
+        console.debug("init_resizer: actionArea.style.width after setting:", actionArea.style.width);
     } else {
-        console.log("init_resizer: no saved width found, using default");
+        console.debug("init_resizer: no saved width found, using default");
     }
 
     let isResizing = false;
 
     resizer.addEventListener('mousedown', function(e) {
-        console.log("init_resizer: mousedown on resizer");
+        console.debug("init_resizer: mousedown on resizer");
         isResizing = true;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
@@ -350,35 +398,35 @@ $.fn.zato.ide.init_resizer = function() {
         let containerRect = container.getBoundingClientRect();
         let newWidth = containerRect.right - e.clientX;
 
-        console.log("init_resizer: mousemove - containerRect.right:", containerRect.right);
-        console.log("init_resizer: mousemove - e.clientX:", e.clientX);
-        console.log("init_resizer: mousemove - calculated newWidth:", newWidth);
-        console.log("init_resizer: mousemove - containerRect.width:", containerRect.width);
+        console.debug("init_resizer: mousemove - containerRect.right:", containerRect.right);
+        console.debug("init_resizer: mousemove - e.clientX:", e.clientX);
+        console.debug("init_resizer: mousemove - calculated newWidth:", newWidth);
+        console.debug("init_resizer: mousemove - containerRect.width:", containerRect.width);
 
         if (newWidth >= 200 && newWidth <= containerRect.width - 200) {
             actionArea.style.width = newWidth + 'px';
-            console.log("init_resizer: mousemove - set width to:", newWidth + 'px');
+            console.debug("init_resizer: mousemove - set width to:", newWidth + 'px');
         } else {
-            console.log("init_resizer: mousemove - width out of bounds, not setting");
+            console.debug("init_resizer: mousemove - width out of bounds, not setting");
         }
     });
 
     document.addEventListener('mouseup', function() {
         if (isResizing) {
-            console.log("init_resizer: mouseup - resizing ended");
+            console.debug("init_resizer: mouseup - resizing ended");
             isResizing = false;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             let widthToSave = actionArea.style.width;
-            console.log("init_resizer: mouseup - actionArea.style.width:", widthToSave);
-            console.log("init_resizer: mouseup - saving to store with key 'zato.action-area-width'");
+            console.debug("init_resizer: mouseup - actionArea.style.width:", widthToSave);
+            console.debug("init_resizer: mouseup - saving to store with key 'zato.action-area-width'");
             store.set('zato.action-area-width', widthToSave);
             let verifyRead = store.get('zato.action-area-width');
-            console.log("init_resizer: mouseup - immediately reading back from store:", JSON.stringify(verifyRead));
+            console.debug("init_resizer: mouseup - immediately reading back from store:", JSON.stringify(verifyRead));
         }
     });
 
-    console.log("init_resizer: END");
+    console.debug("init_resizer: END");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -397,7 +445,7 @@ $.fn.zato.ide.set_inactivity_handler = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.handle_inactivity = function() {
-    //  console.log("Handing inactivity")
+    //  console.debug("Handing inactivity")
     $.fn.zato.ide.save_current_source_code_to_local_storage();
 }
 
@@ -608,7 +656,7 @@ $.fn.zato.ide.after_post_load_source_func = function(data) {
 $.fn.zato.ide.on_file_op_error_func = function(op_name) {
     let result_header_selector = "#result-header";
     _on_error_func = function(options, jq_xhr, text_status, error_message) {
-        console.log(`File ${op_name} impl, on error:  ${jq_xhr.status} -> ${error_message} ->  ${jq_xhr.responseText}`);
+        console.debug(`File ${op_name} impl, on error:  ${jq_xhr.status} -> ${error_message} ->  ${jq_xhr.responseText}`);
         $(result_header_selector).text(`${jq_xhr.status} ${error_message}`);
         $("#data-response").val(jq_xhr.responseText);
         $.fn.zato.invoker.draw_attention([result_header_selector]);
@@ -626,7 +674,7 @@ $.fn.zato.ide.on_file_op_success_func = function(
 {
     let _on_success_func = function(options, data) {
 
-        console.log(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
+        console.debug(`File ${op_name} impl, on success: `+ $.fn.zato.to_dict(data));
 
         if($.fn.zato.is_object(data)) {
             var data = data;
@@ -815,7 +863,7 @@ $.fn.zato.ide.on_file_new = function() {
 
     // .. proceed if we've received anything ..
     if(file_name) {
-        console.log(`Creating file: "${current_root_directory}" -> "${file_name}"`);
+        console.debug(`Creating file: "${current_root_directory}" -> "${file_name}"`);
         $.fn.zato.ide.on_file_new_impl(current_root_directory, file_name);
     }
 }
@@ -877,7 +925,7 @@ $.fn.zato.ide.on_file_rename = function() {
     // .. proceed if we've received anything ..
     if(new_file_name) {
         if(new_file_name != current_file_name) {
-            console.log(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
+            console.debug(`Rename file: "${current_root_directory}" -> "${current_file_name} -> "${new_file_name}"`);
             $.fn.zato.ide.on_file_rename_impl(current_root_directory, current_file_name, new_file_name);
         }
     }
@@ -890,7 +938,7 @@ $.fn.zato.ide.on_file_delete_impl = function(fs_location) {
     // Local variables
     let after_on_file_op_success_func_on_file_delete_impl = function() {
         $.fn.zato.ide.populate_file_list($.fn.zato.ide.after_file_deleted);
-        console.log(`Deleted "${fs_location}"`);
+        console.debug(`Deleted "${fs_location}"`);
     }
 
     let url_path = "/zato/service/ide/delete-file/";
@@ -926,7 +974,7 @@ $.fn.zato.ide.on_file_delete = function() {
     let prompt_text = `Confirm file deletion.\n\n${fs_location}`;
 
     if(confirm(prompt_text)) {
-        console.log(`Deleting file: "${fs_location}" "${fs_location_url_safe}"`)
+        console.debug(`Deleting file: "${fs_location}" "${fs_location_url_safe}"`)
         $.fn.zato.ide.on_file_delete_impl(fs_location);
     }
 }
@@ -937,7 +985,7 @@ $.fn.zato.ide.on_file_reload = function() {
     let current_object_select = $.fn.zato.ide.get_current_object_select();
     let fs_location = current_object_select.attr("data-fs-location");
     let fs_location_url_safe = current_object_select.attr("data-fs-location-url-safe");
-    console.log(`Reloading file: "${fs_location}" "${fs_location_url_safe}"`)
+    console.debug(`Reloading file: "${fs_location}" "${fs_location_url_safe}"`)
     $.fn.zato.ide.on_file_selected(
         fs_location,
         fs_location_url_safe,
@@ -957,7 +1005,7 @@ $.fn.zato.ide.on_file_info = function() {
     let form_id = "file-info-form";
     let fs_location = $.fn.zato.ide.get_current_fs_location();
 
-    console.log(`Getting file info for: "${fs_location}"`);
+    console.debug(`Getting file info for: "${fs_location}"`);
 
     // First, build a dynamic form ..
     $.fn.zato.ide.build_singleton_form(form_id, {
@@ -1014,7 +1062,7 @@ $.fn.zato.ide.populate_document_title = function(name) {
     var prefix = "";
     let has_modified =  $.fn.zato.ide.has_current_object_modified();
 
-    // console.log("Received has modified: "+ has_modified);
+    // console.debug("Received has modified: "+ has_modified);
 
     if(has_modified) {
         prefix = "* ";
@@ -1060,7 +1108,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     var first_option_elem = null;
     var has_new_service_name_match = false;
 
-    // console.log("Populate current file service list: "+ current_file_service_list);
+    // console.debug("Populate current file service list: "+ current_file_service_list);
 
     // First, remove anything we already have in the list ..
     $(".option-current-file").remove();
@@ -1071,7 +1119,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     // .. and populate it anew
     for (const item of current_file_service_list) {
 
-        console.log("Populate current file item: "+ $.fn.zato.to_dict(item));
+        console.debug("Populate current file item: "+ $.fn.zato.to_dict(item));
 
         var option = $("<option>");
         option.text(item.name);
@@ -1114,7 +1162,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
 
 $.fn.zato.ide.set_is_current_file = function(current_fs_location) {
 
-    //  console.log("Setting current file: "+ current_fs_location);
+    //  console.debug("Setting current file: "+ current_fs_location);
 
     // Zero out the current file flag for all the select opions ..
     $(`option[data-object-holder="1"]`).attr("data-is-current-file", "0");
@@ -1225,16 +1273,16 @@ $.fn.zato.ide.post_load_source_object = function(
     after_post_load_source_func,
     get_current_file_service_list_func,
 ) {
-    console.log("post_load_source_object: START");
-    console.log("post_load_source_object: fs_location:", JSON.stringify(fs_location));
-    console.log("post_load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
+    console.debug("post_load_source_object: START");
+    console.debug("post_load_source_object: fs_location:", JSON.stringify(fs_location));
+    console.debug("post_load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
 
     // First, establish the new baseline for deployment status. The content we just received from the server
     // is now considered the "last deployed" version for the purpose of detecting unsaved changes.
     let key = $.fn.zato.ide.get_last_deployed_key();
-    console.log("post_load_source_object: setting baseline with key:", JSON.stringify(key));
+    console.debug("post_load_source_object: setting baseline with key:", JSON.stringify(key));
     localStorage.setItem(key, current_file_source_code);
-    console.log("post_load_source_object: baseline set in localStorage");
+    console.debug("post_load_source_object: baseline set in localStorage");
 
     // Now, load the content into the editor. Any subsequent 'change' event will compare against the correct baseline.
     $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code, reuse_source_code);
@@ -1246,9 +1294,9 @@ $.fn.zato.ide.post_load_source_object = function(
     $.fn.zato.ide.populate_current_file_service_list(current_file_service_list, object_name);
 
     // Check the actual deployment status by comparing editor content against baseline
-    console.log("post_load_source_object: checking deployment status");
+    console.debug("post_load_source_object: checking deployment status");
     $.fn.zato.ide.set_deployment_status();
-    console.log("post_load_source_object: END");
+    console.debug("post_load_source_object: END");
 
     $.fn.zato.ide.set_is_current_file(fs_location);
     if(after_post_load_source_func) {
@@ -1271,23 +1319,23 @@ $.fn.zato.ide.load_source_object = function(
     extra_qs,
 ) {
 
-    console.log("load_source_object: START");
-    console.log("load_source_object: object_type:", JSON.stringify(object_type));
-    console.log("load_source_object: object_name:", JSON.stringify(object_name));
-    console.log("load_source_object: fs_location:", JSON.stringify(fs_location));
+    console.debug("load_source_object: START");
+    console.debug("load_source_object: object_type:", JSON.stringify(object_type));
+    console.debug("load_source_object: object_name:", JSON.stringify(object_name));
+    console.debug("load_source_object: fs_location:", JSON.stringify(fs_location));
 
     extra_qs = extra_qs || "";
 
     var callback = function(data, _unused_status) {
-        console.log("load_source_object: callback START");
+        console.debug("load_source_object: callback START");
         let msg = data.responseText;
-        console.log("load_source_object: msg length:", msg ? msg.length : null);
+        console.debug("load_source_object: msg length:", msg ? msg.length : null);
         let json = JSON.parse(msg)
-        console.log("load_source_object: json parsed");
+        console.debug("load_source_object: json parsed");
         let current_file_source_code = json.current_file_source_code;
-        console.log("load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
-        console.log("load_source_object: current_file_source_code type:", typeof current_file_source_code);
-        console.log("load_source_object: current_file_source_code:", JSON.stringify(current_file_source_code));
+        console.debug("load_source_object: current_file_source_code length:", current_file_source_code ? current_file_source_code.length : null);
+        console.debug("load_source_object: current_file_source_code type:", typeof current_file_source_code);
+        console.debug("load_source_object: current_file_source_code:", JSON.stringify(current_file_source_code));
         let current_file_service_list = json.current_file_service_list;
         $.fn.zato.ide.post_load_source_object(
             data,
@@ -1373,7 +1421,7 @@ $.fn.zato.ide.set_current_object_type = function(value) {
 
 $.fn.zato.ide.get_current_object_select = function() {
     let current = $("#object-select :selected");
-    //  console.log("Returning current select: "+ current.text())
+    //  console.debug("Returning current select: "+ current.text())
     return current;
 }
 
@@ -1383,7 +1431,7 @@ $.fn.zato.ide.has_current_object_modified = function() {
     let current = $.fn.zato.ide.get_current_object_select();
 
     let has_modified = current.attr("data-is-modified") == "1";
-    // console.log("Has current modified: "+ has_modified);
+    // console.debug("Has current modified: "+ has_modified);
     return has_modified;
 }
 
@@ -1435,21 +1483,21 @@ $.fn.zato.ide.set_up_editor_session = function(editor_session) {
 
 $.fn.zato.ide.load_editor_session = function(fs_location, source_code, reuse_source_code) {
 
-    console.log(`ZATO_IDE_DEBUG: load_editor_session called for fs_location: ${fs_location}`);
-    console.log(`ZATO_IDE_DEBUG: load_editor_session received source_code:`, JSON.stringify(source_code));
-    console.log(`ZATO_IDE_DEBUG: load_editor_session reuse_source_code:`, reuse_source_code);
+    console.debug(`ZATO_IDE_DEBUG: load_editor_session called for fs_location: ${fs_location}`);
+    console.debug(`ZATO_IDE_DEBUG: load_editor_session received source_code:`, JSON.stringify(source_code));
+    console.debug(`ZATO_IDE_DEBUG: load_editor_session reuse_source_code:`, reuse_source_code);
 
     // Do we have a session for this file already?
     let existing_session = window.zato_editor_session_map[fs_location];
 
     // If we have an existing session and should reuse it, switch to it
     if(existing_session && reuse_source_code) {
-        console.log(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, keeping existing content.`);
+        console.debug(`ZATO_IDE_DEBUG: Reusing existing session for ${fs_location}, keeping existing content.`);
         window.zato_editor.setSession(existing_session);
     }
     // If we should not reuse or don't have a session, create/replace with server content
     else {
-        console.log(`ZATO_IDE_DEBUG: Creating new session for ${fs_location} with server source code.`);
+        console.debug(`ZATO_IDE_DEBUG: Creating new session for ${fs_location} with server source code.`);
         let new_session = ace.createEditSession(source_code);
         $.fn.zato.ide.set_up_editor_session(new_session);
         window.zato_editor.setSession(new_session);
@@ -1473,17 +1521,17 @@ $.fn.zato.ide.load_editor_session = function(fs_location, source_code, reuse_sou
 $.fn.zato.ide.save_current_editor_session = function() {
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let session = window.zato_editor.getSession();
-    console.log(`ZATO_IDE_DEBUG: save_current_editor_session for ${current_fs_location}`);
-    console.log(`ZATO_IDE_DEBUG: session content length:`, session.getValue().length);
+    console.debug(`ZATO_IDE_DEBUG: save_current_editor_session for ${current_fs_location}`);
+    console.debug(`ZATO_IDE_DEBUG: session content length:`, session.getValue().length);
     window.zato_editor_session_map[current_fs_location] = session;
-    console.log(`ZATO_IDE_DEBUG: session map keys:`, Object.keys(window.zato_editor_session_map));
+    console.debug(`ZATO_IDE_DEBUG: session map keys:`, Object.keys(window.zato_editor_session_map));
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.get_last_deployed_from_store = function(key) {
     let last_deployed = localStorage.getItem(key);
-    // console.log("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
+    // console.debug("Last deployed in store: "+ !!last_deployed +"; key: "+ key);
     return last_deployed;
 }
 
@@ -1494,7 +1542,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
     // Check if this file has been ever deployed, if not, we need to populate
     // the store with the current contents of the file because, by definition,
     // it must be the same as the source code from the server given that we've just loaded it.
-    // console.log("In maybe populate initial last deployed");
+    // console.debug("In maybe populate initial last deployed");
     let key = $.fn.zato.ide.get_last_deployed_key();
     last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
 
@@ -1507,7 +1555,7 @@ $.fn.zato.ide.maybe_populate_initial_last_deployed = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.maybe_set_deploy_needed = function() {
-    console.log("In maybe set deploy needed");
+    console.debug("In maybe set deploy needed");
     $.fn.zato.ide.set_deployment_status();
 }
 
@@ -1519,7 +1567,7 @@ $.fn.zato.ide.populate_root_directory_info_from_option = function(option) {
     let current_root_directory = option.attr("data-current-root-directory");
     let root_directory_count = option.attr("data-root-directory-count");
 
-    console.log(`Setting root dir info: "${current_root_directory}" and "${root_directory_count}"`)
+    console.debug(`Setting root dir info: "${current_root_directory}" and "${root_directory_count}"`)
 
     $.fn.zato.ide.set_current_root_directory(current_root_directory);
     $.fn.zato.ide.set_root_directory_count(root_directory_count);
@@ -1535,7 +1583,7 @@ $.fn.zato.ide.on_file_selected = function(
     get_current_file_service_list_func,
     extra_qs,
 ) {
-    console.log("On file selected ..")
+    console.debug("On file selected ..")
 
     if(reuse_source_code == null) {
         reuse_source_code = true;
@@ -1562,7 +1610,7 @@ $.fn.zato.ide.on_file_selected = function(
 
 $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) {
 
-    //  console.log("On object selected current file ..")
+    //  console.debug("On object selected current file ..")
 
     let fs_location = option_selected.attr("data-fs-location");
     var line_number = option_selected.attr("data-line-number");
@@ -1578,7 +1626,7 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
 
 $.fn.zato.ide.on_object_select_changed_non_current_file = function(option_selected) {
 
-    //  console.log("On object selected non-current file ..")
+    //  console.debug("On object selected non-current file ..")
 
     let new_service_name = option_selected.attr("data-service-name");
     let fs_location = option_selected.attr("data-fs-location");
@@ -1610,7 +1658,7 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 
         // .. a service in another file was selected ..
         else {
-            //  console.log("Switching to an object in another file: "+ option_selected.text());
+            //  console.debug("Switching to an object in another file: "+ option_selected.text());
             $.fn.zato.ide.on_object_select_changed_non_current_file(option_selected);
         }
     }
@@ -1631,41 +1679,41 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_editor_changed = function() {
-    console.log("on_editor_changed: START");
+    console.debug("on_editor_changed: START");
     $.fn.zato.ide.set_deployment_status();
-    console.log("on_editor_changed: END");
+    console.debug("on_editor_changed: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.set_deployment_status = function() {
-    console.log("set_deployment_status: START");
+    console.debug("set_deployment_status: START");
 
     // Get the current value of the editor ..
     let editor_value = window.zato_editor.getValue()
-    console.log("set_deployment_status: editor_value length:", editor_value ? editor_value.length : null);
-    console.log("set_deployment_status: editor_value:", JSON.stringify(editor_value));
+    console.debug("set_deployment_status: editor_value length:", editor_value ? editor_value.length : null);
+    console.debug("set_deployment_status: editor_value:", JSON.stringify(editor_value));
 
     // .. get the value of what was last deployed ..
     let key = $.fn.zato.ide.get_last_deployed_key();
-    console.log("set_deployment_status: key:", JSON.stringify(key));
+    console.debug("set_deployment_status: key:", JSON.stringify(key));
 
     let last_deployed = $.fn.zato.ide.get_last_deployed_from_store(key);
-    console.log("set_deployment_status: last_deployed length:", last_deployed ? last_deployed.length : null);
-    console.log("set_deployment_status: last_deployed:", JSON.stringify(last_deployed));
+    console.debug("set_deployment_status: last_deployed length:", last_deployed ? last_deployed.length : null);
+    console.debug("set_deployment_status: last_deployed:", JSON.stringify(last_deployed));
 
     // .. check if they are different ..
     let is_different = editor_value != last_deployed;
-    console.log("set_deployment_status: is_different:", is_different);
+    console.debug("set_deployment_status: is_different:", is_different);
 
     // .. pick the correct CSS class to set for the "Deploy" button
     if(is_different) {
         var button_class_name = "different";
-        console.log("set_deployment_status: setting button_class_name to 'different'");
+        console.debug("set_deployment_status: setting button_class_name to 'different'");
     }
     else {
         var button_class_name = "not-different";
-        console.log("set_deployment_status: setting button_class_name to 'not-different'");
+        console.debug("set_deployment_status: setting button_class_name to 'not-different'");
     }
 
     // .. set it for the button accordingly ..
@@ -1676,23 +1724,23 @@ $.fn.zato.ide.set_deployment_status = function() {
 
     // .. update the document title to add or remove the star ..
     let title = document.title;
-    console.log("set_deployment_status: current title:", JSON.stringify(title));
-    console.log("set_deployment_status: title starts with '* ':", title.startsWith('* '));
+    console.debug("set_deployment_status: current title:", JSON.stringify(title));
+    console.debug("set_deployment_status: title starts with '* ':", title.startsWith('* '));
     if(is_different) {
         if(!title.startsWith('* ')) {
             document.title = '* ' + title;
-            console.log("set_deployment_status: added star to title");
+            console.debug("set_deployment_status: added star to title");
         }
     } else {
         if(title.startsWith('* ')) {
             document.title = title.substring(2);
-            console.log("set_deployment_status: removed star from title");
+            console.debug("set_deployment_status: removed star from title");
         } else {
-            console.log("set_deployment_status: title does not start with '* ', not removing");
+            console.debug("set_deployment_status: title does not start with '* ', not removing");
         }
     }
 
-    console.log("set_deployment_status: END");
+    console.debug("set_deployment_status: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1700,7 +1748,7 @@ $.fn.zato.ide.set_deployment_status = function() {
 $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_location) {
 
     fs_location = fs_location || $.fn.zato.ide.get_current_fs_location();
-    //  console.log(`Setting option text: ${is_different} and ${fs_location}`);
+    //  console.debug(`Setting option text: ${is_different} and ${fs_location}`);
 
     $(`#object-select option[data-fs-location="${fs_location}"]`).each(function() {
         let option = $(this);
@@ -1721,7 +1769,7 @@ $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_locatio
         }
         option.text(new_text)
         option.attr("data-is-modified", is_modified);
-        //  console.log(`Opt: ${is_modified} -> ${option.text()}`);
+        //  console.debug(`Opt: ${is_modified} -> ${option.text()}`);
     });
 }
 
@@ -1809,7 +1857,7 @@ $.fn.zato.ide.toggle_current_object_type = function(current) {
 
 $.fn.zato.ide.get_undeployed_files_list = function() {
 
-    //  console.log("Getting undeployed files list");
+    //  console.debug("Getting undeployed files list");
 
     let undeployed = [];
     $(`#object-select option[data-is-modified="1"`).each(function() {
@@ -1841,7 +1889,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     let object_select = $("#object-select");
     let undeployed = $.fn.zato.ide.get_undeployed_files_list();
 
-    //  console.log("On service list undeployed: "+ undeployed);
+    //  console.debug("On service list undeployed: "+ undeployed);
 
     // Extract the underlying JSON ..
     let data = JSON.parse(response.responseText);
@@ -1887,7 +1935,7 @@ $.fn.zato.ide.on_service_list_response = function(response) {
     else {
         for(service_item of data.current_file_service_list) {
 
-            console.log("Current file service: "+ $.fn.zato.to_dict(service_item));
+            console.debug("Current file service: "+ $.fn.zato.to_dict(service_item));
             var option = `<option
                 class="option-current-file"
                 data-object-holder="1"
@@ -1947,9 +1995,9 @@ $.fn.zato.ide.on_file_list_response = function(response) {
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let root_directory_count = Object.keys(data).length;
 
-    // console.log("On file list undeployed: "+ undeployed);
-    // console.log("File list data: "+ $.fn.zato.to_dict(data));
-    // console.log("Data length: "+ root_directory_count);
+    // console.debug("On file list undeployed: "+ undeployed);
+    // console.debug("File list data: "+ $.fn.zato.to_dict(data));
+    // console.debug("Data length: "+ root_directory_count);
 
     // .. clear out the form ..
     object_select.empty();
@@ -2052,10 +2100,10 @@ $.fn.zato.ide.on_file_list_response = function(response) {
 $.fn.zato.ide.post_populate_current_file_service_list_impl = function(after_func) {
 
     _post_func = function(response) {
-        console.log("post_populate_current_file_service_list_impl: response:", JSON.stringify(response));
+        console.debug("post_populate_current_file_service_list_impl: response:", JSON.stringify(response));
         let data = JSON.parse(response.responseText);
-        console.log("post_populate_current_file_service_list_impl: data.current_file_service_list:", JSON.stringify(data.current_file_service_list));
-        console.log("post_populate_current_file_service_list_impl: data.current_fs_location:", JSON.stringify(data.current_fs_location));
+        console.debug("post_populate_current_file_service_list_impl: data.current_file_service_list:", JSON.stringify(data.current_file_service_list));
+        console.debug("post_populate_current_file_service_list_impl: data.current_fs_location:", JSON.stringify(data.current_fs_location));
         $.fn.zato.ide.on_service_list_response(response);
         if(after_func) {
             after_func();
@@ -2076,9 +2124,9 @@ $.fn.zato.ide.populate_current_file_service_list_impl = function(after_func, sho
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
     let url_path = `${url_path_prefix}?fs_location=${current_fs_location}&should_wait_for_services=${should_wait_for_services}`;
 
-    console.log("populate_current_file_service_list_impl: url_path:", JSON.stringify(url_path));
-    console.log("populate_current_file_service_list_impl: current_fs_location:", JSON.stringify(current_fs_location));
-    console.log("populate_current_file_service_list_impl: should_wait_for_services:", JSON.stringify(should_wait_for_services));
+    console.debug("populate_current_file_service_list_impl: url_path:", JSON.stringify(url_path));
+    console.debug("populate_current_file_service_list_impl: current_fs_location:", JSON.stringify(current_fs_location));
+    console.debug("populate_current_file_service_list_impl: should_wait_for_services:", JSON.stringify(should_wait_for_services));
 
     let callback = $.fn.zato.ide.post_populate_current_file_service_list_impl(after_func);
     $.fn.zato.invoker.invoke(url_path, "", callback)
@@ -2136,44 +2184,44 @@ $.fn.zato.ide.get_request_history = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.update_request_history_buttons = function() {
-    console.log("update_request_history_buttons: START");
+    console.debug("update_request_history_buttons: START");
 
     let history = $.fn.zato.ide.get_request_history();
     let history_length = history.length;
     let current_index = window.zato_request_history_index;
 
-    console.log("update_request_history_buttons: history_length:", history_length);
-    console.log("update_request_history_buttons: current_index:", current_index);
+    console.debug("update_request_history_buttons: history_length:", history_length);
+    console.debug("update_request_history_buttons: current_index:", current_index);
 
     let up_button = $("#request-history-up");
     let down_button = $("#request-history-down");
 
     if (history_length === 0) {
-        console.log("update_request_history_buttons: history is empty, disabling both buttons");
+        console.debug("update_request_history_buttons: history is empty, disabling both buttons");
         $.fn.zato.ide.disable_button("#request-history-up");
         $.fn.zato.ide.disable_button("#request-history-down");
     } else {
         if (current_index < history_length - 1) {
-            console.log("update_request_history_buttons: enabling up button");
+            console.debug("update_request_history_buttons: enabling up button");
             $.fn.zato.ide.enable_button("#request-history-up");
         } else {
-            console.log("update_request_history_buttons: disabling up button");
+            console.debug("update_request_history_buttons: disabling up button");
             $.fn.zato.ide.disable_button("#request-history-up");
         }
 
         if (current_index > 0) {
-            console.log("update_request_history_buttons: enabling down button (current_index > 0)");
+            console.debug("update_request_history_buttons: enabling down button (current_index > 0)");
             $.fn.zato.ide.enable_button("#request-history-down");
         } else if (current_index === 0) {
-            console.log("update_request_history_buttons: enabling down button (current_index === 0)");
+            console.debug("update_request_history_buttons: enabling down button (current_index === 0)");
             $.fn.zato.ide.enable_button("#request-history-down");
         } else {
-            console.log("update_request_history_buttons: disabling down button");
+            console.debug("update_request_history_buttons: disabling down button");
             $.fn.zato.ide.disable_button("#request-history-down");
         }
     }
 
-    console.log("update_request_history_buttons: END");
+    console.debug("update_request_history_buttons: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2198,26 +2246,26 @@ $.fn.zato.ide.get_full_history = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
-    console.log("save_request_to_history: START");
-    console.log("save_request_to_history: request_text:", JSON.stringify(request_text));
-    console.log("save_request_to_history: request_text.length:", request_text ? request_text.length : 0);
-    console.log("save_request_to_history: response_text:", JSON.stringify(response_text));
+    console.debug("save_request_to_history: START");
+    console.debug("save_request_to_history: request_text:", JSON.stringify(request_text));
+    console.debug("save_request_to_history: request_text.length:", request_text ? request_text.length : 0);
+    console.debug("save_request_to_history: response_text:", JSON.stringify(response_text));
 
     if (!request_text) {
         request_text = '';
     }
 
     let key = $.fn.zato.ide.get_request_history_key();
-    console.log("save_request_to_history: key:", JSON.stringify(key));
+    console.debug("save_request_to_history: key:", JSON.stringify(key));
 
     let history = $.fn.zato.ide.get_request_history();
-    console.log("save_request_to_history: history before save:", JSON.stringify(history));
-    console.log("save_request_to_history: history.length before save:", history.length);
+    console.debug("save_request_to_history: history before save:", JSON.stringify(history));
+    console.debug("save_request_to_history: history.length before save:", history.length);
 
     if (history.length > 0) {
         let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
         if (first_text === request_text) {
-            console.log("save_request_to_history: request_text is same as history[0], updating timestamp and response");
+            console.debug("save_request_to_history: request_text is same as history[0], updating timestamp and response");
             if (typeof history[0] === 'object') {
                 history[0].timestamp = Date.now();
                 history[0].response = response_text || '';
@@ -2241,148 +2289,148 @@ $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
         }
     }
 
-    console.log("save_request_to_history: removing duplicates of request_text from history");
+    console.debug("save_request_to_history: removing duplicates of request_text from history");
     history = history.filter(function(item) {
         let text = typeof item === 'string' ? item : item.text;
         return text !== request_text;
     });
-    console.log("save_request_to_history: history after removing duplicates:", JSON.stringify(history));
+    console.debug("save_request_to_history: history after removing duplicates:", JSON.stringify(history));
 
-    console.log("save_request_to_history: adding request_text to history");
+    console.debug("save_request_to_history: adding request_text to history");
     let entry = {
         text: request_text,
         response: response_text || '',
         timestamp: Date.now()
     };
     history.unshift(entry);
-    console.log("save_request_to_history: history after unshift:", JSON.stringify(history));
-    console.log("save_request_to_history: history.length after unshift:", history.length);
+    console.debug("save_request_to_history: history after unshift:", JSON.stringify(history));
+    console.debug("save_request_to_history: history.length after unshift:", history.length);
 
     const max_history_size = 100;
     if (history.length > max_history_size) {
-        console.log("save_request_to_history: trimming history to max_history_size:", max_history_size);
+        console.debug("save_request_to_history: trimming history to max_history_size:", max_history_size);
         history = history.slice(0, max_history_size);
     }
 
-    console.log("save_request_to_history: saving to localStorage");
+    console.debug("save_request_to_history: saving to localStorage");
     localStorage.setItem(key, JSON.stringify(history));
 
-    console.log("save_request_to_history: resetting index to -1");
+    console.debug("save_request_to_history: resetting index to -1");
     window.zato_request_history_index = -1;
-    console.log("save_request_to_history: window.zato_request_history_index:", window.zato_request_history_index);
+    console.debug("save_request_to_history: window.zato_request_history_index:", window.zato_request_history_index);
 
     $.fn.zato.ide.update_request_history_buttons();
-    console.log("save_request_to_history: END");
+    console.debug("save_request_to_history: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_up = function() {
-    console.log("on_request_history_up: START");
+    console.debug("on_request_history_up: START");
 
     let current_textarea_value = $("#data-request").val();
-    console.log("on_request_history_up: current textarea value:", JSON.stringify(current_textarea_value));
+    console.debug("on_request_history_up: current textarea value:", JSON.stringify(current_textarea_value));
 
     let history = $.fn.zato.ide.get_request_history();
-    console.log("on_request_history_up: history:", JSON.stringify(history));
-    console.log("on_request_history_up: history.length:", history.length);
+    console.debug("on_request_history_up: history:", JSON.stringify(history));
+    console.debug("on_request_history_up: history.length:", history.length);
 
     if (history.length === 0) {
-        console.log("on_request_history_up: history is empty, returning");
+        console.debug("on_request_history_up: history is empty, returning");
         return;
     }
 
     let current_index = window.zato_request_history_index;
-    console.log("on_request_history_up: current_index:", current_index);
+    console.debug("on_request_history_up: current_index:", current_index);
 
     let new_index = current_index + 1;
-    console.log("on_request_history_up: new_index (before adjustment):", new_index);
+    console.debug("on_request_history_up: new_index (before adjustment):", new_index);
 
     if (current_index === -1 && history.length > 0) {
         let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
         if (current_textarea_value === first_text) {
-            console.log("on_request_history_up: at index -1 and textarea matches history[0], skipping to index 1");
+            console.debug("on_request_history_up: at index -1 and textarea matches history[0], skipping to index 1");
             new_index = 1;
         }
     }
 
-    console.log("on_request_history_up: new_index (after adjustment):", new_index);
+    console.debug("on_request_history_up: new_index (after adjustment):", new_index);
 
     if (new_index >= history.length) {
-        console.log("on_request_history_up: new_index >= history.length, returning");
+        console.debug("on_request_history_up: new_index >= history.length, returning");
         return;
     }
 
-    console.log("on_request_history_up: setting window.zato_request_history_index to:", new_index);
+    console.debug("on_request_history_up: setting window.zato_request_history_index to:", new_index);
     window.zato_request_history_index = new_index;
 
     let item = history[new_index];
     let request_text = typeof item === 'string' ? item : item.text;
-    console.log("on_request_history_up: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
+    console.debug("on_request_history_up: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
 
-    console.log("on_request_history_up: setting textarea value");
+    console.debug("on_request_history_up: setting textarea value");
     $("#data-request").val(request_text);
-    console.log("on_request_history_up: textarea value after set:", JSON.stringify($("#data-request").val()));
+    console.debug("on_request_history_up: textarea value after set:", JSON.stringify($("#data-request").val()));
 
     $.fn.zato.ide.update_request_history_buttons();
-    console.log("on_request_history_up: END");
+    console.debug("on_request_history_up: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_down = function() {
-    console.log("on_request_history_down: START");
-    console.log("on_request_history_down: current textarea value:", JSON.stringify($("#data-request").val()));
+    console.debug("on_request_history_down: START");
+    console.debug("on_request_history_down: current textarea value:", JSON.stringify($("#data-request").val()));
 
     let history = $.fn.zato.ide.get_request_history();
-    console.log("on_request_history_down: history:", JSON.stringify(history));
-    console.log("on_request_history_down: history.length:", history.length);
+    console.debug("on_request_history_down: history:", JSON.stringify(history));
+    console.debug("on_request_history_down: history.length:", history.length);
 
     if (history.length === 0) {
-        console.log("on_request_history_down: history is empty, returning");
+        console.debug("on_request_history_down: history is empty, returning");
         return;
     }
 
     let current_index = window.zato_request_history_index;
-    console.log("on_request_history_down: current_index:", current_index);
+    console.debug("on_request_history_down: current_index:", current_index);
 
     let new_index = current_index - 1;
-    console.log("on_request_history_down: new_index:", new_index);
+    console.debug("on_request_history_down: new_index:", new_index);
 
     if (new_index < -1) {
-        console.log("on_request_history_down: new_index < -1, returning");
+        console.debug("on_request_history_down: new_index < -1, returning");
         return;
     }
 
-    console.log("on_request_history_down: setting window.zato_request_history_index to:", new_index);
+    console.debug("on_request_history_down: setting window.zato_request_history_index to:", new_index);
     window.zato_request_history_index = new_index;
 
     if (new_index === -1) {
-        console.log("on_request_history_down: new_index is -1, clearing textarea");
+        console.debug("on_request_history_down: new_index is -1, clearing textarea");
         $("#data-request").val("");
     } else {
         let item = history[new_index];
         let request_text = typeof item === 'string' ? item : item.text;
-        console.log("on_request_history_down: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
-        console.log("on_request_history_down: setting textarea value");
+        console.debug("on_request_history_down: request_text from history[" + new_index + "]:", JSON.stringify(request_text));
+        console.debug("on_request_history_down: setting textarea value");
         $("#data-request").val(request_text);
     }
 
-    console.log("on_request_history_down: textarea value after set:", JSON.stringify($("#data-request").val()));
+    console.debug("on_request_history_down: textarea value after set:", JSON.stringify($("#data-request").val()));
 
     $.fn.zato.ide.update_request_history_buttons();
-    console.log("on_request_history_down: END");
+    console.debug("on_request_history_down: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.open_history_overlay = function() {
-    console.log("open_history_overlay: START");
+    console.debug("open_history_overlay: START");
 
     let overlay = $("#request-history-overlay");
     let history = $.fn.zato.ide.get_request_history();
 
-    console.log("open_history_overlay: history:", JSON.stringify(history));
+    console.debug("open_history_overlay: history:", JSON.stringify(history));
 
     $.fn.zato.ide.populate_history_overlay(history);
 
@@ -2393,7 +2441,7 @@ $.fn.zato.ide.open_history_overlay = function() {
 
     $.fn.zato.ide.init_history_overlay_drag();
 
-    console.log("open_history_overlay: END");
+    console.debug("open_history_overlay: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2450,7 +2498,7 @@ $.fn.zato.ide.init_history_overlay_drag = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.close_history_overlay = function() {
-    console.log("close_history_overlay: called");
+    console.debug("close_history_overlay: called");
     $("#request-history-overlay").addClass("hidden");
 }
 
@@ -2498,14 +2546,14 @@ $.fn.zato.ide.format_timestamp = function(timestamp) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
-    console.log("populate_history_overlay: START");
+    console.debug("populate_history_overlay: START");
 
     if (!history) {
         history = $.fn.zato.ide.get_full_history();
     }
 
-    console.log("populate_history_overlay: history.length:", history.length);
-    console.log("populate_history_overlay: is_search_result:", is_search_result);
+    console.debug("populate_history_overlay: history.length:", history.length);
+    console.debug("populate_history_overlay: is_search_result:", is_search_result);
 
     let list_container = $("#history-overlay-list");
     list_container.empty();
@@ -2573,13 +2621,13 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                 let copy_btn = $('<button class="history-response-detail-copy" id="' + copy_btn_id + '">Copy</button>');
 
                 copy_btn.on("click", function(e) {
-                    console.log("copy_btn clicked: START, id:", copy_btn_id);
+                    console.debug("copy_btn clicked: START, id:", copy_btn_id);
                     e.stopPropagation();
-                    console.log("copy_btn: event.stopPropagation called");
-                    console.log("copy_btn: response length:", response.length);
+                    console.debug("copy_btn: event.stopPropagation called");
+                    console.debug("copy_btn: response length:", response.length);
 
                     if (!response || response.trim() === '' || response.trim() === '(None)') {
-                        console.log("copy_btn: response is empty, showing nothing to copy message");
+                        console.debug("copy_btn: response is empty, showing nothing to copy message");
                         let tippy_root_before = $("[data-tippy-root]");
                         tippy_root_before.each(function(idx, elem) {
                             $(elem).css("z-index", "10001");
@@ -2618,45 +2666,45 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                         return;
                     }
 
-                    console.log("copy_btn: about to call navigator.clipboard.writeText");
+                    console.debug("copy_btn: about to call navigator.clipboard.writeText");
 
                     navigator.clipboard.writeText(response).then(function() {
-                        console.log("copy_btn: clipboard.writeText SUCCESS");
-                        console.log("copy_btn: about to call $.fn.zato.show_bottom_tooltip");
-                        console.log("copy_btn: selector:", "#" + copy_btn_id);
-                        console.log("copy_btn: message:", "Response copied to clipboard");
+                        console.debug("copy_btn: clipboard.writeText SUCCESS");
+                        console.debug("copy_btn: about to call $.fn.zato.show_bottom_tooltip");
+                        console.debug("copy_btn: selector:", "#" + copy_btn_id);
+                        console.debug("copy_btn: message:", "Response copied to clipboard");
 
                         let tooltip_elem = $("#" + copy_btn_id);
-                        console.log("copy_btn: tooltip_elem found:", tooltip_elem.length);
-                        console.log("copy_btn: tooltip_elem offset:", tooltip_elem.offset());
-                        console.log("copy_btn: tooltip_elem css position:", tooltip_elem.css("position"));
-                        console.log("copy_btn: tooltip_elem css z-index:", tooltip_elem.css("z-index"));
+                        console.debug("copy_btn: tooltip_elem found:", tooltip_elem.length);
+                        console.debug("copy_btn: tooltip_elem offset:", tooltip_elem.offset());
+                        console.debug("copy_btn: tooltip_elem css position:", tooltip_elem.css("position"));
+                        console.debug("copy_btn: tooltip_elem css z-index:", tooltip_elem.css("z-index"));
 
                         let tippy_root_before = $("[data-tippy-root]");
-                        console.log("copy_btn: BEFORE show_bottom_tooltip - tippy_root elements found:", tippy_root_before.length);
+                        console.debug("copy_btn: BEFORE show_bottom_tooltip - tippy_root elements found:", tippy_root_before.length);
                         tippy_root_before.each(function(idx, elem) {
                             let $elem = $(elem);
-                            console.log("copy_btn: BEFORE - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
+                            console.debug("copy_btn: BEFORE - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
                             $elem.css("z-index", "10001");
-                            console.log("copy_btn: BEFORE - tippy_root[" + idx + "] z-index set to 10001");
+                            console.debug("copy_btn: BEFORE - tippy_root[" + idx + "] z-index set to 10001");
                         });
 
                         $.fn.zato.show_bottom_tooltip("#" + copy_btn_id, "Response copied to clipboard");
-                        console.log("copy_btn: $.fn.zato.show_bottom_tooltip CALLED");
+                        console.debug("copy_btn: $.fn.zato.show_bottom_tooltip CALLED");
 
                         setTimeout(function() {
                             let tippy_root = $("[data-tippy-root]");
-                            console.log("copy_btn: AFTER timeout - tippy_root elements found:", tippy_root.length);
+                            console.debug("copy_btn: AFTER timeout - tippy_root elements found:", tippy_root.length);
                             tippy_root.each(function(idx, elem) {
                                 let $elem = $(elem);
-                                console.log("copy_btn: AFTER - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
+                                console.debug("copy_btn: AFTER - tippy_root[" + idx + "] z-index:", $elem.css("z-index"));
                                 $elem.css("z-index", "10001");
-                                console.log("copy_btn: AFTER - tippy_root[" + idx + "] z-index set to 10001");
+                                console.debug("copy_btn: AFTER - tippy_root[" + idx + "] z-index set to 10001");
                             });
 
                             let overlay = $(".history-overlay");
-                            console.log("copy_btn: overlay z-index:", overlay.css("z-index"));
-                            console.log("copy_btn: overlay display:", overlay.css("display"));
+                            console.debug("copy_btn: overlay z-index:", overlay.css("z-index"));
+                            console.debug("copy_btn: overlay display:", overlay.css("display"));
                         }, 10);
 
                         setTimeout(function() {
@@ -2667,9 +2715,9 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
                             }
                         }, Copy_Tooltip_Timeout);
 
-                        console.log("copy_btn: END");
+                        console.debug("copy_btn: END");
                     }).catch(function(err) {
-                        console.log("copy_btn: clipboard.writeText FAILED:", err);
+                        console.debug("copy_btn: clipboard.writeText FAILED:", err);
                     });
                 });
 
@@ -2704,37 +2752,37 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         list_container.append(wrapper);
     }
 
-    console.log("populate_history_overlay: END");
+    console.debug("populate_history_overlay: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_history_item_selected = function(index) {
-    console.log("on_history_item_selected: index:", index);
+    console.debug("on_history_item_selected: index:", index);
 
     let history = $.fn.zato.ide.get_request_history();
     let item = history[index];
     let request_text = typeof item === 'string' ? item : item.text;
 
-    console.log("on_history_item_selected: request_text:", JSON.stringify(request_text));
+    console.debug("on_history_item_selected: request_text:", JSON.stringify(request_text));
 
     $("#data-request").val(request_text);
 
     window.zato_request_history_index = parseInt(index);
-    console.log("on_history_item_selected: set window.zato_request_history_index to:", window.zato_request_history_index);
+    console.debug("on_history_item_selected: set window.zato_request_history_index to:", window.zato_request_history_index);
 
     $.fn.zato.ide.close_history_overlay();
     $.fn.zato.ide.update_request_history_buttons();
 
     $("#data-request").focus();
 
-    console.log("on_history_item_selected: END");
+    console.debug("on_history_item_selected: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.filter_history_overlay = function(search_text) {
-    console.log("filter_history_overlay: search_text:", JSON.stringify(search_text));
+    console.debug("filter_history_overlay: search_text:", JSON.stringify(search_text));
 
     let history = $.fn.zato.ide.get_request_history();
     let filtered = history;
@@ -2759,7 +2807,7 @@ $.fn.zato.ide.filter_history_overlay = function(search_text) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_history_item_delete = function(index) {
-    console.log("on_history_item_delete: index:", index);
+    console.debug("on_history_item_delete: index:", index);
 
     let history = $.fn.zato.ide.get_request_history();
     history.splice(index, 1);
@@ -2770,7 +2818,7 @@ $.fn.zato.ide.on_history_item_delete = function(index) {
     $.fn.zato.ide.populate_history_overlay(history);
     $.fn.zato.ide.update_request_history_buttons();
 
-    console.log("on_history_item_delete: END");
+    console.debug("on_history_item_delete: END");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
