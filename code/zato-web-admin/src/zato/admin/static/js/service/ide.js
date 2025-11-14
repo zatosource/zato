@@ -2178,6 +2178,25 @@ $.fn.zato.ide.update_request_history_buttons = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.ide.get_full_history_key = function() {
+    let cluster_name = $.fn.zato.ide.get_cluster_name();
+    let key = window.zato_local_storage_key.zato_full_history + "." + cluster_name;
+    return key;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.ide.get_full_history = function() {
+    let key = $.fn.zato.ide.get_full_history_key();
+    let history_json = localStorage.getItem(key);
+    if (history_json) {
+        return JSON.parse(history_json);
+    }
+    return [];
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
     console.log("save_request_to_history: START");
     console.log("save_request_to_history: request_text:", JSON.stringify(request_text));
@@ -2480,6 +2499,11 @@ $.fn.zato.ide.format_timestamp = function(timestamp) {
 
 $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
     console.log("populate_history_overlay: START");
+
+    if (!history) {
+        history = $.fn.zato.ide.get_full_history();
+    }
+
     console.log("populate_history_overlay: history.length:", history.length);
     console.log("populate_history_overlay: is_search_result:", is_search_result);
 
@@ -2496,15 +2520,16 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         let item = history[i];
         let request_text = typeof item === 'string' ? item : item.text;
         let timestamp = typeof item === 'string' ? null : item.timestamp;
+        let response = typeof item === 'string' ? '' : (item.response || '');
 
         let wrapper = $('<div class="history-item-wrapper"></div>');
         let number_box = $('<div class="history-item-number"></div>');
         number_box.text((i + 1));
         let text_box = $('<div class="history-item-text"></div>');
-        text_box.text(request_text);
+        text_box.text(request_text && request_text.trim() !== '' ? request_text : '(No request)');
 
         let show_response_box = $('<div class="history-item-show-response"></div>');
-        show_response_box.text("Show response");
+        show_response_box.text(response && response.trim() !== '' ? "Show response" : "(No response)");
 
         let timestamp_box = $('<div class="history-item-timestamp"></div>');
         if (timestamp) {
