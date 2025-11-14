@@ -102,29 +102,30 @@
                         var log_entry = JSON.parse(event.data);
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
                         var message = log_entry.message;
+                        var location = log_entry.module + '.' + log_entry.funcName + ':' + log_entry.lineno;
 
                         var timestamp = isFirefox ? '' : getTimestamp() + ' ';
 
                         var levelStyle = '';
                         if (level === 'DEBUG') {
-                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
+                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;';
                         } else if (level === 'INFO') {
-                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
+                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;';
                         } else if (level === 'WARNING') {
-                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px; font-weight: bold;';
+                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; font-weight: bold;';
                         } else if (level === 'ERROR' || level === 'CRITICAL') {
-                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
+                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
                         }
 
                         if (message.indexOf('\n') !== -1 && !isFirefox) {
                             var lines = message.split('\n');
                             var firstLine = lines[0];
 
-                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine, levelStyle, '');
+                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine + ' ' + location, levelStyle, '');
                             console.log(message);
                             console.groupEnd();
                         } else {
-                            console.info(timestamp + '%c' + level + '%c - ' + message, levelStyle, '');
+                            console.info(timestamp + '%c' + level + '%c - ' + message + ' ' + location, levelStyle, '');
                         }
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
