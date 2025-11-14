@@ -397,6 +397,7 @@ Examples:
             '--access-logfile', access_log,
             '--error-logfile', error_log,
             '--name', 'zato-dashboard', # Set desired process name
+            '--timeout', '0',
         ]
 
         if not self.args.fg:
