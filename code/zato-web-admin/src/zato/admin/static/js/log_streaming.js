@@ -102,7 +102,6 @@
                         var log_entry = JSON.parse(event.data);
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
                         var message = log_entry.message;
-                        var location = log_entry.module + '.' + log_entry.funcName + ':' + log_entry.lineno;
 
                         var timestamp = isFirefox ? '' : getTimestamp() + ' ';
 
@@ -121,11 +120,11 @@
                             var lines = message.split('\n');
                             var firstLine = lines[0];
 
-                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine + ' ' + location, levelStyle, '');
+                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine, levelStyle, '');
                             console.log(message);
                             console.groupEnd();
                         } else {
-                            console.info(timestamp + '%c' + level + '%c - ' + message + ' ' + location, levelStyle, '');
+                            console.info(timestamp + '%c' + level + '%c - ' + message, levelStyle, '');
                         }
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
