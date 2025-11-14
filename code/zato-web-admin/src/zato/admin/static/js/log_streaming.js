@@ -102,7 +102,6 @@
                         var log_entry = JSON.parse(event.data);
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
                         var message = log_entry.message;
-                        var rest_of_message = log_entry.logger + ':' + log_entry.lineno + ' - ';
 
                         var timestamp = isFirefox ? '' : getTimestamp() + ' ';
 
@@ -112,7 +111,7 @@
                         } else if (level === 'INFO') {
                             levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         } else if (level === 'WARNING') {
-                            levelStyle = 'background: #fff3cd; color: #856404; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
+                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px; font-weight: bold;';
                         } else if (level === 'ERROR' || level === 'CRITICAL') {
                             levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         }
@@ -121,11 +120,11 @@
                             var lines = message.split('\n');
                             var firstLine = lines[0];
 
-                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
+                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine, levelStyle, '');
                             console.log(message);
                             console.groupEnd();
                         } else {
-                            console.info(timestamp + '%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
+                            console.info(timestamp + '%c' + level + '%c - ' + message, levelStyle, '');
                         }
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);
