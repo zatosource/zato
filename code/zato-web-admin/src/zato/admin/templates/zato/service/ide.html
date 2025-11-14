@@ -216,7 +216,15 @@ Ctrl+K for full history"></textarea></form>
         }
         console.clear();
         setTimeout(function() {
-            console.info('%cINFO%c - ✅ IDE ready - ' + version, 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;', '');
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            var milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+            var timestamp = hours + ':' + minutes + ':' + seconds + '.' + milliseconds;
+            var isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
+            var timestampPrefix = isFirefox ? '' : timestamp + ' ';
+            console.info(timestampPrefix + '%cINFO%c - ✅ IDE ready - ' + version, 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;', '');
         }, 10);
     }, 1000);
 </script>

@@ -85,6 +85,17 @@
                 console.debug('start_streaming: EventSource connection opened', event);
             };
 
+            var isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
+
+            function getTimestamp() {
+                var now = new Date();
+                var hours = String(now.getHours()).padStart(2, '0');
+                var minutes = String(now.getMinutes()).padStart(2, '0');
+                var seconds = String(now.getSeconds()).padStart(2, '0');
+                var milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+                return hours + ':' + minutes + ':' + seconds + '.' + milliseconds;
+            }
+
             self.eventSource.onmessage = function(event) {
                 if (event.data && event.data !== '{}') {
                     try {
@@ -93,27 +104,28 @@
                         var message = log_entry.message;
                         var rest_of_message = log_entry.logger + ':' + log_entry.lineno + ' - ';
 
+                        var timestamp = isFirefox ? '' : getTimestamp() + ' ';
+
                         var levelStyle = '';
                         if (level === 'DEBUG') {
-                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         } else if (level === 'INFO') {
-                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         } else if (level === 'WARNING') {
-                            levelStyle = 'background: #fff3cd; color: #856404; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #fff3cd; color: #856404; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         } else if (level === 'ERROR' || level === 'CRITICAL') {
-                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;';
+                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px; display: inline-block; text-align: center; min-width: 60px;';
                         }
 
-                        if (message.indexOf('\n') !== -1) {
+                        if (message.indexOf('\n') !== -1 && !isFirefox) {
                             var lines = message.split('\n');
                             var firstLine = lines[0];
 
-                            console.log('%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
-                            console.groupCollapsed('More');
+                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + rest_of_message + firstLine, levelStyle, '');
                             console.log(message);
                             console.groupEnd();
                         } else {
-                            console.info('%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
+                            console.info(timestamp + '%c' + level + '%c - ' + rest_of_message + message, levelStyle, '');
                         }
                     } catch (e) {
                         console.error('[ZATO LOG] Parse error:', e);

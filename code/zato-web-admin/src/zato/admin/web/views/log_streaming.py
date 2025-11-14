@@ -97,7 +97,15 @@ def log_stream(req):
                 if message and message['type'] == 'message':
                     message_count += 1
                     log_data = message['data']
-                    stream_logger.info('log_stream: yielding log message #{}'.format(message_count))
+
+                    import json
+                    try:
+                        parsed = json.loads(log_data)
+                        stream_logger.info('log_stream: message #{}, level={}, message preview={}'.format(
+                            message_count, parsed.get('level'), parsed.get('message', '')[:100]))
+                    except Exception:
+                        stream_logger.info('log_stream: yielding log message #{}'.format(message_count))
+
                     yield 'data: {}\n\n'.format(log_data)
                     last_keepalive = current_time
 
