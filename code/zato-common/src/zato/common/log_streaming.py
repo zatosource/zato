@@ -80,6 +80,14 @@ class RedisHandler(logging.Handler):
 
 class LogStreamingManager:
 
+    loggers_to_stream = {
+        'zato_rest',
+        'zato.hot-deploy.create',
+        # 'zato_access_log',
+        # 'zato_kvdb',
+        # 'zato_admin'
+    }
+
     def __init__(self, logger_name=''):
         self.logger_name = logger_name
         self.logger = logging.getLogger(logger_name)
@@ -112,36 +120,11 @@ class LogStreamingManager:
             stream_logger.info('LogStreamingManager: logger level={}, handler count={}'.format(
                 self.logger.level, len(self.logger.handlers)))
 
-            zato_rest_logger = logging.getLogger('zato_rest')
-            stream_logger.info('LogStreamingManager: zato_rest logger level={}, propagate={}, handler count={}'.format(
-                zato_rest_logger.level, zato_rest_logger.propagate, len(zato_rest_logger.handlers)))
-
-            zato_rest_logger.addHandler(redis_handler)
-            stream_logger.info('LogStreamingManager: added RedisHandler to zato_rest logger, new handler count={}'.format(
-                len(zato_rest_logger.handlers)))
-
-            zato_hotdeploy_logger = logging.getLogger('zato.hot-deploy.create')
-            stream_logger.info('LogStreamingManager: zato.hot-deploy.create logger level={}, propagate={}, handler count={}'.format(
-                zato_hotdeploy_logger.level, zato_hotdeploy_logger.propagate, len(zato_hotdeploy_logger.handlers)))
-            
-            zato_hotdeploy_logger.addHandler(redis_handler)
-            stream_logger.info('LogStreamingManager: added RedisHandler to zato.hot-deploy.create logger, new handler count={}'.format(
-                len(zato_hotdeploy_logger.handlers)))
-            
-            zato_access_log = logging.getLogger('zato_access_log')
-            if redis_handler not in zato_access_log.handlers:
-                zato_access_log.addHandler(redis_handler)
-                stream_logger.info('LogStreamingManager: added RedisHandler to zato_access_log logger')
-            
-            zato_kvdb = logging.getLogger('zato_kvdb')
-            if redis_handler not in zato_kvdb.handlers:
-                zato_kvdb.addHandler(redis_handler)
-                stream_logger.info('LogStreamingManager: added RedisHandler to zato_kvdb logger')
-            
-            zato_admin = logging.getLogger('zato_admin')
-            if redis_handler not in zato_admin.handlers:
-                zato_admin.addHandler(redis_handler)
-                stream_logger.info('LogStreamingManager: added RedisHandler to zato_admin logger')
+            for logger_name in self.loggers_to_stream:
+                logger_obj = logging.getLogger(logger_name)
+                if redis_handler not in logger_obj.handlers:
+                    logger_obj.addHandler(redis_handler)
+                    stream_logger.info('LogStreamingManager: added RedisHandler to {} logger'.format(logger_name))
 
             return True
         stream_logger = logging.getLogger('zato.stream_manager')
@@ -154,25 +137,10 @@ class LogStreamingManager:
         if redis_handler in self.logger.handlers:
             self.logger.removeHandler(redis_handler)
 
-            zato_rest_logger = logging.getLogger('zato_rest')
-            if redis_handler in zato_rest_logger.handlers:
-                zato_rest_logger.removeHandler(redis_handler)
-
-            zato_hotdeploy_logger = logging.getLogger('zato.hot-deploy.create')
-            if redis_handler in zato_hotdeploy_logger.handlers:
-                zato_hotdeploy_logger.removeHandler(redis_handler)
-            
-            zato_access_log = logging.getLogger('zato_access_log')
-            if redis_handler in zato_access_log.handlers:
-                zato_access_log.removeHandler(redis_handler)
-            
-            zato_kvdb = logging.getLogger('zato_kvdb')
-            if redis_handler in zato_kvdb.handlers:
-                zato_kvdb.removeHandler(redis_handler)
-            
-            zato_admin = logging.getLogger('zato_admin')
-            if redis_handler in zato_admin.handlers:
-                zato_admin.removeHandler(redis_handler)
+            for logger_name in self.loggers_to_stream:
+                logger_obj = logging.getLogger(logger_name)
+                if redis_handler in logger_obj.handlers:
+                    logger_obj.removeHandler(redis_handler)
 
             stream_logger = logging.getLogger('zato.stream_manager')
             stream_logger.info('LogStreamingManager: disabled streaming on logger "{}"'.format(self.logger_name))
