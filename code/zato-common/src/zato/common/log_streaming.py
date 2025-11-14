@@ -35,6 +35,7 @@ class RedisHandler(logging.Handler):
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.redis_db = redis_db
+        self.emit_count = 0
 
     def _get_redis_client(self):
         if self.redis_client is None:
@@ -48,7 +49,12 @@ class RedisHandler(logging.Handler):
         return self.redis_client
 
     def emit(self, record):
+        if record.name in ('zato.common.log_streaming', 'zato.redis_handler', 'zato.stream_manager', 'zato.sse_stream', 'zato.admin.web.util'):
+            return
+
         try:
+            self.emit_count += 1
+
             log_entry = {
                 'timestamp': datetime.fromtimestamp(record.created).isoformat(),
                 'level': record.levelname,
@@ -62,10 +68,15 @@ class RedisHandler(logging.Handler):
             client = self._get_redis_client()
             json_data = json.dumps(log_entry)
             result = client.publish(self.channel, json_data)
-            logger.info('Published to Redis channel {}, subscribers: {}, data: {}'.format(self.channel, result, json_data))
 
-        except Exception as e:
-            logger.error('Error publishing to Redis: {}'.format(e))
+            redis_logger = logging.getLogger('zato.redis_handler')
+            redis_logger.info('RedisHandler.emit #{}: published to {}, subscribers={}, logger={}, level={}'.format(
+                self.emit_count, self.channel, result, record.name, record.levelname))
+
+        except Exception:
+            from traceback import format_exc
+            redis_logger = logging.getLogger('zato.redis_handler')
+            redis_logger.error('RedisHandler.emit error: {}'.format(format_exc()))
             self.handleError(record)
 
 # ################################################################################################################################
@@ -73,7 +84,7 @@ class RedisHandler(logging.Handler):
 
 class LogStreamingManager:
 
-    def __init__(self, logger_name='zato'):
+    def __init__(self, logger_name=''):
         self.logger_name = logger_name
         self.logger = logging.getLogger(logger_name)
         self.redis_handler = None
@@ -99,9 +110,23 @@ class LogStreamingManager:
 
         if redis_handler not in self.logger.handlers:
             self.logger.addHandler(redis_handler)
-            logger.info('Log streaming enabled, handler added to logger: {}'.format(self.logger_name))
+            stream_logger = logging.getLogger('zato.stream_manager')
+            stream_logger.info('LogStreamingManager: enabled streaming on logger "{}", propagate={}'.format(
+                self.logger_name, self.logger.propagate))
+            stream_logger.info('LogStreamingManager: logger level={}, handler count={}'.format(
+                self.logger.level, len(self.logger.handlers)))
+
+            zato_rest_logger = logging.getLogger('zato_rest')
+            stream_logger.info('LogStreamingManager: zato_rest logger level={}, propagate={}, handler count={}'.format(
+                zato_rest_logger.level, zato_rest_logger.propagate, len(zato_rest_logger.handlers)))
+
+            zato_rest_logger.addHandler(redis_handler)
+            stream_logger.info('LogStreamingManager: added RedisHandler to zato_rest logger, new handler count={}'.format(
+                len(zato_rest_logger.handlers)))
+
             return True
-        logger.info('Log streaming already enabled')
+        stream_logger = logging.getLogger('zato.stream_manager')
+        stream_logger.info('LogStreamingManager: streaming already enabled on logger "{}"'.format(self.logger_name))
         return False
 
     def disable_streaming(self):
@@ -109,9 +134,16 @@ class LogStreamingManager:
 
         if redis_handler in self.logger.handlers:
             self.logger.removeHandler(redis_handler)
-            logger.info('Log streaming disabled, handler removed from logger: {}'.format(self.logger_name))
+
+            zato_rest_logger = logging.getLogger('zato_rest')
+            if redis_handler in zato_rest_logger.handlers:
+                zato_rest_logger.removeHandler(redis_handler)
+
+            stream_logger = logging.getLogger('zato.stream_manager')
+            stream_logger.info('LogStreamingManager: disabled streaming on logger "{}"'.format(self.logger_name))
             return True
-        logger.info('Log streaming already disabled')
+        stream_logger = logging.getLogger('zato.stream_manager')
+        stream_logger.info('LogStreamingManager: streaming already disabled on logger "{}"'.format(self.logger_name))
         return False
 
     def toggle_streaming(self):
