@@ -103,7 +103,9 @@ class ToggleLogStreaming(Service):
     name = 'zato.log.streaming.toggle'
 
     def handle(self) -> 'None':
+        self.logger.info('ToggleLogStreaming service called')
         enabled = self.server.log_streaming_manager.toggle_streaming()
+        self.logger.info('Log streaming toggled, new state: {}'.format(enabled))
         self.response.payload = {
             'status': 'success',
             'streaming_enabled': enabled
@@ -118,7 +120,9 @@ class GetLogStreamingStatus(Service):
     name = 'zato.log.streaming.status'
 
     def handle(self) -> 'None':
+        self.logger.info('GetLogStreamingStatus service called')
         enabled = self.server.log_streaming_manager.is_streaming_enabled()
+        self.logger.info('Current streaming status: {}'.format(enabled))
         self.response.payload = {
             'streaming_enabled': enabled
         }

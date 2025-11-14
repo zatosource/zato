@@ -7,6 +7,7 @@
 {% block head %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
@@ -329,8 +330,8 @@
                                     <li class="child">
                                         <a class="menu-link" href="#">Log streaming &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.log_streaming.get_status()">Log streaming status</a></li>
-                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.log_streaming.toggle()">Toggle log streaming</a></li>
+                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.log_streaming.get_status()">Show status</a></li>
+                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.log_streaming.toggle()">Toggle streaming</a></li>
                                         </ul>
                                     </li>
                                 </ul>
