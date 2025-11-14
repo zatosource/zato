@@ -21,6 +21,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisHandler(logging.Handler):
 
     def __init__(self, channel='zato.logs', redis_host='localhost', redis_port=6379, redis_db=0):
@@ -55,9 +60,12 @@ class RedisHandler(logging.Handler):
             }
 
             client = self._get_redis_client()
-            client.publish(self.channel, json.dumps(log_entry))
+            json_data = json.dumps(log_entry)
+            result = client.publish(self.channel, json_data)
+            logger.info('Published to Redis channel {}, subscribers: {}, data: {}'.format(self.channel, result, json_data))
 
-        except Exception:
+        except Exception as e:
+            logger.error('Error publishing to Redis: {}'.format(e))
             self.handleError(record)
 
 # ################################################################################################################################
@@ -91,7 +99,9 @@ class LogStreamingManager:
 
         if redis_handler not in self.logger.handlers:
             self.logger.addHandler(redis_handler)
+            logger.info('Log streaming enabled, handler added to logger: {}'.format(self.logger_name))
             return True
+        logger.info('Log streaming already enabled')
         return False
 
     def disable_streaming(self):
@@ -99,7 +109,9 @@ class LogStreamingManager:
 
         if redis_handler in self.logger.handlers:
             self.logger.removeHandler(redis_handler)
+            logger.info('Log streaming disabled, handler removed from logger: {}'.format(self.logger_name))
             return True
+        logger.info('Log streaming already disabled')
         return False
 
     def toggle_streaming(self):
