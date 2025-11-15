@@ -2069,7 +2069,8 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
         text: 'Close',
         css: {
             padding: '8px 24px',
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#0d0d0d',
+            backgroundImage: 'none',
             color: '#d4d4d4',
             border: '1px solid #3e3e3e',
             borderRadius: '4px',
@@ -2080,8 +2081,8 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
     });
 
     closeButton.hover(
-        function() { $(this).css('backgroundColor', '#2d2d2d'); },
-        function() { $(this).css('backgroundColor', '#1e1e1e'); }
+        function() { $(this).css('backgroundColor', '#1a1a1a'); },
+        function() { $(this).css('backgroundColor', '#0d0d0d'); }
     );
 
     closeButton.click(function() {
