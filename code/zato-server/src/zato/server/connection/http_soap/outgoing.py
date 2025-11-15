@@ -343,6 +343,11 @@ class BaseHTTPSOAPWrapper:
             # .. drop extra kwargs ..
             _ = kwargs.pop('max_retries', None)
             _ = kwargs.pop('retry_sleep_time', None)
+            _ = kwargs.pop('retry_backoff_threshold', None)
+
+            print()
+            print(111, kwargs)
+            print()
 
             # .. do send it ..
             response = self.session.request(
