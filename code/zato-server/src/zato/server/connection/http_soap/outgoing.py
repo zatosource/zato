@@ -340,6 +340,9 @@ class BaseHTTPSOAPWrapper:
             # .. log the information about our request ..
             logger.info(msg)
 
+            # .. drop extra kwargs ..
+            _ = kwargs.pop('max_retries', None)
+
             # .. do send it ..
             response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
