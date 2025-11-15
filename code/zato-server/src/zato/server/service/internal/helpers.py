@@ -103,11 +103,16 @@ class ToggleLogStreaming(Service):
     name = 'zato.log.streaming.toggle'
 
     def handle(self) -> 'None':
+        self.logger.info('ToggleLogStreaming.handle: called, cid={}'.format(self.cid))
+        was_enabled = self.server.log_streaming_manager.is_streaming_enabled()
+        self.logger.info('ToggleLogStreaming.handle: was_enabled={}'.format(was_enabled))
         enabled = self.server.log_streaming_manager.toggle_streaming()
+        self.logger.info('ToggleLogStreaming.handle: now_enabled={}'.format(enabled))
         self.response.payload = {
             'status': 'success',
             'streaming_enabled': enabled
         }
+        self.logger.info('ToggleLogStreaming.handle: response prepared, streaming_enabled={}'.format(enabled))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,10 +123,13 @@ class GetLogStreamingStatus(Service):
     name = 'zato.log.streaming.status'
 
     def handle(self) -> 'None':
+        self.logger.info('GetLogStreamingStatus.handle: called, cid={}'.format(self.cid))
         enabled = self.server.log_streaming_manager.is_streaming_enabled()
+        self.logger.info('GetLogStreamingStatus.handle: streaming_enabled={}'.format(enabled))
         self.response.payload = {
             'streaming_enabled': enabled
         }
+        self.logger.info('GetLogStreamingStatus.handle: response prepared')
 
 # ################################################################################################################################
 # ################################################################################################################################
