@@ -67,54 +67,30 @@ class BearerTokenManager:
 
     def _get_bearer_token_config(self, sec_def:'stranydict') -> 'BearerTokenConfig':
 
-        logger.info('_get_bearer_token_config: called with sec_def type: %s', type(sec_def))
-        logger.info('_get_bearer_token_config: sec_def keys: %s', list(sec_def.keys()) if hasattr(sec_def, 'keys') else 'N/A')
-        logger.info('_get_bearer_token_config: sec_def["name"]: %s', sec_def.get('name'))
-
         # Scopes require preprocessing ..
-        scopes_raw = sec_def.get('scopes') or ''
-        logger.info('_get_bearer_token_config: scopes_raw type: %s, value: %r', type(scopes_raw), scopes_raw)
-        scopes = scopes_raw.splitlines()
-        logger.info('_get_bearer_token_config: scopes after splitlines, type: %s, value: %r', type(scopes), scopes)
+        scopes = (sec_def.get('scopes') or '').splitlines()
         scopes = [elem.strip() for elem in scopes]
-        logger.info('_get_bearer_token_config: scopes after strip, type: %s, value: %r', type(scopes), scopes)
         scopes = ' '.join(scopes)
-        logger.info('_get_bearer_token_config: scopes after join, type: %s, value: %r', type(scopes), scopes)
 
         # .. same goes for extra fields ..
-        extra_fields_raw = sec_def['extra_fields'] or ''
-        logger.info('_get_bearer_token_config: extra_fields_raw type: %s, value: %r', type(extra_fields_raw), extra_fields_raw)
-        if isinstance(extra_fields_raw, list):
-            logger.info('_get_bearer_token_config: extra_fields_raw is list, joining with newlines')
-            extra_fields_raw = '\n'.join(extra_fields_raw)
-            logger.info('_get_bearer_token_config: extra_fields_raw after join, type: %s, value: %r', type(extra_fields_raw), extra_fields_raw)
-        extra_fields = parse_extra_into_dict(extra_fields_raw)
-        logger.info('_get_bearer_token_config: extra_fields after parse, type: %s, value: %r', type(extra_fields), extra_fields)
+        extra_fields = sec_def['extra_fields'] or ''
+        if isinstance(extra_fields, list):
+            extra_fields = '\n'.join(extra_fields)
+        extra_fields = parse_extra_into_dict(extra_fields)
 
         # .. build a business object from security definition ..
-        logger.info('_get_bearer_token_config: creating BearerTokenConfig object')
         out = BearerTokenConfig()
         out.sec_def_name = sec_def['name']
-        logger.info('_get_bearer_token_config: set sec_def_name: %s', out.sec_def_name)
         out.username = sec_def['username']
-        logger.info('_get_bearer_token_config: set username: %s', out.username)
         out.password = sec_def['password']
-        logger.info('_get_bearer_token_config: set password: %s', '***' if out.password else None)
         out.scopes = scopes
-        logger.info('_get_bearer_token_config: set scopes: %s', out.scopes)
         out.grant_type = sec_def['grant_type']
-        logger.info('_get_bearer_token_config: set grant_type: %s', out.grant_type)
         out.extra_fields = extra_fields
-        logger.info('_get_bearer_token_config: set extra_fields: %s', out.extra_fields)
         out.auth_server_url = sec_def['auth_server_url']
-        logger.info('_get_bearer_token_config: set auth_server_url: %s', out.auth_server_url)
         out.client_id_field = sec_def['client_id_field']
-        logger.info('_get_bearer_token_config: set client_id_field: %s', out.client_id_field)
         out.client_secret_field = sec_def['client_secret_field']
-        logger.info('_get_bearer_token_config: set client_secret_field: %s', out.client_secret_field)
 
         # .. and return it to our caller.
-        logger.info('_get_bearer_token_config: returning BearerTokenConfig object')
         return out
 
 # ################################################################################################################################
