@@ -2087,6 +2087,12 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
 
     closeButton.click(function() {
         overlay.remove();
+        if (is_success) {
+            var currentUrl = window.location.href;
+            if (currentUrl.indexOf('service/ide') === -1) {
+                window.location.reload();
+            }
+        }
     });
 
     buttonContainer.append(closeButton);
