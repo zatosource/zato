@@ -51,6 +51,8 @@
         toggle: function() {
             var self = this;
 
+            console.debug('toggle: called');
+
             $.ajax({
                 type: 'POST',
                 url: '/zato/log-streaming/toggle',
@@ -58,11 +60,14 @@
                     'X-CSRFToken': $.cookie('csrftoken')
                 },
                 success: function(data) {
+                    console.debug('toggle: success response:', data);
                     var streaming_enabled = data.streaming_enabled;
                     var status_text = streaming_enabled ? 'enabled' : 'disabled';
+                    console.debug('toggle: new status:', status_text);
                     alert('New log streaming status: ' + status_text);
                 },
                 error: function(xhr, status, error) {
+                    console.error('toggle: error:', status, error, xhr);
                     alert('Error toggling log streaming: ' + error);
                 }
             });
@@ -97,9 +102,12 @@
             }
 
             self.eventSource.onmessage = function(event) {
+                console.debug('onmessage: received event, data length:', event.data ? event.data.length : 0);
                 if (event.data && event.data !== '{}') {
+                    console.debug('onmessage: parsing data:', event.data.substring(0, 100));
                     try {
                         var log_entry = JSON.parse(event.data);
+                        console.debug('onmessage: parsed log_entry, level:', log_entry.level, 'message preview:', log_entry.message.substring(0, 50));
                         var level = log_entry.level.replace(/\u001b\[[0-9;]*m/g, '').trim();
                         var message = log_entry.message;
 
@@ -132,12 +140,16 @@
                         console.error('[ZATO LOG] Parse error:', e);
                         console.debug('[ZATO LOG] Raw:', event.data);
                     }
+                } else {
+                    console.debug('onmessage: skipping empty or {} data');
                 }
             };
 
             self.eventSource.onerror = function(error) {
-                console.debug('INFO start_streaming: error event', error);
-                console.debug('INFO start_streaming: readyState:', self.eventSource.readyState);
+                console.error('start_streaming: error event', error);
+                console.debug('start_streaming: readyState:', self.eventSource.readyState);
+                console.debug('start_streaming: error type:', error.type);
+                console.debug('start_streaming: calling stop_streaming');
                 self.stop_streaming();
             };
 
@@ -147,9 +159,14 @@
         stop_streaming: function() {
             var self = this;
 
+            console.debug('stop_streaming: called');
             if (self.eventSource) {
+                console.debug('stop_streaming: closing EventSource, readyState:', self.eventSource.readyState);
                 self.eventSource.close();
                 self.eventSource = null;
+                console.debug('stop_streaming: EventSource closed and nulled');
+            } else {
+                console.debug('stop_streaming: no EventSource to close');
             }
         },
 
