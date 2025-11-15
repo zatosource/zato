@@ -86,6 +86,7 @@ def log_stream(req):
             stream_logger.info('log_stream: entering main message loop')
 
             last_keepalive = time.time()
+            last_keepalive_log = time.time()
             message_count = 0
 
             keepalive_count = 0
@@ -94,8 +95,10 @@ def log_stream(req):
 
                 if current_time - last_keepalive >= 5:
                     keepalive_count += 1
-                    stream_logger.info('log_stream: yielding keepalive #{}, time since last: {}'.format(
-                        keepalive_count, current_time - last_keepalive))
+                    if current_time - last_keepalive_log >= 60:
+                        stream_logger.info('log_stream: yielding keepalive #{}, time since last: {}'.format(
+                            keepalive_count, current_time - last_keepalive))
+                        last_keepalive_log = current_time
                     yield ': keepalive\n\n'
                     last_keepalive = current_time
 
