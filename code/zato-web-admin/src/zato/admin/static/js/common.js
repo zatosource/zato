@@ -1997,16 +1997,6 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
 
 
     if (result.stdout && String(result.stdout).trim()) {
-        var stdoutLabel = $('<div/>', {
-            text: result.len_stdout_human ? 'Output (' + result.len_stdout_human + '):' : 'Output:',
-            css: {
-                marginTop: '12px',
-                marginBottom: '4px',
-                color: '#4ec9b0',
-                fontSize: '14px',
-                fontWeight: 'bold'
-            }
-        });
         var stdoutArea = $('<textarea/>', {
             val: String(result.stdout),
             readonly: true,
@@ -2023,13 +2013,25 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
                 resize: 'vertical'
             }
         });
-        popup.append(stdoutLabel);
         popup.append(stdoutArea);
+
+        if (String(result.stdout).indexOf('⭐ Enmasse OK') !== -1) {
+            var successMsg = $('<div/>', {
+                text: '⭐ Config imported OK',
+                css: {
+                    marginTop: '12px',
+                    color: '#4ec9b0',
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                }
+            });
+            popup.append(successMsg);
+        }
     }
 
-    if (result.stderr && String(result.stderr).trim()) {
+    if (result.stderr && String(result.stderr).trim() && !result.is_ok) {
         var stderrLabel = $('<div/>', {
-            text: result.len_stderr_human ? 'Errors (' + result.len_stderr_human + '):' : 'Errors:',
+            text: 'Errors:',
             css: {
                 marginTop: '12px',
                 marginBottom: '4px',
