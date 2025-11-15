@@ -124,6 +124,22 @@ def log_stream(req):
             if redis_client:
                 redis_client.close()
                 stream_logger.info('log_stream: redis_client closed')
+
+            try:
+                stream_logger.info('log_stream: checking if streaming is enabled')
+                status_response = req.zato.client.invoke('zato.log.streaming.status', {})
+                is_enabled = status_response.data.get('streaming_enabled', False)
+                stream_logger.info('log_stream: streaming enabled status: {}'.format(is_enabled))
+
+                if is_enabled:
+                    stream_logger.info('log_stream: disabling log streaming')
+                    response = req.zato.client.invoke('zato.log.streaming.toggle', {})
+                    stream_logger.info('log_stream: log streaming disabled, response: {}'.format(response.data))
+                else:
+                    stream_logger.info('log_stream: streaming already disabled, skipping toggle')
+            except Exception:
+                stream_logger.error('log_stream: failed to disable streaming: {}'.format(format_exc()))
+
             stream_logger.info('log_stream: GENERATOR ENDED')
 
     stream_logger.info('log_stream: creating StreamingHttpResponse')
