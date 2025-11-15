@@ -68,7 +68,7 @@ class BearerTokenManager:
     def _get_bearer_token_config(self, sec_def:'stranydict') -> 'BearerTokenConfig':
 
         # Scopes require preprocessing ..
-        scopes = (sec_def['scopes'] or '').splitlines()
+        scopes = (sec_def.get('scopes') or '').splitlines()
         scopes = [elem.strip() for elem in scopes]
         scopes = ' '.join(scopes)
 
