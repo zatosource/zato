@@ -335,7 +335,9 @@ class SecurityImporter:
 
     def sync_security_definitions(self, security_list:'anylist', session:'SASession') -> 'listtuple':
 
-        logger.info('Processing %d security definitions from YAML', len(security_list))
+        count = len(security_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} security {noun} from YAML')
 
         valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey'}
 
