@@ -205,8 +205,16 @@ class ServerInvoker(AdminService):
     name = 'zato.server.invoker'
 
     def handle(self):
-        func = getattr(self.server, self.request.raw_request['func_name'])
-        response = func()
+        func_name = self.request.raw_request['func_name']
+        func = getattr(self.server, func_name)
+
+        if func_name == 'import_enmasse':
+            file_content = self.request.raw_request.get('file_content', '')
+            file_name = self.request.raw_request.get('file_name', 'config.yaml')
+            response = func(file_content, file_name)
+        else:
+            response = func()
+
         self.response.payload = response
 
 # ################################################################################################################################

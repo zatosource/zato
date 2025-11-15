@@ -326,7 +326,13 @@
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">System &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link monitoring-link" href="#">Monitoring</a></li>
-                                    <li class="child"><a class="menu-link" href="javascript:$.fn.zato.service.export_config()">Export config</a></li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">Config &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.service.import_config()">Import config</a></li>
+                                            <li class="child"><a class="menu-link" href="javascript:$.fn.zato.service.export_config()">Export config</a></li>
+                                        </ul>
+                                    </li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Log streaming &rarr;</a>
                                         <ul>
