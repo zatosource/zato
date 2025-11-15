@@ -28,7 +28,9 @@ logger = getLogger(__name__)
 @method_allowed('POST')
 def toggle_streaming(req):
 
+    logger.info('toggle_streaming: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
     response = req.zato.client.invoke('zato.log.streaming.toggle', {})
+    logger.info('toggle_streaming: service response: {}'.format(response.data))
 
     return HttpResponse(dumps(response.data), content_type='application/json')
 
@@ -38,7 +40,9 @@ def toggle_streaming(req):
 @method_allowed('GET')
 def get_status(req):
 
+    logger.info('get_status: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
     response = req.zato.client.invoke('zato.log.streaming.status', {})
+    logger.info('get_status: service response: {}'.format(response.data))
 
     return HttpResponse(dumps(response.data), content_type='application/json')
 
@@ -78,6 +82,7 @@ def log_stream(req):
 
             yield ': connected\n\n'
             stream_logger.info('log_stream: sent initial connected message')
+            stream_logger.info('log_stream: entering main message loop')
 
             last_keepalive = time.time()
             message_count = 0
@@ -94,9 +99,12 @@ def log_stream(req):
                     last_keepalive = current_time
 
                 message = pubsub.get_message()
+                if message:
+                    stream_logger.info('log_stream: got message from pubsub, type: {}'.format(message.get('type')))
                 if message and message['type'] == 'message':
                     message_count += 1
                     log_data = message['data']
+                    stream_logger.info('log_stream: processing message #{}, data length: {}'.format(message_count, len(log_data)))
 
                     import json
                     try:
@@ -106,15 +114,19 @@ def log_stream(req):
                     except Exception:
                         stream_logger.info('log_stream: yielding log message #{}'.format(message_count))
 
+                    stream_logger.info('log_stream: yielding message #{}'.format(message_count))
                     yield 'data: {}\n\n'.format(log_data)
                     last_keepalive = current_time
+                    stream_logger.info('log_stream: message #{} yielded successfully'.format(message_count))
 
                 time.sleep(0.1)
 
         except GeneratorExit:
             stream_logger.info('log_stream: GENERATOR EXIT (client disconnected)')
+            stream_logger.info('log_stream: total messages sent: {}'.format(message_count))
         except Exception:
             stream_logger.error('log_stream: EXCEPTION in generator: {}'.format(format_exc()))
+            stream_logger.info('log_stream: total messages before exception: {}'.format(message_count))
         finally:
             stream_logger.info('log_stream: FINALLY block, cleaning up')
             if pubsub:
