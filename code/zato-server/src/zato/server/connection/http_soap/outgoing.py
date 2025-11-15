@@ -345,10 +345,6 @@ class BaseHTTPSOAPWrapper:
             _ = kwargs.pop('retry_sleep_time', None)
             _ = kwargs.pop('retry_backoff_threshold', None)
 
-            print()
-            print(111, kwargs)
-            print()
-
             # .. do send it ..
             response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
