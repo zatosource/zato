@@ -1905,20 +1905,13 @@ $.fn.zato.service.import_config = function() {
                 success: function(data) {
                     $('#import-spinner').remove();
 
-                    console.log('[DEBUG] Import response received');
-                    console.log('[DEBUG] Response type:', typeof data);
-                    console.log('[DEBUG] Response data:', data);
-
                     var result;
                     if (typeof data === 'object') {
                         result = data;
-                        console.log('[DEBUG] Response is already an object:', result);
                     } else {
                         try {
                             result = JSON.parse(data);
-                            console.log('[DEBUG] Parsed JSON successfully:', result);
                         } catch (e) {
-                            console.log('[DEBUG] JSON parse failed:', e);
                             result = {
                                 is_ok: false,
                                 exit_code: -1,
