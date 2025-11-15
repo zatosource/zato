@@ -54,6 +54,9 @@ class RedisHandler(logging.Handler):
 
         try:
             self.emit_count += 1
+            redis_logger = logging.getLogger('zato.redis_handler')
+            redis_logger.debug('RedisHandler.emit: emit_count={}, record.name={}, record.levelname={}'.format(
+                self.emit_count, record.name, record.levelname))
 
             message = self.format(record)
             level = record.levelname
@@ -72,7 +75,10 @@ class RedisHandler(logging.Handler):
 
             client = self._get_redis_client()
             json_data = json.dumps(log_entry)
-            client.publish(self.channel, json_data)
+            redis_logger.debug('RedisHandler.emit: publishing to channel={}, json_data length={}'.format(
+                self.channel, len(json_data)))
+            result = client.publish(self.channel, json_data)
+            redis_logger.debug('RedisHandler.emit: publish result (subscribers)={}'.format(result))
 
         except Exception:
             from traceback import format_exc
@@ -116,10 +122,12 @@ class LogStreamingManager:
 
     def enable_streaming(self):
         redis_handler = self.get_redis_handler()
+        stream_logger = logging.getLogger('zato.stream_manager')
+        stream_logger.info('LogStreamingManager.enable_streaming: called for logger "{}"'.format(self.logger_name))
 
         if redis_handler not in self.logger.handlers:
+            stream_logger.info('LogStreamingManager.enable_streaming: adding redis_handler to logger')
             self.logger.addHandler(redis_handler)
-            stream_logger = logging.getLogger('zato.stream_manager')
             stream_logger.info('LogStreamingManager: enabled streaming on logger "{}", propagate={}'.format(
                 self.logger_name, self.logger.propagate))
             stream_logger.info('LogStreamingManager: logger level={}, handler count={}'.format(
@@ -127,9 +135,13 @@ class LogStreamingManager:
 
             for logger_name in self.loggers_to_stream:
                 logger_obj = logging.getLogger(logger_name)
+                stream_logger.info('LogStreamingManager.enable_streaming: checking logger "{}"'.format(logger_name))
                 if redis_handler not in logger_obj.handlers:
+                    stream_logger.info('LogStreamingManager.enable_streaming: adding RedisHandler to "{}"'.format(logger_name))
                     logger_obj.addHandler(redis_handler)
                     stream_logger.info('LogStreamingManager: added RedisHandler to {} logger'.format(logger_name))
+                else:
+                    stream_logger.info('LogStreamingManager.enable_streaming: RedisHandler already in "{}"'.format(logger_name))
 
             return True
         stream_logger = logging.getLogger('zato.stream_manager')
@@ -138,14 +150,21 @@ class LogStreamingManager:
 
     def disable_streaming(self):
         redis_handler = self.get_redis_handler()
+        stream_logger = logging.getLogger('zato.stream_manager')
+        stream_logger.info('LogStreamingManager.disable_streaming: called for logger "{}"'.format(self.logger_name))
 
         if redis_handler in self.logger.handlers:
+            stream_logger.info('LogStreamingManager.disable_streaming: removing redis_handler from logger')
             self.logger.removeHandler(redis_handler)
 
             for logger_name in self.loggers_to_stream:
                 logger_obj = logging.getLogger(logger_name)
+                stream_logger.info('LogStreamingManager.disable_streaming: checking logger "{}"'.format(logger_name))
                 if redis_handler in logger_obj.handlers:
+                    stream_logger.info('LogStreamingManager.disable_streaming: removing RedisHandler from "{}"'.format(logger_name))
                     logger_obj.removeHandler(redis_handler)
+                else:
+                    stream_logger.info('LogStreamingManager.disable_streaming: RedisHandler not in "{}"'.format(logger_name))
 
             stream_logger = logging.getLogger('zato.stream_manager')
             stream_logger.info('LogStreamingManager: disabled streaming on logger "{}"'.format(self.logger_name))
