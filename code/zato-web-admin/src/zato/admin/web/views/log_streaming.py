@@ -9,8 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from traceback import format_exc
-from threading import Lock
-from uuid import uuid4
 
 # Django
 from django.http import HttpResponse, StreamingHttpResponse
@@ -24,9 +22,6 @@ from zato.common.json_internal import dumps
 
 logger = getLogger(__name__)
 
-# Track active SSE connections by unique ID
-_active_connections = set()
-_connections_lock = Lock()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,18 +53,10 @@ def get_status(req):
 @method_allowed('GET')
 def log_stream(req):
 
-    global _active_connections
     stream_logger = getLogger('zato.sse_stream')
     stream_logger.info('log_stream: VIEW CALLED, client: {}'.format(req.META.get('REMOTE_ADDR')))
 
-    connection_id = str(uuid4())
-    with _connections_lock:
-        _active_connections.add(connection_id)
-        stream_logger.info('log_stream: connection registered, id={}, active_count={}'.format(connection_id, len(_active_connections)))
-
     def event_stream():
-
-        global _active_connections
 
         # Redis
         import redis
@@ -150,30 +137,6 @@ def log_stream(req):
             if redis_client:
                 redis_client.close()
                 stream_logger.info('log_stream: redis_client closed')
-
-            with _connections_lock:
-                _active_connections.discard(connection_id)
-                active_count = len(_active_connections)
-                stream_logger.info('log_stream: connection closed, id={}, active_count={}'.format(connection_id, active_count))
-                should_disable = active_count == 0
-
-            if should_disable:
-                try:
-                    stream_logger.info('log_stream: last connection closed, checking if streaming is enabled')
-                    status_response = req.zato.client.invoke('zato.log.streaming.status', {})
-                    is_enabled = status_response.data.get('streaming_enabled', False)
-                    stream_logger.info('log_stream: streaming enabled status: {}'.format(is_enabled))
-
-                    if is_enabled:
-                        stream_logger.info('log_stream: disabling log streaming')
-                        response = req.zato.client.invoke('zato.log.streaming.toggle', {})
-                        stream_logger.info('log_stream: log streaming disabled, response: {}'.format(response.data))
-                    else:
-                        stream_logger.info('log_stream: streaming already disabled, skipping toggle')
-                except Exception:
-                    stream_logger.error('log_stream: failed to disable streaming: {}'.format(format_exc()))
-            else:
-                stream_logger.info('log_stream: other connections still active, not disabling streaming')
 
             stream_logger.info('log_stream: GENERATOR ENDED')
 
