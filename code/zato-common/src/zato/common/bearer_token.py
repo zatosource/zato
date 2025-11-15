@@ -84,6 +84,10 @@ class BearerTokenManager:
         # .. same goes for extra fields ..
         extra_fields_raw = sec_def['extra_fields'] or ''
         logger.info('_get_bearer_token_config: extra_fields_raw type: %s, value: %r', type(extra_fields_raw), extra_fields_raw)
+        if isinstance(extra_fields_raw, list):
+            logger.info('_get_bearer_token_config: extra_fields_raw is list, joining with newlines')
+            extra_fields_raw = '\n'.join(extra_fields_raw)
+            logger.info('_get_bearer_token_config: extra_fields_raw after join, type: %s, value: %r', type(extra_fields_raw), extra_fields_raw)
         extra_fields = parse_extra_into_dict(extra_fields_raw)
         logger.info('_get_bearer_token_config: extra_fields after parse, type: %s, value: %r', type(extra_fields), extra_fields)
 
