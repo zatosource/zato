@@ -62,6 +62,11 @@ def log_stream(req):
     stream_logger = getLogger('zato.sse_stream')
     stream_logger.info('log_stream: VIEW CALLED, client: {}'.format(req.META.get('REMOTE_ADDR')))
 
+    connection_id = str(uuid4())
+    with _connections_lock:
+        _active_connections.add(connection_id)
+        stream_logger.info('log_stream: connection registered, id={}, active_count={}'.format(connection_id, len(_active_connections)))
+
     def event_stream():
 
         global _active_connections
@@ -72,11 +77,6 @@ def log_stream(req):
 
         redis_client = None
         pubsub = None
-        connection_id = str(uuid4())
-
-        with _connections_lock:
-            _active_connections.add(connection_id)
-            stream_logger.info('log_stream: connection opened, id={}, active_count={}'.format(connection_id, len(_active_connections)))
 
         try:
             stream_logger.info('log_stream: GENERATOR STARTED')
