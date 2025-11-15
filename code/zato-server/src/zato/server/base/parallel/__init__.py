@@ -971,6 +971,33 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def import_enmasse(self, file_content:'str', file_name:'str') -> 'str | None':
+
+        # stdlib
+        import tempfile
+
+        # Zato
+        from zato.server.commands import CommandsFacade
+
+        # Local aliases
+        commands = CommandsFacade()
+        commands.init(self)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+            _ = temp_file.write(file_content)
+            temp_file_path = temp_file.name
+
+        try:
+            result = commands.run_enmasse_sync_import(temp_file_path)
+            self.reload_config()
+            return f'Import completed: {result.stdout}'
+        except Exception:
+            logger.warning('Could not import enmasse: %s', format_exc())
+        finally:
+            os.unlink(temp_file_path)
+
+# ################################################################################################################################
+
     def export_enmasse(self):
 
         # Zato
