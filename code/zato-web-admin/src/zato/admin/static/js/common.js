@@ -1934,9 +1934,9 @@ $.fn.zato.service.import_config = function() {
                     }
 
                     if (result.is_ok) {
-                        $.fn.zato.show_import_result_popup(result, true);
+                        $.fn.zato.show_import_result_popup(result, true, file);
                     } else {
-                        $.fn.zato.show_import_result_popup(result, false);
+                        $.fn.zato.show_import_result_popup(result, false, file);
                     }
                 },
                 error: function(xhr, status, error) {
@@ -1951,7 +1951,7 @@ $.fn.zato.service.import_config = function() {
                         total_time: '',
                         len_stdout_human: '',
                         len_stderr_human: ''
-                    }, false);
+                    }, false, file);
                 }
             });
         };
@@ -1963,7 +1963,7 @@ $.fn.zato.service.import_config = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.show_import_result_popup = function(result, is_success) {
+$.fn.zato.show_import_result_popup = function(result, is_success, file) {
     var overlay = $('<div/>', {
         id: 'import-result-overlay',
         css: {
@@ -1996,7 +1996,43 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
     });
 
 
-    if (result.stdout && String(result.stdout).trim()) {
+    if (result.stderr && String(result.stderr).trim() && !result.is_ok) {
+        var stderrArea = $('<textarea/>', {
+            val: String(result.stderr),
+            readonly: true,
+            css: {
+                width: '100%',
+                minHeight: '150px',
+                backgroundColor: '#2d2d2d',
+                color: '#f48771',
+                border: '1px solid #3e3e3e',
+                borderRadius: '4px',
+                padding: '8px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                resize: 'vertical'
+            }
+        });
+        popup.append(stderrArea);
+
+        var fileSize = file ? file.size : 0;
+        var fileSizeHuman = fileSize < 1024 ? fileSize + ' B' :
+                            fileSize < 1048576 ? (fileSize / 1024).toFixed(1) + ' KB' :
+                            (fileSize / 1048576).toFixed(1) + ' MB';
+        var fileName = file ? file.name : 'unknown';
+        var mimeType = file ? (file.type || 'unknown') : 'unknown';
+
+        var errorMsg = $('<div/>', {
+            text: 'File ' + fileName + ' (' + fileSizeHuman + '; ' + mimeType + ') could not be imported',
+            css: {
+                marginTop: '12px',
+                color: '#f48771',
+                fontSize: '16px',
+                fontWeight: 'bold'
+            }
+        });
+        popup.append(errorMsg);
+    } else if (result.stdout && String(result.stdout).trim()) {
         var stdoutArea = $('<textarea/>', {
             val: String(result.stdout),
             readonly: true,
@@ -2027,37 +2063,6 @@ $.fn.zato.show_import_result_popup = function(result, is_success) {
             });
             popup.append(successMsg);
         }
-    }
-
-    if (result.stderr && String(result.stderr).trim() && !result.is_ok) {
-        var stderrLabel = $('<div/>', {
-            text: 'Errors:',
-            css: {
-                marginTop: '12px',
-                marginBottom: '4px',
-                color: '#f48771',
-                fontSize: '14px',
-                fontWeight: 'bold'
-            }
-        });
-        var stderrArea = $('<textarea/>', {
-            val: String(result.stderr),
-            readonly: true,
-            css: {
-                width: '100%',
-                minHeight: '150px',
-                backgroundColor: '#2d2d2d',
-                color: '#f48771',
-                border: '1px solid #3e3e3e',
-                borderRadius: '4px',
-                padding: '8px',
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                resize: 'vertical'
-            }
-        });
-        popup.append(stderrLabel);
-        popup.append(stderrArea);
     }
 
     var buttonContainer = $('<div/>', {

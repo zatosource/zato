@@ -260,10 +260,14 @@ class EnmasseYAMLImporter:
         if not security_list:
             return [], []
 
-        logger.info('Processing %d security definitions', len(security_list))
+        count = len(security_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} security {noun}')
         security_created, security_updated = self.security_importer.sync_security_definitions(security_list, session)
 
-        logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
+        created_count = len(security_created)
+        updated_count = len(security_updated)
+        logger.info(f'Processed security definitions: created={created_count} updated={updated_count}')
 
         return security_created, security_updated
 
@@ -275,7 +279,9 @@ class EnmasseYAMLImporter:
         if not group_list:
             return [], []
 
-        logger.info('Processing %d security groups', len(group_list))
+        count = len(group_list)
+        noun = 'group' if count == 1 else 'groups'
+        logger.info(f'Processing {count} security {noun}')
 
         # Process each group item
         for idx, item in enumerate(group_list):
@@ -298,9 +304,13 @@ class EnmasseYAMLImporter:
         if not channel_list:
             return [], []
 
-        logger.info('Processing %d REST channels', len(channel_list))
+        count = len(channel_list)
+        noun = 'channel' if count == 1 else 'channels'
+        logger.info(f'Processing {count} REST {noun}')
         channels_created, channels_updated = self.channel_importer.sync_channel_rest(channel_list, session)
-        logger.info('Processed REST channels: created=%d updated=%d', len(channels_created), len(channels_updated))
+        created_count = len(channels_created)
+        updated_count = len(channels_updated)
+        logger.info(f'Processed REST channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
 
@@ -335,7 +345,9 @@ class EnmasseYAMLImporter:
         if not odoo_list:
             return [], []
 
-        logger.info('Processing %d Odoo connection definitions', len(odoo_list))
+        count = len(odoo_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Odoo connection {noun}')
 
         # Examine each Odoo item
         for idx, item in enumerate(odoo_list):
@@ -357,7 +369,9 @@ class EnmasseYAMLImporter:
         if not smtp_list:
             return [], []
 
-        logger.info('Processing %d SMTP connection definitions', len(smtp_list))
+        count = len(smtp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SMTP connection {noun}')
 
         # Examine each SMTP item
         for idx, item in enumerate(smtp_list):
@@ -379,7 +393,9 @@ class EnmasseYAMLImporter:
         if not imap_list:
             return [], []
 
-        logger.info('Processing %d IMAP connection definitions', len(imap_list))
+        count = len(imap_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} IMAP connection {noun}')
 
         # Examine each IMAP item
         for idx, item in enumerate(imap_list):
@@ -401,7 +417,9 @@ class EnmasseYAMLImporter:
         if not sql_list:
             return [], []
 
-        logger.info('Processing %d SQL connection pool definitions', len(sql_list))
+        count = len(sql_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SQL connection pool {noun}')
 
         # Examine each SQL connection pool item
         for idx, item in enumerate(sql_list):
@@ -423,7 +441,9 @@ class EnmasseYAMLImporter:
         if not job_list:
             return [], []
 
-        logger.info('Processing %d scheduler job definitions', len(job_list))
+        count = len(job_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} scheduler job {noun}')
 
         # Examine each scheduler job item
         for idx, item in enumerate(job_list):
@@ -445,7 +465,9 @@ class EnmasseYAMLImporter:
         if not confluence_list:
             return [], []
 
-        logger.info('Processing %d Confluence connection definitions', len(confluence_list))
+        count = len(confluence_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Confluence connection {noun}')
 
         # Examine each Confluence connection item
         for idx, item in enumerate(confluence_list):
@@ -467,7 +489,9 @@ class EnmasseYAMLImporter:
         if not jira_list:
             return [], []
 
-        logger.info('Processing %d Jira connection definitions', len(jira_list))
+        count = len(jira_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Jira connection {noun}')
 
         # Examine each Jira connection item
         for idx, item in enumerate(jira_list):
@@ -489,7 +513,9 @@ class EnmasseYAMLImporter:
         if not ldap_list:
             return [], []
 
-        logger.info('Processing %d LDAP connection definitions', len(ldap_list))
+        count = len(ldap_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} LDAP connection {noun}')
 
         # Examine each LDAP connection item
         for idx, item in enumerate(ldap_list):
@@ -511,7 +537,9 @@ class EnmasseYAMLImporter:
         if not microsoft_365_list:
             return [], []
 
-        logger.info('Processing %d Microsoft 365 connection definitions', len(microsoft_365_list))
+        count = len(microsoft_365_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Microsoft 365 connection {noun}')
 
         # Examine each Microsoft 365 connection item
         for idx, item in enumerate(microsoft_365_list):
@@ -533,7 +561,9 @@ class EnmasseYAMLImporter:
         if not es_list:
             return [], []
 
-        logger.info('Processing %d ElasticSearch connection definitions', len(es_list))
+        count = len(es_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} ElasticSearch connection {noun}')
 
         # Examine each ElasticSearch connection item
         for idx, item in enumerate(es_list):
@@ -555,7 +585,9 @@ class EnmasseYAMLImporter:
         if not topic_list:
             return [], []
 
-        logger.info('Processing %d pubsub topic definitions', len(topic_list))
+        count = len(topic_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub topic {noun}')
 
         # Examine each pubsub topic item
         for idx, item in enumerate(topic_list):
@@ -591,7 +623,9 @@ class EnmasseYAMLImporter:
         if not permission_list:
             return [], []
 
-        logger.info('Processing %d pubsub permission definitions', len(permission_list))
+        count = len(permission_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub permission {noun}')
 
         # Examine each pubsub permission item
         for idx, item in enumerate(permission_list):
@@ -613,7 +647,9 @@ class EnmasseYAMLImporter:
         if not subscription_list:
             return [], []
 
-        logger.info('Processing %d pubsub subscription definitions', len(subscription_list))
+        count = len(subscription_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub subscription {noun}')
 
         # Examine each pubsub subscription item
         for idx, item in enumerate(subscription_list):
