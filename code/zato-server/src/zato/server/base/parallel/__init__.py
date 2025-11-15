@@ -1003,18 +1003,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stderr_human': result.len_stderr_human,
             }
 
-            if result.is_ok:
-                self.reload_config()
-
             return json.dumps(response)
 
         except Exception:
-            logger.warning('Could not import enmasse: %s', format_exc())
+            exc = format_exc()
+            logger.warning('Could not import enmasse: %s', exc)
             return json.dumps({
                 'is_ok': False,
                 'exit_code': -1,
                 'stdout': '',
-                'stderr': format_exc(),
+                'stderr': exc,
                 'is_timeout': False,
                 'timeout_msg': '',
                 'total_time': '',
