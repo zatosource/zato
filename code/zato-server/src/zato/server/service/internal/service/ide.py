@@ -710,12 +710,15 @@ class DeleteFile(_GetBase):
 
     def _validate_fs_location(self, fs_location:'str') -> 'None':
 
+        self.logger.info('DeleteFile._validate_fs_location -> validating fs_location: %s', fs_location)
+
         # Make sure we have a path on input ..
         if not fs_location:
             raise BadRequest(self.cid, f'No path given on input `{fs_location}`')
 
         # .. and that it exists ..
         if not os.path.exists(fs_location):
+            self.logger.info('DeleteFile._validate_fs_location -> path does not exist: %s', fs_location)
             raise BadRequest(self.cid, f'Path does not exist `{fs_location}`')
 
         # .. and that it's actually a file.
@@ -729,19 +732,27 @@ class DeleteFile(_GetBase):
         # Local variables
         fs_location = self.request.input.fs_location
 
+        self.logger.info('DeleteFile.handle -> fs_location from input: %s', fs_location)
+
         # .. turn the pickup location into a work directory one ..
         work_dir_fs_location = self._convert_pickup_to_work_dir(fs_location)
 
-        # .. validate both locations ..
-        self._validate_fs_location(fs_location)
-        self._validate_fs_location(work_dir_fs_location)
+        self.logger.info('DeleteFile.handle -> work_dir_fs_location after conversion: %s', work_dir_fs_location)
 
-        # .. if we're here, it means that we can actually delete both locations ..
+        # .. validate the pickup location ..
+        self._validate_fs_location(fs_location)
+
+        # .. delete the pickup location ..
         os.remove(fs_location)
         self.logger.info('Deleted path %s', fs_location)
 
-        os.remove(work_dir_fs_location)
-        self.logger.info('Deleted path %s', work_dir_fs_location)
+        # .. delete the work directory location only if it exists ..
+        if os.path.exists(work_dir_fs_location):
+            self.logger.info('DeleteFile.handle -> work_dir_fs_location exists, deleting: %s', work_dir_fs_location)
+            os.remove(work_dir_fs_location)
+            self.logger.info('Deleted path %s', work_dir_fs_location)
+        else:
+            self.logger.info('DeleteFile.handle -> work_dir_fs_location does not exist, skipping: %s', work_dir_fs_location)
 
         # .. now, delete it from our in-RAM service store ..
         self.server.service_store.delete_objects_by_file_path(work_dir_fs_location, delete_from_odb=True)
@@ -767,12 +778,20 @@ class RenameFile(_GetBase):
         # Local variables
         input = self.request.input
 
+        self.logger.info('RenameFile.handle -> input.root_directory: %s', input.root_directory)
+        self.logger.info('RenameFile.handle -> input.current_file_name: %s', input.current_file_name)
+        self.logger.info('RenameFile.handle -> input.new_file_name: %s', input.new_file_name)
+
         # We always work with combined and absolute paths
         current_file_path = os.path.join(input.root_directory, input.current_file_name)
         current_file_path = self._normalize_fs_location(current_file_path)
 
+        self.logger.info('RenameFile.handle -> current_file_path after normalize: %s', current_file_path)
+
         new_file_path = os.path.join(input.root_directory, input.new_file_name)
-        new_file_path = self._normalize_fs_location(current_file_path)
+        new_file_path = self._normalize_fs_location(new_file_path)
+
+        self.logger.info('RenameFile.handle -> new_file_path after normalize: %s', new_file_path)
 
         # Make sure that both paths are allowed
         self._validate_path(current_file_path)
@@ -783,9 +802,11 @@ class RenameFile(_GetBase):
             data = f.read()
 
         # .. now, we can delete it ..
+        self.logger.info('RenameFile.handle -> about to delete current_file_path: %s', current_file_path)
         _ = self.invoke(DeleteFile, fs_location=current_file_path)
 
         # .. and create a new one ..
+        self.logger.info('RenameFile.handle -> about to create new file with root_directory: %s, file_name: %s', input.root_directory, input.new_file_name)
         response = self.invoke(CreateFile, **{
             'root_directory': input.root_directory,
             'file_name': input.new_file_name,
