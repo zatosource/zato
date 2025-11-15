@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 from threading import Lock
+from uuid import uuid4
 
 # Django
 from django.http import HttpResponse, StreamingHttpResponse
@@ -23,8 +24,8 @@ from zato.common.json_internal import dumps
 
 logger = getLogger(__name__)
 
-# Track active SSE connections
-_active_connections = 0
+# Track active SSE connections by unique ID
+_active_connections = set()
 _connections_lock = Lock()
 
 # ################################################################################################################################
@@ -71,10 +72,11 @@ def log_stream(req):
 
         redis_client = None
         pubsub = None
+        connection_id = str(uuid4())
 
         with _connections_lock:
-            _active_connections += 1
-            stream_logger.info('log_stream: connection opened, active_connections={}'.format(_active_connections))
+            _active_connections.add(connection_id)
+            stream_logger.info('log_stream: connection opened, id={}, active_count={}'.format(connection_id, len(_active_connections)))
 
         try:
             stream_logger.info('log_stream: GENERATOR STARTED')
@@ -150,9 +152,10 @@ def log_stream(req):
                 stream_logger.info('log_stream: redis_client closed')
 
             with _connections_lock:
-                _active_connections -= 1
-                stream_logger.info('log_stream: connection closed, active_connections={}'.format(_active_connections))
-                should_disable = _active_connections == 0
+                _active_connections.discard(connection_id)
+                active_count = len(_active_connections)
+                stream_logger.info('log_stream: connection closed, id={}, active_count={}'.format(connection_id, active_count))
+                should_disable = active_count == 0
 
             if should_disable:
                 try:
