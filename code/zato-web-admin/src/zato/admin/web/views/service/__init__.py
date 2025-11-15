@@ -309,6 +309,27 @@ def enmasse_export(req):
 # ################################################################################################################################
 
 @method_allowed('GET', 'POST')
+def enmasse_import(req):
+
+    file_content = req.POST.get('file_content', '')
+    file_name = req.POST.get('file_name', 'config.yaml')
+
+    response = req.zato.client.invoke('zato.server.invoker', {
+        'func_name': 'import_enmasse',
+        'file_content': file_content,
+        'file_name': file_name
+    })
+
+    response = str(response.data)
+
+    out = HttpResponse()
+    out.content = response
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('GET', 'POST')
 def import_test_config(req):
 
     response = req.zato.client.invoke('zato.server.invoker', {
