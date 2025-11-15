@@ -971,13 +971,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def import_enmasse(self, file_content:'str', file_name:'str') -> 'str | None':
+    def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
         # stdlib
+        import json
         import tempfile
 
         # Zato
         from zato.server.commands import CommandsFacade
+
+        logger.info('import_enmasse called with file_name: %s', file_name)
+        logger.info('import_enmasse file_content length: %s', len(file_content))
 
         # Local aliases
         commands = CommandsFacade()
@@ -987,12 +991,51 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             _ = temp_file.write(file_content)
             temp_file_path = temp_file.name
 
+        logger.info('import_enmasse temp file created: %s', temp_file_path)
+
         try:
             result = commands.run_enmasse_sync_import(temp_file_path)
-            self.reload_config()
-            return f'Import completed: {result.stdout}'
+
+            logger.info('import_enmasse result.is_ok: %s', result.is_ok)
+            logger.info('import_enmasse result.exit_code: %s', result.exit_code)
+            logger.info('import_enmasse result.stdout: %s', result.stdout)
+            logger.info('import_enmasse result.stderr: %s', result.stderr)
+
+            response = {
+                'is_ok': result.is_ok,
+                'exit_code': result.exit_code,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'is_timeout': result.is_timeout,
+                'timeout_msg': result.timeout_msg if result.is_timeout else '',
+                'total_time': result.total_time,
+                'len_stdout_human': result.len_stdout_human,
+                'len_stderr_human': result.len_stderr_human,
+            }
+
+            if result.is_ok:
+                self.reload_config()
+
+            json_response = json.dumps(response)
+            logger.info('import_enmasse returning JSON: %s', json_response)
+
+            return json_response
+
         except Exception:
             logger.warning('Could not import enmasse: %s', format_exc())
+            error_response = json.dumps({
+                'is_ok': False,
+                'exit_code': -1,
+                'stdout': '',
+                'stderr': format_exc(),
+                'is_timeout': False,
+                'timeout_msg': '',
+                'total_time': '',
+                'len_stdout_human': '',
+                'len_stderr_human': '',
+            })
+            logger.info('import_enmasse returning error JSON: %s', error_response)
+            return error_response
         finally:
             os.unlink(temp_file_path)
 

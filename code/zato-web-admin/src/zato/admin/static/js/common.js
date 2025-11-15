@@ -1904,11 +1904,54 @@ $.fn.zato.service.import_config = function() {
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 success: function(data) {
                     $('#import-spinner').remove();
-                    alert('Config imported');
+
+                    console.log('[DEBUG] Import response received');
+                    console.log('[DEBUG] Response type:', typeof data);
+                    console.log('[DEBUG] Response data:', data);
+
+                    var result;
+                    if (typeof data === 'object') {
+                        result = data;
+                        console.log('[DEBUG] Response is already an object:', result);
+                    } else {
+                        try {
+                            result = JSON.parse(data);
+                            console.log('[DEBUG] Parsed JSON successfully:', result);
+                        } catch (e) {
+                            console.log('[DEBUG] JSON parse failed:', e);
+                            result = {
+                                is_ok: false,
+                                exit_code: -1,
+                                stdout: '',
+                                stderr: String(data),
+                                is_timeout: false,
+                                timeout_msg: '',
+                                total_time: '',
+                                len_stdout_human: '',
+                                len_stderr_human: ''
+                            };
+                        }
+                    }
+
+                    if (result.is_ok) {
+                        $.fn.zato.show_import_result_popup(result, true);
+                    } else {
+                        $.fn.zato.show_import_result_popup(result, false);
+                    }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
                     $('#import-spinner').remove();
-                    alert('Import failed. Check server logs.');
+                    $.fn.zato.show_import_result_popup({
+                        is_ok: false,
+                        exit_code: -1,
+                        stdout: '',
+                        stderr: xhr.responseText || error,
+                        is_timeout: false,
+                        timeout_msg: '',
+                        total_time: '',
+                        len_stdout_human: '',
+                        len_stderr_human: ''
+                    }, false);
                 }
             });
         };
@@ -1916,6 +1959,146 @@ $.fn.zato.service.import_config = function() {
     };
 
     input.click();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_import_result_popup = function(result, is_success) {
+    var overlay = $('<div/>', {
+        id: 'import-result-overlay',
+        css: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }
+    });
+
+    var popup = $('<div/>', {
+        css: {
+            backgroundColor: '#1e1e1e',
+            color: '#d4d4d4',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            fontFamily: 'monospace'
+        }
+    });
+
+
+    if (result.stdout && String(result.stdout).trim()) {
+        var stdoutLabel = $('<div/>', {
+            text: result.len_stdout_human ? 'Output (' + result.len_stdout_human + '):' : 'Output:',
+            css: {
+                marginTop: '12px',
+                marginBottom: '4px',
+                color: '#4ec9b0',
+                fontSize: '14px',
+                fontWeight: 'bold'
+            }
+        });
+        var stdoutArea = $('<textarea/>', {
+            val: String(result.stdout),
+            readonly: true,
+            css: {
+                width: '100%',
+                minHeight: '150px',
+                backgroundColor: '#2d2d2d',
+                color: '#d4d4d4',
+                border: '1px solid #3e3e3e',
+                borderRadius: '4px',
+                padding: '8px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                resize: 'vertical'
+            }
+        });
+        popup.append(stdoutLabel);
+        popup.append(stdoutArea);
+    }
+
+    if (result.stderr && String(result.stderr).trim()) {
+        var stderrLabel = $('<div/>', {
+            text: result.len_stderr_human ? 'Errors (' + result.len_stderr_human + '):' : 'Errors:',
+            css: {
+                marginTop: '12px',
+                marginBottom: '4px',
+                color: '#f48771',
+                fontSize: '14px',
+                fontWeight: 'bold'
+            }
+        });
+        var stderrArea = $('<textarea/>', {
+            val: String(result.stderr),
+            readonly: true,
+            css: {
+                width: '100%',
+                minHeight: '150px',
+                backgroundColor: '#2d2d2d',
+                color: '#f48771',
+                border: '1px solid #3e3e3e',
+                borderRadius: '4px',
+                padding: '8px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                resize: 'vertical'
+            }
+        });
+        popup.append(stderrLabel);
+        popup.append(stderrArea);
+    }
+
+    var buttonContainer = $('<div/>', {
+        css: {
+            marginTop: '16px',
+            textAlign: 'right'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: 'Close',
+        css: {
+            padding: '8px 24px',
+            backgroundColor: '#1e1e1e',
+            color: '#d4d4d4',
+            border: '1px solid #3e3e3e',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css('backgroundColor', '#2d2d2d'); },
+        function() { $(this).css('backgroundColor', '#1e1e1e'); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+    });
+
+    buttonContainer.append(closeButton);
+
+    popup.append(buttonContainer);
+    overlay.append(popup);
+    $('body').append(overlay);
+
+    overlay.click(function(e) {
+        if (e.target === overlay[0]) {
+            overlay.remove();
+        }
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

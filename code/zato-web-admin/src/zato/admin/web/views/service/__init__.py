@@ -314,18 +314,25 @@ def enmasse_import(req):
     file_content = req.POST.get('file_content', '')
     file_name = req.POST.get('file_name', 'config.yaml')
 
+    logger.info('enmasse_import view called with file_name: %s', file_name)
+    logger.info('enmasse_import file_content length: %s', len(file_content))
+
     response = req.zato.client.invoke('zato.server.invoker', {
         'func_name': 'import_enmasse',
         'file_content': file_content,
         'file_name': file_name
     })
 
-    response = str(response.data)
+    logger.info('enmasse_import response.data type: %s', type(response.data))
+    logger.info('enmasse_import response.data: %s', response.data)
 
-    out = HttpResponse()
-    out.content = response
-
-    return out
+    if isinstance(response.data, dict):
+        import json
+        response_json = json.dumps(response.data)
+        logger.info('enmasse_import converted dict to JSON: %s', response_json)
+        return HttpResponse(response_json, content_type='application/json')
+    else:
+        return HttpResponse(response.data, content_type='application/json')
 
 # ################################################################################################################################
 
