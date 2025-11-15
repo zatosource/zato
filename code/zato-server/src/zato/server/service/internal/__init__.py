@@ -211,16 +211,11 @@ class ServerInvoker(AdminService):
         if func_name == 'import_enmasse':
             file_content = self.request.raw_request.get('file_content', '')
             file_name = self.request.raw_request.get('file_name', 'config.yaml')
-            logger.info('ServerInvoker calling import_enmasse with file_name: %s', file_name)
             response = func(file_content, file_name)
-            logger.info('ServerInvoker import_enmasse response type: %s', type(response))
-            logger.info('ServerInvoker import_enmasse response: %s', response)
         else:
             response = func()
 
         self.response.payload = response
-        logger.info('ServerInvoker final payload type: %s', type(self.response.payload))
-        logger.info('ServerInvoker final payload: %s', self.response.payload)
 
 # ################################################################################################################################
 

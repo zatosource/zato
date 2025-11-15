@@ -980,9 +980,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Zato
         from zato.server.commands import CommandsFacade
 
-        logger.info('import_enmasse called with file_name: %s', file_name)
-        logger.info('import_enmasse file_content length: %s', len(file_content))
-
         # Local aliases
         commands = CommandsFacade()
         commands.init(self)
@@ -991,15 +988,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             _ = temp_file.write(file_content)
             temp_file_path = temp_file.name
 
-        logger.info('import_enmasse temp file created: %s', temp_file_path)
-
         try:
             result = commands.run_enmasse_sync_import(temp_file_path)
-
-            logger.info('import_enmasse result.is_ok: %s', result.is_ok)
-            logger.info('import_enmasse result.exit_code: %s', result.exit_code)
-            logger.info('import_enmasse result.stdout: %s', result.stdout)
-            logger.info('import_enmasse result.stderr: %s', result.stderr)
 
             response = {
                 'is_ok': result.is_ok,
@@ -1016,14 +1006,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if result.is_ok:
                 self.reload_config()
 
-            json_response = json.dumps(response)
-            logger.info('import_enmasse returning JSON: %s', json_response)
-
-            return json_response
+            return json.dumps(response)
 
         except Exception:
             logger.warning('Could not import enmasse: %s', format_exc())
-            error_response = json.dumps({
+            return json.dumps({
                 'is_ok': False,
                 'exit_code': -1,
                 'stdout': '',
@@ -1034,8 +1021,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
-            logger.info('import_enmasse returning error JSON: %s', error_response)
-            return error_response
         finally:
             os.unlink(temp_file_path)
 
