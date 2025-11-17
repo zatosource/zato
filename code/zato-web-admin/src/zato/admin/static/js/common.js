@@ -108,6 +108,7 @@ $.namespace('zato.service');
 $.namespace('zato.sms');
 $.namespace('zato.stats');
 $.namespace('zato.stats.custom');
+$.namespace('zato.system');
 $.namespace('zato.vendors');
 $.namespace('zato.vendors.keysight');
 $.namespace('zato.vendors.keysight.vision');
