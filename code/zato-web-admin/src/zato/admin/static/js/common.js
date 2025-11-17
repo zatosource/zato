@@ -2142,6 +2142,96 @@ $.fn.zato.pubsub.import_test_config = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.system.show_version = function() {
+    var version = $('meta[name="generator"]').attr('content') || 'Unknown';
+
+    var overlay = $('<div/>', {
+        id: 'version-overlay',
+        css: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }
+    });
+
+    var popup = $('<div/>', {
+        css: {
+            backgroundColor: '#1e1e1e',
+            color: '#d4d4d4',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            fontFamily: 'monospace'
+        }
+    });
+
+    var versionText = $('<div/>', {
+        text: version,
+        css: {
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#4ec9b0',
+            marginBottom: '16px'
+        }
+    });
+
+    var buttonContainer = $('<div/>', {
+        css: {
+            marginTop: '16px',
+            textAlign: 'right'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: 'Close',
+        css: {
+            padding: '8px 24px',
+            backgroundColor: '#0d0d0d',
+            backgroundImage: 'none',
+            color: '#d4d4d4',
+            border: '1px solid #3e3e3e',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css('backgroundColor', '#1a1a1a'); },
+        function() { $(this).css('backgroundColor', '#0d0d0d'); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+    });
+
+    buttonContainer.append(closeButton);
+    popup.append(versionText);
+    popup.append(buttonContainer);
+    overlay.append(popup);
+    $('body').append(overlay);
+
+    overlay.click(function(e) {
+        if (e.target === overlay[0]) {
+            overlay.remove();
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.pubsub.download_openapi = function() {
     var cluster_id = $(document).getUrlParam('cluster') || '1';
     var download_url = '/zato/pubsub/download-openapi?cluster=' + cluster_id;
