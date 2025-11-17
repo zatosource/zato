@@ -74,6 +74,11 @@ class OutgoingRESTImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
+
+            # Handle the previous tls_verify key which now is called validate_tls
+            if 'tls_verify' in item:
+                item['validate_tls'] = item.pop('tls_verify')
+
             name = item['name']
             logger.info('Checking YAML outgoing REST connection: name=%s', name)
 
