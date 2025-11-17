@@ -76,6 +76,24 @@ _crsf_env2 = 'Zato_Django_CSRF_TRUSTED_ORIGINS'
 
 if csrf_trusted_origins := (os.environ.get(_crsf_env1) or os.environ.get(_crsf_env2)):
     CSRF_TRUSTED_ORIGINS = [f'{csrf_trusted_origins}']
+else:
+    ssl_subject = os.environ.get('Zato_SSL_Subject', '/C=US/ST=State/L=City/O=Organization/CN=localhost')
+    cn = ''
+    for part in ssl_subject.split('/'):
+        if part.startswith('CN='):
+            cn = part[3:]
+            break
+    
+    if not cn:
+        cn = 'localhost'
+    
+    dashboard_port = os.environ.get('Zato_Port_Dashboard', '8183')
+    dashboard_ssl_port = os.environ.get('Zato_Port_Dashboard_SSL', '8184')
+    
+    CSRF_TRUSTED_ORIGINS = [
+        f'http://{cn}:{dashboard_port}',
+        f'https://{cn}:{dashboard_ssl_port}'
+    ]
 
 APPEND_SLASH = True
 SECURE_CONTENT_TYPE_NOSNIFF = False
