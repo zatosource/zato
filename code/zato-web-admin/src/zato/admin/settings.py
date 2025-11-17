@@ -69,7 +69,7 @@ INTERNAL_IPS = ('127.0.0.1',)
 # to load the internationalization machinery.
 USE_I18N = True
 
-DEBUG = os.environ.get('Zato_Dashboard_Debug_Enabled') or False
+DEBUG = os.environ.get('Zato_Dashboard_Debug_Enabled') or True
 
 _crsf_env1 = 'Zato_Dashboard_CSRF_Trusted_Origins'
 _crsf_env2 = 'Zato_Django_CSRF_TRUSTED_ORIGINS'
