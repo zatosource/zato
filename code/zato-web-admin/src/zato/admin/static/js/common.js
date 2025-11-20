@@ -2077,7 +2077,9 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: 'bold'
+            fontWeight: '600',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale'
         }
     });
 
@@ -2106,6 +2108,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
     overlay.click(function(e) {
         if (e.target === overlay[0]) {
             overlay.remove();
+            $(document).off('keydown.import-overlay');
         }
     });
 
@@ -2113,6 +2116,12 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
         if (e.key === 'Escape' || e.keyCode === 27) {
             overlay.remove();
             $(document).off('keydown.import-overlay');
+            if (is_success) {
+                var currentPath = window.location.pathname;
+                if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
+                    window.location.reload();
+                }
+            }
         }
     });
 }
@@ -2213,7 +2222,9 @@ $.fn.zato.system.show_version = function() {
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: 'bold'
+            fontWeight: '600',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale'
         }
     });
 
