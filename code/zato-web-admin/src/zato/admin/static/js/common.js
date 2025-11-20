@@ -2088,6 +2088,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
 
     closeButton.click(function() {
         overlay.remove();
+        $(document).off('keydown.import-overlay');
         if (is_success) {
             var currentPath = window.location.pathname;
             if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
@@ -2105,6 +2106,13 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
     overlay.click(function(e) {
         if (e.target === overlay[0]) {
             overlay.remove();
+        }
+    });
+
+    $(document).on('keydown.import-overlay', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            overlay.remove();
+            $(document).off('keydown.import-overlay');
         }
     });
 }
@@ -2216,6 +2224,7 @@ $.fn.zato.system.show_version = function() {
 
     closeButton.click(function() {
         overlay.remove();
+        $(document).off('keydown.version-overlay');
     });
 
     buttonContainer.append(closeButton);
@@ -2227,6 +2236,14 @@ $.fn.zato.system.show_version = function() {
     overlay.click(function(e) {
         if (e.target === overlay[0]) {
             overlay.remove();
+            $(document).off('keydown.version-overlay');
+        }
+    });
+
+    $(document).on('keydown.version-overlay', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            overlay.remove();
+            $(document).off('keydown.version-overlay');
         }
     });
 }
