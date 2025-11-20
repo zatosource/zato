@@ -71,8 +71,7 @@ class OutgoingRESTExporter:
                 exported_conn['security'] = security_name
 
             if data_format := outgoing_row.get('data_format'):
-                if data_format != 'json':
-                    exported_conn['data_format'] = data_format
+                exported_conn['data_format'] = data_format
 
             if (timeout := outgoing_row.get('timeout')) is not None and timeout != 60:
                 exported_conn['timeout'] = timeout
