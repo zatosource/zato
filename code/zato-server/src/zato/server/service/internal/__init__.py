@@ -210,7 +210,7 @@ class ServerInvoker(AdminService):
 
         if func_name == 'import_enmasse':
             file_content = self.request.raw_request.get('file_content', '')
-            file_name = self.request.raw_request.get('file_name', 'config.yaml')
+            file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
             response = func(file_content, file_name)
         else:
             response = func()
