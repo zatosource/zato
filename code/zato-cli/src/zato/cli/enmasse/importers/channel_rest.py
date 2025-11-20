@@ -172,8 +172,7 @@ class ChannelImporter:
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
         cluster = self.importer.get_cluster(session)
 
-        channel = HTTPSOAP(cluster=cluster, service=service)
-
+        security_item = None
         if security_name := channel_def.get('security'):
             logger.info('Security name found: %s', security_name)
             if security_name not in self.importer.sec_defs:
@@ -182,10 +181,11 @@ class ChannelImporter:
             sec_def = self.importer.sec_defs[security_name]
             logger.info('Found security definition: %s', sec_def)
             security_item = get_security_by_id(session, sec_def['id'])
-            channel.security = security_item
-            logger.info('Assigned security object with id %s to channel %s', sec_def['id'], name)
+            logger.info('Retrieved security object with id %s for channel %s', sec_def['id'], name)
         else:
             logger.info('No security definition specified for channel %s', name)
+
+        channel = HTTPSOAP(cluster=cluster, service=service)
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.PLAIN_HTTP
@@ -199,6 +199,10 @@ class ChannelImporter:
         for key, value in channel_def.items():
             if key not in ['service', 'security', 'groups']:
                 setattr(channel, key, value)
+
+        if security_item:
+            channel.security = security_item
+            logger.info('Assigned security object to channel %s', name)
 
         logger.info('Channel created with security_id=%s', channel.security_id)
 
