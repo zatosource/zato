@@ -63,9 +63,12 @@ class SecurityExporter:
             # Create base security entry
             security_entry = {
                 'name': item['name'],
-                'type': sec_type,
-                'username': item['username']
+                'type': sec_type
             }
+
+            # Add username only if not apikey type
+            if sec_type != 'apikey':
+                security_entry['username'] = item['username']
 
             # Add is_active if present
             if 'is_active' in item:
