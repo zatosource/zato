@@ -2117,7 +2117,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
             var successMsg = $('<div/>', {
                 text: '⭐ Config imported OK',
                 css: {
-                    marginTop: '12px',
+                    marginTop: '24px',
                     color: '#4ec9b0',
                     fontSize: '16px',
                     fontWeight: 'bold'
