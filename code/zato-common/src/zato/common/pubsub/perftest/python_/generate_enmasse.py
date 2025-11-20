@@ -40,10 +40,10 @@ class EnmasseGenerator:
 
         self.server_config_dir = os.path.join(self.current_dir, '..', '..', 'server')
 
-        self.config_path = os.path.join(self.server_config_dir, 'config.yaml')
+        self.config_path = os.path.join(self.server_config_dir, 'enmasse.yaml')
         self.config_path = os.path.abspath(self.config_path)
 
-        self.multi_config_path = os.path.join(self.server_config_dir, 'config.multi.yaml')
+        self.multi_config_path = os.path.join(self.server_config_dir, 'enmasse.multi.yaml')
         self.multi_config_path = os.path.abspath(self.multi_config_path)
 
 # ################################################################################################################################
