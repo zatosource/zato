@@ -65,7 +65,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
-                        'zato.cli.enmasse.importers.pubsub_subscription']:
+                        'zato.cli.enmasse.importers.pubsub_subscription', 'zato.cli.enmasse.util']:
     importer_logger = logging.getLogger(importer_module)
     importer_logger.setLevel(logging.INFO)
     importer_logger.addHandler(handler)
