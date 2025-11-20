@@ -392,8 +392,10 @@ class SecurityImporter:
                     'name': name,
                     'type': def_info['type']
                 }
+                logger.info('Added to sec_defs: name=%s id=%s type=%s', name, def_info['id'], def_info['type'])
 
             logger.info('Populated %d security definitions in dictionary', len(self.importer.sec_defs))
+            logger.info('Final sec_defs keys: %s', list(self.importer.sec_defs.keys()))
 
         except Exception as e:
             logger.error('Error syncing security definitions: %s', e)

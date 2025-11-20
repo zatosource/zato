@@ -166,6 +166,7 @@ class ChannelImporter:
     def create_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
         name = channel_def['name']
         logger.info('Creating REST channel: %s', name)
+        logger.info('Channel definition: %s', channel_def)
 
         service_name = channel_def['service']
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
@@ -187,12 +188,20 @@ class ChannelImporter:
                 setattr(channel, key, value)
 
         # Handle security definition
+        logger.info('Checking for security in channel_def: %s', channel_def.get('security'))
+        logger.info('Available security definitions: %s', list(self.importer.sec_defs.keys()))
         if security_name := channel_def.get('security'):
+            logger.info('Security name found: %s', security_name)
             if security_name not in self.importer.sec_defs:
+                logger.error('Security definition "%s" not found in sec_defs', security_name)
                 raise Exception(f'Security definition "{security_name}" not found for REST channel "{name}"')
 
             sec_def = self.importer.sec_defs[security_name]
+            logger.info('Found security definition: %s', sec_def)
             channel.security_id = sec_def['id']
+            logger.info('Assigned security_id %s to channel %s', sec_def['id'], name)
+        else:
+            logger.info('No security definition specified for channel %s', name)
 
         # Handle security groups
         if channel_def.get('groups'):
