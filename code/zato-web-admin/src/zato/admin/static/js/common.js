@@ -1979,16 +1979,84 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
             backgroundColor: '#1e1e1e',
             color: '#d4d4d4',
             borderRadius: '8px',
-            padding: '24px',
+            padding: '0',
             maxWidth: '800px',
             width: '90%',
             maxHeight: '80vh',
-            overflow: 'auto',
+            overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
             fontFamily: 'monospace'
         }
     });
 
+    var header = $('<div/>', {
+        css: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: '#1f1f1f'
+        }
+    });
+
+    var title = $('<h2/>', {
+        text: 'Import result',
+        css: {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#ffffff',
+            letterSpacing: '0.3px'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: '\u2715',
+        css: {
+            background: 'transparent',
+            border: 'none',
+            color: '#999',
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css({background: 'rgba(255, 255, 255, 0.1)', color: '#fff'}); },
+        function() { $(this).css({background: 'transparent', color: '#999'}); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+        $(document).off('keydown.import-overlay');
+        if (is_success) {
+            var currentPath = window.location.pathname;
+            if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
+                window.location.reload();
+            }
+        }
+    });
+
+    header.append(title);
+    header.append(closeButton);
+    popup.append(header);
+
+    var contentArea = $('<div/>', {
+        css: {
+            padding: '24px',
+            maxHeight: 'calc(80vh - 60px)',
+            overflow: 'auto'
+        }
+    });
 
     if (result.stderr && String(result.stderr).trim() && !result.is_ok) {
         var stderrArea = $('<textarea/>', {
@@ -2007,7 +2075,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
                 resize: 'vertical'
             }
         });
-        popup.append(stderrArea);
+        contentArea.append(stderrArea);
 
         var fileSize = file ? file.size : 0;
         var fileSizeHuman = fileSize < 1024 ? fileSize + ' B' :
@@ -2025,7 +2093,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
                 fontWeight: 'bold'
             }
         });
-        popup.append(errorMsg);
+        contentArea.append(errorMsg);
     } else if (result.stdout && String(result.stdout).trim()) {
         var stdoutArea = $('<textarea/>', {
             val: String(result.stdout),
@@ -2043,7 +2111,7 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
                 resize: 'vertical'
             }
         });
-        popup.append(stdoutArea);
+        contentArea.append(stdoutArea);
 
         if (String(result.stdout).indexOf('⭐ Enmasse OK') !== -1) {
             var successMsg = $('<div/>', {
@@ -2055,53 +2123,11 @@ $.fn.zato.show_import_result_popup = function(result, is_success, file) {
                     fontWeight: 'bold'
                 }
             });
-            popup.append(successMsg);
+            contentArea.append(successMsg);
         }
     }
 
-    var buttonContainer = $('<div/>', {
-        css: {
-            marginTop: '16px',
-            textAlign: 'right'
-        }
-    });
-
-    var closeButton = $('<button/>', {
-        text: 'Close',
-        css: {
-            padding: '8px 24px',
-            backgroundColor: '#0d0d0d',
-            backgroundImage: 'none',
-            color: '#d4d4d4',
-            border: '1px solid #3e3e3e',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-            WebkitFontSmoothing: 'antialiased',
-            MozOsxFontSmoothing: 'grayscale'
-        }
-    });
-
-    closeButton.hover(
-        function() { $(this).css('backgroundColor', '#1a1a1a'); },
-        function() { $(this).css('backgroundColor', '#0d0d0d'); }
-    );
-
-    closeButton.click(function() {
-        overlay.remove();
-        $(document).off('keydown.import-overlay');
-        if (is_success) {
-            var currentPath = window.location.pathname;
-            if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
-                window.location.reload();
-            }
-        }
-    });
-
-    buttonContainer.append(closeButton);
-
-    popup.append(buttonContainer);
+    popup.append(contentArea);
     overlay.append(popup);
     $('body').append(overlay);
 
@@ -2184,13 +2210,74 @@ $.fn.zato.system.show_version = function() {
             backgroundColor: '#1e1e1e',
             color: '#d4d4d4',
             borderRadius: '8px',
-            padding: '24px',
+            padding: '0',
             maxWidth: '800px',
             width: '90%',
             maxHeight: '80vh',
-            overflow: 'auto',
+            overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
             fontFamily: 'monospace'
+        }
+    });
+
+    var header = $('<div/>', {
+        css: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: '#1f1f1f'
+        }
+    });
+
+    var title = $('<h2/>', {
+        text: 'Version',
+        css: {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#ffffff',
+            letterSpacing: '0.3px'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: '\u2715',
+        css: {
+            background: 'transparent',
+            border: 'none',
+            color: '#999',
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css({background: 'rgba(255, 255, 255, 0.1)', color: '#fff'}); },
+        function() { $(this).css({background: 'transparent', color: '#999'}); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+        $(document).off('keydown.version-overlay');
+    });
+
+    header.append(title);
+    header.append(closeButton);
+    popup.append(header);
+
+    var contentArea = $('<div/>', {
+        css: {
+            padding: '24px'
         }
     });
 
@@ -2199,48 +2286,12 @@ $.fn.zato.system.show_version = function() {
         css: {
             fontSize: '18px',
             fontWeight: 'bold',
-            color: '#4ec9b0',
-            marginBottom: '16px'
+            color: '#4ec9b0'
         }
     });
 
-    var buttonContainer = $('<div/>', {
-        css: {
-            marginTop: '16px',
-            textAlign: 'right'
-        }
-    });
-
-    var closeButton = $('<button/>', {
-        text: 'Close',
-        css: {
-            padding: '8px 24px',
-            backgroundColor: '#0d0d0d',
-            backgroundImage: 'none',
-            color: '#d4d4d4',
-            border: '1px solid #3e3e3e',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-            WebkitFontSmoothing: 'antialiased',
-            MozOsxFontSmoothing: 'grayscale'
-        }
-    });
-
-    closeButton.hover(
-        function() { $(this).css('backgroundColor', '#1a1a1a'); },
-        function() { $(this).css('backgroundColor', '#0d0d0d'); }
-    );
-
-    closeButton.click(function() {
-        overlay.remove();
-        $(document).off('keydown.version-overlay');
-    });
-
-    buttonContainer.append(closeButton);
-    popup.append(versionText);
-    popup.append(buttonContainer);
+    contentArea.append(versionText);
+    popup.append(contentArea);
     overlay.append(popup);
     $('body').append(overlay);
 
