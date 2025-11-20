@@ -278,19 +278,24 @@ class ChannelImporter:
             for item in to_create:
                 logger.info('Creating channel: name=%s', item['name'])
                 instance = self.create_channel_rest(item, session)
-                logger.info('Created channel: name=%s id=%s', instance.name, instance.id)
+                logger.info('Created channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
                 out_created.append(instance)
 
             logger.info('Updating %d existing REST channels', len(to_update))
             for item in to_update:
                 logger.info('Updating channel: name=%s id=%s', item['name'], item['id'])
                 instance = self.update_channel_rest(item, session)
-                logger.info('Updated channel: name=%s id=%s', instance.name, instance.id)
+                logger.info('Updated channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
                 out_updated.append(instance)
 
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()
             logger.info('Successfully committed all changes')
+            
+            logger.info('Verifying channels in database after commit')
+            for instance in out_created + out_updated:
+                session.refresh(instance)
+                logger.info('Verified channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
 
         except Exception as e:
             logger.error('Error syncing REST channels: %s', e)
