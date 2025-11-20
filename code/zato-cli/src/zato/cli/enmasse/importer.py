@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import sys
 
 # PyYAML
 import yaml
@@ -49,6 +50,25 @@ if 0:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
+                        'zato.cli.enmasse.importers.group', 'zato.cli.enmasse.importers.cache',
+                        'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
+                        'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
+                        'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
+                        'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
+                        'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
+                        'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
+                        'zato.cli.enmasse.importers.pubsub_subscription']:
+    importer_logger = logging.getLogger(importer_module)
+    importer_logger.setLevel(logging.INFO)
+    importer_logger.addHandler(handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
