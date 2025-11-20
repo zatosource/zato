@@ -111,6 +111,9 @@ class SecurityImporter:
             if sec_type == 'apikey' and 'username' not in item:
                 item['username'] = f'Zato-Not-Used-{uuid4().hex}'
 
+            if sec_type == 'apikey' and 'header' not in item:
+                item['header'] = 'X-API-Key'
+
             if 'password' not in item:
                 item['password'] = f'Zato-Auto-Password-{uuid4().hex}'
 
