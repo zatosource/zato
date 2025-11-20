@@ -162,7 +162,7 @@ class SecurityExporter:
         logger.info('Exporting security definitions with exclusions')
 
         # Names to exclude completely
-        excluded_names = {'Rule engine default user', 'admin.invoke', 'ide_publisher'}
+        excluded_names = {'Rule engine default user', 'admin.invoke', 'ide_publisher', 'metrics'}
 
         # Prefixes to exclude
         excluded_prefixes = ['zato', 'pub.zato', 'demo']
