@@ -219,6 +219,9 @@ class ChannelImporter:
     def update_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
 
         channel_id = channel_def['id']
+        logger.info('Updating REST channel with id=%s', channel_id)
+        logger.info('Channel definition: %s', channel_def)
+        
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
         channel.url_path = channel_def['url_path']
 
@@ -234,12 +237,20 @@ class ChannelImporter:
                 setattr(channel, key, value)
 
         # Handle security definition
+        logger.info('Checking for security in channel_def: %s', channel_def.get('security'))
+        logger.info('Available security definitions: %s', list(self.importer.sec_defs.keys()))
         if (security_name := channel_def.get('security')) is not None:
+            logger.info('Security name found: %s', security_name)
             if security_name not in self.importer.sec_defs:
+                logger.error('Security definition "%s" not found in sec_defs', security_name)
                 raise Exception(f'Security definition "{security_name}" not found for REST channel "{channel_def["name"]}"')
 
             sec_def = self.importer.sec_defs[security_name]
+            logger.info('Found security definition: %s', sec_def)
             channel.security_id = sec_def['id']
+            logger.info('Assigned security_id %s to channel %s', sec_def['id'], channel_def['name'])
+        else:
+            logger.info('No security definition specified for channel %s', channel_def['name'])
 
         # Handle security groups
         if (groups := channel_def.get('groups')) is not None and groups:
