@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
@@ -115,6 +116,9 @@ class SecurityImporter:
             name = item['name']
             sec_type = item['type']
 
+            if sec_type == 'apikey' and 'username' not in item:
+                item['username'] = f'Zato-Not-Used-{uuid4().hex}'
+
             if sec_type == 'bearer_token':
                 if 'client_id_field' not in item:
                     item['client_id_field'] = 'client_id'
@@ -142,6 +146,8 @@ class SecurityImporter:
                 needs_update = False
                 for key, value in item.items():
                     if key in ('type', 'name', 'password'):
+                        continue
+                    if key == 'username' and sec_type == 'apikey':
                         continue
 
                     db_value = db_def.get(key)
@@ -268,8 +274,12 @@ class SecurityImporter:
 
     def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
 
+        sec_type = security_def.get('type')
+
         for key, value in security_def.items():
             if key in ('type', 'name', 'id'):
+                continue
+            if key == 'username' and sec_type == 'apikey':
                 continue
 
             if hasattr(definition, key):
