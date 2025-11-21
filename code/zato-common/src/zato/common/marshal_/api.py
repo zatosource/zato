@@ -147,7 +147,7 @@ class Model(BaseModel):
                 for frame in reversed(stack):
                     if '/opt/' in frame.filename and '/zato/' not in frame.filename:
                         line_len = len(frame.line)
-                        msg = f'Class {self.__class__.__name__} is not a dataclass, make sure it looks like below:\n\n'
+                        msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
                         msg += f'@dataclass(init=False)\n'
                         msg += f'class {self.__class__.__name__}(Model):\n'
                         msg += f'  ..\n\n'
@@ -156,7 +156,7 @@ class Model(BaseModel):
                         msg += f'  {"^" * line_len}'
                         break
                 else:
-                    msg = f'Class {self.__class__.__name__} is not a dataclass, make sure it looks like below:\n\n'
+                    msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
                     msg += f'@dataclass(init=False)\n'
                     msg += f'class {self.__class__.__name__}(Model):\n'
                     msg += f'  ..'
