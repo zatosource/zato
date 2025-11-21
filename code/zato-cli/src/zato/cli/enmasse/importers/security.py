@@ -116,8 +116,6 @@ class SecurityImporter:
 
             if 'password' not in item:
                 item['password'] = f'Zato-Auto-Password-{uuid4().hex}'
-            elif isinstance(item['password'], str) and item['password'].startswith('Missing_'):
-                item['password'] = ''
 
             if sec_type == 'bearer_token':
                 if 'client_id_field' not in item:
