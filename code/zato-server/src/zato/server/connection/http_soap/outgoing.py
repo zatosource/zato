@@ -525,11 +525,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             return (self.address.format(**path_params), dict(params))
         except(KeyError, ValueError):
-            logger.warning('CID:`%s` Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
-                cid, self.address, self.config['address_url_path'], params, format_exc())
-
-            raise ValueError('Could not build URL path template `{}`, missing parameters: {}'.format(
-                self.config['address_url_path'], self.path_params))
+            msg = 'Could not build URL path template `{}`, missing parameters: {}'.format(
+                self.config['address_url_path'],
+                self.path_params
+            )
+            raise BadRequest(cid, msg, needs_msg=True)
 
 # ################################################################################################################################
 
@@ -672,7 +672,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             try:
                 response.data = loads(response.text or '""') # type: ignore
             except ValueError as e:
-                raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
+                msg = 'Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0])
+                raise BadRequest(cid, msg, needs_msg=True)
 
         # .. if we have a model class on input, deserialize the received response into one ..
         if model:
