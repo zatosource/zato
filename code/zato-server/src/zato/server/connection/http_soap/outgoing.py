@@ -800,7 +800,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     qs_path = '?' + urlencode(response.zato_qs_params)
                 else:
                     qs_path = ''
-                msg = f'REST call error: {self.config["name"]} -> {response.zato_method} -> {response.zato_address}{qs_path} -> {response.data}'
+                msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
+                msg += f' -> {response.zato_address}{qs_path} -> {response.data}'
                 raise RESTInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
