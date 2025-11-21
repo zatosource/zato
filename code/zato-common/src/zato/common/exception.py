@@ -126,7 +126,7 @@ ClientHTTPError = Reportable
 
 class RESTInvocationError(Reportable):
     def __init__(self, cid, msg='REST invocation error', needs_msg=False):
-        super(BadRequest, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
+        super(RESTInvocationError, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
 
 # ################################################################################################################################
 
