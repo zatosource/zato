@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import isclass
@@ -26,6 +27,11 @@ from zato.common.typing_ import cast_
 from zato.common.util import new_cid
 from zato.common.util.api import get_zato_command
 from zato.common.util.time_ import utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 
 # ################################################################################################################################
 # ################################################################################################################################
