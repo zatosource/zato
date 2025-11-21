@@ -145,7 +145,7 @@ class Model(BaseModel):
                 tb = extract_tb(exc_info()[2])
                 caller_frame = None
                 for frame in reversed(tb):
-                    if 'hot-deploy' in frame.filename:
+                    if '/zato/' not in frame.filename:
                         caller_frame = frame
                         break
                 
