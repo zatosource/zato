@@ -516,7 +516,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 self.config['address_url_path'],
                 self.path_params
             )
-            raise BadRequest(self.cid, msg, needs_msg=True)
+            raise BadRequest(cid, msg, needs_msg=True)
 
         path_params = {}
         try:
