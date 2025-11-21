@@ -272,8 +272,18 @@ $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_st
     console.debug("on_sync_invoke_ended_error: jq_xhr.responseText:", jq_xhr.responseText);
     console.debug("on_sync_invoke_ended_error: jq_xhr.responseText type:", typeof jq_xhr.responseText);
 
+    let response_text = jq_xhr.responseText;
+
+    try {
+        let parsed = JSON.parse(response_text);
+        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'string') {
+            response_text = parsed[0];
+        }
+    } catch (e) {
+    }
+
     let status = jq_xhr.status + " " + error_message;
-    $.fn.zato.invoker.on_form_ended_common(options, status, jq_xhr.responseText);
+    $.fn.zato.invoker.on_form_ended_common(options, status, response_text);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
