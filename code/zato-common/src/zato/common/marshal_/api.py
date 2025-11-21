@@ -143,6 +143,17 @@ class Model(BaseModel):
         except TypeError as e:
             if 'asdict() should be called on dataclass instances' in str(e):
                 tb = extract_tb(exc_info()[2])
+                
+                from logging import getLogger
+                logger = getLogger(__name__)
+                logger.error('=== DEBUG TRACEBACK START ===')
+                for idx, frame in enumerate(tb):
+                    logger.error(f'Frame {idx}: {frame.filename} | line {frame.lineno} | {frame.name} | {frame.line}')
+                    logger.error(f'  /opt/ in filename: {"/opt/" in frame.filename}')
+                    logger.error(f'  /zato/ not in filename: {"/zato/" not in frame.filename}')
+                    logger.error(f'  Combined: {"/opt/" in frame.filename and "/zato/" not in frame.filename}')
+                logger.error('=== DEBUG TRACEBACK END ===')
+                
                 for frame in tb:
                     if '/opt/' in frame.filename and '/zato/' not in frame.filename:
                         caller_info = f'File "{frame.filename}", line {frame.lineno}, in {frame.name}'
