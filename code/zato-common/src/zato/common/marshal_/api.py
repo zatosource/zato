@@ -36,6 +36,7 @@ from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
+from zato.common.exception import BackendInvocationError
 from zato.common.marshal_.model import BaseModel
 from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, type_
 
@@ -135,7 +136,14 @@ class Model(BaseModel):
     from_dict = _zato_from_dict
 
     def to_dict(self):
-        return asdict(self)
+        try:
+            return asdict(self)
+        except TypeError:
+            raise BackendInvocationError(
+                None,
+                f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)',
+                needs_msg=True
+            )
 
     def _json_default_serializer(self, value):
 
