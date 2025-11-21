@@ -363,9 +363,10 @@ class BaseHTTPSOAPWrapper:
             # .. and return it.
             return response
 
-        except RequestsTimeout:
+        except RequestsTimeout as e:
             self._push_metrics(start_time, 'timeout')
-            raise TimeoutException(cid, format_exc())
+            msg = f'Timeout error: {e}'
+            raise BackendInvocationError(cid, msg, needs_msg=True)
         except Exception:
             self._push_metrics(start_time, 'error')
             raise
