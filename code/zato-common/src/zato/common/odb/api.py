@@ -759,7 +759,7 @@ class ODBManager(SessionWrapper):
             columns = Bunch()
 
             # So ConfigDict has its data in the format it expects
-            for c in q.statement.columns:
+            for c in q.statement.selected_columns:
                 columns[c.name] = None
 
             for item in elems_with_opaque(q):
