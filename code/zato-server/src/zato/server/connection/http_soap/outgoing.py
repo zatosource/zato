@@ -207,6 +207,8 @@ class BaseHTTPSOAPWrapper:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
+            logger.info('API Key auth for connection %s -> username: %s, password: %s', 
+                       self.config.get('name'), username, self.config['password'])
             self.base_headers[username] = self.config['password']
 
         # #######################################
@@ -215,6 +217,8 @@ class BaseHTTPSOAPWrapper:
         #
         # #######################################
         elif self.sec_type in {_Basic_Auth}:
+            logger.info('Basic Auth for connection %s -> username: %s, password: %s', 
+                       self.config.get('name'), self.config['username'], self.config['password'])
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
@@ -225,6 +229,8 @@ class BaseHTTPSOAPWrapper:
         # #######################################
         elif self.sec_type == _NTLM:
             _username, _password = self.auth
+            logger.info('NTLM auth for connection %s -> username: %s, password: %s', 
+                       self.config.get('name'), _username, _password)
             _requests_auth = HttpNtlmAuth(_username, _password)
             self.requests_auth = _requests_auth
             self.username = _username
