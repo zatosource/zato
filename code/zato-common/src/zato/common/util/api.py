@@ -1029,49 +1029,35 @@ def parse_literal_dict(value:'str') -> 'str | anydict':
 def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
     """ Creates a dictionary out of key=value lines.
     """
-    logger = logging.getLogger(__name__)
-    logger.info('DEBUG parse_extra_into_dict called with lines type=%s', type(lines))
-    logger.info('DEBUG parse_extra_into_dict input lines repr=%r', lines)
-
     if isinstance(lines, bytes):
-        logger.info('DEBUG parse_extra_into_dict converting bytes to utf8')
         lines = lines.decode('utf8')
-        logger.info('DEBUG parse_extra_into_dict after decode: %r', lines)
 
     _extra = {}
 
     if lines:
         extra = ';'.join(lines.splitlines())
-        logger.info('DEBUG parse_extra_into_dict after splitlines join: %r', extra)
 
-        for idx, line in enumerate(extra.split(';')):
+        for line in extra.split(';'):
             original_line = line
-            logger.info('DEBUG parse_extra_into_dict processing line %d: %r', idx, original_line)
             if line:
 
                 line = line.replace(r'\r', '')
                 line = line.strip()
-                logger.info('DEBUG parse_extra_into_dict after strip line %d: %r', idx, line)
 
                 if line.startswith('#'):
-                    logger.info('DEBUG parse_extra_into_dict skipping comment line %d', idx)
                     continue
 
                 line = line.split('=', 1)
-                logger.info('DEBUG parse_extra_into_dict after split line %d: %r', idx, line)
                 if not len(line) == 2:
-                    logger.error('DEBUG parse_extra_into_dict invalid line %d: original=%r split_result=%r', idx, original_line, line)
                     raise ValueError('Each line must be a single key=value entry, not `{}`'.format(original_line))
 
                 key, value = line
                 value = value.strip()
                 value = parse_simple_type(value, convert_bool)
-                logger.info('DEBUG parse_extra_into_dict parsed line %d: key=%r value=%r', idx, key.strip(), value)
 
                 # OK, let's just treat it as string
                 _extra[key.strip()] = value
 
-    logger.info('DEBUG parse_extra_into_dict returning dict: %r', _extra)
     return _extra
 
 # ################################################################################################################################
