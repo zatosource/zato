@@ -199,10 +199,14 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
 
     if(has_response) {
         if($.fn.zato.is_object(response.data)) {
-            response_data = response.data; //$.fn.zato.to_json(response.data); JSON Parsing and Quotes
+            response_data = response.data;
         }
         else {
             response_data = response.data;
+        }
+
+        if (Array.isArray(response_data) && response_data.length === 1 && typeof response_data[0] === 'string') {
+            response_data = response_data[0];
         }
 
     }
@@ -272,18 +276,8 @@ $.fn.zato.invoker.on_sync_invoke_ended_error = function(options, jq_xhr, text_st
     console.debug("on_sync_invoke_ended_error: jq_xhr.responseText:", jq_xhr.responseText);
     console.debug("on_sync_invoke_ended_error: jq_xhr.responseText type:", typeof jq_xhr.responseText);
 
-    let response_text = jq_xhr.responseText;
-
-    try {
-        let parsed = JSON.parse(response_text);
-        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'string') {
-            response_text = parsed[0];
-        }
-    } catch (e) {
-    }
-
     let status = jq_xhr.status + " " + error_message;
-    $.fn.zato.invoker.on_form_ended_common(options, status, response_text);
+    $.fn.zato.invoker.on_form_ended_common(options, status, jq_xhr.responseText);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
