@@ -73,7 +73,7 @@ class BearerTokenManager:
         scopes = ' '.join(scopes)
 
         # .. same goes for extra fields ..
-        extra_fields = sec_def['extra_fields'] or ''
+        extra_fields = sec_def.get('extra_fields') or ''
         if isinstance(extra_fields, list):
             extra_fields = '\n'.join(extra_fields)
         extra_fields = parse_extra_into_dict(extra_fields)
