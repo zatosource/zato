@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 # requests
 from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
-from requests.exceptions import Timeout as RequestsTimeout
+from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 
 # requests-ntlm
@@ -32,7 +32,7 @@ from prometheus_client import Counter, Histogram
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
-from zato.common.exception import BadRequest, Inactive, BackendInvocationError, TimeoutException
+from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
@@ -367,7 +367,11 @@ class BaseHTTPSOAPWrapper:
             self._push_metrics(start_time, 'timeout')
             msg = f'Timeout error: {e}'
             raise BackendInvocationError(cid, msg, needs_msg=True)
-        except Exception:
+        except RequestsConnectionError as e:
+            self._push_metrics(start_time, 'connection_error')
+            msg = f'Connection error: {e}'
+            raise BackendInvocationError(cid, msg, needs_msg=True)
+        except Exception as e:
             self._push_metrics(start_time, 'error')
             raise
 
