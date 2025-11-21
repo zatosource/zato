@@ -47,6 +47,7 @@ from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
+from zato.common.util.time_ import utcnow
 from zato.server.config import ConfigDict
 from zato.server.service import PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
@@ -90,7 +91,7 @@ List = List
 logger = logging.getLogger(__name__)
 has_debug = logger.isEnabledFor(logging.DEBUG)
 has_trace1 = logger.isEnabledFor(TRACE1)
-_utcnow=datetime.utcnow
+_utcnow=utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################

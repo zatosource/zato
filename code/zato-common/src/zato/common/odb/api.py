@@ -42,6 +42,7 @@ from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
+from zato.common.util.time_ import utcnow
 from zato.common.util.url_dispatcher import get_match_target
 
 # ################################################################################################################################
@@ -722,7 +723,7 @@ class ODBManager(SessionWrapper):
                 return
 
             server.up_status = status
-            server.up_mod_date = datetime.utcnow() # type: ignore
+            server.up_mod_date = utcnow() # type: ignore
 
             if update_host:
                 server.host = current_host()
@@ -957,7 +958,7 @@ class ODBManager(SessionWrapper):
                 ds.package_id = dp.id
                 ds.server_id = server.id
                 ds.status = DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT
-                ds.status_change_time = datetime.utcnow() # type: ignore
+                ds.status_change_time = utcnow() # type: ignore
 
                 session.add(ds)
 

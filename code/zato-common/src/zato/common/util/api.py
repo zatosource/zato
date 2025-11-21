@@ -107,6 +107,7 @@ from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server
 from zato.common.util.config import enrich_config_from_environment
+from zato.common.util.python_ import get_current_stack
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -732,7 +733,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True, 
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
     logger.debug('About to hot-deploy `%s`', path)
-    now = datetime.utcnow()
+    now = utcnow()
     di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path, should_deploy_in_place=should_deploy_in_place))
 
     # Insert the package into the DB ..
@@ -1671,7 +1672,7 @@ def wait_for_predicate(
     if not is_fulfilled:
 
         # For later use
-        start = datetime.utcnow()
+        start = utcnow()
 
         # The time at which we will start to log details
         log_after  = start + timedelta(seconds=log_after_seconds)
@@ -1680,7 +1681,7 @@ def wait_for_predicate(
         wait_until = start + timedelta(seconds=timeout)
 
         # Optionally, we may already have something to log
-        if (datetime.utcnow() > log_after) and needs_log and log_msg_details:
+        if (utcnow() > log_after) and needs_log and log_msg_details:
             logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
 
         # Keep looping until the predicate is fulfilled ..
@@ -1696,7 +1697,7 @@ def wait_for_predicate(
             gevent_sleep(actual_interval)
 
             # .. for later use ..
-            now = datetime.utcnow()
+            now = utcnow()
 
             # .. return if we have run out of time ..
             if now > wait_until:
