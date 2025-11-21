@@ -149,6 +149,16 @@ class Model(BaseModel):
                     tb_list.append((frame.f_code.co_filename, tb_full.tb_lineno, frame.f_code.co_name))
                     tb_full = tb_full.tb_next
                 
+                from logging import getLogger
+                logger = getLogger(__name__)
+                logger.error('=== DEBUG TRACEBACK START ===')
+                for idx, (filename, lineno, name) in enumerate(tb_list):
+                    logger.error(f'Frame {idx}: {filename} | line {lineno} | {name}')
+                    logger.error(f'  /opt/ in filename: {"/opt/" in filename}')
+                    logger.error(f'  /zato/ not in filename: {"/zato/" not in filename}')
+                    logger.error(f'  Combined: {"/opt/" in filename and "/zato/" not in filename}')
+                logger.error('=== DEBUG TRACEBACK END ===')
+                
                 for filename, lineno, name in reversed(tb_list):
                     if '/opt/' in filename and '/zato/' not in filename:
                         msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
