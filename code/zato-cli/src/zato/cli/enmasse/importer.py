@@ -758,7 +758,8 @@ class EnmasseYAMLImporter:
             self.updated_objects['email_imap'] = imap_updated
 
         # Process SQL connection pool definitions
-        sql_created, sql_updated = self.sync_sql(yaml_config.get('sql', []), session)
+        sql_list = yaml_config.get('sql') or yaml_config.get('outconn_sql', [])
+        sql_created, sql_updated = self.sync_sql(sql_list, session)
         if sql_created:
             self.created_objects['sql'] = sql_created
         if sql_updated:
@@ -814,7 +815,8 @@ class EnmasseYAMLImporter:
             self.updated_objects['outgoing_rest'] = outgoing_rest_updated
 
         # Process outgoing SOAP connection definitions
-        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(yaml_config.get('outgoing_soap', []), session)
+        outgoing_soap_list = yaml_config.get('outgoing_soap') or yaml_config.get('outconn_soap', [])
+        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(outgoing_soap_list, session)
         if outgoing_soap_created:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
