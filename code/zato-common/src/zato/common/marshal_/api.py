@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
+from sys import exc_info
+from traceback import extract_tb
 from typing import Any
 
 try:
@@ -140,9 +142,15 @@ class Model(BaseModel):
             return asdict(self)
         except TypeError as e:
             if 'asdict() should be called on dataclass instances' in str(e):
+                tb = extract_tb(exc_info()[2])
+                caller_frame = tb[-2]
+                caller_info = f'File "{caller_frame.filename}", line {caller_frame.lineno}, in {caller_frame.name}'
+                msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
+                msg += f'  {caller_info}\n'
+                msg += f'    {caller_frame.line}'
                 raise BackendInvocationError(
                     None,
-                    f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)',
+                    msg,
                     needs_msg=True
                 )
             else:
