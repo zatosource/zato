@@ -399,7 +399,7 @@ class RequestDispatcher:
                 _format_exc = format_exc()
                 status = _status_internal_server_error
 
-                if isinstance(e, (ValueError, ClientHTTPError, ModelValidationError)):
+                if isinstance(e, (ClientHTTPError, ModelValidationError)):
 
                     response = e.msg
                     status_code = e.status
