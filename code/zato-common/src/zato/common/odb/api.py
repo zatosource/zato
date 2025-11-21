@@ -285,16 +285,12 @@ class SQLConnectionPool:
             self.engine_name = 'oracle+oracledb'
 
         extra = self.config.get('extra') # Optional, hence .get
-        self.logger.info('DEBUG SQLConnectionPool.init name=%s extra=%r', self.name, extra)
-        self.logger.info('DEBUG SQLConnectionPool.init full config=%r', self.config)
 
         if extra and isinstance(extra, str) and extra.startswith('\\x'):
-            self.logger.info('DEBUG SQLConnectionPool.init detected hex-encoded extra, decoding')
             try:
                 extra = bytes.fromhex(extra.replace('\\x', '')).decode('utf-8')
-                self.logger.info('DEBUG SQLConnectionPool.init decoded extra=%r', extra)
             except Exception as e:
-                self.logger.error('DEBUG SQLConnectionPool.init failed to decode hex extra: %s', e)
+                self.logger.error('Failed to decode hex-encoded extra parameter: %s', e)
 
         _extra.update(parse_extra_into_dict(extra)) # type: ignore
 
