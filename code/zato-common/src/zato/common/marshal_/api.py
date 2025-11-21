@@ -143,17 +143,13 @@ class Model(BaseModel):
         except TypeError as e:
             if 'asdict() should be called on dataclass instances' in str(e):
                 tb = extract_tb(exc_info()[2])
-                caller_frame = None
-                for frame in reversed(tb):
-                    if '/zato/' not in frame.filename and '/usr/lib/' not in frame.filename:
-                        caller_frame = frame
+                for idx, frame in enumerate(tb):
+                    if idx > 0 and 'marshal_' in tb[idx-1].filename and 'marshal_' not in frame.filename:
+                        caller_info = f'File "{frame.filename}", line {frame.lineno}, in {frame.name}'
+                        msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
+                        msg += f'  {caller_info}\n'
+                        msg += f'    {frame.line}'
                         break
-                
-                if caller_frame:
-                    caller_info = f'File "{caller_frame.filename}", line {caller_frame.lineno}, in {caller_frame.name}'
-                    msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
-                    msg += f'  {caller_info}\n'
-                    msg += f'    {caller_frame.line}'
                 else:
                     msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)'
                 
