@@ -22,6 +22,7 @@ from requests import post as requests_post
 # Zato
 from zato.cache import KeyExpiredError
 from zato.common.api import CACHE, Data_Format, ZATO_NOT_GIVEN
+from zato.common.exception import BackendInvocationError
 from zato.common.model.security import BearerTokenConfig, BearerTokenInfo, BearerTokenInfoResult
 from zato.common.util.api import parse_extra_into_dict
 
@@ -193,7 +194,7 @@ class BearerTokenManager:
         if not response.ok:
             msg  = f'Bearer token for `{config.sec_def_name}` could not be obtained from {config.auth_server_url} -> '
             msg += f'{response.status_code} -> {response.text}'
-            raise Exception(msg)
+            raise BackendInvocationError(None, msg, needs_msg=True)
 
         # .. if we are here, it means that we can load the JSON response ..
         data:'stranydict' = loads(response.text)
