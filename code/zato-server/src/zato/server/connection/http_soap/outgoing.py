@@ -32,7 +32,7 @@ from prometheus_client import Counter, Histogram
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
-from zato.common.exception import BadRequest, Inactive, TimeoutException
+from zato.common.exception import BadRequest, Inactive, RESTInvocationError, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
@@ -91,6 +91,9 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 
 class Response(_RequestsResponse):
     data: 'strdictnone'
+    zato_method: 'str'
+    zato_address: 'str'
+    zato_qs_params: 'strdictnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -653,10 +656,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        response = cast_('Response', response)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..
         response.data = response.text # type: ignore
+        response.zato_method = method
+        response.zato_address = address
+        response.zato_qs_params = qs_params
 
         # .. check if we are explicitly told that we handle JSON ..
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
@@ -680,7 +687,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
         # .. now, return the response to the caller.
-        return cast_('Response', response)
+        return response
 
 # ################################################################################################################################
 
@@ -789,7 +796,12 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 logger.info('REST call response received -> %s', response.text)
 
             if not response.ok:
-                raise Exception(response.text)
+                if response.zato_qs_params:
+                    qs_path = '?' + urlencode(response.zato_qs_params)
+                else:
+                    qs_path = ''
+                msg = f'REST call error: {self.config.name} -> {response.zato_method} -> {response.zato_address}{qs_path}'
+                raise RESTInvocationError(self.cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
             response_data = response.data # type: ignore
