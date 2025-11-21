@@ -787,7 +787,8 @@ class EnmasseYAMLImporter:
             self.updated_objects['jira'] = jira_updated
 
         # Process LDAP connection definitions
-        ldap_created, ldap_updated = self.sync_ldap(yaml_config.get('ldap', []), session)
+        ldap_list = yaml_config.get('ldap') or yaml_config.get('outgoing_ldap', [])
+        ldap_created, ldap_updated = self.sync_ldap(ldap_list, session)
         if ldap_created:
             self.created_objects['ldap'] = ldap_created
         if ldap_updated:
