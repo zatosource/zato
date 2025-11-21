@@ -143,25 +143,21 @@ class Model(BaseModel):
         except TypeError as e:
             if 'asdict() should be called on dataclass instances' in str(e):
                 stack = extract_stack()
-                
-                from logging import getLogger
-                logger = getLogger(__name__)
-                logger.error('=== DEBUG STACK START ===')
-                for idx, frame in enumerate(stack):
-                    logger.error(f'Frame {idx}: {frame.filename} | line {frame.lineno} | {frame.name} | {frame.line}')
-                    logger.error(f'  /opt/ in filename: {"/opt/" in frame.filename}')
-                    logger.error(f'  /zato/ not in filename: {"/zato/" not in frame.filename}')
-                    logger.error(f'  Combined: {"/opt/" in frame.filename and "/zato/" not in frame.filename}')
-                logger.error('=== DEBUG STACK END ===')
-                
+
                 for frame in reversed(stack):
                     if '/opt/' in frame.filename and '/zato/' not in frame.filename:
-                        msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
-                        msg += f'  File "{frame.filename}", line {frame.lineno}, in {frame.name}\n'
-                        msg += f'    {frame.line}'
+                        msg = f'Class {self.__class__.__name__} is not a dataclass, make sure it looks like below:\n\n'
+                        msg += f'@dataclass(init=False)\n'
+                        msg += f'class {self.__class__.__name__}(Model):\n'
+                        msg += f'  ..\n\n'
+                        msg += f'File "{frame.filename}", line {frame.lineno}, in {frame.name}\n'
+                        msg += f'  {frame.line}'
                         break
                 else:
-                    msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)'
+                    msg = f'Class {self.__class__.__name__} is not a dataclass, make sure it looks like below:\n\n'
+                    msg += f'@dataclass(init=False)\n'
+                    msg += f'class {self.__class__.__name__}(Model):\n'
+                    msg += f'  ..'
 
                 raise BackendInvocationError(
                     None,
