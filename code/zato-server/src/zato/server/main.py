@@ -85,6 +85,7 @@ if 0:
 import warnings
 from sqlalchemy import exc as sa_exc
 warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 
 # ################################################################################################################################
 # ################################################################################################################################
