@@ -138,12 +138,15 @@ class Model(BaseModel):
     def to_dict(self):
         try:
             return asdict(self)
-        except TypeError:
-            raise BackendInvocationError(
-                None,
-                f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)',
-                needs_msg=True
-            )
+        except TypeError as e:
+            if 'asdict() should be called on dataclass instances' in str(e):
+                raise BackendInvocationError(
+                    None,
+                    f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)',
+                    needs_msg=True
+                )
+            else:
+                raise
 
     def _json_default_serializer(self, value):
 
