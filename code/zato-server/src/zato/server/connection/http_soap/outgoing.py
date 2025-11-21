@@ -32,7 +32,7 @@ from prometheus_client import Counter, Histogram
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
-from zato.common.exception import Inactive, TimeoutException
+from zato.common.exception import BadRequest, Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
@@ -512,9 +512,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         sensitive data from leaking to clients.
         """
         if not params:
-            logger.warning('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
-            raise ValueError('No parameters given for URL path template `{}`, missing parameters: {}'.format(
-                self.config['address_url_path'], self.path_params))
+            msg = 'No parameters given for URL path template `{}`, missing parameters: {}'.format(
+                self.config['address_url_path'],
+                self.path_params
+            )
+            raise BadRequest(self.cid, msg, needs_msg=True)
 
         path_params = {}
         try:
