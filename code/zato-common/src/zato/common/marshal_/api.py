@@ -11,7 +11,7 @@ from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type
 from http.client import BAD_REQUEST
 from inspect import isclass
 from sys import exc_info
-from traceback import extract_tb
+from traceback import extract_stack, extract_tb
 from typing import Any
 
 try:
@@ -142,27 +142,23 @@ class Model(BaseModel):
             return asdict(self)
         except TypeError as e:
             if 'asdict() should be called on dataclass instances' in str(e):
-                tb_full = exc_info()[2]
-                tb_list = []
-                while tb_full:
-                    frame = tb_full.tb_frame
-                    tb_list.append((frame.f_code.co_filename, tb_full.tb_lineno, frame.f_code.co_name))
-                    tb_full = tb_full.tb_next
+                stack = extract_stack()
                 
                 from logging import getLogger
                 logger = getLogger(__name__)
-                logger.error('=== DEBUG TRACEBACK START ===')
-                for idx, (filename, lineno, name) in enumerate(tb_list):
-                    logger.error(f'Frame {idx}: {filename} | line {lineno} | {name}')
-                    logger.error(f'  /opt/ in filename: {"/opt/" in filename}')
-                    logger.error(f'  /zato/ not in filename: {"/zato/" not in filename}')
-                    logger.error(f'  Combined: {"/opt/" in filename and "/zato/" not in filename}')
-                logger.error('=== DEBUG TRACEBACK END ===')
+                logger.error('=== DEBUG STACK START ===')
+                for idx, frame in enumerate(stack):
+                    logger.error(f'Frame {idx}: {frame.filename} | line {frame.lineno} | {frame.name} | {frame.line}')
+                    logger.error(f'  /opt/ in filename: {"/opt/" in frame.filename}')
+                    logger.error(f'  /zato/ not in filename: {"/zato/" not in frame.filename}')
+                    logger.error(f'  Combined: {"/opt/" in frame.filename and "/zato/" not in frame.filename}')
+                logger.error('=== DEBUG STACK END ===')
                 
-                for filename, lineno, name in reversed(tb_list):
-                    if '/opt/' in filename and '/zato/' not in filename:
+                for frame in reversed(stack):
+                    if '/opt/' in frame.filename and '/zato/' not in frame.filename:
                         msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)\n'
-                        msg += f'  File "{filename}", line {lineno}, in {name}'
+                        msg += f'  File "{frame.filename}", line {frame.lineno}, in {frame.name}\n'
+                        msg += f'    {frame.line}'
                         break
                 else:
                     msg = f'Class {self.__class__.__name__} is not a dataclass -> make sure it has @dataclass(init=False)'
