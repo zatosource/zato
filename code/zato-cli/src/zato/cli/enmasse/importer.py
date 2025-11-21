@@ -780,7 +780,14 @@ class EnmasseYAMLImporter:
             self.updated_objects['confluence'] = confluence_updated
 
         # Process Jira connection definitions
-        jira_created, jira_updated = self.sync_jira(yaml_config.get('jira', []), session)
+        jira_list = yaml_config.get('jira', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-jira':
+                    jira_list.append(item)
+        jira_created, jira_updated = self.sync_jira(jira_list, session)
         if jira_created:
             self.created_objects['jira'] = jira_created
         if jira_updated:
@@ -795,7 +802,14 @@ class EnmasseYAMLImporter:
             self.updated_objects['ldap'] = ldap_updated
 
         # Process Microsoft 365 connection definitions
-        ms365_created, ms365_updated = self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
+        ms365_list = yaml_config.get('microsoft_365', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-microsoft-365':
+                    ms365_list.append(item)
+        ms365_created, ms365_updated = self.sync_microsoft_365(ms365_list, session)
         if ms365_created:
             self.created_objects['microsoft_365'] = ms365_created
         if ms365_updated:
