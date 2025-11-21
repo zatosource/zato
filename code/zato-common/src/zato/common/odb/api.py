@@ -285,6 +285,8 @@ class SQLConnectionPool:
             self.engine_name = 'oracle+oracledb'
 
         extra = self.config.get('extra') # Optional, hence .get
+        self.logger.info('DEBUG SQLConnectionPool.init name=%s extra=%r', self.name, extra)
+        self.logger.info('DEBUG SQLConnectionPool.init full config=%r', self.config)
         _extra.update(parse_extra_into_dict(extra)) # type: ignore
 
         # SQLite has no pools
