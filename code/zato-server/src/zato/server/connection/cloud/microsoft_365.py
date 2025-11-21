@@ -73,7 +73,7 @@ class Microsoft365Client:
 # ################################################################################################################################
 
     def ping(self):
-        result = self.impl.get_current_user()
+        result = self.impl.get_current_user_data()
         logger.info('Microsoft 365 ping result (%s) -> `%s`', self.config['name'], result)
 
 # ################################################################################################################################
