@@ -53,7 +53,7 @@ class Microsoft365Client:
         secret_value = config.get('secret_value') or config.get('secret') or config.get('password')
 
         if not secret_value:
-            raise Exception(f'Secret value not found in {config}')
+            raise Exception(f'Secret value not found in {dict(config)}')
 
         credentials = (client_id, secret_value)
 
