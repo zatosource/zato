@@ -32,7 +32,7 @@ from prometheus_client import Counter, Histogram
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
-from zato.common.exception import BadRequest, Inactive, RESTInvocationError, TimeoutException
+from zato.common.exception import BadRequest, Inactive, BackendInvocationError, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
@@ -802,7 +802,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     qs_path = ''
                 msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
                 msg += f' {response.zato_address}{qs_path} -> {response.data}'
-                raise RESTInvocationError(cid, msg, needs_msg=True)
+                raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
             response_data = response.data # type: ignore
