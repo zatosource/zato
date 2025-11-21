@@ -32,6 +32,7 @@ from sqlalchemy import func
 
 # Zato
 from zato.common.util.api import get_current_user, make_repr # pylint: disable=no-name-in-module
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 
@@ -150,7 +151,7 @@ class Lock:
 
 # ################################################################################################################################
 
-    def _acquire(self, _utcnow=datetime.utcnow, _has_debug=has_debug):
+    def _acquire(self, _utcnow=utcnow, _has_debug=has_debug):
         """ Try to acquire a lock by its ID. If not possible and block is not False
         sleep for that many seconds as block points to.
         """
@@ -186,7 +187,7 @@ class Lock:
 
 # ################################################################################################################################
 
-    def _wait_in_greenlet(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def _wait_in_greenlet(self, _utcnow=utcnow, _timedelta=timedelta):
         """ Sleeps until self.ttl is reached or until the lock is released and then releases the lock if it is still held.
         """
         now = _utcnow()
@@ -287,7 +288,7 @@ user={}
         super().__init__(*args, **kwargs)
         self.tmp_file_name = None
 
-    def _acquire_impl(self, _flags=None, tmp_dir=gettempdir(), _utcnow=datetime.utcnow, _has_debug=has_debug):
+    def _acquire_impl(self, _flags=None, tmp_dir=gettempdir(), _utcnow=utcnow, _has_debug=has_debug):
         _flags = _flags or LOCK_EX | LOCK_NB
         current = current_thread()
 
