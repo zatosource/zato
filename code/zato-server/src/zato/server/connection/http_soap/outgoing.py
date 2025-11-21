@@ -207,9 +207,12 @@ class BaseHTTPSOAPWrapper:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
+            password = self.config['password']
+            if isinstance(password, str) and password.startswith('Missing_'):
+                password = ''
             logger.info('API Key auth for connection %s -> username: %s, password: %s', 
-                       self.config.get('name'), username, self.config['password'])
-            self.base_headers[username] = self.config['password']
+                       self.config.get('name'), username, password)
+            self.base_headers[username] = password
 
         # #######################################
         #
@@ -217,8 +220,12 @@ class BaseHTTPSOAPWrapper:
         #
         # #######################################
         elif self.sec_type in {_Basic_Auth}:
+            password = self.config['password']
+            if isinstance(password, str) and password.startswith('Missing_'):
+                password = ''
+                self.config['password'] = password
             logger.info('Basic Auth for connection %s -> username: %s, password: %s', 
-                       self.config.get('name'), self.config['username'], self.config['password'])
+                       self.config.get('name'), self.config['username'], password)
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
@@ -229,6 +236,9 @@ class BaseHTTPSOAPWrapper:
         # #######################################
         elif self.sec_type == _NTLM:
             _username, _password = self.auth
+            if isinstance(_password, str) and _password.startswith('Missing_'):
+                _password = ''
+                self.config['password'] = _password
             logger.info('NTLM auth for connection %s -> username: %s, password: %s', 
                        self.config.get('name'), _username, _password)
             _requests_auth = HttpNtlmAuth(_username, _password)
