@@ -39,6 +39,7 @@ from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
+from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
@@ -153,7 +154,7 @@ _wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 # ################################################################################################################################
 
 _response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
-_utcnow = datetime.utcnow
+_utcnow = utcnow
 
 # ################################################################################################################################
 

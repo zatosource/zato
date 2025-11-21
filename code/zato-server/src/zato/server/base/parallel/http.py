@@ -20,6 +20,7 @@ from tzlocal import get_localzone
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
 from zato.common.util.api import make_cid_public, new_cid_server
+from zato.common.util.time_ import utcnow
 
 # prometheus_client
 from prometheus_client import Counter, Histogram
@@ -68,7 +69,7 @@ class HTTPHandler:
         start_response,   # type: callable_
         _new_cid=new_cid_server, # type: callable_
         _local_zone=get_localzone(), # type: ignore
-        _utcnow=datetime.utcnow, # type: ignore
+        _utcnow=utcnow, # type: ignore
         _INFO=INFO, # type: int
         _UTC=UTC,   # type: any_
         _Access_Log_Date_Time_Format=Access_Log_Date_Time_Format, # type: str
