@@ -807,8 +807,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     qs_path = ''
                 msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
                 msg += f' {response.zato_address}{qs_path} -> {response.data}'
-                msg += f' -> Request headers: {response.request.headers}'
-                msg += f' -> Request body: {response.request.body}'
+                msg_log = msg + f' -> Request headers: {response.request.headers} -> Request body: {response.request.body}'
+                logger.info(msg_log)
                 raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
