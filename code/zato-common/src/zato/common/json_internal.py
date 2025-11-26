@@ -22,6 +22,16 @@ except ImportError:
 
 load = load
 dump = dump
+_dumps = dumps
+
+def handle_default(obj):
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError
+
+def dumps(obj, **kwargs):
+    kwargs['default'] = handle_default
+    return _dumps(obj, **kwargs)
 
 json_dumps = dumps
 json_loads = loads
