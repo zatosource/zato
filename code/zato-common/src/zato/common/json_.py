@@ -48,79 +48,43 @@ _utc = timezone.utc
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _ensure_serializable(value, simple_type=(str, int, float)):
+def _default_handler(value):
 
-    if value is not None:
+    # Useful in various contexts
+    if isinstance(value, (date, datetime_, datetimez)):
 
-        if isinstance(value, dict):
-            for key, val in value.items():
-                value[key] = _ensure_serializable(val)
+        # If it should be a time-zone-aware datetime object
+        # but it does not have any TZ, assume UTC.
+        if isinstance(value, datetimez):
+            if not value.tzinfo:
+                value = value.replace(tzinfo=_utc)
 
-        elif isinstance(value, (list, tuple)):
-            value = [_ensure_serializable(item) for item in value]
+        # Now, we can format it as a string object
+        return value.isoformat()
 
-        elif isinstance(value, set):
-            value = [_ensure_serializable(item) for item in value]
+    # Always use Unicode
+    elif isinstance(value, bytes):
+        return value.decode('utf8')
 
-        elif not isinstance(value, simple_type):
+    # For Decimal objects
+    elif isinstance(value, Decimal):
+        return str(value)
 
-            # Useful in various contexts
-            if isinstance(value, (date, datetime_, datetimez)):
+    # For MongoDB queries
+    elif isinstance(value, ObjectId):
+        return 'ObjectId({})'.format(value)
 
-                # If it should be a time-zone-aware datetime object
-                # but it does not have any TZ, assume UTC.
-                if isinstance(value, datetimez):
-                    if not value.tzinfo:
-                        value = value.replace(tzinfo=_utc)
+    # For Zato models
+    elif hasattr(value, 'to_dict'):
+        return value.to_dict()
 
-                # Now, we can format it as a string object
-                value = value.isoformat()
-
-            # Always use Unicode
-            elif isinstance(value, bytes):
-                value = value.decode('utf8')
-
-            # For Decimal objects
-            elif isinstance(value, Decimal):
-                value = str(value)
-
-            # For MongoDB queries
-            elif isinstance(value, ObjectId):
-                value = 'ObjectId({})'.format(value)
-
-            # For Zato models
-            elif hasattr(value, 'to_dict'):
-                value = value.to_dict()
-
-            else:
-                # We do not know how to serialize it
-                raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
-
-    return value
+    else:
+        # We do not know how to serialize it
+        raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
 
 # ################################################################################################################################
 
 def dumps(data, indent=4):
-
-    if data is not None:
-
-        # Make sure we can serialize all the values ..
-        if isinstance(data, dict):
-            for key, value in data.items():
-                data[key] = _ensure_serializable(value)
-
-        # .. check if it's a list of models ..
-        elif data and isinstance(data, list) and hasattr(data[0], 'to_dict'):
-            _data = []
-            for item in data:
-                _item = item.to_dict()
-                _data.append(_item)
-            data = _data
-
-        # .. serialize non-simple types ..
-        else:
-            data = _ensure_serializable(data)
-
-    return json_dumps(data, indent=indent)
+    return json_dumps(data, indent=indent, default=_default_handler)
 
 # ################################################################################################################################
