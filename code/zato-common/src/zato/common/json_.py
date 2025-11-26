@@ -48,11 +48,21 @@ _utc = timezone.utc
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple, set)):
+def _ensure_serializable(value, simple_type=(str, int, float)):
 
     if value is not None:
 
-        if not isinstance(value, simple_type):
+        if isinstance(value, dict):
+            for key, val in value.items():
+                value[key] = _ensure_serializable(val)
+
+        elif isinstance(value, (list, tuple)):
+            value = [_ensure_serializable(item) for item in value]
+
+        elif isinstance(value, set):
+            value = [_ensure_serializable(item) for item in value]
+
+        elif not isinstance(value, simple_type):
 
             # Useful in various contexts
             if isinstance(value, (date, datetime_, datetimez)):
