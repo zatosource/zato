@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import date, timezone
+from decimal import Decimal
 from json import load, loads
 
 # BSON
@@ -68,6 +69,10 @@ def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple,
             # Always use Unicode
             elif isinstance(value, bytes):
                 value = value.decode('utf8')
+
+            # For Decimal objects
+            elif isinstance(value, Decimal):
+                value = str(value)
 
             # For MongoDB queries
             elif isinstance(value, ObjectId):
