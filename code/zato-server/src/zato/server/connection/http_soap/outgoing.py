@@ -274,7 +274,7 @@ class BaseHTTPSOAPWrapper:
         params = kwargs.get('params')
         json = kwargs.pop('json', None)
 
-        if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
+        if ('Zato_Skip_SSL_Verify' in os.environ) or ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
         else:
             tls_verify = self.config.get('validate_tls', True)
