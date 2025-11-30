@@ -62,13 +62,11 @@ export class MessageViewerManager {
         if (!wrapper) return;
 
         const rect = wrapper.getBoundingClientRect();
-        const scrollbarSpace = 48;
-        const viewportBottomSpace = window.innerHeight - rect.top - scrollbarSpace;
+        const scrollbarMargin = 50;
+        const maxHeight = window.innerHeight - rect.top - scrollbarMargin;
         
-        const finalHeight = Math.max(viewportBottomSpace, 300);
-        
-        wrapper.style.height = `${finalHeight}px`;
-        logger.info(`MessageViewerManager.setDynamicHeight: set height to ${finalHeight}px (viewport bottom space=${viewportBottomSpace})`);
+        wrapper.style.maxHeight = `${maxHeight}px`;
+        logger.info(`MessageViewerManager.setDynamicHeight: set wrapper maxHeight to ${maxHeight}px (wrapper.top=${rect.top})`);
     }
 
     initializeControls() {
@@ -110,6 +108,9 @@ export class MessageViewerManager {
                 jsonBtn.classList.remove('invoker-btn-active');
                 logger.info('MessageViewerManager: switched to tree view');
                 this.renderMessage();
+                requestAnimationFrame(() => {
+                    this.setDynamicHeight();
+                });
             });
         }
 
@@ -126,6 +127,9 @@ export class MessageViewerManager {
                 treeBtn.classList.remove('invoker-btn-active');
                 logger.info('MessageViewerManager: switched to JSON view');
                 this.renderMessage();
+                requestAnimationFrame(() => {
+                    this.setDynamicHeight();
+                });
             });
         }
 
