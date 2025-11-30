@@ -57,6 +57,7 @@ body, html {
 #action-area-header {
     padding-top: 12px;
     padding-left: 4px;
+    padding-bottom: 8px;
     background-color: #e9e9e9;
     border-bottom: 1px solid #ccc;
     flex-shrink: 0;
@@ -503,19 +504,6 @@ textarea {
     margin-right: 3px;
 }
 
-#header-left-link-deploy.different,
-#invoke-service.different
-{
-    outline: 3px double #333;
-    color: #333;
-}
-
-#header-left-link-deploy.not-different,
-#invoke-service.not-different
-{
-    outline: none;
-    color: inherit;
-}
 
 .file-system-listing {
     width: 100%;

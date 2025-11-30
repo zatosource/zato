@@ -10,6 +10,7 @@ export class MessageViewerManager {
         this.currentMatchIndex = undefined;
         this.messageData = null;
         this.isPlainText = false;
+        this.isFormatted = false;
         this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
     }
 
@@ -135,6 +136,7 @@ export class MessageViewerManager {
     setMessage(data) {
         this.messageData = data;
         this.isPlainText = false;
+        this.isFormatted = false;
         this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
@@ -145,6 +147,28 @@ export class MessageViewerManager {
     setMessagePlainText(text) {
         this.messageData = text;
         this.isPlainText = true;
+        this.isFormatted = false;
+        this.showPanel();
+        this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+    }
+
+    setMessageFormatted(text) {
+        this.rawMessageData = text;
+        
+        const parts = text.split(/(`[^`]+`)/g);
+        const formatted = parts.map((part, index) => {
+            if (index % 2 === 1) {
+                return `<strong>${this.escapeHtml(part.slice(1, -1))}</strong>`;
+            }
+            return this.escapeHtml(part);
+        }).join('');
+        
+        this.messageData = formatted;
+        this.isPlainText = true;
+        this.isFormatted = true;
         this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
@@ -181,7 +205,9 @@ export class MessageViewerManager {
         let displayText;
 
         if (this.isPlainText) {
-            if (searchTerm) {
+            if (this.isFormatted && !searchTerm) {
+                displayText = jsonText;
+            } else if (searchTerm) {
                 displayText = this.highlightSearchTermPlainText(jsonText, searchTerm);
             } else {
                 displayText = this.escapeHtml(jsonText);
