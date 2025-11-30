@@ -9,6 +9,7 @@ export class MessageViewerManager {
         this.lastSearchTerm = null;
         this.currentMatchIndex = undefined;
         this.messageData = null;
+        this.isPlainText = false;
         this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
     }
 
@@ -67,18 +68,11 @@ export class MessageViewerManager {
         const copyBtn = document.getElementById('message-viewer-copy-btn');
         const searchInput = document.getElementById('message-viewer-search');
 
-        const savedSearchTerm = localStorage.getItem('message-viewer-search-term');
-
-        if (savedSearchTerm && searchInput) {
-            searchInput.value = savedSearchTerm;
-            logger.info(`MessageViewerManager.initializeControls: restored search term="${savedSearchTerm}"`);
-        }
-
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 if (!this.messageData) return;
-                const jsonText = JSON.stringify(this.messageData, null, 2);
-                navigator.clipboard.writeText(jsonText).then(() => {
+                const textToCopy = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
+                navigator.clipboard.writeText(textToCopy).then(() => {
                     logger.info('MessageViewerManager.initializeControls: copied to clipboard');
 
                     const btnRect = copyBtn.getBoundingClientRect();
@@ -111,8 +105,6 @@ export class MessageViewerManager {
                 }
 
                 this.searchDebounceTimer = setTimeout(() => {
-                    localStorage.setItem('message-viewer-search-term', currentValue);
-                    logger.info(`MessageViewerManager: saved search term="${currentValue}"`);
                     this.renderMessage();
                 }, 100);
             });
@@ -130,7 +122,6 @@ export class MessageViewerManager {
                     event.preventDefault();
                     event.stopPropagation();
                     searchInput.value = '';
-                    localStorage.setItem('message-viewer-search-term', '');
                     this.lastSearchTerm = null;
                     this.currentMatchIndex = undefined;
                     this.updateMatchCounter('');
@@ -143,6 +134,16 @@ export class MessageViewerManager {
 
     setMessage(data) {
         this.messageData = data;
+        this.isPlainText = false;
+        this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+    }
+
+    setMessagePlainText(text) {
+        this.messageData = text;
+        this.isPlainText = true;
         this.renderMessage();
         requestAnimationFrame(() => {
             this.setDynamicHeight();
@@ -162,7 +163,7 @@ export class MessageViewerManager {
             return;
         }
 
-        const jsonText = JSON.stringify(this.messageData, null, 2);
+        const jsonText = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
         const searchTerm = searchInput ? searchInput.value.trim() : '';
         logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
 
@@ -175,10 +176,18 @@ export class MessageViewerManager {
         this.lastSearchTerm = searchTerm;
         let displayText;
 
-        if (searchTerm) {
-            displayText = this.highlightSearchTerm(jsonText, searchTerm);
+        if (this.isPlainText) {
+            if (searchTerm) {
+                displayText = this.highlightSearchTermPlainText(jsonText, searchTerm);
+            } else {
+                displayText = this.escapeHtml(jsonText);
+            }
         } else {
-            displayText = this.applySyntaxHighlighting(jsonText);
+            if (searchTerm) {
+                displayText = this.highlightSearchTerm(jsonText, searchTerm);
+            } else {
+                displayText = this.applySyntaxHighlighting(jsonText);
+            }
         }
 
         let display = document.getElementById('message-viewer-json-display');
@@ -211,35 +220,40 @@ export class MessageViewerManager {
         let matchCount = 0;
         let currentIndex = undefined;
 
-        const jsonText = JSON.stringify(this.messageData, null, 2);
+        const textToSearch = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
         let searchRegex;
 
-        if (searchTerm.includes('=')) {
-            const [key, value] = searchTerm.split('=');
-            const trimmedKey = key.trim();
-            const trimmedValue = value ? value.trim() : '';
-
-            if (trimmedKey && trimmedValue) {
-                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-                const patterns = [
-                    `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
-                    `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
-                ];
-
-                searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
-            } else if (trimmedKey) {
-                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
-            }
-        } else {
+        if (this.isPlainText) {
             const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+        } else {
+            if (searchTerm.includes('=')) {
+                const [key, value] = searchTerm.split('=');
+                const trimmedKey = key.trim();
+                const trimmedValue = value ? value.trim() : '';
+
+                if (trimmedKey && trimmedValue) {
+                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                    const patterns = [
+                        `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
+                        `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
+                    ];
+
+                    searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
+                } else if (trimmedKey) {
+                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
+                }
+            } else {
+                const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+            }
         }
 
         if (searchRegex) {
-            const matches = jsonText.match(searchRegex);
+            const matches = textToSearch.match(searchRegex);
             matchCount = matches ? matches.length : 0;
         }
 
@@ -401,6 +415,26 @@ export class MessageViewerManager {
             }
 
             return highlighted;
+        });
+
+        return highlightedLines.join('\n');
+    }
+
+    highlightSearchTermPlainText(text, searchTerm) {
+        if (!searchTerm) return this.escapeHtml(text);
+
+        const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+
+        const lines = text.split('\n');
+        const highlightedLines = lines.map(line => {
+            const parts = line.split(searchRegex);
+            return parts.map((part, partIndex) => {
+                if (partIndex % 2 === 1) {
+                    return `<span class="search-highlight">${this.escapeHtml(part)}</span>`;
+                }
+                return this.escapeHtml(part);
+            }).join('');
         });
 
         return highlightedLines.join('\n');

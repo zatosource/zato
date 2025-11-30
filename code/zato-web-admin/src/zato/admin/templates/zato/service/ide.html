@@ -204,19 +204,6 @@ Ctrl+K for full history"></textarea></form>
 <script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
-<script type="module">
-    import { MessageViewerManager } from '/static/message-viewer-src/message-viewer-manager.js';
-    import { sampleMessage } from '/static/message-viewer-src/sample-response.js';
-    window.MessageViewerManager = MessageViewerManager;
-    window.sampleMessage = sampleMessage;
-
-    window.addEventListener('load', function() {
-        const messageViewer = new MessageViewerManager();
-        messageViewer.initialize('message-viewer-wrapper');
-        messageViewer.setMessage(sampleMessage);
-        window.messageViewer = messageViewer;
-    });
-</script>
 <script type="text/javascript">
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
     $.fn.zato.log_streaming.init();

@@ -12,14 +12,10 @@ window.zato.updateMessageViewer = function(responseText) {
         return;
     }
     
-    let data;
-    let isJSON = false;
     try {
-        data = JSON.parse(responseText);
-        isJSON = true;
+        const data = JSON.parse(responseText);
+        window.zato.messageViewer.setMessage(data);
     } catch (e) {
-        data = { response: responseText };
+        window.zato.messageViewer.setMessagePlainText(responseText);
     }
-    
-    window.zato.messageViewer.setMessage(data);
 };
