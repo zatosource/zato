@@ -12,10 +12,25 @@ window.zato.updateMessageViewer = function(responseText) {
         return;
     }
     
+    let textToDisplay = responseText;
+    
     try {
         const data = JSON.parse(responseText);
         window.zato.messageViewer.setMessage(data);
+        return;
     } catch (e) {
-        window.zato.messageViewer.setMessagePlainText(responseText);
     }
+    
+    if (typeof responseText === 'string' && responseText.includes('ValueError: ')) {
+        const lines = responseText.split('\n');
+        for (const line of lines) {
+            const valueErrorIndex = line.indexOf('ValueError: ');
+            if (valueErrorIndex !== -1) {
+                textToDisplay = line.substring(valueErrorIndex + 'ValueError: '.length).trim();
+                break;
+            }
+        }
+    }
+    
+    window.zato.messageViewer.setMessageFormatted(textToDisplay);
 };
