@@ -50,7 +50,6 @@ export class MessageViewerManager {
                     <i class="fa-solid fa-copy"></i>
                 </button>
             </div>
-            <div id="message-viewer-path-display"><span class="path-prefix">200 OK | 125 ms | 37.5 KB</span> <span class="path-separator">|</span></div>
             <div id="message-viewer-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;"></div>
         `;
 
