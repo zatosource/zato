@@ -142,9 +142,7 @@
 #message-viewer-container .search-highlight {
     background-color: #ffeb3b;
     padding: 0 2px;
-    margin-top: 2px;
     border-radius: 2px;
-    display: inline-block;
     animation: color-shift-wave 1.5s ease-in-out infinite;
 }
 
