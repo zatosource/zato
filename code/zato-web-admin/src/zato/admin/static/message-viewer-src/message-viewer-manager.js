@@ -114,6 +114,11 @@ export class MessageViewerManager {
                 const currentValue = event.target.value.trim();
                 logger.info(`MessageViewerManager: input event: value="${currentValue}"`);
 
+                const counter = document.getElementById('message-viewer-search-counter');
+                if (counter) {
+                    counter.textContent = '';
+                }
+
                 if (this.searchDebounceTimer) {
                     clearTimeout(this.searchDebounceTimer);
                 }
