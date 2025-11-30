@@ -106,10 +106,12 @@
     line-height: 1.5;
     background-color: transparent;
     display: block;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     overflow: auto !important;
     overflow-y: scroll !important;
-    overflow-x: auto !important;
+    overflow-x: hidden !important;
     scrollbar-width: auto;
     scrollbar-color: #888 #f1f1f1;
     box-sizing: border-box;
