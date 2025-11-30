@@ -56,6 +56,10 @@ let Copy_Tooltip_Timeout = 1000;
 $(document).ready(function() {
     $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
     $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
+    
+    if (window.zato && window.zato.initializeMessageViewer) {
+        window.zato.initializeMessageViewer();
+    }
 });
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

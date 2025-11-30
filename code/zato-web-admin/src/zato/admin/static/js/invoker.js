@@ -241,6 +241,10 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
     if ($.fn.zato.ide && $.fn.zato.ide.save_request_to_history && options.is_invoke) {
         $.fn.zato.ide.save_request_to_history(request_text, response_text);
     }
+    
+    if (window.zato && window.zato.updateMessageViewer) {
+        window.zato.updateMessageViewer(response_text);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
