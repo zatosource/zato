@@ -354,13 +354,13 @@ export class MessageViewerManager {
 
         let counterText;
         if (matchCount === 0) {
-            counterText = ' (0 matches)';
+            counterText = '0 matches';
         } else if (matchCount === 1) {
-            counterText = ' (1 match)';
+            counterText = '1 match';
         } else if (currentIndex !== undefined) {
-            counterText = ` (${currentIndex + 1} / ${matchCount} matches)`;
+            counterText = `${currentIndex + 1} of ${matchCount} matches`;
         } else {
-            counterText = ` (${matchCount} matches)`;
+            counterText = `${matchCount} matches`;
         }
 
         counter.textContent = counterText;
