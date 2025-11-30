@@ -1,16 +1,13 @@
 import { getModuleLogger, LOG_LEVEL } from './debug-utils.js';
 import { sampleMessage } from './sample-response.js';
-import { TreeViewManager } from './tree-view-manager.js';
 
 const logger = getModuleLogger('message-viewer');
 logger.setLevel(LOG_LEVEL.INFO);
 
 export class MessageViewerManager {
     constructor() {
-        this.currentViewMode = 'json';
         this.searchDebounceTimer = null;
         this.lastSearchTerm = null;
-        this.treeViewManager = null;
         this.currentMatchIndex = undefined;
         this.messageData = null;
         this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
@@ -41,8 +38,6 @@ export class MessageViewerManager {
                     <input type="text" id="message-viewer-search" placeholder="Search message" class="invoker-message-search-input">
                     <span id="message-viewer-search-counter" class="invoker-search-counter"></span>
                 </div>
-                <input type="button" id="message-viewer-view-tree" value="Tree" title="Tree view">
-                <input type="button" id="message-viewer-view-json" value="JSON" title="JSON view" class="invoker-btn-active">
                 <input type="button" id="message-viewer-copy-btn" value="Copy" title="Copy to clipboard">
             </div>
             <div id="message-viewer-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;"></div>
@@ -70,67 +65,14 @@ export class MessageViewerManager {
     }
 
     initializeControls() {
-        const treeBtn = document.getElementById('message-viewer-view-tree');
-        const jsonBtn = document.getElementById('message-viewer-view-json');
         const copyBtn = document.getElementById('message-viewer-copy-btn');
         const searchInput = document.getElementById('message-viewer-search');
 
-        const savedViewMode = localStorage.getItem('message-viewer-view-mode');
         const savedSearchTerm = localStorage.getItem('message-viewer-search-term');
-
-        if (savedViewMode && (savedViewMode === 'json' || savedViewMode === 'tree')) {
-            this.currentViewMode = savedViewMode;
-            logger.info(`MessageViewerManager.initializeControls: restored view mode="${savedViewMode}"`);
-        }
 
         if (savedSearchTerm && searchInput) {
             searchInput.value = savedSearchTerm;
             logger.info(`MessageViewerManager.initializeControls: restored search term="${savedSearchTerm}"`);
-        }
-
-        if (treeBtn && jsonBtn) {
-            if (this.currentViewMode === 'tree') {
-                treeBtn.classList.add('invoker-btn-active');
-                jsonBtn.classList.remove('invoker-btn-active');
-            } else {
-                jsonBtn.classList.add('invoker-btn-active');
-                treeBtn.classList.remove('invoker-btn-active');
-            }
-        }
-
-        if (treeBtn) {
-            treeBtn.addEventListener('click', () => {
-                this.currentViewMode = 'tree';
-                this.currentMatchIndex = undefined;
-                this.lastSearchTerm = null;
-                localStorage.setItem('message-viewer-view-mode', 'tree');
-                treeBtn.classList.add('invoker-btn-active');
-                jsonBtn.classList.remove('invoker-btn-active');
-                logger.info('MessageViewerManager: switched to tree view');
-                this.renderMessage();
-                requestAnimationFrame(() => {
-                    this.setDynamicHeight();
-                });
-            });
-        }
-
-        if (jsonBtn) {
-            jsonBtn.addEventListener('click', () => {
-                this.currentViewMode = 'json';
-                this.currentMatchIndex = undefined;
-                this.lastSearchTerm = null;
-                if (this.treeViewManager?.scroller) {
-                    this.treeViewManager.scroller = null;
-                }
-                localStorage.setItem('message-viewer-view-mode', 'json');
-                jsonBtn.classList.add('invoker-btn-active');
-                treeBtn.classList.remove('invoker-btn-active');
-                logger.info('MessageViewerManager: switched to JSON view');
-                this.renderMessage();
-                requestAnimationFrame(() => {
-                    this.setDynamicHeight();
-                });
-            });
         }
 
         if (copyBtn) {
@@ -222,57 +164,38 @@ export class MessageViewerManager {
         }
 
         const jsonText = JSON.stringify(this.messageData, null, 2);
+        const searchTerm = searchInput ? searchInput.value.trim() : '';
+        logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
+        
+        if (searchTerm === this.lastSearchTerm) {
+            logger.info(`MessageViewerManager.renderMessage: search term unchanged, skipping render`);
+            return;
+        }
+        
+        this.currentMatchIndex = undefined;
+        this.lastSearchTerm = searchTerm;
+        let displayText;
 
-        if (this.currentViewMode === 'json') {
-            const searchTerm = searchInput ? searchInput.value.trim() : '';
-            logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
-            
-            if (searchTerm === this.lastSearchTerm) {
-                logger.info(`MessageViewerManager.renderMessage: search term unchanged, skipping render`);
-                return;
+        if (searchTerm) {
+            displayText = this.highlightSearchTerm(jsonText, searchTerm);
+        } else {
+            displayText = this.applySyntaxHighlighting(jsonText);
+        }
+        
+        let display = document.getElementById('message-viewer-json-display');
+        const preserveScroll = display ? display.scrollTop : 0;
+        
+        if (!display) {
+            container.innerHTML = `<pre id="message-viewer-json-display">${displayText}</pre>`;
+        } else {
+            display.innerHTML = displayText;
+            if (!searchTerm) {
+                display.scrollTop = preserveScroll;
             }
-            
-            this.currentMatchIndex = undefined;
-            this.lastSearchTerm = searchTerm;
-            let displayText;
-
-            if (searchTerm) {
-                displayText = this.highlightSearchTerm(jsonText, searchTerm);
-            } else {
-                displayText = this.applySyntaxHighlighting(jsonText);
-            }
-            
-            let display = document.getElementById('message-viewer-json-display');
-            const preserveScroll = display ? display.scrollTop : 0;
-            
-            if (!display) {
-                container.innerHTML = `<pre id="message-viewer-json-display">${displayText}</pre>`;
-            } else {
-                display.innerHTML = displayText;
-                if (!searchTerm) {
-                    display.scrollTop = preserveScroll;
-                }
-            }
-            
-            if (searchTerm) {
-                this.scrollToFirstMatch();
-            }
-        } else if (this.currentViewMode === 'tree') {
-            logger.info(`MessageViewerManager.renderMessage: tree mode`);
-            
-            if (!this.treeViewManager) {
-                container.innerHTML = '';
-                this.treeViewManager = new TreeViewManager('message-viewer-container');
-            }
-            
-            this.treeViewManager.setData(this.messageData);
-            
-            const searchTerm = searchInput ? searchInput.value.trim() : '';
-            this.treeViewManager.search(searchTerm);
-            if (searchTerm) {
-                this.treeViewManager.scrollToFirstMatch();
-            }
-            this.updateMatchCounter(searchTerm);
+        }
+        
+        if (searchTerm) {
+            this.scrollToFirstMatch();
         }
     }
 
@@ -289,44 +212,39 @@ export class MessageViewerManager {
         let matchCount = 0;
         let currentIndex = undefined;
 
-        if (this.currentViewMode === 'json') {
-            const jsonText = JSON.stringify(this.messageData, null, 2);
-            let searchRegex;
+        const jsonText = JSON.stringify(this.messageData, null, 2);
+        let searchRegex;
 
-            if (searchTerm.includes('=')) {
-                const [key, value] = searchTerm.split('=');
-                const trimmedKey = key.trim();
-                const trimmedValue = value ? value.trim() : '';
-                
-                if (trimmedKey && trimmedValue) {
-                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    
-                    const patterns = [
-                        `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
-                        `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
-                    ];
-                    
-                    searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
-                } else if (trimmedKey) {
-                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
-                }
-            } else {
-                const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
-            }
-
-            if (searchRegex) {
-                const matches = jsonText.match(searchRegex);
-                matchCount = matches ? matches.length : 0;
-            }
+        if (searchTerm.includes('=')) {
+            const [key, value] = searchTerm.split('=');
+            const trimmedKey = key.trim();
+            const trimmedValue = value ? value.trim() : '';
             
-            currentIndex = this.currentMatchIndex;
-        } else if (this.currentViewMode === 'tree' && this.treeViewManager) {
-            matchCount = this.treeViewManager.getMatchCount(searchTerm);
-            currentIndex = this.treeViewManager.getCurrentMatchIndex();
+            if (trimmedKey && trimmedValue) {
+                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                
+                const patterns = [
+                    `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
+                    `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
+                ];
+                
+                searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
+            } else if (trimmedKey) {
+                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
+            }
+        } else {
+            const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
         }
+
+        if (searchRegex) {
+            const matches = jsonText.match(searchRegex);
+            matchCount = matches ? matches.length : 0;
+        }
+        
+        currentIndex = this.currentMatchIndex;
 
         let counterText;
         if (matchCount === 0) {
@@ -378,37 +296,30 @@ export class MessageViewerManager {
         const searchInput = document.getElementById('message-viewer-search');
         const searchTerm = searchInput ? searchInput.value.trim() : '';
         
-        if (this.currentViewMode === 'tree') {
-            if (this.treeViewManager) {
-                this.treeViewManager.scrollToNextMatch();
-                this.updateMatchCounter(searchTerm);
-            }
+        const display = document.getElementById('message-viewer-json-display');
+        const matches = display?.querySelectorAll('.search-highlight');
+        
+        if (!matches || matches.length === 0) return;
+        
+        if (this.currentMatchIndex === undefined) {
+            this.currentMatchIndex = 0;
         } else {
-            const display = document.getElementById('message-viewer-json-display');
-            const matches = display?.querySelectorAll('.search-highlight');
-            
-            if (!matches || matches.length === 0) return;
-            
-            if (this.currentMatchIndex === undefined) {
-                this.currentMatchIndex = 0;
-            } else {
-                this.currentMatchIndex = (this.currentMatchIndex + 1) % matches.length;
-            }
-            
-            const currentMatch = matches[this.currentMatchIndex];
-            const displayRect = display.getBoundingClientRect();
-            const matchRect = currentMatch.getBoundingClientRect();
-            const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
-            const offset = lineHeight * 8;
-            
-            const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
-            const scrollPosition = Math.max(0, relativeTop - offset);
-            
-            display.scrollTop = scrollPosition;
-            
-            logger.info(`scrollToNextMatch: scrolled to match ${this.currentMatchIndex + 1} of ${matches.length}`);
-            this.updateMatchCounter(searchTerm);
+            this.currentMatchIndex = (this.currentMatchIndex + 1) % matches.length;
         }
+        
+        const currentMatch = matches[this.currentMatchIndex];
+        const displayRect = display.getBoundingClientRect();
+        const matchRect = currentMatch.getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
+        const offset = lineHeight * 8;
+        
+        const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
+        const scrollPosition = Math.max(0, relativeTop - offset);
+        
+        display.scrollTop = scrollPosition;
+        
+        logger.info(`scrollToNextMatch: scrolled to match ${this.currentMatchIndex + 1} of ${matches.length}`);
+        this.updateMatchCounter(searchTerm);
     }
 
     applySyntaxHighlighting(text, wrapMatchLines = false, matchIndices = []) {
