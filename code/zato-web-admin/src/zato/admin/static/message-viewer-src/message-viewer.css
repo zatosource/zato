@@ -48,9 +48,18 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.75rem;
-    color: #333;
+    color: #5e35b1;
+    font-weight: 600;
     pointer-events: none;
     white-space: nowrap;
+}
+
+.invoker-search-counter:not(:empty) {
+    background: linear-gradient(135deg, #e8eaf6, #f3e5f5);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(94, 53, 177, 0.15);
+    border: 1px solid #d1c4e9;
 }
 
 .invoker-message-search-input:focus {
