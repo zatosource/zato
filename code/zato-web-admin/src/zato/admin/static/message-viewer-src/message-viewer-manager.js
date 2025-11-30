@@ -1,5 +1,4 @@
 import { getModuleLogger, LOG_LEVEL } from './debug-utils.js';
-import { sampleMessage } from './sample-response.js';
 
 const logger = getModuleLogger('message-viewer');
 logger.setLevel(LOG_LEVEL.INFO);
