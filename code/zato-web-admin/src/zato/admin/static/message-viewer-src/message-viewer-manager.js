@@ -40,15 +40,9 @@ export class MessageViewerManager {
                     <input type="text" id="message-viewer-search" placeholder="Search message" class="invoker-message-search-input">
                     <span id="message-viewer-search-counter" class="invoker-search-counter"></span>
                 </div>
-                <button id="message-viewer-view-tree" class="invoker-message-btn" title="Tree view">
-                    <i class="fa-solid fa-sitemap"></i>
-                </button>
-                <button id="message-viewer-view-json" class="invoker-message-btn invoker-btn-active" title="JSON view">
-                    <i class="fa-solid fa-code"></i>
-                </button>
-                <button id="message-viewer-copy-btn" class="invoker-message-btn" title="Copy to clipboard">
-                    <i class="fa-solid fa-copy"></i>
-                </button>
+                <input type="button" id="message-viewer-view-tree" value="Tree" title="Tree view">
+                <input type="button" id="message-viewer-view-json" value="JSON" title="JSON view" class="invoker-btn-active">
+                <input type="button" id="message-viewer-copy-btn" value="Copy" title="Copy to clipboard">
             </div>
             <div id="message-viewer-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;"></div>
         `;

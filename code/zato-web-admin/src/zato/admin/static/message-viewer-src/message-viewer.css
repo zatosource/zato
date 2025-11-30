@@ -58,26 +58,9 @@
     box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.1);
 }
 
-.invoker-message-btn {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 0.375rem 0.5rem;
-    font-size: 0.9rem;
-    transition: color 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-}
-
-.invoker-message-btn:hover {
-    color: #212529;
-}
-
-.invoker-message-btn.invoker-btn-active {
-    color: #495057;
+.invoker-btn-active {
+    font-weight: 600;
+    outline: 2px solid #495057;
 }
 
 #message-viewer-container {
