@@ -83,7 +83,7 @@
 
 
 #message-viewer-json-display {
-    width: 100%;
+    width: calc(100% - 2px);
     height: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -101,6 +101,7 @@
     overflow-x: auto !important;
     scrollbar-width: auto;
     scrollbar-color: #888 #f1f1f1;
+    box-sizing: border-box;
 }
 
 #message-viewer-json-display::-webkit-scrollbar {
