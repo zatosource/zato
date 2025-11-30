@@ -1779,9 +1779,15 @@ $.fn.zato.ide.update_deployment_option_state = function(is_different, fs_locatio
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.set_deployment_button_status_class = function(class_name) {
-    let buttons = $("#header-left-link-deploy, #invoke-service-temporarily-disabled")
-    buttons.removeClass("different not-different");
-    buttons.addClass(class_name);
+    let button = $("#header-left-link-deploy");
+    button.removeClass("different not-different");
+    button.addClass(class_name);
+    
+    if (class_name === "different") {
+        button.val("🔷 Deploy");
+    } else {
+        button.val("Deploy");
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
