@@ -4,16 +4,18 @@
     width: 100%;
     max-width: 100%;
     min-height: 400px;
-    overflow: hidden;
+    max-height: 500px;
+    overflow: visible !important;
 }
 
 #message-viewer-panel {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
-    overflow: hidden;
+    height: 100%;
+    overflow: visible !important;
 }
 
 #message-viewer-header {
@@ -68,20 +70,22 @@
 #message-viewer-container {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
+    height: 100%;
     padding: 0;
     background-color: #ffffff;
     border: 1px solid #dee2e6;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 
 #message-viewer-json-display {
     width: 100%;
-    flex: 1;
+    height: 100%;
+    flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
     margin: 0;
@@ -90,9 +94,11 @@
     font-size: 0.85rem;
     line-height: 1.5;
     background-color: transparent;
-    white-space: pre;
-    overflow-x: scroll !important;
-    overflow-y: scroll !important;
+    display: block;
+    white-space: pre-wrap;
+    overflow: auto !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
     scrollbar-width: auto;
     scrollbar-color: #888 #f1f1f1;
 }
