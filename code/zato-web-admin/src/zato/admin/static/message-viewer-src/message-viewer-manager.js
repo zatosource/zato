@@ -105,15 +105,14 @@ export class MessageViewerManager {
                 const currentValue = event.target.value.trim();
                 logger.info(`MessageViewerManager: input event: value="${currentValue}"`);
 
-                this.updateMatchCounter(currentValue);
-
                 if (this.searchDebounceTimer) {
                     clearTimeout(this.searchDebounceTimer);
                 }
 
                 this.searchDebounceTimer = setTimeout(() => {
+                    this.updateMatchCounter(currentValue);
                     this.renderMessage();
-                }, 100);
+                }, 300);
             });
 
             searchInput.addEventListener('keydown', (event) => {
@@ -144,6 +143,7 @@ export class MessageViewerManager {
         this.rawMessageData = null;
         this.isPlainText = false;
         this.isFormatted = false;
+        this.clearSearch();
         this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
@@ -156,6 +156,7 @@ export class MessageViewerManager {
         this.rawMessageData = null;
         this.isPlainText = true;
         this.isFormatted = false;
+        this.clearSearch();
         this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
@@ -177,11 +178,28 @@ export class MessageViewerManager {
         this.messageData = formatted;
         this.isPlainText = true;
         this.isFormatted = true;
+        this.clearSearch();
         this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
             this.setDynamicHeight();
         });
+    }
+
+    clearSearch() {
+        const searchInput = document.getElementById('message-viewer-search');
+        const counter = document.getElementById('message-viewer-search-counter');
+        
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        if (counter) {
+            counter.textContent = '';
+        }
+        
+        this.lastSearchTerm = null;
+        this.currentMatchIndex = undefined;
     }
 
     showPanel() {
