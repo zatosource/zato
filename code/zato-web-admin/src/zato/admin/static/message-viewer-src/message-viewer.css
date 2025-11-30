@@ -4,6 +4,7 @@
     width: 100%;
     max-width: 100%;
     min-height: 400px;
+    overflow: hidden;
 }
 
 #message-viewer-panel {
@@ -12,6 +13,7 @@
     flex: 1;
     min-height: 0;
     min-width: 0;
+    overflow: hidden;
 }
 
 #message-viewer-header {
@@ -73,6 +75,7 @@
     background-color: #ffffff;
     border: 1px solid #dee2e6;
     border-radius: 4px;
+    overflow: hidden;
 }
 
 
