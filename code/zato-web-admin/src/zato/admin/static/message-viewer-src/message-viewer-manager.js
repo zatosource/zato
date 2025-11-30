@@ -62,7 +62,7 @@ export class MessageViewerManager {
         if (!wrapper) return;
 
         const rect = wrapper.getBoundingClientRect();
-        const scrollbarSpace = 50;
+        const scrollbarSpace = 48;
         const viewportBottomSpace = window.innerHeight - rect.top - scrollbarSpace;
         
         const finalHeight = Math.max(viewportBottomSpace, 300);
