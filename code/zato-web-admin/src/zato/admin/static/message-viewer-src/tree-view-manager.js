@@ -387,8 +387,9 @@ export class TreeViewManager {
 
         const resultHeader = document.getElementById('result-header');
         if (resultHeader) {
-            if (!resultHeader.dataset.originalText) {
+            if (!resultHeader.dataset.hoverActive) {
                 resultHeader.dataset.originalText = resultHeader.textContent;
+                resultHeader.dataset.hoverActive = 'true';
             }
             const separator = '<span class="path-separator"> | </span>';
             if (node.collapsible) {
@@ -406,6 +407,8 @@ export class TreeViewManager {
         const resultHeader = document.getElementById('result-header');
         if (resultHeader && resultHeader.dataset.originalText) {
             resultHeader.textContent = resultHeader.dataset.originalText;
+            delete resultHeader.dataset.originalText;
+            delete resultHeader.dataset.hoverActive;
         }
     }
 
