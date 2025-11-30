@@ -59,7 +59,7 @@ export class MessageViewerManager {
         const rect = wrapper.getBoundingClientRect();
         const scrollbarMargin = 50;
         const maxHeight = window.innerHeight - rect.top - scrollbarMargin;
-        
+
         wrapper.style.maxHeight = `${maxHeight}px`;
         logger.info(`MessageViewerManager.setDynamicHeight: set wrapper maxHeight to ${maxHeight}px (wrapper.top=${rect.top})`);
     }
@@ -81,16 +81,16 @@ export class MessageViewerManager {
                 const jsonText = JSON.stringify(this.messageData, null, 2);
                 navigator.clipboard.writeText(jsonText).then(() => {
                     logger.info('MessageViewerManager.initializeControls: copied to clipboard');
-                    
+
                     const btnRect = copyBtn.getBoundingClientRect();
                     const tooltip = document.createElement('span');
                     tooltip.className = 'invoker-copy-tooltip';
-                    tooltip.textContent = 'Copied';
+                    tooltip.textContent = 'Message copied';
                     tooltip.style.position = 'fixed';
                     tooltip.style.top = `${btnRect.top - 32}px`;
                     tooltip.style.right = `${window.innerWidth - btnRect.right}px`;
                     document.body.appendChild(tooltip);
-                    
+
                     setTimeout(() => {
                         tooltip.remove();
                     }, 800);
@@ -104,13 +104,13 @@ export class MessageViewerManager {
             searchInput.addEventListener('input', (event) => {
                 const currentValue = event.target.value.trim();
                 logger.info(`MessageViewerManager: input event: value="${currentValue}"`);
-                
+
                 this.updateMatchCounter(currentValue);
-                
+
                 if (this.searchDebounceTimer) {
                     clearTimeout(this.searchDebounceTimer);
                 }
-                
+
                 this.searchDebounceTimer = setTimeout(() => {
                     localStorage.setItem('message-viewer-search-term', currentValue);
                     logger.info(`MessageViewerManager: saved search term="${currentValue}"`);
@@ -126,7 +126,7 @@ export class MessageViewerManager {
                         this.scrollToNextMatch();
                     }
                 }
-                
+
                 if (event.key === 'Escape') {
                     event.preventDefault();
                     event.stopPropagation();
@@ -166,12 +166,12 @@ export class MessageViewerManager {
         const jsonText = JSON.stringify(this.messageData, null, 2);
         const searchTerm = searchInput ? searchInput.value.trim() : '';
         logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
-        
+
         if (searchTerm === this.lastSearchTerm) {
             logger.info(`MessageViewerManager.renderMessage: search term unchanged, skipping render`);
             return;
         }
-        
+
         this.currentMatchIndex = undefined;
         this.lastSearchTerm = searchTerm;
         let displayText;
@@ -181,10 +181,10 @@ export class MessageViewerManager {
         } else {
             displayText = this.applySyntaxHighlighting(jsonText);
         }
-        
+
         let display = document.getElementById('message-viewer-json-display');
         const preserveScroll = display ? display.scrollTop : 0;
-        
+
         if (!display) {
             container.innerHTML = `<pre id="message-viewer-json-display">${displayText}</pre>`;
         } else {
@@ -193,7 +193,7 @@ export class MessageViewerManager {
                 display.scrollTop = preserveScroll;
             }
         }
-        
+
         if (searchTerm) {
             this.scrollToFirstMatch();
         }
@@ -219,16 +219,16 @@ export class MessageViewerManager {
             const [key, value] = searchTerm.split('=');
             const trimmedKey = key.trim();
             const trimmedValue = value ? value.trim() : '';
-            
+
             if (trimmedKey && trimmedValue) {
                 const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                
+
                 const patterns = [
                     `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
                     `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
                 ];
-                
+
                 searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
             } else if (trimmedKey) {
                 const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -243,7 +243,7 @@ export class MessageViewerManager {
             const matches = jsonText.match(searchRegex);
             matchCount = matches ? matches.length : 0;
         }
-        
+
         currentIndex = this.currentMatchIndex;
 
         let counterText;
@@ -256,9 +256,9 @@ export class MessageViewerManager {
         } else {
             counterText = ` (${matchCount} matches)`;
         }
-        
+
         counter.textContent = counterText;
-        
+
         if (searchInput) {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
@@ -276,17 +276,17 @@ export class MessageViewerManager {
         const firstMatch = display?.querySelector('.search-highlight');
         const searchInput = document.getElementById('message-viewer-search');
         const searchTerm = searchInput ? searchInput.value.trim() : '';
-        
+
         if (firstMatch && container && display) {
             this.currentMatchIndex = 0;
             const displayRect = display.getBoundingClientRect();
             const matchRect = firstMatch.getBoundingClientRect();
             const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
             const offset = lineHeight * 8;
-            
+
             const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
             const scrollPosition = Math.max(0, relativeTop - offset);
-            
+
             display.scrollTop = scrollPosition;
             this.updateMatchCounter(searchTerm);
         }
@@ -295,54 +295,54 @@ export class MessageViewerManager {
     scrollToNextMatch() {
         const searchInput = document.getElementById('message-viewer-search');
         const searchTerm = searchInput ? searchInput.value.trim() : '';
-        
+
         const display = document.getElementById('message-viewer-json-display');
         const matches = display?.querySelectorAll('.search-highlight');
-        
+
         if (!matches || matches.length === 0) return;
-        
+
         if (this.currentMatchIndex === undefined) {
             this.currentMatchIndex = 0;
         } else {
             this.currentMatchIndex = (this.currentMatchIndex + 1) % matches.length;
         }
-        
+
         const currentMatch = matches[this.currentMatchIndex];
         const displayRect = display.getBoundingClientRect();
         const matchRect = currentMatch.getBoundingClientRect();
         const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
         const offset = lineHeight * 8;
-        
+
         const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
         const scrollPosition = Math.max(0, relativeTop - offset);
-        
+
         display.scrollTop = scrollPosition;
-        
+
         logger.info(`scrollToNextMatch: scrolled to match ${this.currentMatchIndex + 1} of ${matches.length}`);
         this.updateMatchCounter(searchTerm);
     }
 
     applySyntaxHighlighting(text, wrapMatchLines = false, matchIndices = []) {
         const lines = text.split('\n');
-        
+
         return lines.map((line, index) => {
             let highlighted = this.escapeHtml(line);
-            
+
             highlighted = highlighted.replace(/"([^"]+)"(\s*):/g, '<span class="json-key">"$1"</span>$2:');
-            
+
             const stringPattern = /:\s*"([^"]*)"/g;
             highlighted = highlighted.replace(stringPattern, ': <span class="json-string">"$1"</span>');
-            
+
             if (!highlighted.includes('json-string')) {
                 highlighted = highlighted.replace(/:\s*(-?\d+\.?\d*)([,\s\r}]|$)/g, ': <span class="json-number">$1</span>$2');
                 highlighted = highlighted.replace(/:\s*(true|false)([,\s\r}]|$)/g, ': <span class="json-boolean">$1</span>$2');
                 highlighted = highlighted.replace(/:\s*(null)([,\s\r}]|$)/g, ': <span class="json-null">$1</span>$2');
             }
-            
+
             if (wrapMatchLines && matchIndices.includes(index)) {
                 highlighted = `<span class="match-line">${highlighted}</span>`;
             }
-            
+
             return highlighted;
         }).join('\n');
     }
@@ -358,16 +358,16 @@ export class MessageViewerManager {
             const [key, value] = searchTerm.split('=');
             const trimmedKey = key.trim();
             const trimmedValue = value ? value.trim() : '';
-            
+
             if (trimmedKey && trimmedValue) {
                 const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                
+
                 const patterns = [
                     `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
                     `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
                 ];
-                
+
                 searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
             } else if (trimmedKey) {
                 const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -389,18 +389,18 @@ export class MessageViewerManager {
 
         const highlightedLines = lines.map((line, index) => {
             const parts = line.split(searchRegex);
-            
+
             const highlighted = parts.map((part, partIndex) => {
                 if (partIndex % 2 === 1) {
                     return `<span class="search-highlight">${this.applySyntaxHighlighting(part)}</span>`;
                 }
                 return this.applySyntaxHighlighting(part);
             }).join('');
-            
+
             if (matchingLineIndices.includes(index)) {
                 return `<span class="match-line">${highlighted}</span>`;
             }
-            
+
             return highlighted;
         });
 
