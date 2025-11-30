@@ -1648,6 +1648,10 @@ $.fn.zato.ide.on_object_select_changed = function(select_elem) {
     let is_current_file = option_selected.attr("data-is-current-file") == "1";
     let current_object_type = $.fn.zato.ide.get_current_object_type()
 
+    if (window.zato && window.zato.messageViewer) {
+        window.zato.messageViewer.hidePanel();
+    }
+
     // This will update the global information about what directory we are
     $.fn.zato.ide.populate_root_directory_info_from_option(option_selected);
 

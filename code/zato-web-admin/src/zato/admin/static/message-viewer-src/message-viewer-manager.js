@@ -117,6 +117,7 @@ export class MessageViewerManager {
                 const counter = document.getElementById('message-viewer-search-counter');
                 if (counter) {
                     counter.textContent = '';
+                    counter.style.left = '';
                 }
 
                 if (this.searchDebounceTimer) {
@@ -210,6 +211,7 @@ export class MessageViewerManager {
         
         if (counter) {
             counter.textContent = '';
+            counter.style.left = '';
         }
         
         this.lastSearchTerm = null;
@@ -220,6 +222,20 @@ export class MessageViewerManager {
         const panel = document.getElementById('message-viewer-panel');
         if (panel && panel.style.display === 'none') {
             panel.style.display = 'flex';
+        }
+    }
+
+    hidePanel() {
+        const panel = document.getElementById('message-viewer-panel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+        this.clearSearch();
+        this.messageData = null;
+        this.rawMessageData = null;
+        const container = document.getElementById('message-viewer-container');
+        if (container) {
+            container.innerHTML = '';
         }
     }
 
@@ -285,6 +301,7 @@ export class MessageViewerManager {
 
         if (!searchTerm) {
             counter.textContent = '';
+            counter.style.left = '';
             return;
         }
 
@@ -347,15 +364,17 @@ export class MessageViewerManager {
         }
 
         counter.textContent = counterText;
-
-        if (searchInput) {
+        
+        if (searchInput && searchTerm) {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             const computedStyle = window.getComputedStyle(searchInput);
-            context.font = computedStyle.fontSize + ' ' + computedStyle.fontFamily;
+            context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
             const textWidth = context.measureText(searchTerm).width;
             const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
-            counter.style.left = `${paddingLeft + textWidth + 8}px`;
+            counter.style.left = `${paddingLeft + textWidth + 10}px`;
+        } else {
+            counter.style.left = '';
         }
     }
 
