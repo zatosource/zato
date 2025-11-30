@@ -423,13 +423,21 @@ export class MessageViewerManager {
 
         const lines = text.split('\n');
         const highlightedLines = lines.map(line => {
+            const hasMatch = searchRegex.test(line);
+            searchRegex.lastIndex = 0;
+            
             const parts = line.split(searchRegex);
-            return parts.map((part, partIndex) => {
+            const highlighted = parts.map((part, partIndex) => {
                 if (partIndex % 2 === 1) {
                     return `<span class="search-highlight">${this.escapeHtml(part)}</span>`;
                 }
                 return this.escapeHtml(part);
             }).join('');
+            
+            if (hasMatch) {
+                return `<span class="match-line">${highlighted}</span>`;
+            }
+            return highlighted;
         });
 
         return highlightedLines.join('\n');
