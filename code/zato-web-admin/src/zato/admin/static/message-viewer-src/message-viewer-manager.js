@@ -62,12 +62,13 @@ export class MessageViewerManager {
         if (!wrapper) return;
 
         const rect = wrapper.getBoundingClientRect();
-        const bottomMargin = 60;
-        const availableHeight = window.innerHeight - rect.top - bottomMargin;
-        const finalHeight = Math.max(availableHeight, 300);
+        const scrollbarSpace = 50;
+        const viewportBottomSpace = window.innerHeight - rect.top - scrollbarSpace;
+        
+        const finalHeight = Math.max(viewportBottomSpace, 300);
         
         wrapper.style.height = `${finalHeight}px`;
-        logger.info(`MessageViewerManager.setDynamicHeight: set height to ${finalHeight}px (available=${availableHeight})`);
+        logger.info(`MessageViewerManager.setDynamicHeight: set height to ${finalHeight}px (viewport bottom space=${viewportBottomSpace})`);
     }
 
     initializeControls() {
