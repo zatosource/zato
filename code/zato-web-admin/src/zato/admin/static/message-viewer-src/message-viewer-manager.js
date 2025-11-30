@@ -13,6 +13,7 @@ export class MessageViewerManager {
         this.treeViewManager = null;
         this.currentMatchIndex = undefined;
         this.messageData = null;
+        this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
     }
 
     initialize(containerId) {
@@ -49,7 +50,24 @@ export class MessageViewerManager {
 
         container.appendChild(viewerPanel);
         this.initializeControls();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+        window.addEventListener('resize', this.boundSetDynamicHeight);
         logger.info('MessageViewerManager.initialize: viewer initialized');
+    }
+
+    setDynamicHeight() {
+        const wrapper = document.getElementById('message-viewer-wrapper');
+        if (!wrapper) return;
+
+        const rect = wrapper.getBoundingClientRect();
+        const bottomMargin = 60;
+        const availableHeight = window.innerHeight - rect.top - bottomMargin;
+        const finalHeight = Math.max(availableHeight, 300);
+        
+        wrapper.style.height = `${finalHeight}px`;
+        logger.info(`MessageViewerManager.setDynamicHeight: set height to ${finalHeight}px (available=${availableHeight})`);
     }
 
     initializeControls() {
@@ -180,6 +198,9 @@ export class MessageViewerManager {
     setMessage(data) {
         this.messageData = data;
         this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
     }
 
     renderMessage() {
