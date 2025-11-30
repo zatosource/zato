@@ -28,7 +28,7 @@ export class MessageViewerManager {
 
         const viewerPanel = document.createElement('div');
         viewerPanel.id = 'message-viewer-panel';
-        viewerPanel.style.display = 'flex';
+        viewerPanel.style.display = 'none';
         viewerPanel.style.flexDirection = 'column';
         viewerPanel.style.flex = '1';
         viewerPanel.style.minHeight = '0';
@@ -135,6 +135,7 @@ export class MessageViewerManager {
     setMessage(data) {
         this.messageData = data;
         this.isPlainText = false;
+        this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
             this.setDynamicHeight();
@@ -144,10 +145,18 @@ export class MessageViewerManager {
     setMessagePlainText(text) {
         this.messageData = text;
         this.isPlainText = true;
+        this.showPanel();
         this.renderMessage();
         requestAnimationFrame(() => {
             this.setDynamicHeight();
         });
+    }
+
+    showPanel() {
+        const panel = document.getElementById('message-viewer-panel');
+        if (panel && panel.style.display === 'none') {
+            panel.style.display = 'flex';
+        }
     }
 
     renderMessage() {
