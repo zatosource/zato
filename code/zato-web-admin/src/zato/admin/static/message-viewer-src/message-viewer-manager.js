@@ -9,6 +9,7 @@ export class MessageViewerManager {
         this.lastSearchTerm = null;
         this.currentMatchIndex = undefined;
         this.messageData = null;
+        this.rawMessageData = null;
         this.isPlainText = false;
         this.isFormatted = false;
         this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
@@ -72,7 +73,12 @@ export class MessageViewerManager {
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 if (!this.messageData) return;
-                const textToCopy = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
+                let textToCopy;
+                if (this.isPlainText) {
+                    textToCopy = this.isFormatted ? this.rawMessageData.replace(/`/g, '') : this.messageData;
+                } else {
+                    textToCopy = JSON.stringify(this.messageData, null, 2);
+                }
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     logger.info('MessageViewerManager.initializeControls: copied to clipboard');
 
@@ -135,6 +141,7 @@ export class MessageViewerManager {
 
     setMessage(data) {
         this.messageData = data;
+        this.rawMessageData = null;
         this.isPlainText = false;
         this.isFormatted = false;
         this.showPanel();
@@ -146,6 +153,7 @@ export class MessageViewerManager {
 
     setMessagePlainText(text) {
         this.messageData = text;
+        this.rawMessageData = null;
         this.isPlainText = true;
         this.isFormatted = false;
         this.showPanel();
@@ -208,7 +216,8 @@ export class MessageViewerManager {
             if (this.isFormatted && !searchTerm) {
                 displayText = jsonText;
             } else if (searchTerm) {
-                displayText = this.highlightSearchTermPlainText(jsonText, searchTerm);
+                const textForSearch = this.isFormatted ? this.rawMessageData : jsonText;
+                displayText = this.highlightSearchTermPlainText(textForSearch, searchTerm);
             } else {
                 displayText = this.escapeHtml(jsonText);
             }
@@ -250,7 +259,12 @@ export class MessageViewerManager {
         let matchCount = 0;
         let currentIndex = undefined;
 
-        const textToSearch = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
+        let textToSearch;
+        if (this.isPlainText) {
+            textToSearch = this.isFormatted ? this.rawMessageData : this.messageData;
+        } else {
+            textToSearch = JSON.stringify(this.messageData, null, 2);
+        }
         let searchRegex;
 
         if (this.isPlainText) {
@@ -465,6 +479,15 @@ export class MessageViewerManager {
             const highlighted = parts.map((part, partIndex) => {
                 if (partIndex % 2 === 1) {
                     return `<span class="search-highlight">${this.escapeHtml(part)}</span>`;
+                }
+                if (this.isFormatted) {
+                    const backtickParts = part.split(/(`[^`]+`)/g);
+                    return backtickParts.map((bp, bpIndex) => {
+                        if (bpIndex % 2 === 1) {
+                            return `<strong>${this.escapeHtml(bp.slice(1, -1))}</strong>`;
+                        }
+                        return this.escapeHtml(bp);
+                    }).join('');
                 }
                 return this.escapeHtml(part);
             }).join('');
