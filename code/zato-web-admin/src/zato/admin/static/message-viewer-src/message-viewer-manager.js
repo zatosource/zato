@@ -51,6 +51,15 @@ export class MessageViewerManager {
             this.setDynamicHeight();
         });
         window.addEventListener('resize', this.boundSetDynamicHeight);
+        
+        const textarea = document.getElementById('data-request');
+        if (textarea) {
+            const resizeObserver = new ResizeObserver(() => {
+                this.setDynamicHeight();
+            });
+            resizeObserver.observe(textarea);
+        }
+        
         logger.info('MessageViewerManager.initialize: viewer initialized');
     }
 
