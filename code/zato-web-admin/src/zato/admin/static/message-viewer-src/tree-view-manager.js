@@ -384,18 +384,17 @@ export class TreeViewManager {
 
         const lineNumber = nodeWrapper.querySelector('.tree-line-number')?.textContent || '';
         const displayPath = path === '' ? '/' : '/' + path.replace(/\.\[/g, '[').replace(/\./g, '/');
-        const value = node.value !== undefined ? String(node.value) : '';
-        const maxValueLength = 50;
-        const truncatedValue = value.length > maxValueLength ? value.substring(0, maxValueLength) + '[...]' : value;
 
-        const pathDisplay = document.getElementById('message-viewer-path-display');
-        if (pathDisplay) {
-            const prefix = '<span class="path-prefix">200 OK | 125 ms | 37.5 KB</span>';
-            const separator = '<span class="path-separator">|</span>';
+        const resultHeader = document.getElementById('result-header');
+        if (resultHeader) {
+            if (!resultHeader.dataset.originalText) {
+                resultHeader.dataset.originalText = resultHeader.textContent;
+            }
+            const separator = '<span class="path-separator"> | </span>';
             if (node.collapsible) {
-                pathDisplay.innerHTML = `${prefix} ${separator} <span class="path-value">${lineNumber} ${displayPath}</span>`;
+                resultHeader.innerHTML = resultHeader.dataset.originalText + `${separator}<span class="path-value">${lineNumber} ${displayPath}</span>`;
             } else {
-                pathDisplay.innerHTML = `${prefix} ${separator} <span class="path-value">${lineNumber} ${displayPath}: ${truncatedValue}</span>`;
+                resultHeader.innerHTML = resultHeader.dataset.originalText + `${separator}<span class="path-value">${displayPath}</span>`;
             }
         }
     }
@@ -404,9 +403,9 @@ export class TreeViewManager {
         const nodeWrapper = event.target.closest('.tree-node-wrapper');
         if (!nodeWrapper) return;
 
-        const pathDisplay = document.getElementById('message-viewer-path-display');
-        if (pathDisplay) {
-            pathDisplay.innerHTML = '<span class="path-prefix">200 OK | 125 ms | 37.5 KB</span> <span class="path-separator">|</span>';
+        const resultHeader = document.getElementById('result-header');
+        if (resultHeader && resultHeader.dataset.originalText) {
+            resultHeader.textContent = resultHeader.dataset.originalText;
         }
     }
 

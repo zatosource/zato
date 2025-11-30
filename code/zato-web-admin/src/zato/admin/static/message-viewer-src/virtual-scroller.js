@@ -158,14 +158,6 @@ export class VirtualScroller {
 
     handleScroll() {
         this.render();
-        
-        const pathDisplay = document.getElementById('message-viewer-path-display');
-        
-        if (this.viewport.scrollTop > 0) {
-            if (pathDisplay) pathDisplay.classList.add('scrolled');
-        } else {
-            if (pathDisplay) pathDisplay.classList.remove('scrolled');
-        }
     }
 
     calculateVisibleRange() {

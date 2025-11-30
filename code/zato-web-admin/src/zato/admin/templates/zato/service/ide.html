@@ -127,16 +127,24 @@ Ctrl+K for full history"></textarea></form>
                     </tr>
 
                     <tr colspan="2" class="invoker-tr">
-                        <td class="align-right">
-                            <div>
-                                <input type="button" id="open-history-overlay" value="History" title="Open full history (Ctrl+K)" onclick="$.fn.zato.ide.open_history_overlay();"/> <span style="user-select: none;">|</span> <input type="button" id="request-history-up" value="Request ▲" title="Previous request (Ctrl+↑)" onclick="$.fn.zato.ide.on_request_history_up();"/> <input type="button" id="request-history-down" value="Request ▼" title="Next request (Ctrl+↓)" onclick="$.fn.zato.ide.on_request_history_down();"/> <span style="user-select: none;">|</span>
-                                <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
-
-                                <input
-                                    id="invoke-service"
-                                    type="button"
-                                    {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
-                                    value="Invoke"/>
+                        <td>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="text-align: left;">
+                                    <div id="singleton-form-parent" class="hidden"></div>
+                                    <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
+                                    <span id="invoking-please-wait" class="hidden">Invoking ..</span>
+                                    <span id="deploying-please-wait" class="hidden">Deploying ..</span>
+                                    <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <input type="button" id="open-history-overlay" value="History" title="Open full history (Ctrl+K)" onclick="$.fn.zato.ide.open_history_overlay();"/> <span style="user-select: none;">|</span> <input type="button" id="request-history-up" value="Request ▲" title="Previous request (Ctrl+↑)" onclick="$.fn.zato.ide.on_request_history_up();"/> <input type="button" id="request-history-down" value="Request ▼" title="Next request (Ctrl+↓)" onclick="$.fn.zato.ide.on_request_history_down();"/> <span style="user-select: none;">|</span>
+                                    <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
+                                    <input
+                                        id="invoke-service"
+                                        type="button"
+                                        {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
+                                        value="Invoke"/>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -144,11 +152,6 @@ Ctrl+K for full history"></textarea></form>
                     <tr colspan="2" class="invoker-tr">
                         <td>
                             <br/>
-                            <div id="singleton-form-parent" class="hidden"></div>
-                            <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
-                            <span id="invoking-please-wait" class="hidden">Invoking ..</span>
-                            <span id="deploying-please-wait" class="hidden">Deploying ..</span>
-                            <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
                             <form id="invoke-service-form" novalidate="" method="post"></form>
                                 <div id="message-viewer-wrapper"></div>
                                 <textarea id="data-response" style="display: none;"></textarea>
