@@ -167,11 +167,6 @@ export class MessageViewerManager {
         const searchTerm = searchInput ? searchInput.value.trim() : '';
         logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
 
-        if (searchTerm === this.lastSearchTerm) {
-            logger.info(`MessageViewerManager.renderMessage: search term unchanged, skipping render`);
-            return;
-        }
-
         this.currentMatchIndex = undefined;
         this.lastSearchTerm = searchTerm;
         let displayText;
