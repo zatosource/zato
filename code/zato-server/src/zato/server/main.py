@@ -61,7 +61,6 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
-from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
