@@ -12,8 +12,6 @@ window.zato.updateMessageViewer = function(responseText) {
         return;
     }
     
-    let textToDisplay = responseText;
-    
     try {
         const data = JSON.parse(responseText);
         window.zato.messageViewer.setMessage(data);
@@ -26,11 +24,16 @@ window.zato.updateMessageViewer = function(responseText) {
         for (const line of lines) {
             const valueErrorIndex = line.indexOf('ValueError: ');
             if (valueErrorIndex !== -1) {
-                textToDisplay = line.substring(valueErrorIndex + 'ValueError: '.length).trim();
-                break;
+                let textToDisplay = line.substring(valueErrorIndex + 'ValueError: '.length).trim();
+                if ((textToDisplay.startsWith("'") && textToDisplay.endsWith("'")) ||
+                    (textToDisplay.startsWith('"') && textToDisplay.endsWith('"'))) {
+                    textToDisplay = textToDisplay.slice(1, -1);
+                }
+                window.zato.messageViewer.setMessageFormatted(textToDisplay);
+                return;
             }
         }
     }
     
-    window.zato.messageViewer.setMessageFormatted(textToDisplay);
+    window.zato.messageViewer.setMessagePlainText(responseText);
 };
