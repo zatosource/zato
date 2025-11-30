@@ -76,6 +76,26 @@ body, html {
     overflow: visible !important;
 }
 
+#message-viewer-wrapper {
+    overflow: visible !important;
+}
+
+#message-viewer-panel {
+    overflow: visible !important;
+}
+
+#message-viewer-container {
+    overflow: visible !important;
+}
+
+#message-viewer-json-display {
+    overflow: auto !important;
+}
+
+.virtual-scroll-viewport {
+    overflow: auto !important;
+}
+
 
 .history-overlay {
     position: fixed;
