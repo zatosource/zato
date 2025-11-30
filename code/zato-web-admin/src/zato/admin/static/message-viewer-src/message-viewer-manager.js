@@ -56,29 +56,7 @@ export class MessageViewerManager {
 
         container.appendChild(viewerPanel);
         this.initializeControls();
-        this.adjustWrapperHeight();
-        
-        const resizeObserver = new ResizeObserver(() => {
-            this.adjustWrapperHeight();
-        });
-        
-        const parentTd = container.parentElement;
-        if (parentTd && parentTd.tagName === 'TD') {
-            resizeObserver.observe(parentTd);
-        }
-        
         logger.info('MessageViewerManager.initialize: viewer initialized');
-    }
-
-    adjustWrapperHeight() {
-        const wrapper = document.getElementById('message-viewer-wrapper');
-        if (!wrapper) return;
-        
-        const parentTd = wrapper.parentElement;
-        if (!parentTd || parentTd.tagName !== 'TD') return;
-        
-        const availableHeight = parentTd.clientHeight;
-        wrapper.style.height = availableHeight + 'px';
     }
 
     initializeControls() {
