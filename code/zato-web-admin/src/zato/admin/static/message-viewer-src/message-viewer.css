@@ -52,7 +52,7 @@
     left: 0;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.75rem;
+    font-size: calc(0.75rem - 1px);
     color: #1a1a1a;
     font-weight: 500;
     pointer-events: none;
@@ -61,7 +61,7 @@
 
 .invoker-search-counter:not(:empty) {
     background: #f3f3f6;
-    padding: 0.1rem 0.5rem 0.2rem 0.5rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 3px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     border: 1px solid #dee2e6;
@@ -150,17 +150,17 @@
 @keyframes color-shift-wave {
     0%, 100% {
         background-color: #ffeb3b;
-        box-shadow: 0 0 2px 1px rgba(255, 235, 59, 0.6);
+        box-shadow: 0 0 1px 0px rgba(255, 235, 59, 0.4);
     }
     50% {
         background-color: #ffc107;
-        box-shadow: 0 0 8px 4px rgba(255, 193, 7, 0.8);
+        box-shadow: 0 0 4px 1px rgba(255, 193, 7, 0.6);
     }
 }
 
 #message-viewer-container .search-highlight {
     background-color: #ffeb3b;
-    padding: 0 2px;
+    padding: 0 1px;
     border-radius: 2px;
     animation: color-shift-wave 1.1s ease-in-out infinite;
 }
