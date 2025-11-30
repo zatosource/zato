@@ -3,7 +3,7 @@
     flex-direction: column;
     width: 100%;
     max-width: 100%;
-    max-height: 600px;
+    height: 500px;
     overflow: visible !important;
 }
 
@@ -13,7 +13,6 @@
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
-    height: 100%;
     overflow: visible !important;
 }
 
@@ -72,8 +71,7 @@
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
-    height: 100%;
-    padding: 0;
+    padding: 0 0 18px 0;
     background-color: #ffffff;
     border: 1px solid #dee2e6;
     border-radius: 4px;
@@ -83,7 +81,6 @@
 
 #message-viewer-json-display {
     width: calc(100% - 2px);
-    height: 100%;
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
@@ -94,9 +91,9 @@
     line-height: 1.5;
     background-color: transparent;
     display: block;
-    white-space: pre-wrap;
+    white-space: pre;
     overflow: auto !important;
-    overflow-y: auto !important;
+    overflow-y: scroll !important;
     overflow-x: auto !important;
     scrollbar-width: auto;
     scrollbar-color: #888 #f1f1f1;
@@ -107,6 +104,11 @@
     width: 14px !important;
     height: 14px !important;
     -webkit-appearance: none !important;
+}
+
+#message-viewer-json-display::-webkit-scrollbar:horizontal {
+    height: 14px !important;
+    display: block !important;
 }
 
 #message-viewer-json-display::-webkit-scrollbar-track {

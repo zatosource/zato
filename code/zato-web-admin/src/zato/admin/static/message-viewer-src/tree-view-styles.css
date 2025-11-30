@@ -23,6 +23,10 @@
     -webkit-appearance: none !important;
 }
 
+.virtual-scroll-viewport::-webkit-scrollbar:horizontal {
+    height: 14px !important;
+}
+
 .virtual-scroll-viewport::-webkit-scrollbar-track {
     background: #f1f1f1 !important;
     border: 1px solid #ddd !important;
