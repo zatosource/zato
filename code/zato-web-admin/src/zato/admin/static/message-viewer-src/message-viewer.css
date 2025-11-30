@@ -40,6 +40,11 @@
     border-radius: 3px;
     font-size: 0.85rem;
     min-width: 0;
+    font-weight: 600;
+}
+
+.invoker-message-search-input::placeholder {
+    font-weight: 500;
 }
 
 .invoker-search-counter {
@@ -49,17 +54,20 @@
     transform: translateY(-50%);
     font-size: 0.75rem;
     color: #1a1a1a;
-    font-weight: 600;
+    font-weight: 500;
     pointer-events: none;
     white-space: nowrap;
 }
 
 .invoker-search-counter:not(:empty) {
     background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-    padding: 0.25rem 0.5rem;
+    padding: 0.1rem 0.5rem 0.2rem 0.5rem;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     border: 1px solid #d0d0d0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
 }
 
 .invoker-message-search-input:focus {
