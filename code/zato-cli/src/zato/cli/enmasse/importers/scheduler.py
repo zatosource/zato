@@ -174,11 +174,10 @@ class SchedulerImporter:
         logger.info('is_active key exists in job_def: %s', 'is_active' in job_def)
         logger.info('is_active raw value from job_def: %r', job_def.get('is_active'))
         logger.info('is_active raw value type: %s', type(job_def.get('is_active')))
-
-        job_is_active = job_def.get('is_active', True) or True
-
-        logger.info('is_active after get with default True: %r', job_def.get('is_active', True))
-        logger.info('is_active final value after or True: %r', job_is_active)
+        
+        job_is_active = job_def.get('is_active', True)
+        
+        logger.info('is_active final value: %r', job_is_active)
         logger.info('is_active final value type: %s', type(job_is_active))
 
         job_type = job_def['job_type']
