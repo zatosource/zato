@@ -29,6 +29,13 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,7 +169,18 @@ class SchedulerImporter:
         # Prepare job parameters
         job_id = None
         job_name = job_def['name']
+
+        logger.info('Processing is_active for job: %s', job_name)
+        logger.info('is_active key exists in job_def: %s', 'is_active' in job_def)
+        logger.info('is_active raw value from job_def: %r', job_def.get('is_active'))
+        logger.info('is_active raw value type: %s', type(job_def.get('is_active')))
+
         job_is_active = job_def.get('is_active', True) or True
+
+        logger.info('is_active after get with default True: %r', job_def.get('is_active', True))
+        logger.info('is_active final value after or True: %r', job_is_active)
+        logger.info('is_active final value type: %s', type(job_is_active))
+
         job_type = job_def['job_type']
         job_extra = job_def.get('extra', '')
 
