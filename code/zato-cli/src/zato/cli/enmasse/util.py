@@ -28,13 +28,6 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,50 +106,34 @@ def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'Enmas
 
 def get_value_from_environment(value:'any_') -> 'str':
 
-    logger.info('get_value_from_environment called with value: %r (type: %s)', value, type(value))
-
     if not isinstance(value, str):
-        logger.info('Value is not a string, returning as-is')
         return value
 
     prefix = 'Zato_Enmasse_Env.'
 
     if not value.startswith(prefix):
-        logger.info('Value does not start with prefix %s, returning as-is', prefix)
         return value
 
     env_key = value.replace(prefix, '')
-    logger.info('Extracted env_key: %s', env_key)
-    
     default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
-    logger.info('Default value if env var not found: %s', default)
 
     value = os.environ.get(env_key, default)
-    logger.info('Value from os.environ.get: %r', value)
 
     try:
         value = asbool(value)
-        logger.info('Value after asbool: %r (type: %s)', value, type(value))
-    except Exception as e:
-        logger.info('asbool failed with exception: %s, keeping value as-is', e)
+    except Exception:
         pass
 
-    logger.info('Returning final value: %r', value)
     return value
 
 # ################################################################################################################################
 
 def preprocess_item(item:'strdict') -> 'any_':
 
-    logger.info('preprocess_item called with item: %s', item)
-
     for key, value in item.items():
-        logger.info('Processing key=%s with value=%r', key, value)
         value = get_value_from_environment(value)
-        logger.info('After get_value_from_environment: key=%s value=%r', key, value)
         item[key] = value
 
-    logger.info('preprocess_item returning: %s', item)
     return item
 
 # ################################################################################################################################
