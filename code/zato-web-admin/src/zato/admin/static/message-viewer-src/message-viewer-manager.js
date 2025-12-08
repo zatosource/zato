@@ -24,7 +24,6 @@ export class MessageViewerManager {
 
         const existingViewer = document.getElementById('message-viewer-panel');
         if (existingViewer) {
-            logger.info('MessageViewerManager.initialize: viewer already exists');
             return;
         }
 
@@ -51,7 +50,7 @@ export class MessageViewerManager {
             this.setDynamicHeight();
         });
         window.addEventListener('resize', this.boundSetDynamicHeight);
-        
+
         const textarea = document.getElementById('data-request');
         if (textarea) {
             const resizeObserver = new ResizeObserver(() => {
@@ -59,8 +58,7 @@ export class MessageViewerManager {
             });
             resizeObserver.observe(textarea);
         }
-        
-        logger.info('MessageViewerManager.initialize: viewer initialized');
+
     }
 
     setDynamicHeight() {
@@ -72,7 +70,6 @@ export class MessageViewerManager {
         const maxHeight = window.innerHeight - rect.top - scrollbarMargin;
 
         wrapper.style.maxHeight = `${maxHeight}px`;
-        logger.info(`MessageViewerManager.setDynamicHeight: set wrapper maxHeight to ${maxHeight}px (wrapper.top=${rect.top})`);
     }
 
     initializeControls() {
@@ -89,7 +86,6 @@ export class MessageViewerManager {
                     textToCopy = JSON.stringify(this.messageData, null, 2);
                 }
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    logger.info('MessageViewerManager.initializeControls: copied to clipboard');
 
                     const btnRect = copyBtn.getBoundingClientRect();
                     const tooltip = document.createElement('span');
@@ -112,7 +108,6 @@ export class MessageViewerManager {
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
                 const currentValue = event.target.value.trim();
-                logger.info(`MessageViewerManager: input event: value="${currentValue}"`);
 
                 const counter = document.getElementById('message-viewer-search-counter');
                 if (counter) {
@@ -147,7 +142,6 @@ export class MessageViewerManager {
                     this.currentMatchIndex = undefined;
                     this.updateMatchCounter('');
                     this.renderMessage();
-                    logger.info('MessageViewerManager: cleared search term via Escape');
                 }
             });
         }
@@ -181,7 +175,7 @@ export class MessageViewerManager {
 
     setMessageFormatted(text) {
         this.rawMessageData = text;
-        
+
         const parts = text.split(/(`[^`]+`)/g);
         const formatted = parts.map((part, index) => {
             if (index % 2 === 1) {
@@ -189,7 +183,7 @@ export class MessageViewerManager {
             }
             return this.escapeHtml(part);
         }).join('');
-        
+
         this.messageData = formatted;
         this.isPlainText = true;
         this.isFormatted = true;
@@ -204,16 +198,16 @@ export class MessageViewerManager {
     clearSearch() {
         const searchInput = document.getElementById('message-viewer-search');
         const counter = document.getElementById('message-viewer-search-counter');
-        
+
         if (searchInput) {
             searchInput.value = '';
         }
-        
+
         if (counter) {
             counter.textContent = '';
             counter.style.left = '';
         }
-        
+
         this.lastSearchTerm = null;
         this.currentMatchIndex = undefined;
     }
@@ -243,18 +237,15 @@ export class MessageViewerManager {
         const container = document.getElementById('message-viewer-container');
         const searchInput = document.getElementById('message-viewer-search');
         if (!container) {
-            logger.info('MessageViewerManager.renderMessage: container not found');
             return;
         }
 
         if (!this.messageData) {
-            logger.info('MessageViewerManager.renderMessage: no message data');
             return;
         }
 
         const jsonText = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
         const searchTerm = searchInput ? searchInput.value.trim() : '';
-        logger.info(`MessageViewerManager.renderMessage: searchTerm="${searchTerm}"`);
 
         this.currentMatchIndex = undefined;
         this.lastSearchTerm = searchTerm;
@@ -364,7 +355,7 @@ export class MessageViewerManager {
         }
 
         counter.textContent = counterText;
-        
+
         if (searchInput && searchTerm) {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
@@ -426,7 +417,6 @@ export class MessageViewerManager {
 
         display.scrollTop = scrollPosition;
 
-        logger.info(`scrollToNextMatch: scrolled to match ${this.currentMatchIndex + 1} of ${matches.length}`);
         this.updateMatchCounter(searchTerm);
     }
 
@@ -525,7 +515,7 @@ export class MessageViewerManager {
         const highlightedLines = lines.map(line => {
             const hasMatch = searchRegex.test(line);
             searchRegex.lastIndex = 0;
-            
+
             const parts = line.split(searchRegex);
             const highlighted = parts.map((part, partIndex) => {
                 if (partIndex % 2 === 1) {
@@ -542,7 +532,7 @@ export class MessageViewerManager {
                 }
                 return this.escapeHtml(part);
             }).join('');
-            
+
             if (hasMatch) {
                 return `<span class="match-line">${highlighted}</span>`;
             }
