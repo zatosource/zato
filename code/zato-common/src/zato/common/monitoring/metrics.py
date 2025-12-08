@@ -7,11 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import time
 from threading import RLock
 
 # Zato
 from zato.common.typing_ import anydict, floatnone
+from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,58 +29,72 @@ class MetricsStore:
         """ Set metric value for given process, context, and key.
         """
         with self._lock:
-            self._metrics[(process_name, ctx_id, key)] = value
+            metric_key = (process_name, ctx_id, key)
+            self._metrics[metric_key] = value
 
     def get_value(self, process_name:'str', ctx_id:'str', key:'str') -> 'floatnone':
         """ Get current metric value.
         """
         with self._lock:
-            return self._metrics.get((process_name, ctx_id, key))
+            metric_key = (process_name, ctx_id, key)
+            return self._metrics.get(metric_key)
 
     def increment_value(self, process_name:'str', ctx_id:'str', key:'str', amount:'float' = 1.0) -> 'None':
         """ Increment metric value by amount.
         """
         with self._lock:
-            current = self._metrics.get((process_name, ctx_id, key), 0.0)
-            self._metrics[(process_name, ctx_id, key)] = current + amount
+            metric_key = (process_name, ctx_id, key)
+            current = self._metrics.get(metric_key, 0.0)
+            new_value = current + amount
+            self._metrics[metric_key] = new_value
 
     def decrement_value(self, process_name:'str', ctx_id:'str', key:'str', amount:'float' = 1.0) -> 'None':
         """ Decrement metric value by amount.
         """
         with self._lock:
-            current = self._metrics.get((process_name, ctx_id, key), 0.0)
-            self._metrics[(process_name, ctx_id, key)] = current - amount
+            metric_key = (process_name, ctx_id, key)
+            current = self._metrics.get(metric_key, 0.0)
+            new_value = current - amount
+            self._metrics[metric_key] = new_value
 
     def set_max_value(self, process_name:'str', ctx_id:'str', key:'str', value:'float') -> 'None':
         """ Set value only if it exceeds current value.
         """
         with self._lock:
-            current = self._metrics.get((process_name, ctx_id, key), float('-inf'))
+            metric_key = (process_name, ctx_id, key)
+            current = self._metrics.get(metric_key, float('-inf'))
             if value > current:
-                self._metrics[(process_name, ctx_id, key)] = value
+                self._metrics[metric_key] = value
 
     def set_min_value(self, process_name:'str', ctx_id:'str', key:'str', value:'float') -> 'None':
         """ Set value only if it is below current value.
         """
         with self._lock:
-            current = self._metrics.get((process_name, ctx_id, key), float('inf'))
+            metric_key = (process_name, ctx_id, key)
+            current = self._metrics.get(metric_key, float('inf'))
             if value < current:
-                self._metrics[(process_name, ctx_id, key)] = value
+                self._metrics[metric_key] = value
 
     def timer_start(self, process_name:'str', ctx_id:'str', key:'str') -> 'None':
         """ Start timer for given key.
         """
         with self._lock:
-            self._timers[(process_name, ctx_id, key)] = time.time()
+            timer_key = (process_name, ctx_id, key)
+            current_time = utcnow_as_ms()
+            self._timers[timer_key] = current_time
 
     def timer_stop(self, process_name:'str', ctx_id:'str', key:'str') -> 'floatnone':
         """ Stop timer and record elapsed milliseconds as metric.
         """
         with self._lock:
-            start_time = self._timers.pop((process_name, ctx_id, key), None)
+            timer_key = (process_name, ctx_id, key)
+            start_time = self._timers.pop(timer_key, None)
             if start_time is not None:
-                elapsed_ms = (time.time() - start_time) * 1000.0
-                self._metrics[(process_name, ctx_id, key)] = elapsed_ms
+                current_time = utcnow_as_ms()
+                elapsed_seconds = current_time - start_time
+                elapsed_ms = elapsed_seconds * 1000.0
+                metric_key = (process_name, ctx_id, key)
+                self._metrics[metric_key] = elapsed_ms
                 return elapsed_ms
             return None
 
