@@ -9,6 +9,7 @@ LOKI_DATA_DIR := ./data/loki
 .PHONY: clean prometheus grafana loki test-server dashboards status
 
 prometheus:
+	@rm -rf $(PROMETHEUS_DATA_DIR)
 	@mkdir -p $(PROMETHEUS_DATA_DIR)
 	prometheus --config.file=./prometheus/prometheus.yml \
 		--storage.tsdb.path=$(PROMETHEUS_DATA_DIR) \
