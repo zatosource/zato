@@ -79,6 +79,10 @@ class GrafanaFieldConfig(Model):
     defaults: 'GrafanaDefaults'
 
 @dataclass(init=False)
+class GrafanaTimepicker(Model):
+    pass
+
+@dataclass(init=False)
 class GrafanaOptions(Model):
     legend: 'strdict'
     tooltip: 'strdict'
@@ -287,7 +291,8 @@ class GrafanaDashboardBuilder:
         dashboard.timezone = 'browser'
         dashboard.panels = panels
         dashboard.time = time.to_dict()
-        dashboard.timepicker = {}
+        timepicker = GrafanaTimepicker()
+        dashboard.timepicker = timepicker.to_dict()
         dashboard.templating = templating.to_dict()
         dashboard.refresh = '5s'
 
