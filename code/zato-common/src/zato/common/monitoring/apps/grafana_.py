@@ -11,14 +11,100 @@ import json
 import logging
 import requests
 import sys
+from dataclasses import dataclass
 
 # Zato
-from zato.common.typing_ import anydict, strdict
+from zato.common.marshal_.api import Model
+from zato.common.typing_ import anydict, list_, optional, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Grafana Dashboard Models
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class GrafanaGridPos(Model):
+    x: 'int'
+    y: 'int'
+    w: 'int'
+    h: 'int'
+
+@dataclass(init=False)
+class GrafanaTarget(Model):
+    expr: 'str'
+    refId: 'str'
+    datasource: 'strdict'
+
+@dataclass(init=False)
+class GrafanaFieldConfig(Model):
+    defaults: 'strdict'
+
+@dataclass(init=False)
+class GrafanaOptions(Model):
+    legend: 'strdict'
+    tooltip: 'strdict'
+
+@dataclass(init=False)
+class GrafanaPanel(Model):
+    id: 'int'
+    title: 'str'
+    type: 'str'
+    gridPos: 'GrafanaGridPos'
+    targets: 'list_[GrafanaTarget]'
+    fieldConfig: 'GrafanaFieldConfig'
+    options: 'GrafanaOptions'
+
+@dataclass(init=False)
+class GrafanaTime(Model):
+    from_: 'str'
+    to: 'str'
+
+    def to_dict(self):
+        data = super().to_dict()
+        # Rename from_ to from for Grafana API
+        if 'from_' in data:
+            data['from'] = data.pop('from_')
+        return data
+
+@dataclass(init=False)
+class GrafanaVariable(Model):
+    name: 'str'
+    type: 'str'
+    datasource: 'strdict'
+    query: 'str'
+    multi: 'bool'
+    includeAll: 'bool'
+    allValue: 'str'
+
+@dataclass(init=False)
+class GrafanaTemplating(Model):
+    list_: 'list_[GrafanaVariable]'
+
+@dataclass(init=False)
+class GrafanaDashboard(Model):
+    id: 'optional[int]'
+    uid: 'optional[str]'
+    title: 'str'
+    tags: 'list_[str]'
+    timezone: 'str'
+    panels: 'list_[GrafanaPanel]'
+    time: 'GrafanaTime'
+    timepicker: 'strdict'
+    templating: 'GrafanaTemplating'
+    refresh: 'str'
+
+@dataclass(init=False)
+class GrafanaDashboardRequest(Model):
+    dashboard: 'GrafanaDashboard'
+    overwrite: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,16 +149,16 @@ class GrafanaDashboardBuilder:
         """ Create main process monitoring dashboard.
         """
         panels = [
-            self.create_panel(1, 'Process metrics by instance', 
+            self.create_panel(1, 'Process metrics by instance',
                 'process_value{ctx_id!=""}', x=0, y=0, w=12, h=8),
-            
-            self.create_panel(2, 'Global metrics', 
+
+            self.create_panel(2, 'Global metrics',
                 'process_value{process_name="global"}', x=0, y=8, w=12, h=8),
-            
-            self.create_panel(3, 'Aircraft handling metrics', 
+
+            self.create_panel(3, 'Aircraft handling metrics',
                 'process_value{process_name="AircraftHandling"}', x=0, y=16, w=12, h=8),
-            
-            self.create_panel(4, 'Applicant processing metrics', 
+
+            self.create_panel(4, 'Applicant processing metrics',
                 'process_value{process_name="ApplicantProcessing"}', x=0, y=24, w=12, h=8)
         ]
 
@@ -98,7 +184,7 @@ class GrafanaDashboardBuilder:
                             'allValue': '.*'
                         },
                         {
-                            'name': 'ctx_id', 
+                            'name': 'ctx_id',
                             'type': 'query',
                             'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
                             'query': 'label_values(process_value{process_name=~"$process_name"}, ctx_id)',
@@ -119,14 +205,14 @@ class GrafanaDashboardBuilder:
         """ Create dashboard via REST API.
         """
         url = f'{self.grafana_url}/api/dashboards/db'
-        
+
         try:
-            response = requests.post(url, 
-                json=dashboard_config, 
-                auth=self.auth, 
+            response = requests.post(url,
+                json=dashboard_config,
+                auth=self.auth,
                 headers=self.headers,
                 timeout=10)
-            
+
             if response.status_code == 200:
                 result = response.json()
                 logger.info(f'Dashboard created: {result.get("url", "unknown")}')
@@ -134,7 +220,7 @@ class GrafanaDashboardBuilder:
             else:
                 logger.error(f'Failed to create dashboard: {response.status_code} - {response.text}')
                 return False
-                
+
         except Exception as e:
             logger.error(f'Error creating dashboard: {e}')
             return False
@@ -143,11 +229,11 @@ class GrafanaDashboardBuilder:
         """ Set up all monitoring dashboards.
         """
         logger.info('Creating Zato monitoring dashboards...')
-        
+
         # Main process monitoring dashboard
         dashboard = self.create_process_monitoring_dashboard()
         success = self.create_dashboard(dashboard)
-        
+
         if success:
             logger.info('Dashboard setup completed successfully')
             return True
