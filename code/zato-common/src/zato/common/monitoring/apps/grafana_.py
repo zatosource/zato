@@ -75,6 +75,12 @@ class GrafanaThresholdsStyle(Model):
     mode: 'str'
 
 @dataclass(init=False)
+class GrafanaHideFrom(Model):
+    legend: 'bool'
+    tooltip: 'bool'
+    vis: 'bool'
+
+@dataclass(init=False)
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
@@ -92,7 +98,7 @@ class GrafanaCustom(Model):
     axisColorMode: 'str'
     scaleDistribution: 'GrafanaScaleDistribution'
     axisCenteredZero: 'bool'
-    hideFrom: 'strdict'
+    hideFrom: 'GrafanaHideFrom'
     thresholdsStyle: 'GrafanaThresholdsStyle'
 
 @dataclass(init=False)
@@ -275,7 +281,13 @@ class GrafanaDashboardBuilder:
         custom.scaleDistribution = scale_distribution
 
         custom.axisCenteredZero = False
-        custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
+
+        # Hide from configuration
+        hide_from = GrafanaHideFrom()
+        hide_from.legend = False
+        hide_from.tooltip = False
+        hide_from.vis = False
+        custom.hideFrom = hide_from
 
         # Thresholds style
         thresholds_style = GrafanaThresholdsStyle()
