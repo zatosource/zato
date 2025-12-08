@@ -192,38 +192,39 @@ class GrafanaDashboardBuilder:
         thresholds = GrafanaThresholds()
         thresholds.steps = [threshold]
         
+        fieldConfig = GrafanaFieldConfig()
+        fieldConfig.defaults = GrafanaDefaults()
+        fieldConfig.defaults.color = {'mode': 'palette-classic'}
+        fieldConfig.defaults.custom = {
+            'drawStyle': 'line',
+            'lineInterpolation': 'linear',
+            'barAlignment': 0,
+            'lineWidth': 1,
+            'fillOpacity': 0,
+            'gradientMode': 'none',
+            'spanNulls': False,
+            'insertNulls': False,
+            'showPoints': 'auto',
+            'pointSize': 5,
+            'stacking': {'mode': 'none', 'group': 'A'},
+            'axisPlacement': 'auto',
+            'axisLabel': '',
+            'axisColorMode': 'text',
+            'scaleDistribution': {'type': 'linear'},
+            'axisCenteredZero': False,
+            'hideFrom': {'legend': False, 'tooltip': False, 'vis': False},
+            'thresholdsStyle': {'mode': 'off'}
+        }
+        fieldConfig.defaults.mappings = []
+        fieldConfig.defaults.thresholds = thresholds
+        
         return {
             'id': panel_id,
             'title': title,
             'type': 'timeseries',
             'targets': [target.to_dict()],
             'gridPos': gridPos.to_dict(),
-            'fieldConfig': {
-                'defaults': {
-                    'color': {'mode': 'palette-classic'},
-                    'custom': {
-                        'drawStyle': 'line',
-                        'lineInterpolation': 'linear',
-                        'barAlignment': 0,
-                        'lineWidth': 1,
-                        'fillOpacity': 0,
-                        'gradientMode': 'none',
-                        'spanNulls': False,
-                        'insertNulls': False,
-                        'showPoints': 'auto',
-                        'pointSize': 5,
-                        'stacking': {'mode': 'none', 'group': 'A'},
-                        'axisPlacement': 'auto',
-                        'axisLabel': '',
-                        'axisColorMode': 'text',
-                        'scaleDistribution': {'type': 'linear'},
-                        'axisCenteredZero': False,
-                        'hideFrom': {'legend': False, 'tooltip': False, 'vis': False},
-                        'thresholdsStyle': {'mode': 'off'}
-                    },
-                    'thresholds': thresholds.to_dict()
-                }
-            },
+            'fieldConfig': fieldConfig.to_dict(),
             'options': {
                 'tooltip': {'mode': 'single', 'sort': 'none'}
             }
