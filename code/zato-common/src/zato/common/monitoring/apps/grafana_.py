@@ -67,6 +67,10 @@ class GrafanaStacking(Model):
     group: 'str'
 
 @dataclass(init=False)
+class GrafanaScaleDistribution(Model):
+    type: 'str'
+
+@dataclass(init=False)
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
@@ -82,7 +86,7 @@ class GrafanaCustom(Model):
     axisPlacement: 'str'
     axisLabel: 'str'
     axisColorMode: 'str'
-    scaleDistribution: 'strdict'
+    scaleDistribution: 'GrafanaScaleDistribution'
     axisCenteredZero: 'bool'
     hideFrom: 'strdict'
     thresholdsStyle: 'strdict'
@@ -249,14 +253,23 @@ class GrafanaDashboardBuilder:
         custom.insertNulls = False
         custom.showPoints = 'auto'
         custom.pointSize = 5
+        
+        # Stacking configuration
         stacking = GrafanaStacking()
         stacking.mode = 'none'
         stacking.group = 'A'
         custom.stacking = stacking
+        
+        # Axis configuration
         custom.axisPlacement = 'auto'
         custom.axisLabel = ''
         custom.axisColorMode = 'text'
-        custom.scaleDistribution = {'type': 'linear'}
+        
+        # Scale distribution
+        scale_distribution = GrafanaScaleDistribution()
+        scale_distribution.type = 'linear'
+        custom.scaleDistribution = scale_distribution
+        
         custom.axisCenteredZero = False
         custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
         custom.thresholdsStyle = {'mode': 'off'}
