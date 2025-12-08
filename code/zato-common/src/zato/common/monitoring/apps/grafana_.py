@@ -176,25 +176,25 @@ class GrafanaDashboardBuilder:
         datasource = GrafanaDatasource()
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
-        
+
         gridPos = GrafanaGridPos()
         gridPos.x = x
         gridPos.y = y
         gridPos.w = w
         gridPos.h = h
-        
+
         target = GrafanaTarget()
         target.datasource = datasource
         target.expr = query
         target.refId = 'A'
-        
+
         threshold = GrafanaThreshold()
         threshold.color = 'green'
         threshold.value = None
-        
+
         thresholds = GrafanaThresholds()
         thresholds.steps = [threshold]
-        
+
         fieldConfig = GrafanaFieldConfig()
         fieldConfig.defaults = GrafanaDefaults()
         fieldConfig.defaults.color = {'mode': 'palette-classic'}
@@ -220,7 +220,7 @@ class GrafanaDashboardBuilder:
         }
         fieldConfig.defaults.mappings = []
         fieldConfig.defaults.thresholds = thresholds
-        
+
         panel = GrafanaPanel()
         panel.id = panel_id
         panel.title = title
@@ -231,7 +231,7 @@ class GrafanaDashboardBuilder:
         panel.options = GrafanaOptions()
         panel.options.legend = {}
         panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
-        
+
         return panel.to_dict()
 
     def create_process_monitoring_dashboard(self) -> 'anydict':
@@ -240,7 +240,7 @@ class GrafanaDashboardBuilder:
         datasource = GrafanaDatasource()
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
-        
+
         var1 = GrafanaVariable()
         var1.name = 'process_name'
         var1.type = 'query'
@@ -252,7 +252,7 @@ class GrafanaDashboardBuilder:
         var1.current = {'text': 'All', 'value': ['$__all']}
         var1.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
         var1.refresh = 1
-        
+
         var2 = GrafanaVariable()
         var2.name = 'ctx_id'
         var2.type = 'query'
@@ -264,7 +264,7 @@ class GrafanaDashboardBuilder:
         var2.current = {'text': 'All', 'value': ['$__all']}
         var2.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
         var2.refresh = 2
-        
+
         templating = GrafanaTemplating()
         templating.list_ = [var1, var2]
 
@@ -278,7 +278,7 @@ class GrafanaDashboardBuilder:
         time = GrafanaTime()
         time.from_ = 'now-5m'
         time.to = 'now'
-        
+
         dashboard = GrafanaDashboard()
         dashboard.id = None
         dashboard.uid = None
@@ -286,16 +286,19 @@ class GrafanaDashboardBuilder:
         dashboard.tags = ['zato', 'monitoring']
         dashboard.timezone = 'browser'
         dashboard.panels = panels
-        dashboard.time = time
+        dashboard.time = time.to_dict()
         dashboard.timepicker = {}
-        dashboard.templating = templating
+        dashboard.templating = templating.to_dict()
         dashboard.refresh = '5s'
-        
+
         dashboardRequest = GrafanaDashboardRequest()
         dashboardRequest.dashboard = dashboard
         dashboardRequest.overwrite = True
-        
-        return dashboardRequest.to_dict()
+
+        result = dashboardRequest.to_dict()
+        logger.info(f'Dashboard JSON being sent: {result}')
+
+        return result
 
     def create_dashboard(self, dashboard_config:'anydict') -> 'bool':
         """ Create dashboard via REST API.
@@ -343,6 +346,7 @@ class GrafanaDashboardBuilder:
 def main() -> 'None':
     """ Main entry point.
     """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     builder = GrafanaDashboardBuilder()
     success = builder.setup_dashboards()
     sys.exit(0 if success else 1)
