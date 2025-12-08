@@ -71,6 +71,10 @@ class GrafanaScaleDistribution(Model):
     type: 'str'
 
 @dataclass(init=False)
+class GrafanaThresholdsStyle(Model):
+    mode: 'str'
+
+@dataclass(init=False)
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
@@ -89,7 +93,7 @@ class GrafanaCustom(Model):
     scaleDistribution: 'GrafanaScaleDistribution'
     axisCenteredZero: 'bool'
     hideFrom: 'strdict'
-    thresholdsStyle: 'strdict'
+    thresholdsStyle: 'GrafanaThresholdsStyle'
 
 @dataclass(init=False)
 class GrafanaDefaults(Model):
@@ -253,26 +257,30 @@ class GrafanaDashboardBuilder:
         custom.insertNulls = False
         custom.showPoints = 'auto'
         custom.pointSize = 5
-        
+
         # Stacking configuration
         stacking = GrafanaStacking()
         stacking.mode = 'none'
         stacking.group = 'A'
         custom.stacking = stacking
-        
+
         # Axis configuration
         custom.axisPlacement = 'auto'
         custom.axisLabel = ''
         custom.axisColorMode = 'text'
-        
+
         # Scale distribution
         scale_distribution = GrafanaScaleDistribution()
         scale_distribution.type = 'linear'
         custom.scaleDistribution = scale_distribution
-        
+
         custom.axisCenteredZero = False
         custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
-        custom.thresholdsStyle = {'mode': 'off'}
+
+        # Thresholds style
+        thresholds_style = GrafanaThresholdsStyle()
+        thresholds_style.mode = 'off'
+        custom.thresholdsStyle = thresholds_style
         field_config.defaults.custom = custom
 
         # Finalize field config
