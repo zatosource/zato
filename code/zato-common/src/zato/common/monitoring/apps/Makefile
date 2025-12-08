@@ -14,7 +14,8 @@ prometheus:
 	prometheus --config.file=./prometheus/prometheus.yml \
 		--storage.tsdb.path=$(PROMETHEUS_DATA_DIR) \
 		--web.listen-address=:$(PROMETHEUS_PORT) \
-		--web.enable-lifecycle
+		--web.enable-lifecycle \
+		--storage.tsdb.retention.time=1h
 
 grafana:
 	@mkdir -p $(GRAFANA_DATA_DIR) $(GRAFANA_DATA_DIR)/logs $(GRAFANA_DATA_DIR)/plugins $(GRAFANA_DATA_DIR)/sessions
