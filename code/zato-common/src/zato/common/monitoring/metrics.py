@@ -6,17 +6,23 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
 import time
 from threading import RLock
-from typing import Dict, Tuple, Optional
+
+# Zato
+from zato.common.typing_ import anydict, floatnone
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class MetricsStore:
     """ Thread-safe storage for process metrics with Prometheus text format export.
     """
 
     def __init__(self) -> 'None':
-        self._metrics: 'Dict[Tuple[str, str, str], float]' = {}
-        self._timers: 'Dict[Tuple[str, str, str], float]' = {}
+        self._metrics: 'anydict' = {}
+        self._timers: 'anydict' = {}
         self._lock = RLock()
 
     def set_value(self, process_name:'str', ctx_id:'str', key:'str', value:'float') -> 'None':
@@ -25,7 +31,7 @@ class MetricsStore:
         with self._lock:
             self._metrics[(process_name, ctx_id, key)] = value
 
-    def get_value(self, process_name:'str', ctx_id:'str', key:'str') -> 'Optional[float]':
+    def get_value(self, process_name:'str', ctx_id:'str', key:'str') -> 'floatnone':
         """ Get current metric value.
         """
         with self._lock:
@@ -67,7 +73,7 @@ class MetricsStore:
         with self._lock:
             self._timers[(process_name, ctx_id, key)] = time.time()
 
-    def timer_stop(self, process_name:'str', ctx_id:'str', key:'str') -> 'Optional[float]':
+    def timer_stop(self, process_name:'str', ctx_id:'str', key:'str') -> 'floatnone':
         """ Stop timer and record elapsed milliseconds as metric.
         """
         with self._lock:
@@ -97,10 +103,19 @@ class MetricsStore:
 
             return '\n'.join(lines) + '\n'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Global metrics store instance
 _global_metrics_store = MetricsStore()
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def get_global_metrics_store() -> 'MetricsStore':
     """ Get the global metrics store instance.
     """
     return _global_metrics_store
+
+# ################################################################################################################################
+# ################################################################################################################################
