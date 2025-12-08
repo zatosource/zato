@@ -218,17 +218,18 @@ class GrafanaDashboardBuilder:
         fieldConfig.defaults.mappings = []
         fieldConfig.defaults.thresholds = thresholds
         
-        return {
-            'id': panel_id,
-            'title': title,
-            'type': 'timeseries',
-            'targets': [target.to_dict()],
-            'gridPos': gridPos.to_dict(),
-            'fieldConfig': fieldConfig.to_dict(),
-            'options': {
-                'tooltip': {'mode': 'single', 'sort': 'none'}
-            }
-        }
+        panel = GrafanaPanel()
+        panel.id = panel_id
+        panel.title = title
+        panel.type = 'timeseries'
+        panel.targets = [target]
+        panel.gridPos = gridPos
+        panel.fieldConfig = fieldConfig
+        panel.options = GrafanaOptions()
+        panel.options.legend = {}
+        panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
+        
+        return panel.to_dict()
 
     def create_process_monitoring_dashboard(self) -> 'anydict':
         """ Create main process monitoring dashboard.
