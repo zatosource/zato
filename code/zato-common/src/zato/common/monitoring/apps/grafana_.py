@@ -62,6 +62,11 @@ class GrafanaColor(Model):
     mode: 'str'
 
 @dataclass(init=False)
+class GrafanaStacking(Model):
+    mode: 'str'
+    group: 'str'
+
+@dataclass(init=False)
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
@@ -73,7 +78,7 @@ class GrafanaCustom(Model):
     insertNulls: 'bool'
     showPoints: 'str'
     pointSize: 'int'
-    stacking: 'strdict'
+    stacking: 'GrafanaStacking'
     axisPlacement: 'str'
     axisLabel: 'str'
     axisColorMode: 'str'
@@ -244,7 +249,10 @@ class GrafanaDashboardBuilder:
         custom.insertNulls = False
         custom.showPoints = 'auto'
         custom.pointSize = 5
-        custom.stacking = {'mode': 'none', 'group': 'A'}
+        stacking = GrafanaStacking()
+        stacking.mode = 'none'
+        stacking.group = 'A'
+        custom.stacking = stacking
         custom.axisPlacement = 'auto'
         custom.axisLabel = ''
         custom.axisColorMode = 'text'
