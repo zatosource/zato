@@ -173,7 +173,13 @@ class GrafanaDashboardBuilder:
         datasource = GrafanaDatasource()
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
-
+        
+        gridPos = GrafanaGridPos()
+        gridPos.x = x
+        gridPos.y = y
+        gridPos.w = w
+        gridPos.h = h
+        
         return {
             'id': panel_id,
             'title': title,
@@ -185,7 +191,7 @@ class GrafanaDashboardBuilder:
                     'refId': 'A'
                 }
             ],
-            'gridPos': {'x': x, 'y': y, 'w': w, 'h': h},
+            'gridPos': gridPos.to_dict(),
             'fieldConfig': {
                 'defaults': {
                     'color': {'mode': 'palette-classic'},
