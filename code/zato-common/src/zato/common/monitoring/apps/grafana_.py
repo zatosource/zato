@@ -114,6 +114,9 @@ class GrafanaVariable(Model):
     multi: 'bool'
     includeAll: 'bool'
     allValue: 'str'
+    current: 'strdict'
+    options: 'list_[strdict]'
+    refresh: 'int'
 
 @dataclass(init=False)
 class GrafanaTemplating(Model):
@@ -237,6 +240,33 @@ class GrafanaDashboardBuilder:
         datasource = GrafanaDatasource()
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
+        
+        var1 = GrafanaVariable()
+        var1.name = 'process_name'
+        var1.type = 'query'
+        var1.datasource = datasource
+        var1.query = 'label_values(process_value, process_name)'
+        var1.multi = True
+        var1.includeAll = True
+        var1.allValue = '.*'
+        var1.current = {'text': 'All', 'value': ['$__all']}
+        var1.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
+        var1.refresh = 1
+        
+        var2 = GrafanaVariable()
+        var2.name = 'ctx_id'
+        var2.type = 'query'
+        var2.datasource = datasource
+        var2.query = 'label_values(process_value{process_name=~"$process_name"}, ctx_id)'
+        var2.multi = True
+        var2.includeAll = True
+        var2.allValue = '.*'
+        var2.current = {'text': 'All', 'value': ['$__all']}
+        var2.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
+        var2.refresh = 2
+        
+        templating = GrafanaTemplating()
+        templating.list_ = [var1, var2]
 
         panels = [
             self.create_panel(1, 'Process metrics by instance', 'process_value{ctx_id=~".+"}', x=0, y=0, w=12, h=8),
@@ -255,34 +285,7 @@ class GrafanaDashboardBuilder:
                 'panels': panels,
                 'time': {'from': 'now-5m', 'to': 'now'},
                 'timepicker': {},
-                'templating': {
-                    'list': [
-                        {
-                            'name': 'process_name',
-                            'type': 'query',
-                            'datasource': datasource.to_dict(),
-                            'query': 'label_values(process_value, process_name)',
-                            'multi': True,
-                            'includeAll': True,
-                            'allValue': '.*',
-                            'current': {'text': 'All', 'value': ['$__all']},
-                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
-                            'refresh': 1
-                        },
-                        {
-                            'name': 'ctx_id',
-                            'type': 'query',
-                            'datasource': datasource.to_dict(),
-                            'query': 'label_values(process_value{process_name=~"$process_name"}, ctx_id)',
-                            'multi': True,
-                            'includeAll': True,
-                            'allValue': '.*',
-                            'current': {'text': 'All', 'value': ['$__all']},
-                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
-                            'refresh': 2
-                        }
-                    ]
-                },
+                'templating': templating.to_dict(),
                 'refresh': '5s'
             },
             'overwrite': True
