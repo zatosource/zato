@@ -118,7 +118,7 @@ class GrafanaVariable(Model):
 @dataclass(init=False)
 class GrafanaTemplating(Model):
     list_: 'list_[GrafanaVariable]'
-    
+
     def to_dict(self):
         data = super().to_dict()
         # Rename list_ to list for Grafana API
@@ -170,13 +170,17 @@ class GrafanaDashboardBuilder:
     def create_panel(self, panel_id:'int', title:'str', query:'str', x:'int'=0, y:'int'=0, w:'int'=12, h:'int'=8) -> 'anydict':
         """ Create a single panel configuration.
         """
+        datasource = GrafanaDatasource()
+        datasource.type = 'prometheus'
+        datasource.uid = 'prometheus'
+
         return {
             'id': panel_id,
             'title': title,
             'type': 'timeseries',
             'targets': [
                 {
-                    'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                    'datasource': datasource.to_dict(),
                     'expr': query,
                     'refId': 'A'
                 }
@@ -220,6 +224,10 @@ class GrafanaDashboardBuilder:
     def create_process_monitoring_dashboard(self) -> 'anydict':
         """ Create main process monitoring dashboard.
         """
+        datasource = GrafanaDatasource()
+        datasource.type = 'prometheus'
+        datasource.uid = 'prometheus'
+
         panels = [
             self.create_panel(1, 'Process metrics by instance', 'process_value{ctx_id=~".+"}', x=0, y=0, w=12, h=8),
             self.create_panel(2, 'Global metrics', 'process_value{process_name="global"}', x=0, y=8, w=12, h=8),
@@ -242,7 +250,7 @@ class GrafanaDashboardBuilder:
                         {
                             'name': 'process_name',
                             'type': 'query',
-                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                            'datasource': datasource.to_dict(),
                             'query': 'label_values(process_value, process_name)',
                             'multi': True,
                             'includeAll': True,
@@ -254,7 +262,7 @@ class GrafanaDashboardBuilder:
                         {
                             'name': 'ctx_id',
                             'type': 'query',
-                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                            'datasource': datasource.to_dict(),
                             'query': 'label_values(process_value{process_name=~"$process_name"}, ctx_id)',
                             'multi': True,
                             'includeAll': True,
