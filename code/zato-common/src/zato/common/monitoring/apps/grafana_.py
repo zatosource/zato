@@ -185,6 +185,13 @@ class GrafanaDashboardBuilder:
         target.expr = query
         target.refId = 'A'
         
+        threshold = GrafanaThreshold()
+        threshold.color = 'green'
+        threshold.value = None
+        
+        thresholds = GrafanaThresholds()
+        thresholds.steps = [threshold]
+        
         return {
             'id': panel_id,
             'title': title,
@@ -214,11 +221,7 @@ class GrafanaDashboardBuilder:
                         'hideFrom': {'legend': False, 'tooltip': False, 'vis': False},
                         'thresholdsStyle': {'mode': 'off'}
                     },
-                    'thresholds': {
-                        'steps': [
-                            {'color': 'green', 'value': None}
-                        ]
-                    }
+                    'thresholds': thresholds.to_dict()
                 }
             },
             'options': {
