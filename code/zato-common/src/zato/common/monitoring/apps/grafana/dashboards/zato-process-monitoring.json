@@ -122,7 +122,7 @@
           "refId": "A"
         }
       ],
-      "title": "Process Metrics Rate",
+      "title": "Process metrics rate",
       "type": "timeseries"
     },
     {
@@ -182,7 +182,7 @@
           "refId": "A"
         }
       ],
-      "title": "Active Process Instances",
+      "title": "Active process instances",
       "type": "stat"
     },
     {
@@ -217,7 +217,7 @@
           "refId": "A"
         }
       ],
-      "title": "Process Events",
+      "title": "Process events",
       "type": "logs"
     }
   ],

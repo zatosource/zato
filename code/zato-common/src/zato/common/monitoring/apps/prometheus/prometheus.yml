@@ -26,3 +26,9 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:17012']
     scrape_timeout: 10s
+
+  - job_name: 'test-server'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:8080']
