@@ -137,6 +137,17 @@ class GrafanaDashboardRequest(Model):
     dashboard: 'GrafanaDashboard'
     overwrite: 'bool'
 
+@dataclass(init=False)
+class PanelConfig(Model):
+    panel_id: 'int'
+    title: 'str'
+    query: 'str'
+    panel_type: 'str' = 'timeseries'
+    x: 'int' = 0
+    y: 'int' = 0
+    w: 'int' = 12
+    h: 'int' = 8
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -149,7 +160,7 @@ class GrafanaDashboardBuilder:
         self.auth = (username, password)
         self.headers = {'Content-Type': 'application/json'}
 
-    def create_panel(self, panel_id:'int', title:'str', query:'str', panel_type:'str'='timeseries', x:'int'=0, y:'int'=0, w:'int'=12, h:'int'=8) -> 'anydict':
+    def create_panel(self, config:'PanelConfig') -> 'anydict':
         """ Create a panel configuration.
         """
         datasource = GrafanaDatasource()
@@ -157,18 +168,18 @@ class GrafanaDashboardBuilder:
         datasource.uid = 'prometheus'
 
         panel = GrafanaPanel()
-        panel.id = panel_id
-        panel.title = title
-        panel.type = panel_type
-        
+        panel.id = config.panel_id
+        panel.title = config.title
+        panel.type = config.panel_type
+
         panel.gridPos = GrafanaGridPos()
-        panel.gridPos.x = x
-        panel.gridPos.y = y
-        panel.gridPos.w = w
-        panel.gridPos.h = h
+        panel.gridPos.x = config.x
+        panel.gridPos.y = config.y
+        panel.gridPos.w = config.w
+        panel.gridPos.h = config.h
 
         panel.targets = [GrafanaTarget()]
-        panel.targets[0].expr = query
+        panel.targets[0].expr = config.query
         panel.targets[0].refId = 'A'
         panel.targets[0].datasource = datasource
 
