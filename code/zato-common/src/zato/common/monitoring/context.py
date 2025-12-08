@@ -6,11 +6,9 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import time
-
 # Zato
 from zato.common.typing_ import strdict
+from zato.common.util.time_ import utcnow_as_ms
 from zato.common.monitoring.metrics import get_global_metrics_store
 
 # ################################################################################################################################
@@ -74,7 +72,8 @@ class ProcessContext:
     def push_timestamp(self, key:'str') -> 'None':
         """ Record current unix timestamp.
         """
-        self.push(key, time.time())
+        current_timestamp = utcnow_as_ms()
+        self.push(key, current_timestamp)
 
     def timer_start(self, key:'str') -> 'None':
         """ Start internal timer for key.
