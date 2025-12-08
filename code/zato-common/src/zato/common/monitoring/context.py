@@ -6,10 +6,15 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
 import time
-from typing import Dict, Any
 
-from .metrics import get_global_metrics_store
+# Zato
+from zato.common.typing_ import strdict
+from zato.common.monitoring.metrics import get_global_metrics_store
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ProcessContext:
     """ Context object for process instance metrics operations.
@@ -25,7 +30,7 @@ class ProcessContext:
         """
         self._metrics_store.set_value(self.process_name, self.ctx_id, key, value)
 
-    def push_dict(self, metrics:'Dict[str, float]') -> 'None':
+    def push_dict(self, metrics:'strdict') -> 'None':
         """ Set multiple metric values from dictionary.
         """
         for key, value in metrics.items():
@@ -81,6 +86,9 @@ class ProcessContext:
         """
         self._metrics_store.timer_stop(self.process_name, self.ctx_id, key)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GlobalMetrics:
     """ Global metrics not tied to specific process instance.
     """
@@ -103,10 +111,19 @@ class GlobalMetrics:
         """
         self._metrics_store.set_value('global', '', key, value)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Global metrics instance
 _global_metrics = GlobalMetrics()
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def get_global_metrics() -> 'GlobalMetrics':
     """ Get global metrics instance.
     """
     return _global_metrics
+
+# ################################################################################################################################
+# ################################################################################################################################

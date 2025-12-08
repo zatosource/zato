@@ -17,6 +17,7 @@ import time
 from gevent.wsgi import WSGIServer # type: ignore
 
 # Zato
+from zato.common.typing_ import str_
 from zato.common.monitoring.api import create_context, get_metrics_data, incr_global, push_global
 
 # ################################################################################################################################
@@ -26,7 +27,7 @@ class PrometheusTestServer:
     """ Gevent-based test server for validating metrics framework.
     """
 
-    def __init__(self, host:'str' = '0.0.0.0', port:'int' = 8080) -> 'None':
+    def __init__(self, host:'str_' = '0.0.0.0', port:'int' = 8080) -> 'None':
         self.host = host
         self.port = port
         self.server = None
