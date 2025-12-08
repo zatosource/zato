@@ -178,10 +178,11 @@ class GrafanaDashboardBuilder:
         panel.gridPos.w = config.w
         panel.gridPos.h = config.h
 
-        panel.targets = [GrafanaTarget()]
-        panel.targets[0].expr = config.query
-        panel.targets[0].refId = 'A'
-        panel.targets[0].datasource = datasource
+        target = GrafanaTarget()
+        target.expr = config.query
+        target.refId = 'A'
+        target.datasource = datasource
+        panel.targets = [target]
 
         panel.fieldConfig = GrafanaFieldConfig()
         panel.fieldConfig.defaults = GrafanaDefaults()
@@ -192,10 +193,13 @@ class GrafanaDashboardBuilder:
         panel.fieldConfig.defaults.custom.lineInterpolation = 'linear'
         panel.fieldConfig.defaults.custom.spanNulls = False
         panel.fieldConfig.defaults.mappings = []
-        panel.fieldConfig.defaults.thresholds = GrafanaThresholds()
-        panel.fieldConfig.defaults.thresholds.steps = [GrafanaThreshold()]
-        panel.fieldConfig.defaults.thresholds.steps[0].color = 'green'
-        panel.fieldConfig.defaults.thresholds.steps[0].value = None
+        threshold = GrafanaThreshold()
+        threshold.color = 'green'
+        threshold.value = None
+        
+        thresholds = GrafanaThresholds()
+        thresholds.steps = [threshold]
+        panel.fieldConfig.defaults.thresholds = thresholds
 
         panel.options = GrafanaOptions()
         panel.options.legend = {'displayMode': 'visible'}
