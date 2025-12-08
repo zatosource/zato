@@ -167,97 +167,65 @@ class GrafanaDashboardBuilder:
         self.auth = (username, password)
         self.headers = {'Content-Type': 'application/json'}
 
-    def create_panel(self, config:'PanelConfig') -> 'anydict':
-        """ Create a panel configuration.
+    def create_panel(self, panel_id:'int', title:'str', query:'str', x:'int'=0, y:'int'=0, w:'int'=12, h:'int'=8) -> 'anydict':
+        """ Create a single panel configuration.
         """
-        datasource = GrafanaDatasource()
-        datasource.type = 'prometheus'
-        datasource.uid = 'prometheus'
-
-        panel = GrafanaPanel()
-        panel.id = config.panel_id
-        panel.title = config.title
-        panel.type = config.panel_type
-
-        panel.gridPos = GrafanaGridPos()
-        panel.gridPos.x = config.x
-        panel.gridPos.y = config.y
-        panel.gridPos.w = config.w
-        panel.gridPos.h = config.h
-
-        target = GrafanaTarget()
-        target.expr = config.query
-        target.refId = 'A'
-        target.datasource = datasource
-        panel.targets = [target]
-
-        panel.fieldConfig = GrafanaFieldConfig()
-        panel.fieldConfig.defaults = GrafanaDefaults()
-        panel.fieldConfig.defaults.color = GrafanaColor()
-        panel.fieldConfig.defaults.color.mode = 'palette-classic'
-        panel.fieldConfig.defaults.custom = GrafanaCustom()
-        panel.fieldConfig.defaults.custom.drawStyle = 'line'
-        panel.fieldConfig.defaults.custom.lineInterpolation = 'linear'
-        panel.fieldConfig.defaults.custom.spanNulls = False
-        panel.fieldConfig.defaults.mappings = []
-        threshold = GrafanaThreshold()
-        threshold.color = 'green'
-        threshold.value = None
-
-        thresholds = GrafanaThresholds()
-        thresholds.steps = [threshold]
-        panel.fieldConfig.defaults.thresholds = thresholds
-
-        panel.options = GrafanaOptions()
-        panel.options.legend = {'displayMode': 'visible'}
-        panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
-
-        return panel.to_dict()
+        return {
+            'id': panel_id,
+            'title': title,
+            'type': 'timeseries',
+            'targets': [
+                {
+                    'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                    'expr': query,
+                    'refId': 'A'
+                }
+            ],
+            'gridPos': {'x': x, 'y': y, 'w': w, 'h': h},
+            'fieldConfig': {
+                'defaults': {
+                    'color': {'mode': 'palette-classic'},
+                    'custom': {
+                        'drawStyle': 'line',
+                        'lineInterpolation': 'linear',
+                        'barAlignment': 0,
+                        'lineWidth': 1,
+                        'fillOpacity': 0,
+                        'gradientMode': 'none',
+                        'spanNulls': False,
+                        'insertNulls': False,
+                        'showPoints': 'auto',
+                        'pointSize': 5,
+                        'stacking': {'mode': 'none', 'group': 'A'},
+                        'axisPlacement': 'auto',
+                        'axisLabel': '',
+                        'axisColorMode': 'text',
+                        'scaleDistribution': {'type': 'linear'},
+                        'axisCenteredZero': False,
+                        'hideFrom': {'legend': False, 'tooltip': False, 'vis': False},
+                        'thresholdsStyle': {'mode': 'off'}
+                    },
+                    'thresholds': {
+                        'steps': [
+                            {'color': 'green', 'value': None}
+                        ]
+                    }
+                }
+            },
+            'options': {
+                'tooltip': {'mode': 'single', 'sort': 'none'}
+            }
+        }
 
     def create_process_monitoring_dashboard(self) -> 'anydict':
         """ Create main process monitoring dashboard.
         """
-        config1 = PanelConfig()
-        config1.panel_id = 1
-        config1.title = 'Process metrics by instance'
-        config1.query = 'process_value{ctx_id!=""}'
-        config1.x = 0
-        config1.y = 0
-        config1.w = 12
-        config1.h = 8
-
-        config2 = PanelConfig()
-        config2.panel_id = 2
-        config2.title = 'Global metrics'
-        config2.query = 'process_value{process_name="global"}'
-        config2.x = 0
-        config2.y = 8
-        config2.w = 12
-        config2.h = 8
-
-        config3 = PanelConfig()
-        config3.panel_id = 3
-        config3.title = 'Aircraft handling metrics'
-        config3.query = 'process_value{process_name="AircraftHandling"}'
-        config3.x = 0
-        config3.y = 16
-        config3.w = 12
-        config3.h = 8
-
-        config4 = PanelConfig()
-        config4.panel_id = 4
-        config4.title = 'Applicant processing metrics'
-        config4.query = 'process_value{process_name="ApplicantProcessing"}'
-        config4.x = 0
-        config4.y = 24
-        config4.w = 12
-        config4.h = 8
-
-        panel1 = self.create_panel(config1)
-        panel2 = self.create_panel(config2)
-        panel3 = self.create_panel(config3)
-        panel4 = self.create_panel(config4)
-        panels = [panel1, panel2, panel3, panel4]
+        panels = [
+            self.create_panel(1, 'Process metrics by instance', 'process_value{ctx_id=~".+"}', x=0, y=0, w=12, h=8),
+            self.create_panel(2, 'Global metrics', 'process_value{process_name="global"}', x=0, y=8, w=12, h=8),
+            self.create_panel(3, 'Aircraft handling metrics', 'process_value{process_name="AircraftHandling"}', x=0, y=16, w=12, h=8),
+            self.create_panel(4, 'Applicant processing metrics', 'process_value{process_name="ApplicantProcessing"}', x=0, y=24, w=12, h=8)
+        ]
 
         dashboard = {
             'dashboard': {
