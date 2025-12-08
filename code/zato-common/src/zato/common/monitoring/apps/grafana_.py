@@ -118,6 +118,13 @@ class GrafanaVariable(Model):
 @dataclass(init=False)
 class GrafanaTemplating(Model):
     list_: 'list_[GrafanaVariable]'
+    
+    def to_dict(self):
+        data = super().to_dict()
+        # Rename list_ to list for Grafana API
+        if 'list_' in data:
+            data['list'] = data.pop('list_')
+        return data
 
 @dataclass(init=False)
 class GrafanaDashboard(Model):
@@ -252,52 +259,48 @@ class GrafanaDashboardBuilder:
         panel4 = self.create_panel(config4)
         panels = [panel1, panel2, panel3, panel4]
 
-        datasource = GrafanaDatasource()
-        datasource.type = 'prometheus'
-        datasource.uid = 'prometheus'
-
-        process_name_var = GrafanaVariable()
-        process_name_var.name = 'process_name'
-        process_name_var.type = 'query'
-        process_name_var.datasource = datasource
-        process_name_var.query = 'label_values(process_value, process_name)'
-        process_name_var.multi = True
-        process_name_var.includeAll = True
-        process_name_var.allValue = '.*'
-
-        ctx_id_var = GrafanaVariable()
-        ctx_id_var.name = 'ctx_id'
-        ctx_id_var.type = 'query'
-        ctx_id_var.datasource = datasource
-        ctx_id_var.query = 'label_values(process_value{process_name=~"$process_name"}, ctx_id)'
-        ctx_id_var.multi = True
-        ctx_id_var.includeAll = True
-        ctx_id_var.allValue = '.*'
-
-        templating = GrafanaTemplating()
-        templating.list_ = [process_name_var, ctx_id_var]
-
-        time = GrafanaTime()
-        time.from_ = 'now-1h'
-        time.to = 'now'
-
-        dashboard = GrafanaDashboard()
-        dashboard.id = None
-        dashboard.uid = None
-        dashboard.title = 'Zato process monitoring'
-        dashboard.tags = ['zato', 'monitoring']
-        dashboard.timezone = 'browser'
-        dashboard.panels = panels
-        dashboard.time = time
-        dashboard.timepicker = {}
-        dashboard.templating = templating
-        dashboard.refresh = '10s'
-
-        dashboard_request = GrafanaDashboardRequest()
-        dashboard_request.dashboard = dashboard
-        dashboard_request.overwrite = True
-
-        dashboard = dashboard_request.to_dict()
+        dashboard = {
+            'dashboard': {
+                'id': None,
+                'uid': None,
+                'title': 'Zato process monitoring',
+                'tags': ['zato', 'monitoring'],
+                'timezone': 'browser',
+                'panels': panels,
+                'time': {'from': 'now-1h', 'to': 'now'},
+                'timepicker': {},
+                'templating': {
+                    'list': [
+                        {
+                            'name': 'process_name',
+                            'type': 'query',
+                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                            'query': 'label_values(process_value, process_name)',
+                            'multi': True,
+                            'includeAll': True,
+                            'allValue': '.*',
+                            'current': {'text': 'All', 'value': ['$__all']},
+                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
+                            'refresh': 1
+                        },
+                        {
+                            'name': 'ctx_id',
+                            'type': 'query',
+                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
+                            'query': 'label_values(process_value{process_name=~"$process_name"}, ctx_id)',
+                            'multi': True,
+                            'includeAll': True,
+                            'allValue': '.*',
+                            'current': {'text': 'All', 'value': ['$__all']},
+                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
+                            'refresh': 2
+                        }
+                    ]
+                },
+                'refresh': '10s'
+            },
+            'overwrite': True
+        }
 
         return dashboard
 
