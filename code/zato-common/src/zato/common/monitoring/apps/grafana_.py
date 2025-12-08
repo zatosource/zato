@@ -275,23 +275,27 @@ class GrafanaDashboardBuilder:
             self.create_panel(4, 'Applicant processing metrics', 'process_value{process_name="ApplicantProcessing"}', x=0, y=24, w=12, h=8)
         ]
 
-        dashboard = {
-            'dashboard': {
-                'id': None,
-                'uid': None,
-                'title': 'Zato process monitoring',
-                'tags': ['zato', 'monitoring'],
-                'timezone': 'browser',
-                'panels': panels,
-                'time': {'from': 'now-5m', 'to': 'now'},
-                'timepicker': {},
-                'templating': templating.to_dict(),
-                'refresh': '5s'
-            },
-            'overwrite': True
-        }
-
-        return dashboard
+        time = GrafanaTime()
+        time.from_ = 'now-5m'
+        time.to = 'now'
+        
+        dashboard = GrafanaDashboard()
+        dashboard.id = None
+        dashboard.uid = None
+        dashboard.title = 'Zato process monitoring'
+        dashboard.tags = ['zato', 'monitoring']
+        dashboard.timezone = 'browser'
+        dashboard.panels = panels
+        dashboard.time = time
+        dashboard.timepicker = {}
+        dashboard.templating = templating
+        dashboard.refresh = '5s'
+        
+        dashboardRequest = GrafanaDashboardRequest()
+        dashboardRequest.dashboard = dashboard
+        dashboardRequest.overwrite = True
+        
+        return dashboardRequest.to_dict()
 
     def create_dashboard(self, dashboard_config:'anydict') -> 'bool':
         """ Create dashboard via REST API.
