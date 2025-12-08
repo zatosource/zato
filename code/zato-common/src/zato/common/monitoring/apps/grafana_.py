@@ -98,9 +98,18 @@ class GrafanaTimepicker(Model):
     pass
 
 @dataclass(init=False)
+class GrafanaLegend(Model):
+    pass
+
+@dataclass(init=False)
+class GrafanaTooltip(Model):
+    mode: 'str'
+    sort: 'str'
+
+@dataclass(init=False)
 class GrafanaOptions(Model):
-    legend: 'strdict'
-    tooltip: 'strdict'
+    legend: 'GrafanaLegend'
+    tooltip: 'GrafanaTooltip'
 
 @dataclass(init=False)
 class GrafanaPanel(Model):
@@ -214,11 +223,16 @@ class GrafanaDashboardBuilder:
         thresholds = GrafanaThresholds()
         thresholds.steps = [threshold]
 
+        # Field configuration setup
         field_config = GrafanaFieldConfig()
         field_config.defaults = GrafanaDefaults()
+
+        # Color configuration
         color = GrafanaColor()
         color.mode = 'palette-classic'
         field_config.defaults.color = color
+
+        # Custom display settings
         custom = GrafanaCustom()
         custom.drawStyle = 'line'
         custom.lineInterpolation = 'linear'
@@ -239,9 +253,12 @@ class GrafanaDashboardBuilder:
         custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
         custom.thresholdsStyle = {'mode': 'off'}
         field_config.defaults.custom = custom
+
+        # Finalize field config
         field_config.defaults.mappings = []
         field_config.defaults.thresholds = thresholds
 
+        # Panel creation
         panel = GrafanaPanel()
         panel.id = panel_id
         panel.title = title
@@ -249,9 +266,18 @@ class GrafanaDashboardBuilder:
         panel.targets = [target]
         panel.gridPos = grid_pos
         panel.fieldConfig = field_config
-        panel.options = GrafanaOptions()
-        panel.options.legend = {}
-        panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
+
+        # Panel options setup
+        legend = GrafanaLegend()
+
+        tooltip = GrafanaTooltip()
+        tooltip.mode = 'single'
+        tooltip.sort = 'none'
+
+        options = GrafanaOptions()
+        options.legend = legend
+        options.tooltip = tooltip
+        panel.options = options
 
         return panel.to_dict()
 
