@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
 import requests
 import sys
@@ -158,6 +157,12 @@ class GrafanaVariableCurrent(Model):
     value: 'list_[str]'
 
 @dataclass(init=False)
+class GrafanaVariableOption(Model):
+    text: 'str'
+    value: 'str'
+    selected: 'bool'
+
+@dataclass(init=False)
 class GrafanaVariable(Model):
     name: 'str'
     type: 'str'
@@ -167,7 +172,7 @@ class GrafanaVariable(Model):
     includeAll: 'bool'
     allValue: 'str'
     current: 'GrafanaVariableCurrent'
-    options: 'list_[strdict]'
+    options: 'list_[GrafanaVariableOption]'
     refresh: 'int'
 
 @dataclass(init=False)
@@ -349,7 +354,12 @@ class GrafanaDashboardBuilder:
         current1.value = ['$__all']
         var1.current = current1
 
-        var1.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
+        # Variable options
+        option1 = GrafanaVariableOption()
+        option1.text = 'All'
+        option1.value = '$__all'
+        option1.selected = True
+        var1.options = [option1]
         var1.refresh = 1
 
         var2 = GrafanaVariable()
@@ -367,7 +377,12 @@ class GrafanaDashboardBuilder:
         current2.value = ['$__all']
         var2.current = current2
 
-        var2.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
+        # Variable options
+        option2 = GrafanaVariableOption()
+        option2.text = 'All'
+        option2.value = '$__all'
+        option2.selected = True
+        var2.options = [option2]
         var2.refresh = 2
 
         templating = GrafanaTemplating()
