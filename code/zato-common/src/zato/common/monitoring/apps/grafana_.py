@@ -267,7 +267,7 @@ class GrafanaDashboardBuilder:
                 'tags': ['zato', 'monitoring'],
                 'timezone': 'browser',
                 'panels': panels,
-                'time': {'from': 'now-1h', 'to': 'now'},
+                'time': {'from': 'now-5m', 'to': 'now'},
                 'timepicker': {},
                 'templating': {
                     'list': [
@@ -297,7 +297,7 @@ class GrafanaDashboardBuilder:
                         }
                     ]
                 },
-                'refresh': '10s'
+                'refresh': '5s'
             },
             'overwrite': True
         }
