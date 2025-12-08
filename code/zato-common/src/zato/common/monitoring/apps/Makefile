@@ -1,12 +1,12 @@
 PROMETHEUS_PORT := 9090
 GRAFANA_PORT := 3000
-LOKI_PORT := 3100
+LOKI_PORT := 3101
 
 PROMETHEUS_DATA_DIR := ./data/prometheus
 GRAFANA_DATA_DIR := ./data/grafana
 LOKI_DATA_DIR := ./data/loki
 
-.PHONY: clean prometheus grafana loki status
+.PHONY: clean prometheus grafana loki test-server status
 
 prometheus:
 	@mkdir -p $(PROMETHEUS_DATA_DIR)
@@ -26,8 +26,11 @@ loki:
 	@mkdir -p $(LOKI_DATA_DIR)
 	loki --config.file=./loki/loki.yml
 
+test-server:
+	py test_server.py --port 8080
+
 clean:
 	@rm -rf ./data/* conf public
 
 status:
-	@ps aux | grep -E "(prometheus|grafana|loki)" | grep -v grep || echo "No services running"
+	@ps aux | grep -E "(prometheus|grafana|loki|test_server)" | grep -v grep || echo "No services running"
