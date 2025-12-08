@@ -6,7 +6,7 @@ PROMETHEUS_DATA_DIR := ./data/prometheus
 GRAFANA_DATA_DIR := ./data/grafana
 LOKI_DATA_DIR := ./data/loki
 
-.PHONY: clean prometheus grafana loki test-server status
+.PHONY: clean prometheus grafana loki test-server dashboards status
 
 prometheus:
 	@mkdir -p $(PROMETHEUS_DATA_DIR)
@@ -25,6 +25,9 @@ loki:
 
 test-server:
 	py test_server.py --port 8080
+
+dashboards:
+	py grafana_.py
 
 clean:
 	@rm -rf ./data/* conf public

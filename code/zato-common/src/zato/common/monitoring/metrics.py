@@ -110,9 +110,9 @@ class MetricsStore:
 
             for (process_name, ctx_id, key), value in sorted(self._metrics.items()):
                 if ctx_id:
-                    line = f'process_value{{process_name=\'{process_name}\',ctx_id=\'{ctx_id}\',key=\'{key}\'}} {value}'
+                    line = f'process_value{{process_name="{process_name}",ctx_id="{ctx_id}",key="{key}"}} {value}'
                 else:
-                    line = f'process_value{{process_name=\'{process_name}\',key=\'{key}\'}} {value}'
+                    line = f'process_value{{process_name="{process_name}",key="{key}"}} {value}'
                 lines.append(line)
 
             return '\n'.join(lines) + '\n'
