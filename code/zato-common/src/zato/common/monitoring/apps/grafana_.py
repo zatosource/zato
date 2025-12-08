@@ -180,17 +180,16 @@ class GrafanaDashboardBuilder:
         gridPos.w = w
         gridPos.h = h
         
+        target = GrafanaTarget()
+        target.datasource = datasource
+        target.expr = query
+        target.refId = 'A'
+        
         return {
             'id': panel_id,
             'title': title,
             'type': 'timeseries',
-            'targets': [
-                {
-                    'datasource': datasource.to_dict(),
-                    'expr': query,
-                    'refId': 'A'
-                }
-            ],
+            'targets': [target.to_dict()],
             'gridPos': gridPos.to_dict(),
             'fieldConfig': {
                 'defaults': {
