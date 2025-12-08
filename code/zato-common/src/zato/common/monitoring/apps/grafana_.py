@@ -153,6 +153,11 @@ class GrafanaTime(Model):
         return data
 
 @dataclass(init=False)
+class GrafanaVariableCurrent(Model):
+    text: 'str'
+    value: 'list_[str]'
+
+@dataclass(init=False)
 class GrafanaVariable(Model):
     name: 'str'
     type: 'str'
@@ -161,7 +166,7 @@ class GrafanaVariable(Model):
     multi: 'bool'
     includeAll: 'bool'
     allValue: 'str'
-    current: 'strdict'
+    current: 'GrafanaVariableCurrent'
     options: 'list_[strdict]'
     refresh: 'int'
 
@@ -337,7 +342,13 @@ class GrafanaDashboardBuilder:
         var1.multi = True
         var1.includeAll = True
         var1.allValue = '.*'
-        var1.current = {'text': 'All', 'value': ['$__all']}
+
+        # Variable current value
+        current1 = GrafanaVariableCurrent()
+        current1.text = 'All'
+        current1.value = ['$__all']
+        var1.current = current1
+
         var1.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
         var1.refresh = 1
 
@@ -349,7 +360,13 @@ class GrafanaDashboardBuilder:
         var2.multi = True
         var2.includeAll = True
         var2.allValue = '.*'
-        var2.current = {'text': 'All', 'value': ['$__all']}
+
+        # Variable current value
+        current2 = GrafanaVariableCurrent()
+        current2.text = 'All'
+        current2.value = ['$__all']
+        var2.current = current2
+
         var2.options = [{'text': 'All', 'value': '$__all', 'selected': True}]
         var2.refresh = 2
 
