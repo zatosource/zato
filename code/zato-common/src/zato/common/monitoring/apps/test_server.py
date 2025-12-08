@@ -110,7 +110,7 @@ class PrometheusTestServer:
         try:
             self.server.serve_forever()
         except KeyboardInterrupt:
-            print("\nShutting down server...")
+            print('\nShutting down server...')
             self.server.stop()
 
 # ################################################################################################################################
