@@ -196,11 +196,11 @@ class GrafanaDashboardBuilder:
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
 
-        gridPos = GrafanaGridPos()
-        gridPos.x = x
-        gridPos.y = y
-        gridPos.w = w
-        gridPos.h = h
+        grid_pos = GrafanaGridPos()
+        grid_pos.x = x
+        grid_pos.y = y
+        grid_pos.w = w
+        grid_pos.h = h
 
         target = GrafanaTarget()
         target.datasource = datasource
@@ -214,9 +214,11 @@ class GrafanaDashboardBuilder:
         thresholds = GrafanaThresholds()
         thresholds.steps = [threshold]
 
-        fieldConfig = GrafanaFieldConfig()
-        fieldConfig.defaults = GrafanaDefaults()
-        fieldConfig.defaults.color = {'mode': 'palette-classic'}
+        field_config = GrafanaFieldConfig()
+        field_config.defaults = GrafanaDefaults()
+        color = GrafanaColor()
+        color.mode = 'palette-classic'
+        field_config.defaults.color = color
         custom = GrafanaCustom()
         custom.drawStyle = 'line'
         custom.lineInterpolation = 'linear'
@@ -236,17 +238,17 @@ class GrafanaDashboardBuilder:
         custom.axisCenteredZero = False
         custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
         custom.thresholdsStyle = {'mode': 'off'}
-        fieldConfig.defaults.custom = custom
-        fieldConfig.defaults.mappings = []
-        fieldConfig.defaults.thresholds = thresholds
+        field_config.defaults.custom = custom
+        field_config.defaults.mappings = []
+        field_config.defaults.thresholds = thresholds
 
         panel = GrafanaPanel()
         panel.id = panel_id
         panel.title = title
         panel.type = 'timeseries'
         panel.targets = [target]
-        panel.gridPos = gridPos
-        panel.fieldConfig = fieldConfig
+        panel.gridPos = grid_pos
+        panel.fieldConfig = field_config
         panel.options = GrafanaOptions()
         panel.options.legend = {}
         panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
@@ -311,11 +313,11 @@ class GrafanaDashboardBuilder:
         dashboard.templating = templating.to_dict()
         dashboard.refresh = '5s'
 
-        dashboardRequest = GrafanaDashboardRequest()
-        dashboardRequest.dashboard = dashboard
-        dashboardRequest.overwrite = True
+        dashboard_request = GrafanaDashboardRequest()
+        dashboard_request.dashboard = dashboard
+        dashboard_request.overwrite = True
 
-        result = dashboardRequest.to_dict()
+        result = dashboard_request.to_dict()
         logger.info(f'Dashboard JSON being sent: {result}')
 
         return result
