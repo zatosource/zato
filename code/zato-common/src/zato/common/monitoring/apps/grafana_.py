@@ -65,7 +65,22 @@ class GrafanaColor(Model):
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
+    barAlignment: 'int'
+    lineWidth: 'int'
+    fillOpacity: 'int'
+    gradientMode: 'str'
     spanNulls: 'bool'
+    insertNulls: 'bool'
+    showPoints: 'str'
+    pointSize: 'int'
+    stacking: 'strdict'
+    axisPlacement: 'str'
+    axisLabel: 'str'
+    axisColorMode: 'str'
+    scaleDistribution: 'strdict'
+    axisCenteredZero: 'bool'
+    hideFrom: 'strdict'
+    thresholdsStyle: 'strdict'
 
 @dataclass(init=False)
 class GrafanaDefaults(Model):
@@ -202,26 +217,26 @@ class GrafanaDashboardBuilder:
         fieldConfig = GrafanaFieldConfig()
         fieldConfig.defaults = GrafanaDefaults()
         fieldConfig.defaults.color = {'mode': 'palette-classic'}
-        fieldConfig.defaults.custom = {
-            'drawStyle': 'line',
-            'lineInterpolation': 'linear',
-            'barAlignment': 0,
-            'lineWidth': 1,
-            'fillOpacity': 0,
-            'gradientMode': 'none',
-            'spanNulls': False,
-            'insertNulls': False,
-            'showPoints': 'auto',
-            'pointSize': 5,
-            'stacking': {'mode': 'none', 'group': 'A'},
-            'axisPlacement': 'auto',
-            'axisLabel': '',
-            'axisColorMode': 'text',
-            'scaleDistribution': {'type': 'linear'},
-            'axisCenteredZero': False,
-            'hideFrom': {'legend': False, 'tooltip': False, 'vis': False},
-            'thresholdsStyle': {'mode': 'off'}
-        }
+        custom = GrafanaCustom()
+        custom.drawStyle = 'line'
+        custom.lineInterpolation = 'linear'
+        custom.barAlignment = 0
+        custom.lineWidth = 1
+        custom.fillOpacity = 0
+        custom.gradientMode = 'none'
+        custom.spanNulls = False
+        custom.insertNulls = False
+        custom.showPoints = 'auto'
+        custom.pointSize = 5
+        custom.stacking = {'mode': 'none', 'group': 'A'}
+        custom.axisPlacement = 'auto'
+        custom.axisLabel = ''
+        custom.axisColorMode = 'text'
+        custom.scaleDistribution = {'type': 'linear'}
+        custom.axisCenteredZero = False
+        custom.hideFrom = {'legend': False, 'tooltip': False, 'vis': False}
+        custom.thresholdsStyle = {'mode': 'off'}
+        fieldConfig.defaults.custom = custom
         fieldConfig.defaults.mappings = []
         fieldConfig.defaults.thresholds = thresholds
 
