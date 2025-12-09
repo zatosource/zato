@@ -148,6 +148,12 @@ body {
     border-color: #e8f4ff;
 }
 
+.step-number.active {
+    background: #012845;
+    color: #ffffff;
+    border-color: #012845;
+}
+
 .step-connector {
     height: 40px;
     width: 3px;
