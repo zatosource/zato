@@ -569,7 +569,7 @@
         
         // Show tooltip with spinner
         const _tooltip = tippy(button[0], {
-            content: '<span style="display: inline-flex; align-items: flex-start; gap: 4px; line-height: 1;"><span style="animation: spin 1s linear infinite; font-size: 16px; display: inline-flex; align-items: center; margin-top: 1px;">⟳</span><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
+            content: '<span style="display: inline-flex; align-items: flex-start; gap: 4px; line-height: 1;"><img src="/static/gfx/spinner.svg" style="animation: spin 0.8s linear infinite; width: 16px; height: 16px; margin-top: 1px; filter: brightness(0) saturate(100%) invert(100%);"><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
             trigger: "manual",
             hideOnClick: false,
             placement: "top",
@@ -592,9 +592,17 @@
             success: function(response) {
                 // Update tooltip content and keep it visible
                 _tooltip.setContent('OK, invoked');
+                // Hide tooltip after 1.6 seconds from success message
+                setTimeout(() => {
+                    _tooltip.hide();
+                }, 1600);
             },
             error: function() {
                 _tooltip.setContent('Invocation failed');
+                // Hide tooltip after 1.6 seconds from error message
+                setTimeout(() => {
+                    _tooltip.hide();
+                }, 1600);
             }
         });
     });
