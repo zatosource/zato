@@ -184,6 +184,7 @@
                     alert('Wizard Complete!');
                 }
             } else if (errorField) {
+                $('#next-button').blur();
                 errorField.removeClass('field-error');
                 setTimeout(() => {
                     errorField.addClass('field-error');
