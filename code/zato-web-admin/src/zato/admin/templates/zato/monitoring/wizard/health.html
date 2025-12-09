@@ -15,8 +15,8 @@
 <script src="/static/js/monitoring.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
-        // Generate wizard structure dynamically
-        $.fn.zato.monitoring.wizard.generateHTML();
+        // Generate wizard structure dynamically for health monitoring
+        $.fn.zato.monitoring.wizard.generateHTML('health');
         $.fn.zato.monitoring.wizard.init();
     });
 </script>
