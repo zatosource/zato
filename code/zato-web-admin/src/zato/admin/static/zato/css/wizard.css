@@ -63,6 +63,23 @@ body {
     backdrop-filter: blur(8px);
 }
 
+.step-value::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 3px;
+    background: repeating-linear-gradient(
+        to right,
+        #dc3545 0px,
+        #dc3545 3px,
+        transparent 3px,
+        transparent 6px
+    );
+}
+
 #value-1 {
     top: 143px;
 }
