@@ -60,8 +60,16 @@
     padding: 40px 32px;
 }
 
-.progress-section {
+.progress-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
     margin-bottom: 32px;
+    box-shadow: 4px 4px 0px var(--shadow-dark);
+}
+
+.progress-section {
+    margin-bottom: 0;
 }
 
 .progress-item {
@@ -488,20 +496,22 @@
     <div class="creation-panel">
         <div class="creation-content">
             <div class="creation-main">
-                <div class="progress-section">
-                    <div class="progress-item" id="grafana-progress">
-                        <div class="progress-icon">⟳</div>
-                        <div class="progress-content">
-                            <div class="progress-platform">Grafana dashboard</div>
-                            <div class="progress-text">Initializing...</div>
+                <div class="progress-panel">
+                    <div class="progress-section">
+                        <div class="progress-item" id="grafana-progress">
+                            <div class="progress-icon">⟳</div>
+                            <div class="progress-content">
+                                <div class="progress-platform">Grafana dashboard</div>
+                                <div class="progress-text">Initializing...</div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="progress-item" id="datadog-progress">
-                        <div class="progress-icon">⟳</div>
-                        <div class="progress-content">
-                            <div class="progress-platform">Datadog dashboard</div>
-                            <div class="progress-text">Waiting...</div>
+                        <div class="progress-item" id="datadog-progress">
+                            <div class="progress-icon">⟳</div>
+                            <div class="progress-content">
+                                <div class="progress-platform">Datadog dashboard</div>
+                                <div class="progress-text">Waiting...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
