@@ -165,7 +165,7 @@
 .summary-item {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 12px;
     font-size: 14px;
     line-height: 1.4;
@@ -205,7 +205,7 @@
     opacity: 1;
 }
 
-.code-section h3 {
+.code-section h3, .creation-main h3, .creation-sidebar h3 {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
@@ -244,8 +244,8 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-transform: uppercase;
     z-index: 5;
-    box-shadow: none;
-    text-shadow: none;
+    box-shadow: none !important;
+    text-shadow: none !important;
 }
 
 .copy-button:hover {
@@ -343,6 +343,19 @@
     $(document).ready(function() {
         // Start dashboard creation process
         createDashboards();
+        
+        // Close tooltips when clicking anywhere on page
+        $(document).on('click', function(e) {
+            // Don't close if clicking on copy or try buttons
+            if (!$(e.target).hasClass('copy-button')) {
+                // Hide all visible tippy instances
+                document.querySelectorAll('[data-tippy-root]').forEach(function(tooltip) {
+                    if (tooltip._tippy) {
+                        tooltip._tippy.hide();
+                    }
+                });
+            }
+        });
     });
 
     function createDashboards() {
@@ -535,6 +548,7 @@
     <div class="creation-panel">
         <div class="creation-content">
             <div class="creation-main">
+                <h3>Status</h3>
                 <div class="progress-panel">
                     <div class="progress-section">
                         <div class="progress-item" id="grafana-progress">
@@ -590,21 +604,21 @@
             </div>
 
             <div class="creation-sidebar">
+                <h3>Config summary</h3>
                 <div class="wizard-summary">
-                    <h3 class="summary-title">Configuration summary</h3>
                     <div class="summary-item">
                         <div class="summary-label">Dashboard type</div>
                         <div class="summary-value">{{ wizard_type }}</div>
                     </div>
                     {% if step1 %}
                     <div class="summary-item">
-                        <div class="summary-label">Monitor target</div>
+                        <div class="summary-label">Service</div>
                         <div class="summary-value">{{ step1 }}</div>
                     </div>
                     {% endif %}
                     {% if step2 %}
                     <div class="summary-item">
-                        <div class="summary-label">Tracking metric</div>
+                        <div class="summary-label">Monitor</div>
                         <div class="summary-value">{{ step2_text }}</div>
                     </div>
                     {% endif %}
