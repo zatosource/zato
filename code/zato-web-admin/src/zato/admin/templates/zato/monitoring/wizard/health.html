@@ -109,21 +109,30 @@
         box-sizing: border-box !important;
     }
     .input-field:focus {
-        outline: none;
-        background: #ffffff;
-        border-color: #67bfff;
-        transform: translateY(-2px);
+        outline: none !important;
+        background: #ffffff !important;
+        border-color: #67bfff !important;
     }
     .input-field::placeholder {
         color: #6c757d;
         font-weight: 400;
     }
+    select.input-field {
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23012845" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>') !important;
+        background-repeat: no-repeat !important;
+        background-position: right 12px center !important;
+        background-size: 12px !important;
+    }
     .input-field option {
-        padding: 15px;
-        font-size: 16px;
-        font-weight: 500;
-        color: #012845;
-        background: #ffffff;
+        padding: 8px !important;
+        font-size: 14px !important;
+        font-weight: normal !important;
+        color: initial !important;
+        background: initial !important;
+        font-family: initial !important;
     }
     .wizard-buttons {
         display: flex;
