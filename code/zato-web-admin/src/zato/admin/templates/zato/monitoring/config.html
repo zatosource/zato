@@ -11,11 +11,11 @@
         margin: -20px;
     }
     .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 30px;
+        display: flex;
+        gap: 20px;
         max-width: 1200px;
         margin: 0 auto;
+        justify-content: center;
     }
     .dashboard-card {
         background: rgba(255, 255, 255, 0.9);
@@ -26,11 +26,13 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
+        flex: 1;
+        min-width: 220px;
     }
     .dashboard-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 248, 230, 0.95);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.1);
     }
     .card-title {
         font-size: 24px;
@@ -71,8 +73,8 @@
     
     <div class="dashboard-grid">
         <div class="dashboard-card">
-            <h3 class="card-title">How many of X?</h3>
-            <p class="card-description">Count-based dashboards that show totals, aggregations, and numerical summaries</p>
+            <h3 class="card-title">Is X working?</h3>
+            <p class="card-description">Health and status dashboards that monitor system availability and operational state</p>
         </div>
 
         <div class="dashboard-card">
@@ -81,8 +83,8 @@
         </div>
 
         <div class="dashboard-card">
-            <h3 class="card-title">Is X working?</h3>
-            <p class="card-description">Health and status dashboards that monitor system availability and operational state</p>
+            <h3 class="card-title">How many of X?</h3>
+            <p class="card-description">Count-based dashboards that show totals, aggregations, and numerical summaries</p>
         </div>
 
         <div class="dashboard-card">
