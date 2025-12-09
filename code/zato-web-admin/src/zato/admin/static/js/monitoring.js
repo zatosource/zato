@@ -134,7 +134,7 @@ $.fn.zato.monitoring.wizard.init = function() {
     function goToNextStep() {
         let isValid = false;
         let errorField = null;
-        
+
         if (currentStep === 1) {
             const stepInput = $('#step-' + currentStep + ' input, #step-' + currentStep + ' textarea');
             if (stepInput.length && stepInput.val().trim()) {
@@ -163,20 +163,20 @@ $.fn.zato.monitoring.wizard.init = function() {
                 const step1Value = $('#step-1 input').val()?.trim() || '';
                 const step2Selected = $('#step-2 .option-item.selected').length > 0;
                 const step3Selected = $('#step-3 .option-item.selected').length > 0;
-                
+
                 const missingSteps = [];
                 if (!step1Value) missingSteps.push('▶ 1. What do you want to monitor?');
                 if (!step2Selected) missingSteps.push('▶ 2. What do you want to track?');
                 if (!step3Selected) missingSteps.push('▶ 3. How far back to look?');
-                
+
                 if (missingSteps.length > 0) {
                     const tooltipText = 'Please complete the following:<br>' + missingSteps.join('<br>');
-                    
+
                     const button = document.getElementById('next-button');
                     if (button._tippy) {
                         button._tippy.destroy();
                     }
-                    
+
                     let _tooltip = tippy(button, {
                         content: tooltipText,
                         allowHTML: true,
@@ -188,7 +188,7 @@ $.fn.zato.monitoring.wizard.init = function() {
                         inertia: true,
                         role: "tooltip-draw-attention",
                     });
-                    
+
                     _tooltip.show();
                     $('#next-button').blur();
                 } else {
@@ -208,12 +208,12 @@ $.fn.zato.monitoring.wizard.init = function() {
 
                 if (missingSteps.length > 0) {
                     const tooltipText = 'Please complete the following:<br>' + missingSteps.join('<br>');
-                    
+
                     const button = document.getElementById('next-button');
                     if (button._tippy) {
                         button._tippy.destroy();
                     }
-                    
+
                     let _tooltip = tippy(button, {
                         content: tooltipText,
                         allowHTML: true,
@@ -225,13 +225,13 @@ $.fn.zato.monitoring.wizard.init = function() {
                         inertia: true,
                         role: "tooltip-draw-attention",
                     });
-                    
+
                     _tooltip.show();
                     $('#next-button').blur();
                 }
             } else if (errorField) {
                 $('#next-button').blur();
-                
+
                 if (currentStep === 1) {
                     const inputField = $('#step-1 input, #step-1 textarea').first();
                     if (inputField.length) {
@@ -240,7 +240,7 @@ $.fn.zato.monitoring.wizard.init = function() {
                         }, 100);
                     }
                 }
-                
+
                 errorField.removeClass('field-error');
                 setTimeout(() => {
                     errorField.addClass('field-error');
