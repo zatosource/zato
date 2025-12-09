@@ -678,6 +678,8 @@ urlpatterns += [
         monitoring_dashboard.create_grafana_dashboard, name='monitoring-dashboard-create-grafana'),
     url(r'^zato/monitoring/dashboard/create/datadog/$',
         monitoring_dashboard.create_datadog_dashboard, name='monitoring-dashboard-create-datadog'),
+    url(r'^zato/monitoring/dashboard/try/$',
+        monitoring_dashboard.try_service_code, name='monitoring-dashboard-try'),
     ]
 
 # ################################################################################################################################
