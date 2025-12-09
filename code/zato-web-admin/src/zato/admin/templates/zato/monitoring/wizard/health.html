@@ -103,6 +103,10 @@
 
             if (step === 1) {
                 $('#prev-button').hide();
+                // Focus input on step 1
+                setTimeout(() => {
+                    $('#step-1 input, #step-1 textarea').first().focus();
+                }, 100);
             } else {
                 $('#prev-button').show();
             }
