@@ -96,7 +96,7 @@
             $('#step-' + step).show();
 
             $('.step-number').removeClass('active');
-            $('.step:nth-child(' + (step * 2 - 1) + ') .step-number').addClass('active');
+            $('.step-number').eq(step - 1).addClass('active');
 
             $('.step-value').removeClass('current');
             $('#value-' + step).addClass('current');
@@ -114,6 +114,19 @@
             const parent = $(this).parent();
             parent.find('.option-item').removeClass('selected');
             $(this).addClass('selected');
+            
+            const stepDiv = $(this).closest('.wizard-step');
+            const stepId = stepDiv.attr('id');
+            const selectedValue = $(this).data('value');
+            const selectedText = $(this).find('.option-text').text();
+            
+            if (stepId === 'step-2') {
+                wizardData.step2 = selectedValue;
+                updateStepValues();
+            } else if (stepId === 'step-3') {
+                wizardData.step3 = selectedValue;
+                updateStepValues();
+            }
         });
 
         function goToNextStep() {
