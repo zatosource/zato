@@ -4,100 +4,91 @@
 
 {% block "extra_css" %}
 <style type="text/css">
-    .monitoring-section {
-        margin: 20px 0;
-        padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background-color: #f9f9f9;
+    .monitoring-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: calc(100vh - 200px);
+        padding: 40px;
+        margin: -20px;
     }
-    .monitoring-title {
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .dashboard-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        background: rgba(255, 255, 255, 0.95);
+    }
+    .card-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+    }
+    .card-description {
+        color: #64748b;
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0;
+    }
+    .page-title {
+        text-align: center;
+        font-size: 48px;
+        font-weight: 300;
+        color: #2c3e50;
+        margin-bottom: 60px;
+        letter-spacing: -1px;
+    }
+    .page-subtitle {
+        text-align: center;
         font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 10px;
-        color: #333;
-    }
-    .monitoring-description {
-        color: #666;
-        margin-bottom: 15px;
-    }
-    .monitoring-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid #eee;
-        background-color: white;
-    }
-    .monitoring-item:last-child {
-        border-bottom: none;
-    }
-    .monitoring-item-name {
-        font-weight: bold;
-    }
-    .monitoring-item-status {
-        color: #28a745;
+        color: #64748b;
+        margin-bottom: 80px;
+        font-weight: 400;
     }
 </style>
 {% endblock %}
 
 {% block "content" %}
 
-<h2 class="content_header bigger">
-    <a href="javascript:$.fn.zato.data_table.set_title()">Monitoring configuration</a>
-</h2>
+<div class="monitoring-container">
+    <h1 class="page-title">Monitoring</h1>
+    <p class="page-subtitle">Choose your dashboard type</p>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h3 class="card-title">How many of X?</h3>
+            <p class="card-description">Count-based dashboards that show totals, aggregations, and numerical summaries</p>
+        </div>
 
-<div class="monitoring-section">
-    <div class="monitoring-title">System monitoring</div>
-    <div class="monitoring-description">
-        Configure and manage monitoring settings for your Zato cluster.
-    </div>
-    
-    <div class="monitoring-item">
-        <div>
-            <div class="monitoring-item-name">Metrics collection</div>
-            <div>Collect performance and usage metrics</div>
+        <div class="dashboard-card">
+            <h3 class="card-title">How fast is X?</h3>
+            <p class="card-description">Performance dashboards that measure duration</p>
         </div>
-        <div class="monitoring-item-status">Enabled</div>
-    </div>
-    
-    <div class="monitoring-item">
-        <div>
-            <div class="monitoring-item-name">Health checks</div>
-            <div>Monitor service and connection health</div>
-        </div>
-        <div class="monitoring-item-status">Enabled</div>
-    </div>
-    
-    <div class="monitoring-item">
-        <div>
-            <div class="monitoring-item-name">Log aggregation</div>
-            <div>Centralized log collection and analysis</div>
-        </div>
-        <div class="monitoring-item-status">Enabled</div>
-    </div>
-</div>
 
-<div class="monitoring-section">
-    <div class="monitoring-title">Alerting</div>
-    <div class="monitoring-description">
-        Configure alerts for system events and thresholds.
-    </div>
-    
-    <div class="monitoring-item">
-        <div>
-            <div class="monitoring-item-name">Error rate alerts</div>
-            <div>Alert when error rates exceed thresholds</div>
+        <div class="dashboard-card">
+            <h3 class="card-title">Is X working?</h3>
+            <p class="card-description">Health and status dashboards that monitor system availability and operational state</p>
         </div>
-        <div class="monitoring-item-status">Configured</div>
-    </div>
-    
-    <div class="monitoring-item">
-        <div>
-            <div class="monitoring-item-name">Performance alerts</div>
-            <div>Alert on performance degradation</div>
+
+        <div class="dashboard-card">
+            <h3 class="card-title">What happened to X?</h3>
+            <p class="card-description">Historical and event-based dashboards that analyze incidents and track changes</p>
         </div>
-        <div class="monitoring-item-status">Configured</div>
     </div>
 </div>
 
