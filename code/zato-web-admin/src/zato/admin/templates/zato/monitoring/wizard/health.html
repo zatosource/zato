@@ -162,7 +162,7 @@
                     wizardData['step' + currentStep] = stepInput.val().trim();
                     isValid = true;
                 } else {
-                    errorField = stepInput;
+                    errorField = $('#step-' + currentStep + ' .input-wrapper');
                 }
             } else {
                 const selectedOption = $('#step-' + currentStep + ' .option-item.selected');
@@ -176,7 +176,7 @@
 
             if (isValid) {
                 updateStepValues();
-                
+
                 if (currentStep < totalSteps) {
                     currentStep++;
                     showStep(currentStep);
@@ -275,7 +275,9 @@
             <div class="wizard-content">
             <div id="step-1" class="wizard-step">
                 <h1 class="question-title">1. What do you want to monitor?</h1>
-                <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+                <div class="input-wrapper">
+                    <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+                </div>
             </div>
 
             <div id="step-2" class="wizard-step" style="display: none;">
