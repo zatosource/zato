@@ -78,7 +78,7 @@ $.fn.zato.monitoring.wizard.generateHTML = function(wizardType) {
         const displayStyle = stepNum === 1 ? '' : 'style="display: none;"';
 
         stepsHTML += `<div id="step-${stepNum}" class="wizard-step" ${displayStyle}>`;
-        stepsHTML += `<h1 class="question-title">${stepNum}. ${stepConfig.question}</h1>`;
+        stepsHTML += `<h1 class="question-title">${stepNum}. ${stepConfig.question} <button class="help-tag">How to</button></h1>`;
 
         if (stepConfig.type === 'input') {
             stepsHTML += `<div class="input-wrapper">`;
