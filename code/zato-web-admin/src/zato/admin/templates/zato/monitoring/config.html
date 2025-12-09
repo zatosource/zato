@@ -1,0 +1,104 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Monitoring{% endblock %}
+
+{% block "extra_css" %}
+<style type="text/css">
+    .monitoring-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .monitoring-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    .monitoring-description {
+        color: #666;
+        margin-bottom: 15px;
+    }
+    .monitoring-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        background-color: white;
+    }
+    .monitoring-item:last-child {
+        border-bottom: none;
+    }
+    .monitoring-item-name {
+        font-weight: bold;
+    }
+    .monitoring-item-status {
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block "content" %}
+
+<h2 class="content_header bigger">
+    <a href="javascript:$.fn.zato.data_table.set_title()">Monitoring configuration</a>
+</h2>
+
+<div class="monitoring-section">
+    <div class="monitoring-title">System monitoring</div>
+    <div class="monitoring-description">
+        Configure and manage monitoring settings for your Zato cluster.
+    </div>
+    
+    <div class="monitoring-item">
+        <div>
+            <div class="monitoring-item-name">Metrics collection</div>
+            <div>Collect performance and usage metrics</div>
+        </div>
+        <div class="monitoring-item-status">Enabled</div>
+    </div>
+    
+    <div class="monitoring-item">
+        <div>
+            <div class="monitoring-item-name">Health checks</div>
+            <div>Monitor service and connection health</div>
+        </div>
+        <div class="monitoring-item-status">Enabled</div>
+    </div>
+    
+    <div class="monitoring-item">
+        <div>
+            <div class="monitoring-item-name">Log aggregation</div>
+            <div>Centralized log collection and analysis</div>
+        </div>
+        <div class="monitoring-item-status">Enabled</div>
+    </div>
+</div>
+
+<div class="monitoring-section">
+    <div class="monitoring-title">Alerting</div>
+    <div class="monitoring-description">
+        Configure alerts for system events and thresholds.
+    </div>
+    
+    <div class="monitoring-item">
+        <div>
+            <div class="monitoring-item-name">Error rate alerts</div>
+            <div>Alert when error rates exceed thresholds</div>
+        </div>
+        <div class="monitoring-item-status">Configured</div>
+    </div>
+    
+    <div class="monitoring-item">
+        <div>
+            <div class="monitoring-item-name">Performance alerts</div>
+            <div>Alert on performance degradation</div>
+        </div>
+        <div class="monitoring-item-status">Configured</div>
+    </div>
+</div>
+
+{% endblock %}
