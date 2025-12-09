@@ -117,15 +117,6 @@
         color: #6c757d;
         font-weight: 400;
     }
-    select.input-field {
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23012845" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>') !important;
-        background-repeat: no-repeat !important;
-        background-position: right 12px center !important;
-        background-size: 12px !important;
-    }
     .input-field option {
         padding: 8px !important;
         font-size: 14px !important;
@@ -153,20 +144,23 @@
         cursor: pointer;
         transition: all 0.2s ease;
         letter-spacing: 0.5px;
+        box-shadow: 8px 8px 0px #063c65;
     }
     .wizard-btn:hover {
         background: #012845;
         color: #ffffff;
+        box-shadow: 8px 8px 0px #82ccff;
     }
     .wizard-btn:disabled {
-        background: #ffffff;
-        border-color: #063c65;
-        color: #063c65;
+        background: #f8f9fa;
+        border-color: #dee2e6;
+        color: #6c757d;
         cursor: not-allowed;
+        opacity: 0.6;
     }
     .wizard-btn:disabled:hover {
-        background: #ffffff;
-        color: #063c65;
+        background: #f8f9fa;
+        color: #6c757d;
     }
 </style>
 {% endblock %}
