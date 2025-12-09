@@ -125,30 +125,26 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-evenly;
+    justify-content: center;
     transition: all 0.3s ease;
     margin: 8px 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        #dc3545 0px,
+        #dc3545 2px,
+        transparent 2px,
+        transparent 6px
+    );
 }
 
-.step-connector::before {
-    content: '';
-    width: 2px;
-    height: 2px;
-    background: #dc3545;
-    border-radius: 1px;
-}
-
-.step-connector::after {
-    content: '';
-    width: 2px;
-    height: 2px;
-    background: #dc3545;
-    border-radius: 1px;
-}
-
-.step.completed .step-connector::before,
-.step.completed .step-connector::after {
-    background: #dc3545;
+.step.completed .step-connector {
+    background: repeating-linear-gradient(
+        to bottom,
+        #dc3545 0px,
+        #dc3545 2px,
+        transparent 2px,
+        transparent 6px
+    );
 }
 
 .wizard-content {
